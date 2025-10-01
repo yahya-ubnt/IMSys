@@ -1,0 +1,164 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { motion } from "framer-motion"
+import { Topbar } from "@/components/topbar"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
+import { DataTable } from "@/components/data-table"
+import { columns } from "./columns"
+import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form"
+import { PlusCircle, FileText } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+
+// --- TYPE DEFINITIONS ---
+export type SmsTemplate = {
+  _id: string;
+  name: string;
+  messageBody: string;
+  createdAt: string;
+};
+
+// --- MAIN COMPONENT ---
+export default function SmsTemplatesPage() {
+  const { toast } = useToast()
+  const { token } = useAuth()
+
+  // Data states
+  const [templates, setTemplates] = useState<SmsTemplate[]>([])
+  
+  // UI states
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<SmsTemplate | null>(null)
+
+  // --- DATA FETCHING ---
+  const fetchTemplates = useCallback(async () => {
+    if (!token) return
+    try {
+      const response = await fetch("/api/smstemplates", { 
+        headers: { "Authorization": `Bearer ${token}` } 
+      })
+      if (!response.ok) throw new Error("Failed to fetch templates")
+      setTemplates(await response.json())
+    } catch {
+      toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
+    }
+  }, [token, toast])
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [fetchTemplates])
+
+  // --- EVENT HANDLERS ---
+  const handleNewTemplate = () => {
+    setSelectedTemplate(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (template: SmsTemplate) => {
+    setSelectedTemplate(template)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (template: SmsTemplate) => {
+    if (!window.confirm("Are you sure you want to delete this template?")) return;
+    try {
+      if (!token) throw new Error("Authentication token not found")
+      const response = await fetch(`/api/smstemplates/${template._id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      })
+      if (!response.ok) throw new Error("Failed to delete template")
+      toast({ title: "Success", description: "Template deleted successfully." })
+      fetchTemplates()
+    } catch {
+      toast({ title: "Error", description: "Could not delete template.", variant: "destructive" })
+    }
+  }
+
+  const handleFormSubmit = async (data: SmsTemplateFormData) => {
+    const url = selectedTemplate ? `/api/smstemplates/${selectedTemplate._id}` : "/api/smstemplates"
+    const method = selectedTemplate ? "PUT" : "POST"
+    
+    try {
+      if (!token) throw new Error("Authentication token not found")
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) throw new Error((await response.json()).message || "Failed to save template")
+      
+      toast({ title: "Success", description: `Template ${selectedTemplate ? 'updated' : 'created'} successfully.` })
+      setIsModalOpen(false)
+      fetchTemplates()
+    } catch (error: unknown) {
+      toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unknown error occurred.", variant: "destructive" })
+    }
+  }
+
+  // --- RENDER ---
+  return (
+    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+      <Topbar />
+      <main className="flex-1 p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">SMS Templates</h1>
+            <p className="text-sm text-zinc-400">Create and manage reusable SMS message templates.</p>
+          </div>
+          <Button onClick={handleNewTemplate} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+            <PlusCircle className="mr-2 h-4 w-4" /> New Template
+          </Button>
+        </div>
+
+        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          <Card className="bg-transparent border-none">
+            <CardHeader className="p-4 border-b border-zinc-800 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-cyan-400">All Templates</CardTitle>
+                <CardDescription className="text-zinc-400">A list of all your SMS templates.</CardDescription>
+              </div>
+              <StatCard title="Total Templates" value={templates.length} icon={FileText} />
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="overflow-x-auto">
+                <DataTable columns={columns({ handleEdit, handleDelete })} data={templates} filterColumn="name" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-cyan-400">{selectedTemplate ? "Edit Template" : "Create New Template"}</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                {selectedTemplate ? "Update the details for your SMS template." : "Fill in the details to create a new SMS template."}
+              </DialogDescription>
+            </DialogHeader>
+            <SmsTemplateForm
+              onSubmit={handleFormSubmit}
+              initialData={selectedTemplate}
+              onClose={() => setIsModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </main>
+    </div>
+  )
+}
+
+// --- SUB-COMPONENTS ---
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
+    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
+    <div>
+      <p className="text-xs text-zinc-400">{title}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    </div>
+  </div>
+);

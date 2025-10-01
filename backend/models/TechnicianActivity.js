@@ -1,0 +1,75 @@
+const mongoose = require('mongoose');
+
+const TechnicianActivitySchema = mongoose.Schema(
+  {
+    technician: {
+      type: String,
+      required: true,
+    },
+    activityType: {
+      type: String,
+      enum: ['Installation', 'Support'],
+      required: true,
+    },
+    clientName: {
+      type: String,
+      required: true,
+    },
+    clientPhone: {
+      type: String,
+      required: true,
+      match: [/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/, 'Please add a valid phone number'],
+    },
+    activityDate: {
+      type: Date,
+      required: true,
+    },
+    description: { // General description of the activity
+      type: String,
+      required: true,
+    },
+    // Fields specific to Installation
+    installedEquipment: { // e.g., "Router X, ONU Y"
+      type: String,
+      required: function() { return this.activityType === 'Installation'; }
+    },
+    installationNotes: {
+      type: String,
+      required: function() { return this.activityType === 'Installation'; }
+    },
+    // Fields specific to Support
+    supportCategory: { // ADDED FIELD
+      type: String,
+      enum: ['Client Problem', 'Building Issue'],
+      required: function() { return this.activityType === 'Support'; }
+    },
+    issueDescription: { // What was the client's reported issue?
+      type: String,
+      required: function() { return this.activityType === 'Support'; }
+    },
+    solutionProvided: { // What was done to resolve the issue?
+      type: String,
+      required: function() { return this.activityType === 'Support'; }
+    },
+    partsReplaced: { // e.g., "Faulty PSU, Cable"
+      type: String,
+    },
+    configurationChanges: { // e.g., "Changed Wi-Fi password, updated router firmware"
+      type: String,
+    },
+    // Optional: Link to a Unit or Building if applicable (for CRM context)
+    unit: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Unit',
+    },
+    building: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Building',
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model('TechnicianActivity', TechnicianActivitySchema);

@@ -1,0 +1,45 @@
+# ========================
+# Node.js & Environment
+# ========================
+node_modules/
+.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========================
+# IDEs and OS Files
+# ========================
+.vscode/
+.idea/
+.DS_Store
+
+# ========================
+# Build Artifacts
+# ========================
+build/
+dist/
+
+# ========================
+# Frontend (Next.js) Specific
+# ========================
+frontend/build/
+frontend/node_modules/
+frontend/.next/
+frontend/.cache/
+frontend/out/
+
+# ========================
+# Backend Specific
+# ========================
+backend/node_modules/
+backend/.cache/
+
+# ========================
+# Misc
+# ========================
+*.tmp
+*.temp

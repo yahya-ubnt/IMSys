@@ -1,0 +1,48 @@
+const mongoose = require('mongoose');
+
+const MikrotikRouterSchema = mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Please add a name for the router'],
+      trim: true,
+    },
+    ipAddress: {
+      type: String,
+      required: [true, 'Please add an IP address'],
+      unique: true,
+      match: [/^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/, 'Please use a valid IP address'],
+    },
+    apiUsername: {
+      type: String,
+      required: [true, 'Please add an API username'],
+    },
+    apiPassword: {
+      type: String,
+      required: [true, 'Please add an API password'],
+    },
+    apiPort: {
+      type: Number,
+      required: [true, 'Please add an API port'],
+      default: 8728,
+    },
+    location: {
+      type: String,
+      required: false,
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+    lastChecked: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+
+
+module.exports = mongoose.model('MikrotikRouter', MikrotikRouterSchema);

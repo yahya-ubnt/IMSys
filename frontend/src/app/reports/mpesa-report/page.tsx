@@ -1,0 +1,144 @@
+"use client"
+
+import { useState } from "react"
+import { Topbar } from "@/components/topbar"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { DataTable } from "@/components/data-table"
+import { columns } from "./columns"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
+import { motion, AnimatePresence } from "framer-motion"
+import { Calendar, BarChart2, Download } from "lucide-react"
+
+// --- TYPE DEFINITIONS ---
+interface MpesaTransaction {
+  Number: number;
+  'Transaction ID': string;
+  'Official Name': string;
+  Amount: number;
+  'Date & Time': string;
+}
+
+// --- MAIN COMPONENT ---
+export default function MpesaReportPage() {
+  const { toast } = useToast()
+  
+  // Data states
+  const [reportData, setReportData] = useState<MpesaTransaction[]>([])
+  const [totalAmount, setTotalAmount] = useState(0)
+  
+  // UI states
+  const [isLoading, setIsLoading] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+
+  // Form states
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  // --- EVENT HANDLERS ---
+  const handleGenerateReport = async () => {
+    if (!startDate || !endDate) {
+      return toast({ title: 'Missing Information', description: 'Please select a start and end date.', variant: 'destructive' })
+    }
+    setIsLoading(true)
+    setShowReport(false)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Authentication token not found.')
+      const response = await fetch('/api/reports/mpesa-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ startDate, endDate }),
+      })
+      if (!response.ok) throw new Error('Failed to generate report')
+      
+      const data = await response.json()
+      setReportData(data.reportData)
+      setTotalAmount(data.totalAmount)
+      setShowReport(true)
+    } catch {
+      toast({ title: 'Error', description: 'Failed to generate report.', variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // --- RENDER ---
+  return (
+    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+      <Topbar />
+      <main className="flex-1 p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">M-Pesa Transaction Report</h1>
+            <p className="text-sm text-zinc-400">Generate a report of all M-Pesa transactions within a date range.</p>
+          </div>
+          <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105" disabled={!showReport}>
+            <Download className="mr-2 h-4 w-4" /> Export Report
+          </Button>
+        </div>
+
+        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          <Card className="bg-transparent border-none">
+            <CardHeader className="border-b border-zinc-800">
+              <CardTitle className="text-cyan-400">Report Filters</CardTitle>
+              <CardDescription className="text-zinc-400">Select a date range to generate the report.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <InputGroup icon={Calendar} label="Start Date">
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+                </InputGroup>
+                <InputGroup icon={Calendar} label="End Date">
+                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+                </InputGroup>
+                <Button onClick={handleGenerateReport} disabled={isLoading} className="self-end w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  {isLoading ? 'Generating...' : 'Generate Report'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <AnimatePresence>
+          {showReport && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+              <Card className="bg-transparent border-none">
+                <CardHeader className="border-b border-zinc-800 flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-cyan-400">Report Results</CardTitle>
+                    <CardDescription className="text-zinc-400">
+                      Transactions from {startDate} to {endDate}
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-zinc-400">Total Amount</p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KES' }).format(totalAmount)}
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <DataTable columns={columns} data={reportData} />
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  )
+}
+
+// --- SUB-COMPONENTS ---
+const InputGroup = ({ icon: Icon, label, children }: any) => (
+  <div className="space-y-2">
+    <Label className="text-zinc-300 flex items-center gap-2"><Icon className="w-4 h-4" /> {label}</Label>
+    {children}
+  </div>
+)
