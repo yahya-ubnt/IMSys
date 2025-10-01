@@ -12,6 +12,23 @@ const ApplicationSettingsSchema = mongoose.Schema(
       required: true,
       default: "Wifi", // Default Lucide icon name
     },
+
+    // M-Pesa Fields
+    mpesaPaybill: {
+      paybillNumber: { type: String, trim: true },
+      consumerKey: { type: String, trim: true },
+      consumerSecret: { type: String, trim: true },
+      passkey: { type: String, trim: true },
+      activated: { type: Boolean, default: false }
+    },
+    mpesaTill: {
+      tillStoreNumber: { type: String, trim: true },
+      tillNumber: { type: String, trim: true },
+      consumerKey: { type: String, trim: true },
+      consumerSecret: { type: String, trim: true },
+      passkey: { type: String, trim: true },
+      activated: { type: Boolean, default: false }
+    }
   },
   {
     timestamps: true,

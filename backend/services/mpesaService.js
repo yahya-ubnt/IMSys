@@ -3,31 +3,92 @@ const MikrotikUser = require('../models/MikrotikUser');
 const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
+const ApplicationSettings = require('../models/ApplicationSettings'); // Import ApplicationSettings
 const { reconnectMikrotikUser } = require('../utils/mikrotikUtils');
 const { getDarajaToken } = require('../utils/darajaAuth');
-const { DARAJA_ENV, DARAJA_SHORTCODE, DARAJA_PASSKEY } = require('../config/env');
+const { DARAJA_ENV } = require('../config/env');
+
+// Helper function to get M-Pesa configuration from the database
+const getMpesaConfig = async (type) => {
+  const settings = await ApplicationSettings.findOne();
+  if (type === 'paybill' && settings?.mpesaPaybill) {
+    return {
+      shortcode: settings.mpesaPaybill.paybillNumber,
+      passkey: settings.mpesaPaybill.passkey,
+      consumerKey: settings.mpesaPaybill.consumerKey,
+      consumerSecret: settings.mpesaPaybill.consumerSecret,
+    };
+  }
+  if (type === 'till' && settings?.mpesaTill) {
+    return {
+      shortcode: settings.mpesaTill.tillNumber,
+      passkey: settings.mpesaTill.passkey,
+      consumerKey: settings.mpesaTill.consumerKey,
+      consumerSecret: settings.mpesaTill.consumerSecret,
+    };
+  }
+  // Fallback for STK push if no type is specified
+  if (!type) {
+    if (settings?.mpesaPaybill?.activated) return getMpesaConfig('paybill');
+    if (settings?.mpesaTill?.activated) return getMpesaConfig('till');
+  }
+  throw new Error(`M-Pesa ${type || ''} is not configured.`);
+};
+
+const registerCallbackURL = async (type) => {
+  const config = await getMpesaConfig(type);
+  const token = await getDarajaToken(config.consumerKey, config.consumerSecret);
+
+  const url = DARAJA_ENV === 'production'
+    ? 'https://api.safaricom.co.ke/mpesa/c2b/v1/registerurl'
+    : 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl';
+
+  const response = await axios.post(url, {
+    ShortCode: config.shortcode,
+    ResponseType: 'Completed',
+    ConfirmationURL: `http://localhost:5000/api/payments/c2b-callback`,
+    ValidationURL: `http://localhost:5000/api/payments/c2b-validation`,
+  }, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  // Update the activation status in the database
+  const settings = await ApplicationSettings.findOne();
+  if (type === 'paybill') {
+    settings.mpesaPaybill.activated = true;
+  } else if (type === 'till') {
+    settings.mpesaTill.activated = true;
+  }
+  await settings.save();
+
+  return response.data;
+};
+
 
 // A temporary in-memory store for STK requests.
 // In a production environment, this should be a database table.
 const pendingStkRequests = new Map();
 
 const initiateStkPushService = async (amount, phoneNumber, accountReference, userId) => {
+  const { shortcode, passkey } = await getMpesaConfig();
   const token = await getDarajaToken();
   const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
-  const password = Buffer.from(`${DARAJA_SHORTCODE}${DARAJA_PASSKEY}${timestamp}`).toString('base64');
+  const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
 
   const url = DARAJA_ENV === 'production'
     ? 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
     : 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
 
   const response = await axios.post(url, {
-    BusinessShortCode: DARAJA_SHORTCODE,
+    BusinessShortCode: shortcode,
     Password: password,
     Timestamp: timestamp,
     TransactionType: 'CustomerPayBillOnline',
     Amount: amount,
     PartyA: phoneNumber,
-    PartyB: DARAJA_SHORTCODE,
+    PartyB: shortcode,
     PhoneNumber: phoneNumber,
     CallBackURL: `http://localhost:5000/api/payments/daraja-callback`,
     AccountReference: accountReference,
@@ -179,4 +240,5 @@ module.exports = {
   processStkCallback,
   processC2bCallback,
   creditUserWallet,
+  registerCallbackURL,
 };
