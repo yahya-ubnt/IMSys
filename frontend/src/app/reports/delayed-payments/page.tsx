@@ -21,19 +21,24 @@ export default function DelayedPaymentsPage() {
   const { toast } = useToast();
   
   const [daysOverdue, setDaysOverdue] = useState(3);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchDelayedUsers = useCallback(async () => {
     if (!token) {
       setError('Authentication token not found.');
       return;
     }
-    if (daysOverdue === null || daysOverdue <= 0) {
+    if (daysOverdue === null || daysOverdue < 0) {
         toast({ title: 'Invalid Input', description: 'Please enter a valid number of days.', variant: 'destructive' });
         return;
     }
     try {
       setLoading(true);
-      const response = await fetch(`/api/mikrotik/users/delayed-payments?days_overdue=${daysOverdue}`, {
+      let url = `/api/mikrotik/users/delayed-payments?days_overdue=${daysOverdue}`;
+      if (searchTerm) {
+        url += `&name_search=${searchTerm}`;
+      }
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error(`Failed to fetch users: ${response.statusText}`);
@@ -44,7 +49,7 @@ export default function DelayedPaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, daysOverdue, toast]);
+  }, [token, daysOverdue, searchTerm, toast]);
 
   const columns = getColumns();
 
@@ -67,15 +72,22 @@ export default function DelayedPaymentsPage() {
               <CardTitle>Filter Overdue Users</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col md:flex-row items-center gap-4">
                 <Input
                   type="number"
-                  placeholder="Days Overdue"
+                  placeholder="Min. Days Overdue"
                   value={daysOverdue}
                   onChange={(e) => {
                     const value = parseInt(e.target.value, 10);
                     setDaysOverdue(isNaN(value) ? 0 : value);
                   }}
+                  className="max-w-xs bg-zinc-800 border-zinc-700"
+                />
+                <Input
+                  type="text"
+                  placeholder="Search by name or username..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="max-w-xs bg-zinc-800 border-zinc-700"
                 />
                 <Button onClick={fetchDelayedUsers} className="bg-gradient-to-r from-orange-600 to-yellow-500 text-white">

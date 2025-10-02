@@ -26,9 +26,10 @@ interface PaymentStat {
 interface PaymentHistoryEntry {
     billId: string;
     dueDate: string;
-    paidDate: string;
+    paidDate: string | null;
     amount: number;
-    status: 'Paid (On-Time)' | 'Paid (Late)';
+    status: 'Paid (On-Time)' | 'Paid (Late)' | 'Pending';
+    daysDelayed: number;
 }
 
 const StatCard = ({ title, value, icon: Icon, color, suffix = '' }: any) => (
@@ -79,9 +80,22 @@ export default function PaymentStatsPage() {
     const columns: ColumnDef<PaymentHistoryEntry>[] = [
         { accessorKey: "dueDate", header: "Due Date", cell: ({ row }) => new Date(row.original.dueDate).toLocaleDateString() },
         { accessorKey: "paidDate", header: "Paid Date", cell: ({ row }) => row.original.paidDate ? new Date(row.original.paidDate).toLocaleDateString() : 'N/A' },
+        {
+            accessorKey: "daysDelayed",
+            header: "Days Delayed",
+            cell: ({ row }) => {
+                const days = parseInt(row.original.daysDelayed as any, 10);
+                if (isNaN(days)) {
+                    return <Badge variant="secondary">N/A</Badge>;
+                }
+                // Assuming a grace period of 3 days for visual indication
+                const variant = days > 3 ? 'destructive' : 'default';
+                return <Badge variant={variant}>{days} {days === 1 ? 'day' : 'days'}</Badge>
+            }
+        },
         { accessorKey: "amount", header: "Amount", cell: ({ row }) => `KES ${row.original.amount.toLocaleString()}` },
-        { 
-            accessorKey: "status", 
+        {
+            accessorKey: "status",
             header: "Status",
             cell: ({ row }) => {
                 const status = row.original.status;
@@ -90,7 +104,6 @@ export default function PaymentStatsPage() {
             }
         },
     ];
-
     if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading payment insights...</div>;
     if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
     if (!stats) return null;

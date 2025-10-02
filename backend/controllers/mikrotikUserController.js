@@ -796,7 +796,7 @@ const getDowntimeLogs = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/delayed-payments
 // @access  Private/Admin
 const getDelayedPayments = asyncHandler(async (req, res) => {
-  const { days_overdue } = req.query;
+  const { days_overdue, name_search } = req.query;
 
   if (!days_overdue) {
     res.status(400);
@@ -810,11 +810,20 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
   }
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to the beginning of the day
+  today.setHours(0, 0, 0, 0);
 
-  const users = await MikrotikUser.find({
+  const filter = {
     expiryDate: { $lt: today },
-  }).populate('package');
+  };
+
+  if (name_search) {
+    filter.$or = [
+      { officialName: { $regex: name_search, $options: 'i' } },
+      { username: { $regex: name_search, $options: 'i' } },
+    ];
+  }
+
+  const users = await MikrotikUser.find(filter).populate('package');
 
   const usersWithDaysOverdue = users
     .map(user => {
@@ -871,7 +880,7 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
 
             if (payment) {
                 const paidDate = new Date(payment.createdAt);
-                const delay = (paidDate.getTime() - dueDate.getTime()) / (1000 * 3600 * 24);
+                const delay = Math.max(0, (paidDate.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
 
                 if (paidDate <= gracePeriodEndDate) {
                     onTimePayments++;
@@ -881,6 +890,7 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
                         paidDate: paidDate,
                         amount: debit.amount,
                         status: 'Paid (On-Time)',
+                        daysDelayed: 0,
                     });
                 } else {
                     latePayments++;
@@ -891,16 +901,20 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
                         paidDate: paidDate,
                         amount: debit.amount,
                         status: 'Paid (Late)',
+                        daysDelayed: Math.round(delay),
                     });
                 }
             } else {
                 // Handle cases where a debit exists but has not been paid yet
+                const today = new Date();
+                const daysDelayed = (today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24);
                 paymentHistory.push({
                     billId: debit._id,
                     dueDate: debit.createdAt,
                     paidDate: null, // No payment date
                     amount: debit.amount,
                     status: 'Pending',
+                    daysDelayed: Math.round(Math.max(0, daysDelayed)),
                 });
             }
         });
