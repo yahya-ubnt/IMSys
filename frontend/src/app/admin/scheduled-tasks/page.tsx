@@ -20,6 +20,7 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -190,6 +191,9 @@ export default function ScheduledTasksPage() {
                 <DialogContent className="bg-zinc-900 text-white border-zinc-800">
                     <DialogHeader>
                         <DialogTitle>Log for {selectedTask?.name}</DialogTitle>
+                        <DialogDescription>
+                            This is the raw log output from the last time this task was executed.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="mt-4 bg-zinc-800 p-4 rounded-md max-h-96 overflow-y-auto">
                         <pre className="text-sm whitespace-pre-wrap">
@@ -204,6 +208,9 @@ export default function ScheduledTasksPage() {
                 <DialogContent className="bg-zinc-900 text-white border-zinc-800">
                     <DialogHeader>
                         <DialogTitle>{selectedTask?._id ? 'Edit Task' : 'Create New Task'}</DialogTitle>
+                        <DialogDescription>
+                            {selectedTask?._id ? 'Modify the details of this scheduled task.' : 'Create a new automated task to run on a schedule.'}
+                        </DialogDescription>
                     </DialogHeader>
                     <TaskForm
                         task={selectedTask}
