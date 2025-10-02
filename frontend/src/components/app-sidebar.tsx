@@ -288,6 +288,10 @@ const menuCategories: MenuCategory[] = [
         icon: FileText,
         items: [
           {
+            title: "Delayed Payments",
+            url: "/reports/delayed-payments",
+          },
+          {
             title: "Location Report",
             url: "/reports/location",
           },

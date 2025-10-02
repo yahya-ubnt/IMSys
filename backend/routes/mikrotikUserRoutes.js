@@ -13,6 +13,7 @@ const {
   getMikrotikUserStatus,
   getMikrotikUserTraffic,
   getDowntimeLogs,
+  getDelayedPayments,
 } = require('../controllers/mikrotikUserController');
 const protect = require('../middlewares/protect').protect;
 const admin = require('../middlewares/protect').admin;
@@ -20,6 +21,7 @@ const diagnosticRoutes = require('./diagnosticRoutes');
 
 // More specific routes should come before more general ones
 router.route('/clients-for-sms').get(protect, getMikrotikClientsForSms);
+router.route('/delayed-payments').get(protect, admin, getDelayedPayments);
 
 router.route('/stats/monthly-new-subscribers').get(protect, admin, getMonthlyNewSubscribers);
 router.route('/stats/monthly-paid-subscribers').get(protect, admin, getMonthlyPaidSubscribers);

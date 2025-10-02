@@ -1,0 +1,323 @@
+"use client"
+
+import * as React from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Shell } from "@/components/shell"
+
+// API service functions
+import { getMpesaSettings, updateMpesaSettings, activateMpesa } from "@/services/settingsService"
+
+const paybillFormSchema = z.object({
+  paybillNumber: z.string().min(1, "Paybill number is required"),
+  consumerKey: z.string().min(1, "Consumer key is required"),
+  consumerSecret: z.string().min(1, "Consumer secret is required"),
+  passkey: z.string().min(1, "Passkey is required"),
+})
+
+const tillFormSchema = z.object({
+  tillStoreNumber: z.string().min(1, "Store number is required"),
+  tillNumber: z.string().min(1, "Till number is required"),
+  consumerKey: z.string().min(1, "Consumer key is required"),
+  consumerSecret: z.string().min(1, "Consumer secret is required"),
+  passkey: z.string().min(1, "Passkey is required"),
+})
+
+type PaybillFormValues = z.infer<typeof paybillFormSchema>
+type TillFormValues = z.infer<typeof tillFormSchema>
+
+export function MpesaSettingsForm() {
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [isActivating, setIsActivating] = React.useState<string | null>(null)
+  const [settings, setSettings] = React.useState<any>(null)
+
+  const paybillForm = useForm<PaybillFormValues>({
+    resolver: zodResolver(paybillFormSchema),
+    defaultValues: {
+      paybillNumber: "",
+      consumerKey: "",
+      consumerSecret: "",
+      passkey: "",
+    },
+  })
+
+  const tillForm = useForm<TillFormValues>({
+    resolver: zodResolver(tillFormSchema),
+    defaultValues: {
+      tillStoreNumber: "",
+      tillNumber: "",
+      consumerKey: "",
+      consumerSecret: "",
+      passkey: "",
+    },
+  })
+
+  React.useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const data = await getMpesaSettings()
+        setSettings(data)
+        if (data.mpesaPaybill) {
+          paybillForm.reset(data.mpesaPaybill)
+        }
+        if (data.mpesaTill) {
+          tillForm.reset(data.mpesaTill)
+        }
+      } catch (error) {
+        toast.error("Failed to fetch M-Pesa settings.")
+      }
+    }
+    fetchSettings()
+  }, [paybillForm, tillForm])
+
+  const handlePaybillSubmit = async (values: PaybillFormValues) => {
+    setIsLoading(true)
+    try {
+      await updateMpesaSettings("paybill", values)
+      toast.success("Paybill settings updated successfully.")
+    } catch (error) {
+      toast.error("Failed to update Paybill settings.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleTillSubmit = async (values: TillFormValues) => {
+    setIsLoading(true)
+    try {
+      await updateMpesaSettings("till", values)
+      toast.success("Till settings updated successfully.")
+    } catch (error) {
+      toast.error("Failed to update Till settings.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleActivation = async (type: "paybill" | "till") => {
+    setIsActivating(type)
+    try {
+      const response = await activateMpesa(type)
+      toast.success(response.message)
+      // Refetch settings to update activation status
+      const data = await getMpesaSettings()
+      setSettings(data)
+    } catch (error: any) {
+      toast.error(`Failed to activate: ${error.message}`)
+    } finally {
+      setIsActivating(null)
+    }
+  }
+
+  return (
+    <Tabs defaultValue="paybill" className="w-full">
+      <TabsList>
+        <TabsTrigger value="paybill">M-Pesa Paybill</TabsTrigger>
+        <TabsTrigger value="till">M-Pesa Till</TabsTrigger>
+      </TabsList>
+
+      {/* Paybill Tab */}
+      <TabsContent value="paybill">
+        <Card>
+          <CardHeader>
+            <CardTitle>Paybill Configuration</CardTitle>
+            <CardDescription>
+              Enter your M-Pesa Paybill details here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-8">
+            <Form {...paybillForm}>
+              <form onSubmit={paybillForm.handleSubmit(handlePaybillSubmit)} className="space-y-4">
+                <FormField
+                  control={paybillForm.control}
+                  name="paybillNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Paybill Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 123456" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={paybillForm.control}
+                  name="consumerKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consumer Key</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your consumer key" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={paybillForm.control}
+                  name="consumerSecret"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consumer Secret</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Your consumer secret" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={paybillForm.control}
+                  name="passkey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Passkey</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Your passkey" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Saving..." : "Update Paybill Settings"}
+                </Button>
+              </form>
+            </Form>
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Callback URL</h4>
+              <p className="text-sm text-muted-foreground">
+                We will attempt to register this callback URL with Safaricom.
+              </p>
+              <Input
+                readOnly
+                value="https://api.yourdomain.com/api/payments/c2b-callback"
+                className="bg-muted"
+              />
+              <Button
+                onClick={() => handleActivation("paybill")}
+                disabled={isActivating === "paybill"}
+                variant={settings?.mpesaPaybill?.activated ? "secondary" : "default"}
+              >
+                {isActivating === "paybill" ? "Activating..." : (settings?.mpesaPaybill?.activated ? "Activated" : "Activate M-Pesa")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Till Tab */}
+      <TabsContent value="till">
+        <Card>
+          <CardHeader>
+            <CardTitle>Till Configuration</CardTitle>
+            <CardDescription>
+              Enter your M-Pesa Till details here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-8">
+            <Form {...tillForm}>
+              <form onSubmit={tillForm.handleSubmit(handleTillSubmit)} className="space-y-4">
+                <FormField
+                  control={tillForm.control}
+                  name="tillStoreNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Till Store Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 654321" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tillForm.control}
+                  name="tillNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Till Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 987654" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tillForm.control}
+                  name="consumerKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consumer Key</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your consumer key" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tillForm.control}
+                  name="consumerSecret"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consumer Secret</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Your consumer secret" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={tillForm.control}
+                  name="passkey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Passkey</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Your passkey" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Saving..." : "Update Till Settings"}
+                </Button>
+              </form>
+            </Form>
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Callback URL</h4>
+              <p className="text-sm text-muted-foreground">
+                We will attempt to register this callback URL with Safaricom.
+              </p>
+              <Input
+                readOnly
+                value="https://api.yourdomain.com/api/payments/c2b-callback"
+                className="bg-muted"
+              />
+              <Button
+                onClick={() => handleActivation("till")}
+                disabled={isActivating === "till"}
+                variant={settings?.mpesaTill?.activated ? "secondary" : "default"}
+              >
+                {isActivating === "till" ? "Activating..." : (settings?.mpesaTill?.activated ? "Activated" : "Activate M-Pesa")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  )
+}

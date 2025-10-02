@@ -790,6 +790,44 @@ const getDowntimeLogs = asyncHandler(async (req, res) => {
   res.status(200).json(logs);
 });
 
+// @desc    Get users with delayed payments
+// @route   GET /api/mikrotik/users/delayed-payments
+// @access  Private/Admin
+const getDelayedPayments = asyncHandler(async (req, res) => {
+  const { days_overdue } = req.query;
+
+  if (!days_overdue) {
+    res.status(400);
+    throw new Error('days_overdue query parameter is required');
+  }
+
+  const days = parseInt(days_overdue, 10);
+  if (isNaN(days)) {
+    res.status(400);
+    throw new Error('days_overdue must be a number');
+  }
+
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() - days);
+
+  const users = await MikrotikUser.find({
+    expiryDate: { $lt: targetDate },
+  }).populate('package');
+
+  const usersWithDaysOverdue = users.map(user => {
+    const expiryDate = new Date(user.expiryDate);
+    const now = new Date();
+    const diffTime = Math.abs(now - expiryDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return {
+      ...user.toObject(),
+      daysOverdue: diffDays,
+    };
+  });
+
+  res.status(200).json(usersWithDaysOverdue);
+});
+
 module.exports = {
   createMikrotikUser,
   getMikrotikUsers,
@@ -804,4 +842,5 @@ module.exports = {
   getMikrotikUserTraffic,
   getMikrotikUsersByStation,
   getDowntimeLogs,
+  getDelayedPayments,
 };
