@@ -12,14 +12,6 @@ const { decrypt } = require('../utils/crypto');
 // Load environment variables from backend/.env
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// Placeholder for MikroTik connection details - these should ideally come from your database
-// For now, we'll use environment variables or hardcode for testing, but the final solution
-// should fetch these from the ApplicationSettings or MikrotikRouter models.
-const MIKROTIK_HOST = process.env.MIKROTIK_HOST || 'your_mikrotik_ip';
-const MIKROTIK_USERNAME = process.env.MIKROTIK_USERNAME || 'your_mikrotik_username';
-const MIKROTIK_PASSWORD = process.env.MIKROTIK_PASSWORD || 'your_mikrotik_password';
-const MIKROTIK_PORT = process.env.MIKROTIK_PORT || 8728; // Default API port
-
 async function disconnectExpiredClients() {
     console.log(`[${new Date().toISOString()}] Starting disconnectExpiredClients script...`);
 
@@ -128,6 +120,9 @@ async function disconnectExpiredClients() {
             connection.close();
             console.log(`[${new Date().toISOString()}] Disconnected from MikroTik router.`);
         }
+        // Ensure the database connection is closed
+        await mongoose.connection.close();
+        console.log(`[${new Date().toISOString()}] MongoDB connection closed.`);
         console.log(`[${new Date().toISOString()}] disconnectExpiredClients script finished.`);
     }
 }
