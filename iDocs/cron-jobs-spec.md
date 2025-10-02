@@ -28,11 +28,24 @@ This section details the cron jobs that are currently active on the production s
 
 ---
 
-## 3. Recommended Future Cron Jobs
+## 3. Implemented In-App Schedules
+
+This section details automated tasks that run continuously as part of the main application process (e.g., using `setInterval`), started in `server.js`.
+
+### 3.1. Network Health Monitoring
+
+-   **Task:** Periodically checks the status of all MikroTik routers to ensure they are online.
+-   **Service:** `backend/services/routerMonitoringService.js`
+-   **Schedule:** Runs every 5 seconds (triggered by `setInterval` in `server.js`).
+-   **Purpose:** To provide near real-time status updates for all routers. The service has a built-in retry mechanism to prevent false alarms and updates the `isOnline` status of each router in the database. This is a critical service for monitoring network uptime.
+
+---
+
+## 4. Recommended Future Cron Jobs
 
 This section outlines suggested cron jobs that would add significant value to the system but have not yet been implemented.
 
-### 3.1. Automated Payment Reminders
+### 4.1. Automated Payment Reminders
 
 -   **Task:** Send SMS reminders to customers whose subscription is expiring soon.
 -   **Proposed Script:** `backend/scripts/sendPaymentReminders.js` (This script needs to be created).
@@ -42,18 +55,7 @@ This section outlines suggested cron jobs that would add significant value to th
     1.  Queries for users whose `expiryDate` is in the near future (e.g., in 3 days).
     2.  Uses the existing `smsService` to send a pre-defined message from an SMS template.
 
-### 3.2. Network Health Monitoring
-
--   **Task:** Periodically check the status of all MikroTik routers to ensure they are online.
--   **Proposed Script:** `backend/scripts/checkRouterStatus.js` (This script needs to be created).
--   **Recommended Schedule:** `*/15 * * * *` (Every 15 minutes).
--   **Purpose:** To provide early warnings of network outages. An alert (via SMS or email) can be sent to the administrator if a router is unreachable, allowing for a quick response before a large number of customers are affected.
--   **Implementation Notes:** This script would:
-    1.  Fetch all routers from the `MikrotikRouter` model.
-    2.  Loop through each router and attempt to connect using the RouterOS API.
-    3.  If a connection fails, trigger an alert.
-
-### 3.3. Database Log Cleanup
+### 4.2. Database Log Cleanup
 
 -   **Task:** Archive or delete old log records to maintain database performance.
 -   **Proposed Script:** `backend/scripts/cleanupOldLogs.js` (This script needs to be created).
