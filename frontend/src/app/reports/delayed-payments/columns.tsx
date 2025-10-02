@@ -23,7 +23,7 @@ export const getColumns = (): ColumnDef<MikrotikUser & { daysOverdue: number }>[
       </Button>
     ),
     cell: ({ row }) => (
-      <Link href={`/mikrotik/users/${row.original._id}/details`} className="font-medium text-blue-400 hover:underline">
+      <Link href={`/reports/delayed-payments/${row.original._id}/stats`} className="font-medium text-blue-400 hover:underline">
         {row.original.username}
       </Link>
     ),
@@ -72,7 +72,7 @@ export const getColumns = (): ColumnDef<MikrotikUser & { daysOverdue: number }>[
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}/details`}>View Details</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link href={`/reports/delayed-payments/${user._id}/stats`}>View Stats</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>Edit User</Link></DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

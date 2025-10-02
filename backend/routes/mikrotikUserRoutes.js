@@ -14,6 +14,7 @@ const {
   getMikrotikUserTraffic,
   getDowntimeLogs,
   getDelayedPayments,
+  getUserPaymentStats,
 } = require('../controllers/mikrotikUserController');
 const protect = require('../middlewares/protect').protect;
 const admin = require('../middlewares/protect').admin;
@@ -34,6 +35,7 @@ router.use('/:userId/diagnostics', protect, admin, diagnosticRoutes);
 
 router.route('/:id/status').get(protect, admin, getMikrotikUserStatus);
 router.route('/:id/traffic').get(protect, admin, getMikrotikUserTraffic);
+router.route('/:id/payment-stats').get(protect, admin, getUserPaymentStats);
 router.route('/:userId/downtime-logs').get(protect, admin, getDowntimeLogs);
 
 router

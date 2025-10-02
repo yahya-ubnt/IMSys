@@ -132,3 +132,73 @@ No immediate changes to the data models are anticipated. The logic will be handl
 - **Automated Alerts:** Set up cron jobs to automatically send SMS or WhatsApp reminders to users on this list.
 - **User Tagging:** Allow admins to tag users (e.g., "Good Payer," "Chronic Late Payer") based on their stats.
 - **Dashboard Widget:** Add a widget to the main dashboard showing a summary of overdue payments (e.g., "5 users are 3+ days overdue").
+
+## 7. In-Depth Logic for Payment Insights Page
+
+This section details the step-by-step process of how the Payment Insights page generates its results, turning raw transaction data into a clear financial scorecard for each customer.
+
+### The Goal: Answer Key Financial Questions
+
+The primary purpose of this page is to answer these critical questions about a customer at a glance:
+- Are they a reliable payer?
+- When they are late, how late are they on average?
+- What is their total value to the business so far?
+- What is the detailed history of their bills and payments?
+
+### Step 1: Fetching the Complete Financial History (Backend)
+
+When a user navigates to the page, the frontend makes a request to the API endpoint: `GET /api/mikrotik/users/:id/payment-stats`.
+
+The backend `getUserPaymentStats` function then performs its first and most crucial task: it gathers all the raw financial data for that specific user.
+
+1.  It queries the `WalletTransaction` collection in the database.
+2.  It fetches **every single transaction** linked to that user's ID.
+3.  It sorts these transactions chronologically, from oldest to newest. This is essential for the next step.
+
+At this point, the backend has a complete, ordered history of every time the user was billed and every time they paid.
+
+### Step 2: The Core Logic - Matching Bills to Payments (Backend)
+
+This is where the "intelligence" of the feature lies. The backend code now processes the transaction history to understand the user's behavior.
+
+1.  **Separating Bills from Payments:** The code splits the transactions into two lists:
+    -   **`debitTransactions`**: These are the bills. Each `Debit` represents a monthly charge. The date of the debit is considered the **"Due Date"**.
+    -   **`creditTransactions`**: These are the payments made by the customer.
+
+2.  **The Matching Loop:** The code then iterates through every single **bill (`Debit`)** one by one. For each bill, it asks: "Was this bill paid, and if so, when?"
+    -   It searches the `creditTransactions` list to find the **first payment** that occurred **on or after** the bill's due date and was **large enough** to cover the bill amount.
+
+3.  **Applying the Business Rule (The Grace Period):** The code defines a configurable "grace period". This value is stored in the `ApplicationSettings` model (as `paymentGracePeriodDays`) and defaults to 3 days. A payment is still considered "On-Time" if it's made within this grace period after the bill's due date.
+
+### Step 3: Calculating the Key Metrics (Backend)
+
+As the code loops through each bill and its corresponding payment, it calculates the statistics that are displayed in the cards at the top of the page.
+
+-   **On-Time vs. Late Payments:**
+    -   If a payment is found and its date is within the 3-day grace period, it increments the `onTimePayments` counter.
+    -   If the payment date is *after* the grace period, it increments the `latePayments` counter.
+
+-   **Average Payment Delay:**
+    -   For every late payment, it calculates the number of days between the due date and the payment date.
+    -   It adds this number to a running total, `totalDelayDays`.
+    -   After the loop, it calculates the average by dividing `totalDelayDays` by the number of `latePayments`.
+
+-   **On-Time Rate:** A simple percentage calculated after the loop: `(On-Time Payments / Total Payments) * 100`.
+
+-   **Lifetime Value:** The sum of the `amount` of all `creditTransactions` (i.e., the total amount of money the customer has ever paid).
+
+### Step 4: Building the Detailed Payment History Table
+
+Simultaneously, as the backend performs these calculations, it also builds the row-by-row data for the "Detailed Payment History" table.
+
+-   If a bill (`Debit`) is matched with a payment (`Credit`), it adds an entry to the history with the due date, the paid date, the amount, and a status of either **"Paid (On-Time)"** or **"Paid (Late)"**.
+-   If the code cannot find a match for a particular bill, it means that bill is still unpaid. It then adds an entry to the history with the due date, a `null` paid date, the amount, and a status of **"Pending"**.
+
+### Step 5: Displaying the Results (Frontend)
+
+Finally, the backend bundles all of this calculated data into a single JSON object and sends it to the frontend.
+
+The frontend page receives this object and:
+1.  Renders the `StatCard` components using the calculated metrics (e.g., `onTimePayments`, `averagePaymentDelay`).
+2.  Passes the `paymentHistory` array to the `DataTable` component.
+3.  The table then displays each entry, using different colored badges for the status ("On-Time", "Late", "Pending") and showing "N/A" for the paid date if the bill is still pending.

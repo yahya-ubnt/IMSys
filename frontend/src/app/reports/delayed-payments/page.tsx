@@ -72,7 +72,10 @@ export default function DelayedPaymentsPage() {
                   type="number"
                   placeholder="Days Overdue"
                   value={daysOverdue}
-                  onChange={(e) => setDaysOverdue(parseInt(e.target.value, 10))}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    setDaysOverdue(isNaN(value) ? 0 : value);
+                  }}
                   className="max-w-xs bg-zinc-800 border-zinc-700"
                 />
                 <Button onClick={fetchDelayedUsers} className="bg-gradient-to-r from-orange-600 to-yellow-500 text-white">

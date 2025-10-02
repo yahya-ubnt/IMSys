@@ -5,6 +5,8 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const { decrypt } = require('../utils/crypto'); // Import decrypt function
 const UserDowntimeLog = require('../models/UserDowntimeLog');
+const WalletTransaction = require('../models/WalletTransaction');
+const ApplicationSettings = require('../models/ApplicationSettings');
 // Mikrotik API client will be integrated here later
 // const MikrotikAPI = require('mikrotik'); // Example
 
@@ -807,26 +809,122 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
     throw new Error('days_overdue must be a number');
   }
 
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() - days);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to the beginning of the day
 
   const users = await MikrotikUser.find({
-    expiryDate: { $lt: targetDate },
+    expiryDate: { $lt: today },
   }).populate('package');
 
-  const usersWithDaysOverdue = users.map(user => {
-    const expiryDate = new Date(user.expiryDate);
-    const now = new Date();
-    const diffTime = Math.abs(now - expiryDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return {
-      ...user.toObject(),
-      daysOverdue: diffDays,
-    };
-  });
+  const usersWithDaysOverdue = users
+    .map(user => {
+      const expiryDate = new Date(user.expiryDate);
+      const diffTime = today.getTime() - expiryDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return {
+        ...user.toObject(),
+        daysOverdue: diffDays,
+      };
+    })
+    .filter(user => user.daysOverdue >= days);
 
   res.status(200).json(usersWithDaysOverdue);
 });
+
+
+// @desc    Get payment statistics for a single Mikrotik User
+// @route   GET /api/mikrotik/users/:id/payment-stats
+// @access  Private/Admin
+const getUserPaymentStats = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await MikrotikUser.findById(userId);
+
+        if (!user) {
+            res.status(404);
+            throw new Error('User not found');
+        }
+
+        // Fetch application settings to get the grace period
+        const settings = await ApplicationSettings.findOne();
+        const gracePeriodDays = settings ? settings.paymentGracePeriodDays : 3; // Default to 3 if not set
+
+        const transactions = await WalletTransaction.find({ userId }).sort({ createdAt: 'asc' });
+
+        const debitTransactions = transactions.filter(t => t.type === 'Debit');
+        const creditTransactions = transactions.filter(t => t.type === 'Credit');
+
+        let onTimePayments = 0;
+        let latePayments = 0;
+        let totalDelayDays = 0;
+        const paymentHistory = [];
+
+        debitTransactions.forEach(debit => {
+            const dueDate = new Date(debit.createdAt);
+            const gracePeriodEndDate = new Date(dueDate);
+            gracePeriodEndDate.setDate(dueDate.getDate() + gracePeriodDays);
+
+            const payment = creditTransactions.find(credit => 
+                new Date(credit.createdAt) >= dueDate && credit.amount >= debit.amount
+            );
+
+            if (payment) {
+                const paidDate = new Date(payment.createdAt);
+                const delay = (paidDate.getTime() - dueDate.getTime()) / (1000 * 3600 * 24);
+
+                if (paidDate <= gracePeriodEndDate) {
+                    onTimePayments++;
+                    paymentHistory.push({
+                        billId: debit._id,
+                        dueDate: debit.createdAt,
+                        paidDate: paidDate,
+                        amount: debit.amount,
+                        status: 'Paid (On-Time)',
+                    });
+                } else {
+                    latePayments++;
+                    totalDelayDays += delay;
+                    paymentHistory.push({
+                        billId: debit._id,
+                        dueDate: debit.createdAt,
+                        paidDate: paidDate,
+                        amount: debit.amount,
+                        status: 'Paid (Late)',
+                    });
+                }
+            } else {
+                // Handle cases where a debit exists but has not been paid yet
+                paymentHistory.push({
+                    billId: debit._id,
+                    dueDate: debit.createdAt,
+                    paidDate: null, // No payment date
+                    amount: debit.amount,
+                    status: 'Pending',
+                });
+            }
+        });
+
+        const totalPayments = onTimePayments + latePayments;
+        const lifetimeValue = creditTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+
+        res.status(200).json({
+            userId: user._id,
+            name: user.officialName,
+            totalPayments,
+            onTimePayments,
+            latePayments,
+            onTimePaymentPercentage: totalPayments > 0 ? (onTimePayments / totalPayments) * 100 : 0,
+            averagePaymentDelay: latePayments > 0 ? totalDelayDays / latePayments : 0,
+            lifetimeValue,
+            paymentHistory,
+        });
+    } catch (error) {
+        console.error(`Error fetching payment stats for user ${req.params.id}:`, error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 
 module.exports = {
   createMikrotikUser,
@@ -843,4 +941,5 @@ module.exports = {
   getMikrotikUsersByStation,
   getDowntimeLogs,
   getDelayedPayments,
+  getUserPaymentStats,
 };

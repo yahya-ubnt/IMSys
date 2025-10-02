@@ -12,6 +12,11 @@ const ApplicationSettingsSchema = mongoose.Schema(
       required: true,
       default: "Wifi", // Default Lucide icon name
     },
+    paymentGracePeriodDays: {
+      type: Number,
+      required: true,
+      default: 3,
+    },
 
     // M-Pesa Fields
     mpesaPaybill: {
