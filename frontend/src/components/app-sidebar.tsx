@@ -344,6 +344,11 @@ const menuCategories: MenuCategory[] = [
     label: "Administration",
     items: [
       {
+        title: "Scheduled Tasks",
+        url: "/admin/scheduled-tasks",
+        icon: Settings, // Using Settings icon for now
+      },
+      {
         title: "Accounts",
         url: "/settings",
         icon: Settings,

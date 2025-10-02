@@ -1,4 +1,4 @@
-const { Routeros } = require('routeros-node');
+const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const Device = require('../models/Device');
 const DowntimeLog = require('../models/DowntimeLog');
 const MikrotikRouter = require('../models/MikrotikRouter');
@@ -45,24 +45,26 @@ const handleFailedPing = async (device) => {
 };
 
 const pingDevice = async (device) => {
-  let routeros;
+  let client;
   try {
     const router = await MikrotikRouter.findById(device.router);
     if (!router) {
       throw new Error(`Router with ID ${device.router} not found for device ${device.ipAddress}`);
     }
 
-    routeros = new Routeros({
+    client = new RouterOSAPI({
       host: router.ipAddress,
       user: router.apiUsername,
       password: decrypt(router.apiPassword),
       port: router.apiPort,
+      timeout: 4000, // Shorter timeout for ping
     });
 
-    const conn = await routeros.connect();
-    const response = await conn.write(['/ping', `=address=${device.ipAddress}`, '=count=1']);
-
-    if (response && response.length > 0 && response[0].received > 0) {
+    await client.connect();
+    const response = await client.write('/ping', [`=address=${device.ipAddress}`, '=count=1']);
+    
+    // node-routeros returns an array of objects. We need to check if any of them indicate a received packet.
+    if (response && response.some(r => r.received && parseInt(r.received, 10) > 0)) {
       await handleSuccessfulPing(device);
     } else {
       await handleFailedPing(device);
@@ -71,8 +73,8 @@ const pingDevice = async (device) => {
     console.error(`Error pinging ${device.ipAddress}:`, error.message);
     await handleFailedPing(device);
   } finally {
-    if (routeros && routeros.connected) {
-      routeros.destroy();
+    if (client && client.connected) {
+      client.close();
     }
   }
 };

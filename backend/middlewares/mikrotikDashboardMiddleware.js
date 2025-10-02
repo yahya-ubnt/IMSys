@@ -1,61 +1,51 @@
 const asyncHandler = require('express-async-handler');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const { decrypt } = require('../utils/crypto');
-const { RouterOSClient } = require('routeros-client');
+const RouterOSAPI = require('node-routeros').RouterOSAPI;
 
 const connectToRouter = asyncHandler(async (req, res, next) => {
-  let client; // Declare client here
+  const router = await MikrotikRouter.findById(req.params.routerId);
+
+  if (!router) {
+    res.status(404);
+    throw new Error('Router not found');
+  }
+
+  let decryptedPassword;
   try {
-    const router = await MikrotikRouter.findById(req.params.routerId);
+    decryptedPassword = decrypt(router.apiPassword);
+  } catch (e) {
+    console.error('Failed to decrypt router password:', e);
+    res.status(500);
+    throw new Error('Could not decrypt router password. Please check settings.');
+  }
 
-    if (!router) {
-      res.status(404);
-      throw new Error('Router not found');
-    }
+  const client = new RouterOSAPI({
+    host: router.ipAddress,
+    user: router.apiUsername,
+    password: decryptedPassword,
+    port: router.apiPort,
+    timeout: 5000, // 5-second timeout
+  });
 
-    let decryptedPassword;
-    try {
-      decryptedPassword = decrypt(router.apiPassword);
-    } catch (parseError) {
-      console.error('Error parsing or decrypting password:', parseError);
-      res.status(500);
-      throw new Error('Failed to decrypt router password. Ensure it is correctly encrypted.');
-    }
+  try {
+    await client.connect();
+    console.log(`Successfully connected to router: ${router.name}`);
+    req.mikrotikClient = client; // Attach client to the request object
 
-    try {
-        console.log(`Connecting to MikroTik router: ${router.name} (${router.ipAddress}:${router.apiPort})`);
-        console.log(`Using username: ${router.apiUsername}`);
-        console.log('Middleware: Client object before connect', client);
-        client = new RouterOSClient({
-            host: router.ipAddress,
-            port: router.apiPort,
-            user: router.apiUsername,
-            password: decryptedPassword,
-            timeout: 30, // seconds (increased for debugging)
-        });
-        await client.connect();
-        console.log('Middleware: Client object after connect (if successful)', client);
-        req.client = client;
-        client.on('error', (err) => {
-            console.error('RouterOSClient Error Event:', err);
-        });
-        next();
-    } catch (error) {
-        console.error(`RouterOSClient Connection Error for ${router.name} (${router.ipAddress}):`, error.message);
-        return res.status(500).json({
-            message: `Failed to connect to MikroTik router: ${router.name}`,
-            error: error.message,
-        });
-    } finally { // Added finally block
-        if (client && client.connected) { // Ensure client exists and is connected before closing
-            client.close();
-        }
-    }
-  } catch (outerError) {
-    console.error('An unexpected error occurred in connectToRouter middleware:', outerError);
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'An unexpected server error occurred.', error: outerError.message });
-    }
+    // Ensure the connection is closed after the response is sent
+    res.on('finish', () => {
+      if (client.connected) {
+        client.close();
+        console.log(`Connection to router ${router.name} closed.`);
+      }
+    });
+
+    next();
+  } catch (error) {
+    console.error(`Failed to connect to MikroTik router ${router.name}:`, error);
+    res.status(500);
+    throw new Error(`Could not connect to router: ${router.name}`);
   }
 });
 

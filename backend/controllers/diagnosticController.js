@@ -4,7 +4,6 @@ const MikrotikRouter = require('../models/MikrotikRouter.js');
 const Device = require('../models/Device.js');
 const DiagnosticLog = require('../models/DiagnosticLog.js');
 const { decrypt } = require('../utils/crypto.js');
-const { Routeros } = require('routeros-node');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const { checkRouterStatus, checkUserStatus, checkCPEStatus } = require('../utils/mikrotikUtils');
 
