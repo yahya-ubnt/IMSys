@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/components/auth-provider";
 import { Loader2, Save, Building, Palette, Bot } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Zod Schema for Validation
 const formSchema = z.object({
@@ -46,6 +47,7 @@ const africanCountries = [
 
 export default function GeneralSettingsForm() {
   const { token } = useAuth();
+  const router = useRouter();
   const form = useForm<GeneralSettingsFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -91,13 +93,13 @@ export default function GeneralSettingsForm() {
       const formData = new FormData();
       
       // Append all fields to FormData
-      Object.keys(data).forEach(key => {
+      (Object.keys(data) as Array<keyof GeneralSettingsFormValues>).forEach(key => {
         if (key === 'logoIcon' || key === 'favicon') {
           if (data[key][0]) formData.append(key, data[key][0]);
         } else if (typeof data[key] === 'object' && data[key] !== null) {
           formData.append(key, JSON.stringify(data[key]));
         } else {
-          formData.append(key, data[key]);
+          formData.append(key, data[key] as string);
         }
       });
 
@@ -109,6 +111,7 @@ export default function GeneralSettingsForm() {
 
       if (!response.ok) throw new Error("Failed to update settings.");
       toast.success("General settings updated successfully!");
+      router.refresh();
     } catch (error) {
       toast.error((error as Error).message);
     }

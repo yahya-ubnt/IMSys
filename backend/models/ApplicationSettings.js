@@ -7,6 +7,10 @@ const ApplicationSettingsSchema = mongoose.Schema(
       required: true,
       default: "MEDIATEK MANAGEMENT SYSTEM",
     },
+    slogan: {
+      type: String,
+      default: "MANAGEMENT SYSTEM",
+    },
     logoIcon: {
       type: String,
       required: true,

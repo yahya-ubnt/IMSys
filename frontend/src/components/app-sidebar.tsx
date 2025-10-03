@@ -3,8 +3,9 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Sun, Moon, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, HeartPulse } from "lucide-react"
-
+import Image from "next/image"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/components/auth-provider"
 
 
 import Link from "next/link" // ADD THIS IMPORT
@@ -366,7 +367,30 @@ const menuCategories: MenuCategory[] = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
+  const { token } = useAuth();
   const [openMenu, setOpenMenu] = React.useState<string | null>(null)
+  const [appName, setAppName] = React.useState("MEDIATEK");
+  const [logoIcon, setLogoIcon] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!token) return;
+      try {
+        const response = await fetch("/api/settings/general", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAppName(data.appName || "MEDIATEK");
+          setLogoIcon(data.logoIcon);
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
+    };
+    fetchSettings();
+  }, [token]);
+
   // Determine which menu should be open based on current pathname
   React.useEffect(() => {
     if (pathname.startsWith("/buildings")) {
@@ -414,11 +438,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="border-b border-zinc-800 pb-4">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <Wifi className="size-5" />
+            {logoIcon && logoIcon.startsWith('/') ? (
+              <Image src={logoIcon} alt="Logo" width={20} height={20} className="size-5" />
+            ) : (
+              <Wifi className="size-5" />
+            )}
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-extrabold text-lg text-blue-400 tracking-wide">
-              MEDIATEK
+              {appName}
             </span>
             <span className="truncate text-xs text-zinc-400 font-medium uppercase">MANAGEMENT SYSTEM</span>
           </div>
