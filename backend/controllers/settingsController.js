@@ -16,6 +16,8 @@ const getBrandingSettings = asyncHandler(async (req, res) => {
     const defaultSettings = await ApplicationSettings.create({
       appName: "MEDIATEK MANAGEMENT SYSTEM",
       logoIcon: "/globe.svg", // Default logo image path
+      mpesaPaybill: undefined,
+      mpesaTill: undefined,
     });
     res.json(defaultSettings);
   }
@@ -58,10 +60,19 @@ const updateBrandingSettings = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getMpesaSettings = asyncHandler(async (req, res) => {
   const settings = await ApplicationSettings.findOne().select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
-  res.json({
-    mpesaPaybill: settings?.mpesaPaybill,
-    mpesaTill: settings?.mpesaTill,
-  });
+  
+  if (settings) {
+    res.json({
+      mpesaPaybill: settings.mpesaPaybill,
+      mpesaTill: settings.mpesaTill,
+    });
+  } else {
+    // If no settings exist, return empty objects
+    res.json({
+      mpesaPaybill: {},
+      mpesaTill: {},
+    });
+  }
 });
 
 // @desc    Update M-Pesa settings

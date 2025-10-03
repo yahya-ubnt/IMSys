@@ -4,6 +4,7 @@ const User = require('./models/User');
 const MikrotikRouter = require('./models/MikrotikRouter');
 const Package = require('./models/Package');
 const MikrotikUser = require('./models/MikrotikUser');
+const ApplicationSettings = require('./models/ApplicationSettings');
 const bcrypt = require('bcryptjs');
 const connectDB = require('./config/db');
 
@@ -22,16 +23,16 @@ const importData = async () => {
     console.log('Data wiped.');
 
     console.log('Creating admin user...');
-    const users = await Promise.all([
+    const users = [
       {
         fullName: 'Admin User',
         email: 'admin@example.com',
         phone: '+254700000000',
-        password: await bcrypt.hash('Abuhureira12', 10),
+        password: 'Abuhureira12',
         isAdmin: true,
       },
-    ]);
-    await User.insertMany(users);
+    ];
+    await User.create(users);
     console.log('Admin user created.');
 
     console.log('Creating production router...');
@@ -82,6 +83,7 @@ const destroyData = async () => {
     await MikrotikRouter.deleteMany();
     await Package.deleteMany();
     await MikrotikUser.deleteMany();
+    await ApplicationSettings.deleteMany();
 
     console.log('Data Destroyed!');
     process.exit();
