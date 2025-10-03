@@ -47,7 +47,11 @@ export default function MainSettingsPage() {
             </Card>
           </StyledTabsContent>
           <StyledTabsContent value="mpesa" className="mt-4">
-            <MpesaSettingsPage />
+            <div className="flex justify-center">
+              <div className="w-full max-w-3xl">
+                <MpesaSettingsPage />
+              </div>
+            </div>
           </StyledTabsContent>
         </StyledTabsRoot>
       </div>
