@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/components/auth-provider";
+import { useSettings } from "@/hooks/use-settings";
 import { Loader2, Save, Building, Palette, Bot } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -56,6 +57,7 @@ const africanCountries = [
 
 export default function GeneralSettingsForm() {
   const { token } = useAuth();
+  const { setSettings } = useSettings();
   const router = useRouter();
 
   const brandingForm = useForm<BrandingFormValues>({
@@ -144,6 +146,12 @@ export default function GeneralSettingsForm() {
         const errorText = await response.text();
         throw new Error(`Failed to update ${section} settings: ${errorText}`);
       }
+      const updatedSettings = await response.json();
+      setSettings({
+        appName: updatedSettings.appName,
+        slogan: updatedSettings.slogan,
+        logoIcon: updatedSettings.logoIcon,
+      });
       toast.success(`${section} settings updated successfully!`);
       router.refresh();
     } catch (error) {

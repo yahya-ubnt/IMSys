@@ -22,9 +22,6 @@ const getGeneralSettings = asyncHandler(async (req, res) => {
 // @route   PUT /api/settings/general
 // @access  Private/Admin
 const updateGeneralSettings = asyncHandler(async (req, res) => {
-  console.log('Request Body:', req.body);
-  console.log('Request Files:', req.files);
-
   let settings = await ApplicationSettings.findOne();
   if (!settings) {
     settings = await ApplicationSettings.create({});
