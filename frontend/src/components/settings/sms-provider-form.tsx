@@ -25,7 +25,7 @@ const providerTypes = [
 
 const providerFields = {
   celcom: [
-    { name: "partnerId", label: "Partner ID", type: "text" },
+    { name: "partnerID", label: "Partner ID", type: "text" },
     { name: "apiKey", label: "API Key", type: "password" },
     { name: "senderId", label: "Sender ID", type: "text" },
   ],

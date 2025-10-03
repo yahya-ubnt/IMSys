@@ -55,6 +55,17 @@ export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }) {
     }
   }
 
+  if (providers.length === 0) {
+    return (
+      <div className="text-center py-12 border-2 border-dashed border-zinc-800 rounded-lg">
+        <h3 className="text-lg font-medium text-zinc-300">No SMS Providers Configured</h3>
+        <p className="text-sm text-zinc-500 mt-2">
+          Click the "Add New Provider" button to get started.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="border border-zinc-800 rounded-lg">
       <Table>
