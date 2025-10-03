@@ -51,3 +51,19 @@ export const deleteWhatsAppTemplate = async (id: string, token: string) => {
     }
     return response.json();
 };
+
+export const composeWhatsApp = async (payload: any, token: string) => {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/whatsapp/compose`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send WhatsApp message');
+    }
+    return response.json();
+};
