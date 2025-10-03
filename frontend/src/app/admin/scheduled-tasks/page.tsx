@@ -42,6 +42,7 @@ interface ScheduledTask {
     _id: string;
     name: string;
     description: string;
+    scriptPath: string;
     schedule: string;
     isEnabled: boolean;
     lastRun?: string;

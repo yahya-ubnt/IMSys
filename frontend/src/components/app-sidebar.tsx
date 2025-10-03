@@ -350,8 +350,13 @@ const menuCategories: MenuCategory[] = [
       },
       {
         title: "Accounts",
-        url: "/settings",
         icon: Settings,
+        items: [
+          {
+            title: "Settings",
+            url: "/settings",
+          },
+        ],
       },
     ],
   },

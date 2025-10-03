@@ -57,7 +57,7 @@ const updateBrandingSettings = asyncHandler(async (req, res) => {
 // @route   GET /api/settings/mpesa
 // @access  Private/Admin
 const getMpesaSettings = asyncHandler(async (req, res) => {
-  const settings = await ApplicationSettings.findOne();
+  const settings = await ApplicationSettings.findOne().select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
   res.json({
     mpesaPaybill: settings?.mpesaPaybill,
     mpesaTill: settings?.mpesaTill,

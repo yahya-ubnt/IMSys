@@ -5,7 +5,8 @@ type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
-  action?: React.ReactElement
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const TOAST_LIMIT = 1

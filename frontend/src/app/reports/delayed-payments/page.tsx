@@ -12,6 +12,7 @@ import { getColumns } from "./columns";
 import { Topbar } from "@/components/topbar";
 import { motion } from "framer-motion";
 import { MikrotikUser } from "@/app/mikrotik/users/page"; // Re-use the same interface
+import { ColumnDef } from "@tanstack/react-table";
 
 export default function DelayedPaymentsPage() {
   const [users, setUsers] = useState<MikrotikUser[]>([]);
@@ -51,7 +52,7 @@ export default function DelayedPaymentsPage() {
     }
   }, [token, daysOverdue, searchTerm, toast]);
 
-  const columns = getColumns();
+  const columns: ColumnDef<MikrotikUser & { daysOverdue: number }>[] = getColumns();
 
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
 
@@ -109,7 +110,7 @@ export default function DelayedPaymentsPage() {
                         <p>Loading data...</p>
                     </div>
                 ) : (
-                    <DataTable columns={columns} data={users} filterColumn="username" />
+                    <DataTable columns={columns} data={users as (MikrotikUser & { daysOverdue: number; })[]} filterColumn="username" />
                 )}
             </CardContent>
           </Card>

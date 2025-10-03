@@ -38,16 +38,17 @@ const importData = async () => {
     const router = await MikrotikRouter.create({
       name: 'AMANI ESTATE MIK',
       ipAddress: '10.10.10.1',
-      apiUsername: 'mtek api',
-      apiPassword: 'test123',
+      apiUsername: 'admin',
+      apiPassword: '0741554490#',
       apiPort: 8728,
     });
     console.log('Production router created:', router.name);
 
     console.log('Creating test package...');
     const testPackage = await Package.create({
+      mikrotikRouter: router._id,
+      serviceType: 'pppoe',
       name: 'Test Package',
-      speed: '10/10',
       price: 1000,
     });
     console.log('Test package created:', testPackage.name);
