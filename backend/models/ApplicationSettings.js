@@ -5,7 +5,7 @@ const ApplicationSettingsSchema = mongoose.Schema(
     appName: {
       type: String,
       required: true,
-      default: "MEDIATEK MANAGEMENT SYSTEM",
+      default: "MEDIATEK",
     },
     slogan: {
       type: String,
@@ -13,7 +13,6 @@ const ApplicationSettingsSchema = mongoose.Schema(
     },
     logoIcon: {
       type: String,
-      required: true,
       default: "Wifi", // Default Lucide icon name
     },
     favicon: {

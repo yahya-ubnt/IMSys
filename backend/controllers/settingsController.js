@@ -22,23 +22,42 @@ const getGeneralSettings = asyncHandler(async (req, res) => {
 // @route   PUT /api/settings/general
 // @access  Private/Admin
 const updateGeneralSettings = asyncHandler(async (req, res) => {
-  const { appName, logoIcon, favicon, paymentGracePeriodDays, currencySymbol, taxRate, autoDisconnectUsers, sendPaymentReminders, disconnectTime, companyInfo, portalUrls } = req.body;
+  console.log('Request Body:', req.body);
+  console.log('Request Files:', req.files);
 
   let settings = await ApplicationSettings.findOne();
-
   if (!settings) {
     settings = await ApplicationSettings.create({});
   }
 
-  settings.appName = appName || settings.appName;
-  settings.paymentGracePeriodDays = paymentGracePeriodDays || settings.paymentGracePeriodDays;
-  settings.currencySymbol = currencySymbol || settings.currencySymbol;
-  settings.taxRate = taxRate || settings.taxRate;
-  settings.autoDisconnectUsers = autoDisconnectUsers !== undefined ? autoDisconnectUsers : settings.autoDisconnectUsers;
-  settings.sendPaymentReminders = sendPaymentReminders !== undefined ? sendPaymentReminders : settings.sendPaymentReminders;
-  settings.disconnectTime = disconnectTime || settings.disconnectTime;
-  settings.companyInfo = companyInfo ? { ...settings.companyInfo, ...companyInfo } : settings.companyInfo;
-  settings.portalUrls = portalUrls ? { ...settings.portalUrls, ...portalUrls } : settings.portalUrls;
+  // List of fields that can be updated
+  const fieldsToUpdate = [
+    'appName', 'slogan', 'paymentGracePeriodDays', 'currencySymbol', 
+    'taxRate', 'autoDisconnectUsers', 'sendPaymentReminders', 'disconnectTime'
+  ];
+
+  fieldsToUpdate.forEach(field => {
+    if (req.body[field] !== undefined) {
+      settings[field] = req.body[field];
+    }
+  });
+
+  // Handle nested objects separately
+  if (req.body.companyInfo) {
+    let companyInfo = req.body.companyInfo;
+    if (typeof companyInfo === 'string') {
+      companyInfo = JSON.parse(companyInfo);
+    }
+    settings.companyInfo = { ...settings.companyInfo, ...companyInfo };
+  }
+
+  if (req.body.portalUrls) {
+    let portalUrls = req.body.portalUrls;
+    if (typeof portalUrls === 'string') {
+      portalUrls = JSON.parse(portalUrls);
+    }
+    settings.portalUrls = { ...settings.portalUrls, ...portalUrls };
+  }
 
   // Handle file uploads
   if (req.files) {
