@@ -97,3 +97,70 @@ export const setActiveSmsProvider = async (id: string, token: string) => {
     }
     return response.json();
 };
+
+// WhatsApp Provider Settings
+const WHATSAPP_PROVIDERS_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/settings/whatsapp-providers`;
+
+export const getWhatsAppProviders = async (token: string) => {
+    const response = await fetch(WHATSAPP_PROVIDERS_API_URL, {
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Failed to fetch WhatsApp providers');
+    return response.json();
+};
+
+export const createWhatsAppProvider = async (providerData: any, token: string) => {
+    const response = await fetch(WHATSAPP_PROVIDERS_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(providerData),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create WhatsApp provider');
+    }
+    return response.json();
+};
+
+export const updateWhatsAppProvider = async (id: string, providerData: any, token: string) => {
+    const response = await fetch(`${WHATSAPP_PROVIDERS_API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(providerData),
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update WhatsApp provider');
+    }
+    return response.json();
+};
+
+export const deleteWhatsAppProvider = async (id: string, token: string) => {
+    const response = await fetch(`${WHATSAPP_PROVIDERS_API_URL}/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete WhatsApp provider');
+    }
+    return response.json();
+};
+
+export const setActiveWhatsAppProvider = async (id: string, token: string) => {
+    const response = await fetch(`${WHATSAPP_PROVIDERS_API_URL}/${id}/set-active`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to set active WhatsApp provider');
+    }
+    return response.json();
+};

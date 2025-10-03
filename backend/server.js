@@ -27,6 +27,8 @@ const billRoutes = require('./routes/billRoutes'); // Import bill routes
 const technicianActivityRoutes = require('./routes/technicianActivityRoutes'); // Import technician activity routes
 const settingsRoutes = require('./routes/settingsRoutes'); // ADDED
 const smsProviderRoutes = require('./routes/smsProviderRoutes'); // Import SMS provider routes
+const whatsAppProviderRoutes = require('./routes/whatsAppProviderRoutes'); // Import WhatsApp provider routes
+const whatsAppTemplateRoutes = require('./routes/whatsAppTemplateRoutes'); // Import WhatsApp template routes
 const smsTemplateRoutes = require('./routes/smsTemplateRoutes');
 const smsExpiryScheduleRoutes = require('./routes/smsExpiryScheduleRoutes');
 const smsAcknowledgementRoutes = require('./routes/smsAcknowledgementRoutes');
@@ -99,6 +101,8 @@ app.use('/api/bills', billRoutes); // Add bill routes
 app.use('/api/technician-activities', technicianActivityRoutes);
 app.use('/api/settings', settingsRoutes); // ADDED // Add technician activity routes
 app.use('/api/settings/sms-providers', smsProviderRoutes); // Mount SMS provider routes
+app.use('/api/settings/whatsapp-providers', whatsAppProviderRoutes); // Mount WhatsApp provider routes
+app.use('/api/whatsapp-templates', whatsAppTemplateRoutes); // Mount WhatsApp template routes
 app.use('/api/smstemplates', smsTemplateRoutes);
 app.use('/api/smsexpiryschedules', smsExpiryScheduleRoutes);
 app.use('/api/smsacknowledgements', smsAcknowledgementRoutes);

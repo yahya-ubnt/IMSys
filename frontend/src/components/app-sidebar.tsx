@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Sun, Moon, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, HeartPulse } from "lucide-react"
+import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Sun, Moon, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, HeartPulse, MessageCircle } from "lucide-react"
 import Image from "next/image"
 import { useTheme } from "next-themes"
 import { useSettings } from "@/hooks/use-settings"
@@ -156,6 +156,24 @@ const menuCategories: MenuCategory[] = [
           {
             title: "Templates",
             url: "/sms/templates",
+          },
+        ],
+      },
+      {
+        title: "WhatsApp",
+        icon: MessageCircle,
+        items: [
+          {
+            title: "Templates",
+            url: "/whatsapp/templates",
+          },
+          {
+            title: "Compose",
+            url: "/whatsapp/compose",
+          },
+          {
+            title: "Sent Log",
+            url: "/whatsapp/sent",
           },
         ],
       },

@@ -1,65 +1,101 @@
-# WhatsApp Integration Specification
+# WhatsApp Integration Specification (v2.0)
 
-## 1. Overview
+## 1. Objective
 
-This document outlines the integration of WhatsApp messaging capabilities into the system. The primary purpose is to provide an alternative and potentially richer channel for sending automated reminders, notifications, and potentially other forms of communication to users.
+To implement a flexible, multi-provider WhatsApp messaging capability within the application. This system will allow administrators to configure and manage WhatsApp Business Solution Providers (BSPs) from the settings panel, providing a rich channel for automated notifications, customer support, and user engagement.
 
-## 2. WhatsApp Business API Provider
+## 2. Key Features
 
-Integration will be achieved through the official WhatsApp Business API. This requires partnering with a WhatsApp Business Solution Provider (BSP) (e.g., Twilio, MessageBird, Vonage). The chosen BSP will provide the necessary infrastructure and API endpoints for sending and receiving WhatsApp messages.
+- **UI-Driven Configuration:** Replaces the previous `.env`-based setup. Administrators will manage providers entirely through a new "WhatsApp" tab in the settings UI.
+- **Multi-Provider Support:** Allows for configuring multiple BSPs (e.g., Twilio, Vonage), with one designated as "active" for sending messages.
+- **Secure Credential Storage:** All API keys and tokens will be encrypted in the database.
+- **Extensible Driver Architecture:** A modular backend pattern will make it simple to add new WhatsApp providers in the future.
+- **Template-Based Messaging:** The core service will focus on sending pre-approved, templated messages, which is the standard for business-initiated conversations on WhatsApp.
 
-## 3. Configuration Parameters
+## 3. Backend Implementation
 
-All WhatsApp API credentials and configuration settings will be managed via environment variables, similar to the existing SMS gateway integration. These will be loaded into the backend configuration.
+The backend will be architected identically to the new SMS provider system for consistency and maintainability.
 
--   **`WHATSAPP_PROVIDER`**: (String) Specifies the WhatsApp BSP to use (e.g., `TWILIO_WHATSAPP`, `MESSAGEBIRD_WHATSAPP`).
--   **`WHATSAPP_API_KEY`**: (String) The primary API key or username for authentication with the WhatsApp BSP.
--   **`WHATSAPP_API_SECRET`**: (String, Optional) The API secret or password for authentication.
--   **`WHATSAPP_PHONE_NUMBER_ID`**: (String) The ID of the WhatsApp Business Account phone number used for sending messages.
--   **`WHATSAPP_ACCOUNT_SID`**: (String, Optional) Specific to providers like Twilio (Account SID).
--   **`WHATSAPP_AUTH_TOKEN`**: (String, Optional) Specific to providers like Twilio (Auth Token).
--   **`WHATSAPP_ENDPOINT_URL`**: (String, Optional) The base URL for the WhatsApp BSP's API endpoint, if not standard.
+### 3.1. Database Model: `WhatsAppProvider`
 
-## 4. Message Types
+A new Mongoose model will be created to store provider configurations.
 
-WhatsApp Business API distinguishes between different message types, which impacts how messages can be sent and initiated.
+**File:** `backend/models/WhatsAppProvider.js`
 
-### 4.1. Template Messages (Highly Structured Messages - HSMs)
+**Schema:**
 
--   **Purpose**: Used for outbound notifications and reminders (e.g., expiry alerts, payment confirmations) where the user has not initiated a conversation within the last 24 hours.
--   **Requirement**: Must be pre-approved by WhatsApp. They consist of static text and dynamic placeholders.
--   **Implementation**: The `whatsappService` will need to support sending messages using specific template names and populating their dynamic parameters.
+| Field         | Type          | Description                                                              | Required | Notes                                                                    |
+|---------------|---------------|--------------------------------------------------------------------------|----------|--------------------------------------------------------------------------|
+| `name`        | String        | A unique, user-friendly name for the configuration.                      | Yes      | Unique                                                                   |
+| `providerType`| String        | An enum identifying the provider driver (e.g., `twilio`).                | Yes      |                                                                          |
+| `credentials` | Mixed (Object)| An encrypted JSON object holding the provider-specific credentials.      | Yes      | Getter/setter will handle encryption/decryption.                         |
+| `isActive`    | Boolean       | If `true`, this provider is used for sending all WhatsApp messages.      | No       | Default: `false`. Middleware will enforce a single active provider.      |
 
-### 4.2. Session Messages
+### 3.2. API Endpoints
 
--   **Purpose**: Free-form messages that can be sent in response to a user-initiated conversation within a 24-hour window.
--   **Requirement**: No pre-approval needed, but limited to the 24-hour session.
--   **Implementation**: Less critical for initial reminder functionality, but can be considered for future interactive features.
+New CRUD endpoints will be created under `/api/settings/whatsapp-providers`.
 
-## 5. Service Layer (`whatsappService.js`)
+| Method | Endpoint                                  | Description                                  | Access  |
+|--------|-------------------------------------------|----------------------------------------------|---------|
+| `POST` | `/api/settings/whatsapp-providers`        | Add a new WhatsApp provider configuration.   | Private |
+| `GET`  | `/api/settings/whatsapp-providers`        | Get a list of all configured providers.      | Private |
+| `PUT`  | `/api/settings/whatsapp-providers/:id`    | Update a provider's configuration.           | Private |
+| `DELETE`| `/api/settings/whatsapp-providers/:id`    | Delete a provider configuration.             | Private |
+| `POST` | `/api/settings/whatsapp-providers/:id/set-active`| Set a provider as the active one.       | Private |
 
-A dedicated service file (`backend/services/whatsappService.js`) will encapsulate all WhatsApp API interactions.
+### 3.3. Service Layer Refactoring (`whatsappService.js`)
 
--   **`sendWhatsAppMessage(recipientPhoneNumber, templateName, templateParameters)`**: Function to send a WhatsApp message using a pre-approved template.
-    -   `recipientPhoneNumber`: The WhatsApp number of the recipient.
-    -   `templateName`: The name of the pre-approved WhatsApp message template to use.
-    -   `templateParameters`: An object or array containing values to populate the dynamic placeholders in the template.
--   **Error Handling and Logging**: The service will capture responses from the WhatsApp BSP, log successful sends, and record failures with detailed error messages.
+The existing service will be refactored to use the new database model.
 
-## 6. Integration Points
+- **`sendWhatsAppMessage(recipientPhoneNumber, templateName, templateParameters)`**: This function will be updated to:
+  1. Query the `WhatsAppProvider` model to find the active provider.
+  2. Decrypt its credentials.
+  3. Load the appropriate driver from the `whatsappDrivers` directory.
+  4. Pass the details to the driver for sending.
 
-Once the `whatsappService` is in place, it can be integrated into various parts of the backend:
+### 3.4. Driver Architecture
 
--   **Expiry Reminders**: The existing cron job in `server.js` can be modified to send WhatsApp messages in addition to (or instead of) SMS for expiry notifications.
--   **Acknowledgement Messages**: The `sendAcknowledgementSms` function (or a new `sendAcknowledgementWhatsApp` function) can be extended to support WhatsApp based on trigger types.
--   **Compose New Message**: A future enhancement could allow users to compose and send ad-hoc WhatsApp messages (likely requiring a pre-approved template for initial contact).
+- A new directory will be created: `backend/services/whatsappDrivers/`.
+- **Initial Support:** The first driver will be for **Twilio for WhatsApp**, as it is a widely-used and well-documented BSP.
+- **File:** `backend/services/whatsappDrivers/twilio.js` will contain the specific logic to interact with the Twilio API for sending templated WhatsApp messages.
 
-## 7. Frontend Considerations
+## 4. Frontend Implementation
 
--   **Notification Channel Preference**: The frontend UI will need to allow users to select WhatsApp as their preferred notification channel (e.g., in user settings or reminder configurations).
--   **Template Selection**: If users can choose templates, the frontend will need to display available WhatsApp templates.
+A new, dedicated section for WhatsApp will be added to the main application sidebar, providing a centralized hub for all related features.
 
-## 8. User Opt-in and Consent
+- **Main Sidebar Navigation:**
+  - A new top-level menu item, **"WhatsApp"**, will be added.
+  - This menu item will have three sub-menus:
+    1.  **Templates:** Leads to the WhatsApp Template management page.
+    2.  **Compose:** Leads to the page for composing and sending new messages.
+    3.  **Sent Log:** Leads to the page for viewing the history of sent messages.
 
--   **Crucial Requirement**: Obtaining explicit user consent (opt-in) for receiving WhatsApp messages is mandatory and critical for compliance and avoiding spam. This must be handled on the frontend and stored in the user's profile.
--   **Opt-out Mechanism**: A clear and easy way for users to opt-out of WhatsApp messages must be provided.
+- **New Pages:**
+  - **WhatsApp Template Management Page:** A new page will be created for CRUD operations on `WhatsAppTemplate` entities. Users will be able to view, add, edit, and delete their pre-approved message templates here.
+  - **Compose Page:** This page will contain the UI for selecting a target audience (users, groups, etc.), choosing a template, filling in variables, and sending the message.
+  - **Sent Log Page:** This page will display the `WhatsAppLog` data in a filterable and paginated table.
+
+- **Settings Tab (Configuration):**
+  - The configuration of WhatsApp providers (adding Twilio, etc.) will still reside in the **Settings** page, under its own **"WhatsApp" tab**, as previously designed. This separates the one-time setup from the daily-use operational tools.
+
+## 5. Expanded Use Cases for WhatsApp
+
+To enhance the application's value, WhatsApp can be integrated at several key points:
+
+- **Automated Notifications:**
+  - **Payment Reminders & Expiry Alerts:** Send alerts to users who have opted-in, providing a richer experience than SMS.
+  - **Payment Confirmations:** Instantly send a confirmation message when a payment is successfully received and applied.
+  - **New Bill Notifications:** Alert users when a new monthly bill has been generated.
+
+- **Customer Support & Ticketing:**
+  - **Ticket Creation Confirmation:** When a user raises a ticket, send an immediate WhatsApp message confirming receipt with the ticket number.
+  - **Ticket Status Updates:** Notify users when their ticket status changes (e.g., "An agent is now looking at your issue," or "Your issue has been resolved.").
+
+- **User Onboarding & Engagement:**
+  - **Welcome Message:** Send a welcome message to new users upon registration, with a link to the client portal and a brief guide.
+  - **Diagnostic Notifications:** Inform a user when a diagnostic check they initiated has been completed, with a summary of the results.
+
+## 6. Compliance and User Consent
+
+- **Explicit Opt-In:** A mechanism must be created (e.g., a checkbox in the user's profile) for users to explicitly consent to receiving WhatsApp communications. This is a strict requirement of the WhatsApp platform.
+- **Easy Opt-Out:** Users must have a clear and simple way to unsubscribe from WhatsApp messages.
