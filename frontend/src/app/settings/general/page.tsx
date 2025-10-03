@@ -40,6 +40,10 @@ const formSchema = z.object({
 
 type GeneralSettingsFormValues = z.infer<typeof formSchema>;
 
+const africanCountries = [
+  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros", "Congo, Democratic Republic of the", "Congo, Republic of the", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Ivory Coast", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda", "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan", "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe", "Western Sahara"
+];
+
 export default function GeneralSettingsForm() {
   const { token } = useAuth();
   const form = useForm<GeneralSettingsFormValues>({
@@ -157,7 +161,16 @@ export default function GeneralSettingsForm() {
               <FormField control={form.control} name="companyInfo.country" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Country</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                      {africanCountries.map(country => <SelectItem key={country} value={country} className="text-sm">{country}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -220,13 +233,13 @@ export default function GeneralSettingsForm() {
                   <FormLabel>Disconnect Time on Expiry Day</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="expiry_time">At the exact time of expiry</SelectItem>
-                      <SelectItem value="end_of_day">At the end of the day</SelectItem>
+                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                      <SelectItem value="expiry_time" className="text-sm">At the exact time of expiry</SelectItem>
+                      <SelectItem value="end_of_day" className="text-sm">At the end of the day</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
