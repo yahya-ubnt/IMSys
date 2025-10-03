@@ -12,13 +12,51 @@ const ApplicationSettingsSchema = mongoose.Schema(
       required: true,
       default: "Wifi", // Default Lucide icon name
     },
+    favicon: {
+      type: String,
+      default: "/favicon.ico",
+    },
     paymentGracePeriodDays: {
       type: Number,
       required: true,
       default: 3,
     },
-
-    // M-Pesa Fields
+    currencySymbol: {
+      type: String,
+      required: true,
+      default: "KES",
+    },
+    taxRate: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    autoDisconnectUsers: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    sendPaymentReminders: {
+      type: Boolean,
+      required: true,
+      default: true,
+    },
+    disconnectTime: {
+      type: String,
+      enum: ['expiry_time', 'end_of_day'],
+      default: 'end_of_day',
+    },
+    companyInfo: {
+      name: { type: String, default: "" },
+      country: { type: String, default: "Kenya" },
+      address: { type: String, default: "" },
+      email: { type: String, default: "" },
+      phone: { type: String, default: "" },
+    },
+    portalUrls: {
+      admin: { type: String, default: "" },
+      client: { type: String, default: "" },
+    },
     mpesaPaybill: {
       paybillNumber: { type: String, trim: true },
       consumerKey: { type: String, trim: true },

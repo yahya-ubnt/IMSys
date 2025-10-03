@@ -6,9 +6,9 @@ import {
   StyledTabsRoot,
   StyledTabsContent,
 } from "@/components/ui/StyledTabs"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Settings, CreditCard } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
+import GeneralSettingsForm from "./general/page"
 
 export default function MainSettingsPage() {
   const [activeTab, setActiveTab] = useState("general")
@@ -34,17 +34,11 @@ export default function MainSettingsPage() {
           onTabChange={setActiveTab}
         >
           <StyledTabsContent value="general" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>
-                  General application settings will be managed here in the future.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>This section is under construction.</p>
-              </CardContent>
-            </Card>
+            <div className="flex justify-center">
+              <div className="w-full max-w-3xl">
+                <GeneralSettingsForm />
+              </div>
+            </div>
           </StyledTabsContent>
           <StyledTabsContent value="mpesa" className="mt-4">
             <div className="flex justify-center">

@@ -3,56 +3,55 @@ const ApplicationSettings = require('../models/ApplicationSettings');
 const { registerCallbackURL } = require('../services/mpesaService');
 
 
-// @desc    Get application branding settings
-// @route   GET /api/settings/branding
+// @desc    Get application general settings
+// @route   GET /api/settings/general
 // @access  Private
-const getBrandingSettings = asyncHandler(async (req, res) => {
+const getGeneralSettings = asyncHandler(async (req, res) => {
   const settings = await ApplicationSettings.findOne();
 
   if (settings) {
     res.json(settings);
   } else {
     // If no settings exist, create default ones
-    const defaultSettings = await ApplicationSettings.create({
-      appName: "MEDIATEK MANAGEMENT SYSTEM",
-      logoIcon: "/globe.svg", // Default logo image path
-      mpesaPaybill: undefined,
-      mpesaTill: undefined,
-    });
+    const defaultSettings = await ApplicationSettings.create({});
     res.json(defaultSettings);
   }
 });
 
-// @desc    Update application branding settings
-// @route   PUT /api/settings/branding
+// @desc    Update application general settings
+// @route   PUT /api/settings/general
 // @access  Private/Admin
-const updateBrandingSettings = asyncHandler(async (req, res) => {
-  const { appName, logoIcon } = req.body; // logoIcon from body will be present if no new file is uploaded
+const updateGeneralSettings = asyncHandler(async (req, res) => {
+  const { appName, logoIcon, favicon, paymentGracePeriodDays, currencySymbol, taxRate, autoDisconnectUsers, sendPaymentReminders, disconnectTime, companyInfo, portalUrls } = req.body;
 
   let settings = await ApplicationSettings.findOne();
 
-  if (settings) {
-    settings.appName = appName || settings.appName;
-
-    // Handle logoIcon based on file upload or body data
-    if (req.file) {
-      // A new logo file was uploaded
-      settings.logoIcon = `/${req.file.path}`; // Store the path to the uploaded file
-    } else if (logoIcon) {
-      // No new file, but logoIcon was sent in the body (e.g., keeping existing or default Lucide icon)
-      settings.logoIcon = logoIcon;
-    }
-
-    const updatedSettings = await settings.save();
-    res.json(updatedSettings);
-  } else {
-    // If no settings exist, create new ones
-    const newSettings = await ApplicationSettings.create({
-      appName,
-      logoIcon: req.file ? `/${req.file.path}` : logoIcon, // Use uploaded file path or body logoIcon
-    });
-    res.status(201).json(newSettings);
+  if (!settings) {
+    settings = await ApplicationSettings.create({});
   }
+
+  settings.appName = appName || settings.appName;
+  settings.paymentGracePeriodDays = paymentGracePeriodDays || settings.paymentGracePeriodDays;
+  settings.currencySymbol = currencySymbol || settings.currencySymbol;
+  settings.taxRate = taxRate || settings.taxRate;
+  settings.autoDisconnectUsers = autoDisconnectUsers !== undefined ? autoDisconnectUsers : settings.autoDisconnectUsers;
+  settings.sendPaymentReminders = sendPaymentReminders !== undefined ? sendPaymentReminders : settings.sendPaymentReminders;
+  settings.disconnectTime = disconnectTime || settings.disconnectTime;
+  settings.companyInfo = companyInfo ? { ...settings.companyInfo, ...companyInfo } : settings.companyInfo;
+  settings.portalUrls = portalUrls ? { ...settings.portalUrls, ...portalUrls } : settings.portalUrls;
+
+  // Handle file uploads
+  if (req.files) {
+    if (req.files.logoIcon) {
+      settings.logoIcon = `/${req.files.logoIcon[0].path}`;
+    }
+    if (req.files.favicon) {
+      settings.favicon = `/${req.files.favicon[0].path}`;
+    }
+  }
+
+  const updatedSettings = await settings.save();
+  res.json(updatedSettings);
 });
 
 // @desc    Get M-Pesa settings
@@ -120,8 +119,8 @@ const activateMpesa = asyncHandler(async (req, res) => {
 
 
 module.exports = {
-  getBrandingSettings,
-  updateBrandingSettings,
+  getGeneralSettings,
+  updateGeneralSettings,
   getMpesaSettings,
   updateMpesaSettings,
   activateMpesa,
