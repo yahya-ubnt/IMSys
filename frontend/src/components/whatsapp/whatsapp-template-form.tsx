@@ -6,11 +6,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { createWhatsAppTemplate, updateWhatsAppTemplate } from "@/services/whatsappService"
 import { useAuth } from "@/components/auth-provider"
 
-export function WhatsAppTemplateForm({ template, onSuccess, onCancel }) {
+export function WhatsAppTemplateForm({ template, smsTemplates, onSuccess, onCancel }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm()
   const { toast } = useToast()
   const { token } = useAuth()
@@ -42,8 +49,31 @@ export function WhatsAppTemplateForm({ template, onSuccess, onCancel }) {
     }
   }
 
+  const handleCopyFromSms = (smsTemplateId: string) => {
+    const selectedSms = smsTemplates.find(t => t._id === smsTemplateId);
+    if (selectedSms) {
+      setValue("body", selectedSms.messageBody);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="space-y-2 p-4 bg-zinc-800/50 rounded-lg border border-zinc-700">
+        <Label>Copy from SMS Template (Optional)</Label>
+        <Select onValueChange={handleCopyFromSms}>
+          <SelectTrigger className="bg-zinc-800 border-zinc-700">
+            <SelectValue placeholder="Select an SMS template to copy from..." />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+            {smsTemplates.map((sms) => (
+              <SelectItem key={sms._id} value={sms._id}>
+                {sms.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="templateName">Template Name</Label>
         <Input 

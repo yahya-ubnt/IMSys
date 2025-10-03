@@ -1,21 +1,7 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { DataTable } from "@/components/data-table"
+import { columns } from "@/app/whatsapp/templates/columns"
 import { useToast } from "@/components/ui/use-toast"
 import { deleteWhatsAppTemplate } from "@/services/whatsappService"
 import { useAuth } from "@/components/auth-provider"
@@ -24,10 +10,10 @@ export function WhatsAppTemplateList({ templates, onEdit, onDelete }) {
   const { toast } = useToast()
   const { token } = useAuth()
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this template?")) {
+  const handleDelete = async (template) => {
+    if (window.confirm(`Are you sure you want to delete the template "${template.templateName}"?`)) {
       try {
-        await deleteWhatsAppTemplate(id, token)
+        await deleteWhatsAppTemplate(template._id, token)
         toast({ title: "Success", description: "Template deleted." })
         onDelete()
       } catch (error) {
@@ -52,46 +38,12 @@ export function WhatsAppTemplateList({ templates, onEdit, onDelete }) {
   }
 
   return (
-    <div className="border border-zinc-800 rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-zinc-800">
-            <TableHead className="text-zinc-300">Template Name</TableHead>
-            <TableHead className="text-zinc-300">Provider Template ID</TableHead>
-            <TableHead className="text-zinc-300">Body</TableHead>
-            <TableHead className="text-right text-zinc-300">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {templates.map((template) => (
-            <TableRow key={template._id} className="border-zinc-800">
-              <TableCell>{template.templateName}</TableCell>
-              <TableCell className="font-mono text-xs">{template.providerTemplateId}</TableCell>
-              <TableCell className="text-sm text-zinc-400 truncate max-w-xs">{template.body}</TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
-                    <DropdownMenuItem onClick={() => onEdit(template)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      <span>Edit</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDelete(template._id)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Delete</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-800 shadow-2xl shadow-cyan-500/10 rounded-xl p-4">
+      <DataTable 
+        columns={columns({ handleEdit: onEdit, handleDelete })} 
+        data={templates} 
+        filterColumn="templateName"
+      />
     </div>
   )
 }

@@ -220,68 +220,89 @@ cron.schedule('0 0 1 * *', async () => { // Runs at 00:00 on the 1st of every mo
 
 // SMS Expiry Notification Cron Job
 cron.schedule('0 0 * * *', async () => { // Runs daily at 00:00
-  console.log('Running SMS expiry notification job...');
+  console.log('Running Expiry Notification Job...');
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize to start of day
 
   try {
-    const activeSchedules = await SmsExpirySchedule.find({ status: 'Active' });
+    const activeSchedules = await SmsExpirySchedule.find({ status: 'Active' })
+      .populate('smsTemplate')
+      .populate('whatsAppTemplate');
 
     for (const schedule of activeSchedules) {
-      const { days, timing, messageBody } = schedule;
+      const { days, timing, smsTemplate, whatsAppTemplate } = schedule;
 
-      // Calculate target date based on timing (Before/After)
+      if (!smsTemplate) {
+        console.warn(`Skipping schedule "${schedule.name}" because its SMS template is missing.`);
+        continue;
+      }
+
       const targetDate = new Date(today);
       if (timing === 'Before') {
         targetDate.setDate(today.getDate() + days);
       } else if (timing === 'After') {
         targetDate.setDate(today.getDate() - days);
       } else {
-        // 'Not Applicable' schedules are not handled by date-based expiry
         continue;
       }
 
-      // Find users whose expiry date matches the targetDate
-      // Assuming 'User' model has an 'expiryDate' field
       const usersToNotify = await User.find({
         expiryDate: {
           $gte: targetDate,
-          $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000) // End of target day
+          $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
         }
       });
 
       for (const user of usersToNotify) {
-        // Populate template variables
-        let personalizedMessage = messageBody;
-        personalizedMessage = personalizedMessage.replace(/{{customer_name}}/g, user.name || 'Customer');
-        personalizedMessage = personalizedMessage.replace(/{{reference_number}}/g, user.referenceNumber || ''); // Assuming referenceNumber exists
-        personalizedMessage = personalizedMessage.replace(/{{customer_phone}}/g, user.phoneNumber || ''); // Assuming phoneNumber exists
-        personalizedMessage = personalizedMessage.replace(/{{transaction_amount}}/g, user.transactionAmount || ''); // Assuming transactionAmount exists
-        personalizedMessage = personalizedMessage.replace(/{{expiry_date}}/g, user.expiryDate ? user.expiryDate.toLocaleDateString() : '');
+        const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
+        
+        let personalizedMessage;
+        const templateData = {
+            customer_name: user.name || 'Customer',
+            reference_number: user.referenceNumber || '',
+            customer_phone: user.phoneNumber || '',
+            transaction_amount: user.transactionAmount || '',
+            expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
+        };
 
-        // Send SMS
-        const smsResult = await sendSMS(user.phoneNumber, personalizedMessage);
+        if (useWhatsApp) {
+          // For WhatsApp, the 'body' is just for reference; the service uses the providerTemplateId.
+          // The templateParameters need to match what the provider expects (e.g., { '1': 'value', '2': 'value' })
+          // This is a simplification; a more robust solution would map names to numbers.
+          const templateParameters = {
+            '1': templateData.customer_name,
+            '2': templateData.transaction_amount,
+            '3': templateData.expiry_date,
+          };
 
-        // Send WhatsApp Message
-        // Assuming a pre-approved template named 'expiry_reminder'
-        const whatsappResult = await sendWhatsAppMessage(user.phoneNumber, 'expiry_reminder', {
-          customer_name: user.name || 'Customer',
-          expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
-        });
+          const whatsappResult = await sendWhatsAppMessage(user.phoneNumber, whatsAppTemplate.providerTemplateId, templateParameters);
+          
+          // Log WhatsApp message (a new model `WhatsAppLog` will be needed)
+          // await WhatsAppLog.create({ ... });
 
-        // Log SMS
-        await SmsLog.create({
-          mobileNumber: user.phoneNumber,
-          message: personalizedMessage,
-          messageType: 'Expiry Alert',
-          smsStatus: smsResult.success ? 'Success' : 'Failed',
-          providerResponse: smsResult.message,
-          user: user._id,
-        });
+        } else {
+          // Fallback to SMS
+          personalizedMessage = smsTemplate.messageBody;
+          for (const key in templateData) {
+              const placeholder = new RegExp(`{{${key}}}`, 'g');
+              personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+          }
+
+          const smsResult = await sendSMS(user.phoneNumber, personalizedMessage);
+
+          await SmsLog.create({
+            mobileNumber: user.phoneNumber,
+            message: personalizedMessage,
+            messageType: 'Expiry Alert',
+            smsStatus: smsResult.success ? 'Success' : 'Failed',
+            providerResponse: smsResult.message,
+            user: user._id,
+          });
+        }
       }
     }
-    console.log('SMS expiry notification job completed successfully.');
+    console.log('Expiry Notification Job completed successfully.');
   } catch (error) {
-    console.error('Error running SMS expiry notification job:', error);
+    console.error('Error running Expiry Notification Job:', error);
   }
 });

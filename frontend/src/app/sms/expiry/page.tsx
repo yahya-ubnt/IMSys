@@ -11,6 +11,8 @@ import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
 import { SmsExpiryScheduleForm, SmsExpiryScheduleFormData } from "./sms-expiry-schedule-form"
 import { PlusCircle, CheckCircle, XCircle } from "lucide-react"
+import { getSmsTemplates } from "@/services/smsTemplateService"
+import { getWhatsAppTemplates } from "@/services/whatsappService"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 // --- TYPE DEFINITIONS ---
@@ -31,12 +33,28 @@ export default function SmsExpiryPage() {
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
+  const [smsTemplates, setSmsTemplates] = useState<any[]>([])
+  const [whatsAppTemplates, setWhatsAppTemplates] = useState<any[]>([])
   
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSchedule, setSelectedSchedule] = useState<SmsExpirySchedule | null>(null)
 
   // --- DATA FETCHING ---
+  const fetchTemplates = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [smsData, whatsappData] = await Promise.all([
+        getSmsTemplates(token),
+        getWhatsAppTemplates(token)
+      ]);
+      setSmsTemplates(smsData);
+      setWhatsAppTemplates(whatsappData);
+    } catch {
+      toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
+    }
+  }, [token, toast]);
+
   const fetchSchedules = useCallback(async () => {
     if (!token) return
     try {
@@ -52,7 +70,8 @@ export default function SmsExpiryPage() {
 
   useEffect(() => {
     fetchSchedules()
-  }, [fetchSchedules])
+    fetchTemplates()
+  }, [fetchSchedules, fetchTemplates])
 
   // --- EVENT HANDLERS ---
   const handleNewSchedule = () => {
@@ -148,6 +167,8 @@ export default function SmsExpiryPage() {
               onSubmit={handleFormSubmit}
               initialData={selectedSchedule}
               onClose={() => setIsModalOpen(false)}
+              smsTemplates={smsTemplates}
+              whatsAppTemplates={whatsAppTemplates}
             />
           </DialogContent>
         </Dialog>

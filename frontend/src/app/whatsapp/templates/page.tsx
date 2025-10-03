@@ -16,10 +16,13 @@ import { useAuth } from "@/components/auth-provider"
 import { Topbar } from "@/components/topbar"
 import { WhatsAppTemplateList } from "@/components/whatsapp/whatsapp-template-list"
 import { WhatsAppTemplateForm } from "@/components/whatsapp/whatsapp-template-form"
+import { getSmsTemplates } from "@/services/smsTemplateService";
 import { getWhatsAppTemplates } from "@/services/whatsappService"
+import { columns } from "./columns"
 
 export default function WhatsAppTemplatesPage() {
   const [templates, setTemplates] = useState([])
+  const [smsTemplates, setSmsTemplates] = useState([])
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const { toast } = useToast()
@@ -33,12 +36,16 @@ export default function WhatsAppTemplatesPage() {
 
   const fetchTemplates = async () => {
     try {
-      const data = await getWhatsAppTemplates(token)
-      setTemplates(data)
+      const [whatsappData, smsData] = await Promise.all([
+        getWhatsAppTemplates(token),
+        getSmsTemplates(token)
+      ]);
+      setTemplates(whatsappData);
+      setSmsTemplates(smsData);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch WhatsApp templates.",
+        description: "Failed to fetch templates.",
         variant: "destructive",
       })
     }
@@ -96,7 +103,7 @@ export default function WhatsAppTemplatesPage() {
                 Provide the details for your WhatsApp message template.
               </DialogDescription>
             </DialogHeader>
-            <WhatsAppTemplateForm template={editingTemplate} onSuccess={onFormSuccess} onCancel={() => setIsFormOpen(false)} />
+            <WhatsAppTemplateForm template={editingTemplate} smsTemplates={smsTemplates} onSuccess={onFormSuccess} onCancel={() => setIsFormOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
