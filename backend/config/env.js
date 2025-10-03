@@ -25,4 +25,5 @@ module.exports = {
   WHATSAPP_AUTH_TOKEN: process.env.WHATSAPP_AUTH_TOKEN,
   WHATSAPP_ENDPOINT_URL: process.env.WHATSAPP_ENDPOINT_URL,
   CRYPTO_SECRET: process.env.CRYPTO_SECRET, // Explicitly export CRYPTO_SECRET
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY, // Export the encryption key
 };

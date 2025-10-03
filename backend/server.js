@@ -1,8 +1,8 @@
+require('./config/env'); // Load environment variables
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path'); // Import path module
-require('./config/env'); // Load environment variables
 
 // Import routes
 const leadRoutes = require('./routes/leadRoutes');
@@ -26,6 +26,7 @@ const { sendWhatsAppMessage } = require('./services/whatsappService'); // Import
 const billRoutes = require('./routes/billRoutes'); // Import bill routes
 const technicianActivityRoutes = require('./routes/technicianActivityRoutes'); // Import technician activity routes
 const settingsRoutes = require('./routes/settingsRoutes'); // ADDED
+const smsProviderRoutes = require('./routes/smsProviderRoutes'); // Import SMS provider routes
 const smsTemplateRoutes = require('./routes/smsTemplateRoutes');
 const smsExpiryScheduleRoutes = require('./routes/smsExpiryScheduleRoutes');
 const smsAcknowledgementRoutes = require('./routes/smsAcknowledgementRoutes');
@@ -97,6 +98,7 @@ app.use('/api/daily-transactions', dailyTransactionRoutes); // Add daily transac
 app.use('/api/bills', billRoutes); // Add bill routes
 app.use('/api/technician-activities', technicianActivityRoutes);
 app.use('/api/settings', settingsRoutes); // ADDED // Add technician activity routes
+app.use('/api/settings/sms-providers', smsProviderRoutes); // Mount SMS provider routes
 app.use('/api/smstemplates', smsTemplateRoutes);
 app.use('/api/smsexpiryschedules', smsExpiryScheduleRoutes);
 app.use('/api/smsacknowledgements', smsAcknowledgementRoutes);

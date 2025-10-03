@@ -6,8 +6,9 @@ import {
   StyledTabsRoot,
   StyledTabsContent,
 } from "@/components/ui/StyledTabs"
-import { Settings, CreditCard } from "lucide-react"
+import { Settings, CreditCard, MessageSquare } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
+import SmsSettingsPage from "./sms/page"
 import GeneralSettingsForm from "./general/page"
 
 export default function MainSettingsPage() {
@@ -16,6 +17,7 @@ export default function MainSettingsPage() {
   const tabs = [
     { id: "general", label: "General", icon: Settings },
     { id: "mpesa", label: "M-Pesa", icon: CreditCard },
+    { id: "sms", label: "SMS", icon: MessageSquare },
   ]
 
   return (
@@ -44,6 +46,13 @@ export default function MainSettingsPage() {
             <div className="flex justify-center">
               <div className="w-full max-w-3xl">
                 <MpesaSettingsPage />
+              </div>
+            </div>
+          </StyledTabsContent>
+          <StyledTabsContent value="sms" className="mt-4">
+            <div className="flex justify-center">
+              <div className="w-full max-w-3xl">
+                <SmsSettingsPage />
               </div>
             </div>
           </StyledTabsContent>

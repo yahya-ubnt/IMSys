@@ -1,50 +1,61 @@
-const axios = require('axios');
+const SmsProvider = require('../models/SmsProvider');
 const SmsAcknowledgement = require('../models/SmsAcknowledgement');
-const SmsTemplate = require('../models/SmsTemplate');
 const SmsLog = require('../models/SmsLog');
+const path = require('path');
 
-const {
-  SMS_PROVIDER,
-  SMS_API_KEY,
-  SMS_API_SECRET,
-  SMS_SENDER_ID,
-  SMS_ENDPOINT_URL,
-  SMS_ACCOUNT_SID,
-  SMS_AUTH_TOKEN,
-} = process.env;
+/**
+ * Dynamically loads and executes an SMS provider driver.
+ * @param {string} providerType - The type of the provider (e.g., 'celcom', 'twilio').
+ * @param {object} credentials - The decrypted credentials for the provider.
+ * @param {string} phoneNumber - The recipient's phone number.
+ * @param {string} message - The SMS message body.
+ * @returns {Promise<{success: boolean, message: string}>} - The result from the provider.
+ */
+const executeSmsDriver = async (providerType, credentials, phoneNumber, message) => {
+  try {
+    const driverPath = path.join(__dirname, 'smsDrivers', `${providerType}.js`);
+    const driver = require(driverPath);
+    return await driver.sendMessage(credentials, phoneNumber, message);
+  } catch (error) {
+    console.error(`Error loading or executing SMS driver for '${providerType}':`, error);
+    // Check if the error is because the driver module doesn't exist
+    if (error.code === 'MODULE_NOT_FOUND') {
+      return { success: false, message: `SMS provider driver for '${providerType}' not found.` };
+    }
+    return { success: false, message: `An unexpected error occurred with the '${providerType}' SMS driver.` };
+  }
+};
 
 exports.sendSMS = async (phoneNumber, message) => {
   try {
-    let response;
+    // 1. Find the active SMS provider from the database
+    const activeProvider = await SmsProvider.findOne({ isActive: true });
 
-    switch (SMS_PROVIDER) {
-      case 'GENERIC_HTTP':
-        if (!SMS_ENDPOINT_URL || !SMS_API_KEY || !SMS_SENDER_ID) {
-          console.error('Missing environment variables for GENERIC_HTTP SMS provider.');
-          return { success: false, message: 'SMS service not configured properly.' };
-        }
-        response = await axios.post(SMS_ENDPOINT_URL, {
-          to: phoneNumber,
-          from: SMS_SENDER_ID,
-          message: message,
-          apiKey: SMS_API_KEY,
-        });
-        console.log(`Generic HTTP SMS response:`, response.data);
-        if (response.status === 200 && response.data.status === 'success') {
-          return { success: true, message: 'SMS sent successfully via Generic HTTP.' };
-        } else {
-          return { success: false, message: `Failed to send SMS via Generic HTTP: ${response.data.message || 'Unknown error'}` };
-        }
-
-      default:
-        console.warn(`Unsupported SMS_PROVIDER: ${SMS_PROVIDER}. SMS not sent.`);
-        return { success: false, message: `Unsupported SMS provider: ${SMS_PROVIDER}.` };
+    if (!activeProvider) {
+      console.error('No active SMS provider is configured.');
+      return { success: false, message: 'SMS service is not configured. No active provider found.' };
     }
+
+    // 2. The model's 'get' function automatically decrypts credentials
+    const credentials = activeProvider.credentials;
+    if (!credentials) {
+        console.error(`Failed to decrypt credentials for provider: ${activeProvider.name}`);
+        return { success: false, message: 'Credential decryption failed.' };
+    }
+
+    // 3. Execute the appropriate driver
+    const result = await executeSmsDriver(
+      activeProvider.providerType,
+      credentials,
+      phoneNumber,
+      message
+    );
+
+    console.log(`SMS to ${phoneNumber} via ${activeProvider.name}: ${result.message}`);
+    return result;
+
   } catch (error) {
     console.error(`Error sending SMS to ${phoneNumber}:`, error.message);
-    if (error.response) {
-      console.error('SMS Provider Error Response:', error.response.data);
-    }
     return { success: false, message: `Failed to send SMS: ${error.message}` };
   }
 };
