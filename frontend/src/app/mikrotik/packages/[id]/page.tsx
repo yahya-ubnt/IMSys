@@ -4,15 +4,17 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
+// --- Interface Definitions ---
 interface Package {
     _id: string;
     mikrotikRouter: { _id: string; name: string; };
@@ -24,19 +26,46 @@ interface Package {
     status: 'active' | 'disabled';
 }
 
+// --- Step Indicator ---
+const StepIndicator = ({ currentStep }: { currentStep: number }) => (
+    <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>1</div>
+            <span className={`text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Router Info</span>
+        </div>
+        <div className={`w-12 h-px transition-colors ${currentStep === 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
+        <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>2</div>
+            <span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Package Details</span>
+        </div>
+    </div>
+);
+
+// --- Framer Motion Variants ---
+const formVariants = {
+    hidden: (direction: number) => ({ opacity: 0, x: direction > 0 ? 50 : -50 }),
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: "easeInOut" } },
+    exit: (direction: number) => ({ opacity: 0, x: direction < 0 ? 50 : -50, transition: { duration: 0.2, ease: "easeInOut" } }),
+};
+
+// --- Main Component ---
 export default function EditPackagePage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
     const params = React.use(paramsPromise);
     const { id } = params;
+
+    const [step, setStep] = useState(1);
+    const [direction, setDirection] = useState(1);
+
     const [packageData, setPackageData] = useState<Package | null>(null);
-    const [serviceType, setServiceType] = useState<'pppoe' | 'static' | null>(null);
+    const [serviceType, setServiceType] = useState<'pppoe' | 'static' | undefined>(undefined);
     const [name, setName] = useState("");
     const [price, setPrice] = useState("");
     const [profile, setProfile] = useState("");
     const [rateLimit, setRateLimit] = useState("");
     const [status, setStatus] = useState<'active' | 'disabled'>("active");
     const [pppProfiles, setPppProfiles] = useState<string[]>([]);
+    
     const [loading, setLoading] = useState(true);
-    const [submitting, setSubmitting] = useState(false);
     const [pppProfilesLoading, setPppProfilesLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,9 +82,7 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
             }
             try {
                 const response = await fetch(`/api/mikrotik/packages/${id}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -71,20 +98,12 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
                 setStatus(data.status);
             } catch (err: unknown) {
                 setError((err instanceof Error) ? err.message : "Failed to load package data.");
-                toast({
-                    title: "Error",
-                    description: (err instanceof Error) ? err.message : "Failed to load package data.",
-                    variant: "destructive",
-                });
             } finally {
                 setLoading(false);
             }
         };
-
-        if (id) {
-            fetchPackage();
-        }
-    }, [id, token, toast]);
+        if (id) fetchPackage();
+    }, [id, token]);
 
     useEffect(() => {
         const fetchPppProfiles = async () => {
@@ -95,138 +114,77 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
             setPppProfilesLoading(true);
             try {
                 const response = await fetch(`/api/mikrotik/routers/${packageData.mikrotikRouter._id}/ppp-profiles`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!response.ok) {
-                    throw new Error("Failed to fetch PPP profiles");
-                }
-                const data = await response.json();
-                setPppProfiles(data);
+                if (!response.ok) throw new Error("Failed to fetch PPP profiles");
+                setPppProfiles(await response.json());
             } catch (err: unknown) {
-                toast({
-                    title: "Error",
-                    description: (err instanceof Error) ? err.message : "Failed to load PPP profiles.",
-                    variant: "destructive",
-                });
+                toast({ title: "Error", description: "Failed to load PPP profiles.", variant: "destructive" });
             } finally {
                 setPppProfilesLoading(false);
             }
         };
-
-        if (serviceType === "pppoe") {
-            fetchPppProfiles();
-        }
+        if (serviceType === "pppoe") fetchPppProfiles();
     }, [token, toast, packageData, serviceType]);
+
+    const handleNext = () => {
+        if (serviceType) {
+            setDirection(1);
+            setStep(2);
+        } else {
+            toast({ title: "Missing Information", description: "Please select a service type.", variant: "destructive" });
+        }
+    };
+
+    const handleBack = () => {
+        setDirection(-1);
+        setStep(1);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSubmitting(true);
-
         if (!serviceType) {
-            toast({
-                title: "Validation Error",
-                description: "Please select a service type.",
-                variant: "destructive",
-            });
-            setSubmitting(false);
+            toast({ title: "Validation Error", description: "Please select a service type.", variant: "destructive" });
             return;
         }
-
-        if (!token) {
-            toast({
-                title: "Authentication Error",
-                description: "You must be logged in to update a package.",
-                variant: "destructive",
-            });
-            setSubmitting(false);
-            return;
-        }
-
-        const updatedPackageData = {
-            name,
-            serviceType,
-            price: parseFloat(price),
-            profile: serviceType === 'pppoe' ? profile : undefined,
-            rateLimit: serviceType === 'static' ? rateLimit : undefined,
-            status,
-        };
-
+        setLoading(true);
+        const updatedPackageData = { name, serviceType, price: parseFloat(price), profile, rateLimit, status };
         try {
             const response = await fetch(`/api/mikrotik/packages/${id}`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify(updatedPackageData),
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || "Failed to update package");
             }
-
-            toast({
-                title: "Package Updated",
-                description: "Mikrotik package updated successfully.",
-            });
+            toast({ title: "Package Updated", description: "Package updated successfully." });
             router.push("/mikrotik/packages");
         } catch (error: unknown) {
-            toast({
-                title: "Error",
-                description: (error instanceof Error) ? error.message : "Failed to update package. Please try again.",
-                variant: "destructive",
-            });
+            toast({ title: "Error", description: (error instanceof Error) ? error.message : "Failed to update package.", variant: "destructive" });
         } finally {
-            setSubmitting(false);
+            setLoading(false);
         }
     };
 
     if (loading) {
         return (
-            <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-950 to-zinc-900 text-white">
+            <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
                 <Topbar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-300 mx-auto"></div>
-                        <p className="mt-2 text-zinc-400">Loading package data...</p>
-                    </div>
-                </div>
+                <div className="flex-1 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-500" /></div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-950 to-zinc-900 text-white">
+            <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
                 <Topbar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center p-4 bg-zinc-900 border border-red-500 rounded-lg">
-                        <p className="text-lg font-semibold text-red-500">Error loading package details. Please try again.</p>
-                        <Button onClick={() => setError(null)} className="mt-4 bg-red-600 hover:bg-red-700">
-                            Retry
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (!packageData) {
-        return (
-            <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-950 to-zinc-900 text-white">
-                <Topbar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold text-zinc-300 mb-2">Package Not Found</h2>
-                        <p className="text-zinc-400 mb-4">The Mikrotik package you&apos;re looking for doesn&apos;t exist.</p>
-                        <Link href="/mikrotik/packages">
-                            <Button variant="outline" className="bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border-zinc-700">
-                                Back to Packages
-                            </Button>
-                        </Link>
+                <div className="flex-1 flex items-center justify-center text-center">
+                    <div>
+                        <p className="text-red-500">{error}</p>
+                        <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
                     </div>
                 </div>
             </div>
@@ -234,119 +192,56 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-950 to-black text-white">
+        <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
             <Topbar />
-            <div className="flex-1 p-6 lg:px-8 space-y-8">
-                <div className="flex items-center gap-4 mb-6">
-                    <Link href="/mikrotik/packages">
-                        <Button variant="ghost" size="icon" className="bg-zinc-800 text-white hover:bg-zinc-700">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                    </Link>
+            <div className="flex-1 p-6 space-y-6">
+                <div className="flex items-center gap-4">
+                    <Link href="/mikrotik/packages"><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-blue-400">Edit Mikrotik Package</h1>
-                        <p className="text-sm text-zinc-400">Update Mikrotik package information.</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Edit Package</h1>
+                        <p className="text-sm text-zinc-400">Update the details for {packageData?.name}.</p>
                     </div>
                 </div>
 
-                <div className="max-w-4xl mx-auto">
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        <Card className="bg-zinc-900 border border-zinc-700 shadow-xl rounded-lg hover:shadow-blue-500/50 transition-all duration-300">
-                            <CardHeader className="border-b border-zinc-800 pb-4">
-                                <CardTitle className="text-cyan-400">Package Details</CardTitle>
-                                <CardDescription className="text-zinc-400">Update the details for this package.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4 pt-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name" className="text-zinc-300">Package Name</Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        required
-                                        className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="serviceType" className="text-zinc-300">Service Type</Label>
-                                    <Select onValueChange={(value: 'pppoe' | 'static') => setServiceType(value)} value={serviceType || undefined}>
-                                        <SelectTrigger className="bg-zinc-800 text-white border-zinc-700 focus:border-blue-500 focus:ring-blue-500 rounded-lg">
-                                            <SelectValue placeholder="Select service type" className="text-zinc-400" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-zinc-800 text-white border-zinc-700 rounded-lg">
-                                            <SelectItem value="pppoe" className="focus:bg-zinc-700 focus:text-white">PPPoE</SelectItem>
-                                            <SelectItem value="static" className="focus:bg-zinc-700 focus:text-white">Static IP</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="price" className="text-zinc-300">Price</Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        value={price}
-                                        onChange={(e) => setPrice(e.target.value)}
-                                        required
-                                        className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
-                                    />
-                                </div>
-                                {serviceType === 'pppoe' && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="profile" className="text-zinc-300">Profile</Label>
-                                        <Select onValueChange={setProfile} value={profile} disabled={pppProfilesLoading || pppProfiles.length === 0}>
-                                            <SelectTrigger className="bg-zinc-800 text-white border-zinc-700 focus:border-blue-500 focus:ring-blue-500 rounded-lg">
-                                                <SelectValue placeholder={pppProfilesLoading ? "Loading profiles..." : "Select a profile"} className="text-zinc-400" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-800 text-white border-zinc-700 rounded-lg">
-                                                {pppProfiles.map((p) => (
-                                                    <SelectItem key={p} value={p} className="focus:bg-zinc-700 focus:text-white">
-                                                        {p}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                                {serviceType === 'static' && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="rateLimit" className="text-zinc-300">Rate Limit</Label>
-                                        <Input
-                                            id="rateLimit"
-                                            type="text"
-                                            value={rateLimit}
-                                            onChange={(e) => setRateLimit(e.target.value)}
-                                            placeholder="e.g., 10M/10M"
-                                            className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
-                                        />
-                                    </div>
-                                )}
-                                <div className="space-y-2">
-                                    <Label htmlFor="status" className="text-zinc-300">Status</Label>
-                                    <Select onValueChange={(value: 'active' | 'disabled') => setStatus(value)} value={status}>
-                                        <SelectTrigger className="bg-zinc-800 text-white border-zinc-700 focus:border-blue-500 focus:ring-blue-500 rounded-lg">
-                                            <SelectValue placeholder="Select status" className="text-zinc-400" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-zinc-800 text-white border-zinc-700 rounded-lg">
-                                            <SelectItem value="active" className="focus:bg-zinc-700 focus:text-white">Active</SelectItem>
-                                            <SelectItem value="disabled" className="focus:bg-zinc-700 focus:text-white">Inactive</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <div className="flex items-center justify-end gap-4 pt-6 border-t border-zinc-800">
-                            <Link href="/mikrotik/packages">
-                                <Button type="button" variant="outline" className="bg-zinc-800 text-white hover:bg-zinc-700 border-zinc-700">
-                                    Cancel
-                                </Button>
-                            </Link>
-                            <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all duration-300 hover:scale-105">
-                                {submitting ? "Updating Package..." : "Update Package"}
-                            </Button>
-                        </div>
-                    </form>
+                <div className="flex justify-center">
+                    <div className="w-full max-w-2xl">
+                        <form onSubmit={handleSubmit}>
+                            <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+                                <Card className="bg-transparent border-none">
+                                    <CardHeader className="p-4 border-b border-zinc-800"><StepIndicator currentStep={step} /></CardHeader>
+                                    <CardContent className="p-5">
+                                        <AnimatePresence mode="wait" custom={direction}>
+                                            {step === 1 ? (
+                                                <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Input value={packageData?.mikrotikRouter?.name || 'Loading...'} disabled className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent></Select></div>
+                                                    </div>
+                                                </motion.div>
+                                            ) : (
+                                                <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div className="space-y-1"><Label className="text-xs">Name</Label><Input value={name} onChange={e => setName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        <div className="space-y-1"><Label className="text-xs">Price</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        <div className="space-y-1"><Label className="text-xs">Status</Label><Select onValueChange={(v: "active" | "disabled") => setStatus(v)} value={status}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select status" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="active" className="text-sm">Active</SelectItem><SelectItem value="disabled" className="text-sm">Inactive</SelectItem></SelectContent></Select></div>
+                                                        {serviceType === "pppoe" && <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={pppProfilesLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{pppProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>}
+                                                        {serviceType === "static" && <div className="space-y-1"><Label className="text-xs">Rate Limit</Label><Input value={rateLimit} onChange={e => setRateLimit(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </CardContent>
+                                    <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
+                                        <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
+                                        <div>
+                                            {step === 1 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
+                                            {step === 2 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Changes"}</Button>}
+                                        </div>
+                                    </CardFooter>
+                                </Card>
+                            </motion.div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
