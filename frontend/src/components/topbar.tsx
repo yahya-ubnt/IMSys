@@ -35,28 +35,36 @@ export function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b-2 border-blue-500 bg-zinc-950">
-      <div className="flex h-16 items-center gap-4 px-2">
+    <header className="sticky top-0 z-50 w-full border-b" style={{
+      backgroundColor: 'var(--sidebar)',
+      borderColor: 'var(--sidebar-border)',
+    }}>
+      <div className="flex h-16 items-center gap-4 px-4">
 
         <div className="flex-1 flex items-center gap-4">
           <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Search buildings, units, caretakers..."
-              className="pl-8 bg-zinc-800 text-zinc-200 border-zinc-700 focus:ring-blue-500 focus:border-blue-500"
+              className="pl-8 rounded-full"
+              style={{
+                backgroundColor: 'var(--input)',
+                color: 'var(--foreground)',
+                borderColor: 'var(--border)',
+              }}
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Theme Toggle */}
-          <Button variant="outline" size="icon" onClick={toggleTheme} className="h-9 w-9 border-blue-500 text-blue-400 hover:bg-blue-900 hover:text-white">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" style={{ color: 'var(--muted-foreground)' }}>
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             <span className="sr-only">Toggle theme</span>
           </Button>
 
           {/* Notifications */}
-          <Button variant="outline" size="icon" className="h-9 w-9 border-blue-500 text-blue-400 hover:bg-blue-900 hover:text-white">
+          <Button variant="ghost" size="icon" className="h-9 w-9" style={{ color: 'var(--muted-foreground)' }}>
             <Bell className="h-4 w-4" />
             <span className="sr-only">Notifications</span>
           </Button>
@@ -64,38 +72,42 @@ export function Topbar() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="relative h-9 w-9 rounded-full border-blue-500 hover:bg-blue-900">
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
                   <AvatarImage
                     src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
                     alt={user?.name || "User"}
                   />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+                  <AvatarFallback style={{ backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)' }}>
                     {user?.name?.charAt(0) || "A"}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-zinc-900 text-zinc-200 border-zinc-700" align="end" forceMount>
+            <DropdownMenuContent className="w-56" align="end" forceMount style={{
+              backgroundColor: 'var(--sidebar)',
+              color: 'var(--popover-foreground)',
+              borderColor: 'var(--sidebar-border)',
+            }}>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none text-blue-400">{user?.name || "Admin User"}</p>
-                  <p className="text-xs leading-none text-zinc-400">{user?.email || "admin@mediatek.com"}</p>
+                  <p className="text-sm font-medium leading-none">{user?.name || "Admin User"}</p>
+                  <p className="text-xs leading-none" style={{ color: 'var(--muted-foreground)' }}>{user?.email || "admin@mediatek.com"}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-zinc-700" />
-              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer hover:bg-zinc-800">
-                <User className="mr-2 h-4 w-4 text-blue-400" />
-                <span className="text-zinc-200">Profile</span>
+              <DropdownMenuSeparator style={{ backgroundColor: 'var(--sidebar-border)' }} />
+              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer hover:bg-zinc-800">
-                <Settings className="mr-2 h-4 w-4 text-blue-400" />
-                <span className="text-zinc-200">Settings</span>
+              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-zinc-700" />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500 hover:bg-zinc-800">
-                <LogOut className="mr-2 h-4 w-4 text-red-500" />
-                <span className="text-red-500">Log out</span>
+              <DropdownMenuSeparator style={{ backgroundColor: 'var(--sidebar-border)' }} />
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" style={{ color: 'var(--destructive)' }}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
