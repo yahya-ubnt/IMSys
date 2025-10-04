@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -101,10 +102,12 @@ export default function PackagesPage() {
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Mikrotik Packages</h1>
               <p className="text-sm text-zinc-400">A centralized hub for managing all your internet service packages.</p>
             </div>
-            <Button onClick={() => handleOpenForm()} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Package
-            </Button>
+            <Link href="/mikrotik/packages/new" passHref>
+              <Button as="a" className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Plus className="mr-2 h-4 w-4" />
+                Add New Package
+              </Button>
+            </Link>
           </div>
 
           <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">

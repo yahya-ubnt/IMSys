@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 import { Package } from "@/types/mikrotik-package";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Save, Loader2 } from "lucide-react";
@@ -31,6 +32,10 @@ export type PackageFormData = {
   status: 'active' | 'disabled';
   profile?: string;
   rateLimit?: string;
+}
+
+type FormState = Omit<PackageFormData, 'price'> & {
+  price: string;
 }
 
 interface PackageFormProps {
@@ -58,16 +63,19 @@ const formVariants = {
 export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitting }: PackageFormProps) {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
-  const [formData, setFormData] = useState<PackageFormData>({
+  const { toast } = useToast();
+  const [formData, setFormData] = useState<FormState>({
     mikrotikRouter: "",
     serviceType: "pppoe",
     name: "",
-    price: 0,
+    price: "",
     status: "active",
     profile: "",
     rateLimit: "",
   })
   const [routers, setRouters] = useState<MikrotikRouter[]>([])
+  const [pppoeProfiles, setPppoeProfiles] = useState<string[]>([])
+  const [isProfilesLoading, setIsProfilesLoading] = useState(false)
 
   useEffect(() => {
     if (initialData) {
@@ -75,7 +83,7 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
         mikrotikRouter: typeof initialData.mikrotikRouter === 'string' ? initialData.mikrotikRouter : initialData.mikrotikRouter._id,
         serviceType: initialData.serviceType,
         name: initialData.name,
-        price: initialData.price,
+        price: initialData.price.toString(),
         status: initialData.status,
         profile: initialData.profile || "",
         rateLimit: initialData.rateLimit || "",
@@ -85,7 +93,7 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
         mikrotikRouter: "",
         serviceType: "pppoe",
         name: "",
-        price: 0,
+        price: "",
         status: "active",
         profile: "",
         rateLimit: "",
@@ -118,6 +126,38 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
     }
   }, [isOpen])
 
+  useEffect(() => {
+    const fetchPppoeProfiles = async () => {
+      if (formData.mikrotikRouter && formData.serviceType === 'pppoe') {
+        setIsProfilesLoading(true);
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) throw new Error("No token found");
+
+          const response = await fetch(`/api/mikrotik/routers/${formData.mikrotikRouter}/ppp-profiles`, {
+            headers: { "Authorization": `Bearer ${token}` },
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch PPPoE profiles");
+          }
+
+          const data = await response.json();
+          setPppoeProfiles(data);
+        } catch (error) {
+          console.error("Error fetching PPPoE profiles:", error);
+          setPppoeProfiles([]);
+        } finally {
+          setIsProfilesLoading(false);
+        }
+      } else {
+        setPppoeProfiles([]);
+      }
+    };
+
+    fetchPppoeProfiles();
+  }, [formData.mikrotikRouter, formData.serviceType]);
+
   const handleNext = () => {
       setDirection(1);
       setStep(2);
@@ -126,7 +166,20 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    const priceAsNumber = parseFloat(formData.price);
+    if (isNaN(priceAsNumber) || formData.price.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "Price is required and must be a valid number.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const dataToSubmit: PackageFormData = {
+      ...formData,
+      price: priceAsNumber,
+    };
+    onSubmit(dataToSubmit)
   }
 
   return (
@@ -148,15 +201,31 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
                         <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
                             <div className="space-y-1"><Label className="text-xs">Package Name</Label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1"><Label className="text-xs">Price</Label><Input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                <div className="space-y-1"><Label className="text-xs">Price</Label><Input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                 <div className="space-y-1"><Label className="text-xs">Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as 'active' | 'disabled' })}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="active">Active</SelectItem><SelectItem value="disabled">Disabled</SelectItem></SelectContent></Select></div>
                             </div>
                         </motion.div>
                     ) : (
                         <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
-                            <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select value={formData.mikrotikRouter} onValueChange={(v) => setFormData({ ...formData, mikrotikRouter: v })} required><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id}>{r.name}</SelectItem>)}</SelectContent></Select></div>
-                            <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select value={formData.serviceType} onValueChange={(v) => setFormData({ ...formData, serviceType: v as 'pppoe' | 'static' })}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe">PPPoE</SelectItem><SelectItem value="static">Static IP</SelectItem></SelectContent></Select></div>
-                            {formData.serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Profile</Label><Input value={formData.profile} onChange={(e) => setFormData({ ...formData, profile: e.target.value })} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 10M-Profile"/></div>}
+                            <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select value={formData.mikrotikRouter} onValueChange={(v) => setFormData({ ...formData, mikrotikRouter: v, profile: '' })} required><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id}>{r.name}</SelectItem>)}</SelectContent></Select></div>
+                            <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select value={formData.serviceType} onValueChange={(v) => setFormData({ ...formData, serviceType: v as 'pppoe' | 'static', profile: '' })}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe">PPPoE</SelectItem><SelectItem value="static">Static IP</SelectItem></SelectContent></Select></div>
+                            {formData.serviceType === 'pppoe' && (
+                                <div className="space-y-1">
+                                    <Label className="text-xs">PPPoE Profile</Label>
+                                    <Select 
+                                        value={formData.profile} 
+                                        onValueChange={(v) => setFormData({ ...formData, profile: v })}
+                                        disabled={isProfilesLoading || !formData.mikrotikRouter}
+                                    >
+                                        <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                                            <SelectValue placeholder={isProfilesLoading ? "Loading profiles..." : "Select a profile"} />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                            {pppoeProfiles.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                             {formData.serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Rate Limit</Label><Input value={formData.rateLimit} onChange={(e) => setFormData({ ...formData, rateLimit: e.target.value })} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 10M/10M"/></div>}
                         </motion.div>
                     )}
