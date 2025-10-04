@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Topbar } from "@/components/topbar";
 import { motion } from "framer-motion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export interface MikrotikUser {
   _id: string;
@@ -43,6 +44,7 @@ export default function MikrotikUsersPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "expired">("all");
   const [monthlyTotalSubscribers, setMonthlyTotalSubscribers] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const fetchMonthlyTotalSubscribers = useCallback(async (year: string) => {
     if (!token) return;
@@ -81,22 +83,26 @@ export default function MikrotikUsersPage() {
     }
   }, [token, isLoggingOut, selectedYear, fetchUsers, fetchMonthlyTotalSubscribers]);
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async () => {
+    if (!deleteCandidateId) return;
     if (!token) {
       toast({ title: 'Authentication Error', description: 'You must be logged in.', variant: 'destructive' });
       return;
     }
     try {
-      const response = await fetch(`/api/mikrotik/users/${userId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`/api/mikrotik/users/${deleteCandidateId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error(`Failed to delete user: ${response.statusText}`);
-      setUsers(prev => prev.filter(user => user._id !== userId));
+      setUsers(prev => prev.filter(user => user._id !== deleteCandidateId));
       toast({ title: 'User Deleted', description: 'Mikrotik user has been successfully deleted.' });
     } catch (error: unknown) {
       toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete user.', variant: 'destructive' });
     }
+    finally {
+      setDeleteCandidateId(null);
+    }
   };
 
-  const columns = getColumns(handleDeleteUser);
+  const columns = getColumns((id) => setDeleteCandidateId(id));
 
   const filteredUsers = useMemo(() => users.filter(user => {
     const userStatus = getMikrotikUserStatus(user).status.toLowerCase();
@@ -114,40 +120,56 @@ export default function MikrotikUsersPage() {
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
-      <Topbar />
-      <div className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Mikrotik Users</h1>
-            <p className="text-sm text-zinc-400">Dashboard and management for all network users.</p>
+    <>
+      <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+        <Topbar />
+        <div className="flex-1 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Mikrotik Users</h1>
+              <p className="text-sm text-zinc-400">Dashboard and management for all network users.</p>
+            </div>
+            <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Link href="/mikrotik/users/new"><PlusCircledIcon className="mr-2 h-4 w-4" /> Add New User</Link>
+            </Button>
           </div>
-          <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <Link href="/mikrotik/users/new"><PlusCircledIcon className="mr-2 h-4 w-4" /> Add New User</Link>
-          </Button>
-        </div>
 
-        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
-          <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard title="Total Users" value={totalUsers} icon={Users} />
-              <StatCard title="Active Users" value={activeUsers} icon={CheckCircle} color="text-green-400" />
-              <StatCard title="Expired Users" value={expiredUsers} icon={Clock} color="text-yellow-400" />
-            </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ChartCard title="Subscriber Trends" selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyTotalSubscribers} />
-              <DonutChartCard active={activeUsers} expired={expiredUsers} total={totalUsers} />
-            </CardContent>
-            <div className="p-4 border-t border-zinc-800">
-              <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} statusFilter={statusFilter} onStatusFilter={setStatusFilter} />
-            </div>
-            <div className="overflow-x-auto">
-              <DataTable columns={columns} data={filteredUsers} filterColumn="username" />
-            </div>
-          </Card>
-        </motion.div>
+          <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+            <Card className="bg-transparent border-none">
+              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard title="Total Users" value={totalUsers} icon={Users} />
+                <StatCard title="Active Users" value={activeUsers} icon={CheckCircle} color="text-green-400" />
+                <StatCard title="Expired Users" value={expiredUsers} icon={Clock} color="text-yellow-400" />
+              </CardHeader>
+              <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ChartCard title="Subscriber Trends" selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyTotalSubscribers} />
+                <DonutChartCard active={activeUsers} expired={expiredUsers} total={totalUsers} />
+              </CardContent>
+              <div className="p-4 border-t border-zinc-800">
+                <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} statusFilter={statusFilter} onStatusFilter={setStatusFilter} />
+              </div>
+              <div className="overflow-x-auto">
+                <DataTable columns={columns} data={filteredUsers} filterColumn="username" />
+              </div>
+            </Card>
+          </motion.div>
+        </div>
       </div>
-    </div>
+      <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

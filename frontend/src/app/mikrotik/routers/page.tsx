@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Router as RouterIcon, Wifi, WifiOff } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { motion } from "framer-motion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // --- Interface Definition ---
 interface MikrotikRouter {
@@ -33,6 +34,7 @@ export default function MikrotikRoutersPage() {
   const { token, isLoggingOut } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const fetchRouters = useCallback(async () => {
     if (!token) {
@@ -59,22 +61,26 @@ export default function MikrotikRoutersPage() {
     return () => clearInterval(interval);
   }, [fetchRouters, isLoggingOut]);
 
-  const handleDeleteRouter = async (routerId: string) => {
+  const handleDeleteRouter = async () => {
+    if (!deleteCandidateId) return;
     if (!token) {
       toast({ title: 'Authentication Error', variant: 'destructive' });
       return;
     }
     try {
-      const response = await fetch(`/api/mikrotik/routers/${routerId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`/api/mikrotik/routers/${deleteCandidateId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error(`Failed to delete router: ${response.statusText}`);
       toast({ title: 'Router Deleted', description: 'Mikrotik router has been successfully deleted.' });
       fetchRouters();
     } catch (error: unknown) {
       toast({ title: 'Error', description: (error instanceof Error) ? error.message : 'Failed to delete router.', variant: 'destructive' });
     }
+    finally {
+      setDeleteCandidateId(null);
+    }
   };
 
-  const columns = getColumns(handleDeleteRouter);
+  const columns = getColumns((id) => setDeleteCandidateId(id));
 
   const filteredRouters = useMemo(() =>
     routers.filter(router =>
@@ -97,40 +103,56 @@ export default function MikrotikRoutersPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
-      <Topbar />
-      <div className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Mikrotik Routers</h1>
-            <p className="text-sm text-zinc-400">Manage all your Mikrotik routers with ease.</p>
+    <>
+      <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+        <Topbar />
+        <div className="flex-1 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Mikrotik Routers</h1>
+              <p className="text-sm text-zinc-400">Manage all your Mikrotik routers with ease.</p>
+            </div>
+            <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Link href="/mikrotik/routers/new"><Plus className="mr-2 h-4 w-4" />Add New Router</Link>
+            </Button>
           </div>
-          <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <Link href="/mikrotik/routers/new"><Plus className="mr-2 h-4 w-4" />Add New Router</Link>
-          </Button>
-        </div>
 
-        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
-          <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-zinc-800">
-              <StatCard title="Total Routers" value={stats.total} icon={RouterIcon} />
-              <StatCard title="Online" value={stats.online} icon={Wifi} color="text-green-400" />
-              <StatCard title="Offline" value={stats.offline} icon={WifiOff} color="text-red-400" />
-            </CardHeader>
-            <div className="p-4 border-t border-zinc-800">
-              <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} />
-            </div>
-            <div className="overflow-x-auto">
-              <DataTable
-                columns={columns}
-                data={filteredRouters}
-                filterColumn="name"
-              />
-            </div>
-          </Card>
-        </motion.div>
+          <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+            <Card className="bg-transparent border-none">
+              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-zinc-800">
+                <StatCard title="Total Routers" value={stats.total} icon={RouterIcon} />
+                <StatCard title="Online" value={stats.online} icon={Wifi} color="text-green-400" />
+                <StatCard title="Offline" value={stats.offline} icon={WifiOff} color="text-red-400" />
+              </CardHeader>
+              <div className="p-4 border-t border-zinc-800">
+                <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} />
+              </div>
+              <div className="overflow-x-auto">
+                <DataTable
+                  columns={columns}
+                  data={filteredRouters}
+                  filterColumn="name"
+                />
+              </div>
+            </Card>
+          </motion.div>
+        </div>
       </div>
-    </div>
+      <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the router.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRouter}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

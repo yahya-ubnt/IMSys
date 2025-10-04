@@ -19,6 +19,7 @@ import { Topbar } from "@/components/topbar"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // --- MAIN COMPONENT ---
 export default function LeadsPage() {
@@ -36,6 +37,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [createMikrotikUser, setCreateMikrotikUser] = useState(false)
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
   
   // Form states
   const [mikrotikDetails, setMikrotikDetails] = useState({ mikrotikUsername: "", mikrotikPassword: "", mikrotikService: "", mikrotikRouter: "" })
@@ -62,17 +64,20 @@ export default function LeadsPage() {
   }, [fetchLeads])
 
   // --- EVENT HANDLERS ---
-  const handleDeleteLead = async (leadId: string) => {
-    if (!confirm("Are you sure?")) return
+  const handleDeleteLead = async () => {
+    if (!deleteCandidateId) return
     try {
       const token = localStorage.getItem('token')
       if (!token) throw new Error("Authentication token not found.")
-      const response = await fetch(`/api/leads/${leadId}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } })
+      const response = await fetch(`/api/leads/${deleteCandidateId}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } })
       if (!response.ok) throw new Error("Failed to delete lead")
       toast({ title: "Lead Deleted", description: "Lead has been successfully deleted." })
       fetchLeads()
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete lead.", variant: "destructive" })
+    }
+    finally {
+      setDeleteCandidateId(null)
     }
   }
 
@@ -109,107 +114,123 @@ export default function LeadsPage() {
   if (isLoading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading...</div>
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
-      <Topbar />
-      <main className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">All Leads</h1>
-            <p className="text-sm text-zinc-400">Manage and track all your potential customers.</p>
-          </div>
-          <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <Link href="/leads/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add New Lead
-            </Link>
-          </Button>
-        </div>
-
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
-          <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Total Leads" value={dashboardStats.totalLeads} icon={List} />
-                <StatCard title="New This Month" value={dashboardStats.newLeadsThisMonth} icon={UserPlus} color="text-yellow-400" />
-                <StatCard title="Converted This Month" value={dashboardStats.totalConvertedLeads} icon={CheckCircle} color="text-green-400" />
-                <StatCard title="Total Converted" value={dashboardStats.totalConvertedLeads} icon={CheckCircle} color="text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 bg-zinc-800/50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-semibold text-cyan-400">Monthly Lead Trends</h3>
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                      <defs>
-                        <linearGradient id="newLeadsFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="convertedLeadsFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="month" tickFormatter={m => new Date(2000, m - 1).toLocaleString('default', { month: 'short' })} style={{ fontSize: '0.75rem' }} stroke="#888" />
-                      <YAxis style={{ fontSize: '0.75rem' }} stroke="#888" />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-                      <Area type="monotone" dataKey="newLeads" stroke="#f59e0b" fill="url(#newLeadsFill)" name="New Leads" />
-                      <Area type="monotone" dataKey="convertedLeads" stroke="#10b981" fill="url(#convertedLeadsFill)" name="Converted Leads" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="bg-zinc-800/50 p-4 rounded-lg">
-                  <h3 className="text-sm font-semibold text-cyan-400 mb-2">Quick Actions</h3>
-                  <p className="text-xs text-zinc-400">Feature coming soon.</p>
-                </div>
-              </div>
-              <div className="p-4 border-t border-zinc-800 mt-4">
-                <DataTable
-                  columns={getColumns(handleDeleteLead, handleStatusChange)}
-                  data={leads}
-                  filterColumn="name"
-                  onRowClick={(lead: Lead) => router.push(`/leads/${lead._id}`)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-cyan-400">Convert Lead</DialogTitle>
-              <DialogDescription className="text-zinc-400">Convert this lead into a client.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox id="create-mikrotik-user" checked={createMikrotikUser} onCheckedChange={(c) => setCreateMikrotikUser(!!c)} className="border-zinc-500 data-[state=checked]:bg-blue-600" />
-                <Label htmlFor="create-mikrotik-user" className="text-zinc-300">Create MikroTik User?</Label>
-              </div>
-              {createMikrotikUser && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
-                  <div className="space-y-2"><Label className="text-zinc-300">Username</Label><Input value={mikrotikDetails.mikrotikUsername} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikUsername: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                  <div className="space-y-2"><Label className="text-zinc-300">Password</Label><Input type="password" value={mikrotikDetails.mikrotikPassword} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikPassword: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                  <div className="space-y-2"><Label className="text-zinc-300">Service</Label><Input value={mikrotikDetails.mikrotikService} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikService: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                  <div className="space-y-2"><Label className="text-zinc-300">Router</Label><Input value={mikrotikDetails.mikrotikRouter} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikRouter: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                </div>
-              )}
+    <>
+      <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+        <Topbar />
+        <main className="flex-1 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">All Leads</h1>
+              <p className="text-sm text-zinc-400">Manage and track all your potential customers.</p>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsModalOpen(false)} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
-              <Button onClick={handleModalSubmit} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">Convert</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </main>
-    </div>
+            <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Link href="/leads/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Lead
+              </Link>
+            </Button>
+          </div>
+
+          <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+            <Card className="bg-transparent border-none">
+              <CardHeader className="p-4 border-b border-zinc-800">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <StatCard title="Total Leads" value={dashboardStats.totalLeads} icon={List} />
+                  <StatCard title="New This Month" value={dashboardStats.newLeadsThisMonth} icon={UserPlus} color="text-yellow-400" />
+                  <StatCard title="Converted This Month" value={dashboardStats.totalConvertedLeads} icon={CheckCircle} color="text-green-400" />
+                  <StatCard title="Total Converted" value={dashboardStats.totalConvertedLeads} icon={CheckCircle} color="text-green-400" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="lg:col-span-2 bg-zinc-800/50 p-4 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-semibold text-cyan-400">Monthly Lead Trends</h3>
+                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <defs>
+                          <linearGradient id="newLeadsFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="convertedLeadsFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="month" tickFormatter={m => new Date(2000, m - 1).toLocaleString('default', { month: 'short' })} style={{ fontSize: '0.75rem' }} stroke="#888" />
+                        <YAxis style={{ fontSize: '0.75rem' }} stroke="#888" />
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
+                        <Area type="monotone" dataKey="newLeads" stroke="#f59e0b" fill="url(#newLeadsFill)" name="New Leads" />
+                        <Area type="monotone" dataKey="convertedLeads" stroke="#10b981" fill="url(#convertedLeadsFill)" name="Converted Leads" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="bg-zinc-800/50 p-4 rounded-lg">
+                    <h3 className="text-sm font-semibold text-cyan-400 mb-2">Quick Actions</h3>
+                    <p className="text-xs text-zinc-400">Feature coming soon.</p>
+                  </div>
+                </div>
+                <div className="p-4 border-t border-zinc-800 mt-4">
+                  <DataTable
+                    columns={getColumns((id) => setDeleteCandidateId(id), handleStatusChange)}
+                    data={leads}
+                    filterColumn="name"
+                    onRowClick={(lead: Lead) => router.push(`/leads/${lead._id}`)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
+              <DialogHeader>
+                <DialogTitle className="text-cyan-400">Convert Lead</DialogTitle>
+                <DialogDescription className="text-zinc-400">Convert this lead into a client.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="create-mikrotik-user" checked={createMikrotikUser} onCheckedChange={(c) => setCreateMikrotikUser(!!c)} className="border-zinc-500 data-[state=checked]:bg-blue-600" />
+                  <Label htmlFor="create-mikrotik-user" className="text-zinc-300">Create MikroTik User?</Label>
+                </div>
+                {createMikrotikUser && (
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
+                    <div className="space-y-2"><Label className="text-zinc-300">Username</Label><Input value={mikrotikDetails.mikrotikUsername} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikUsername: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+                    <div className="space-y-2"><Label className="text-zinc-300">Password</Label><Input type="password" value={mikrotikDetails.mikrotikPassword} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikPassword: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+                    <div className="space-y-2"><Label className="text-zinc-300">Service</Label><Input value={mikrotikDetails.mikrotikService} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikService: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+                    <div className="space-y-2"><Label className="text-zinc-300">Router</Label><Input value={mikrotikDetails.mikrotikRouter} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikRouter: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
+                <Button onClick={handleModalSubmit} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">Convert</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </main>
+      </div>
+      <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the lead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteLead}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 

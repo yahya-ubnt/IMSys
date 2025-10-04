@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Expense, ExpenseType } from "@/types/expenses"
 import { User } from "@/types/users"
 
@@ -34,6 +35,7 @@ export default function AllExpensesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null)
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
@@ -94,10 +96,10 @@ export default function AllExpensesPage() {
     setIsDialogOpen(true);
   }
 
-  const handleDelete = async (id: string) => {
-    if (!token || !window.confirm("Are you sure?")) return;
+  const handleDelete = async () => {
+    if (!token || !deleteCandidateId) return;
     try {
-      const response = await fetch(`/api/expenses/${id}`, {
+      const response = await fetch(`/api/expenses/${deleteCandidateId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -106,6 +108,9 @@ export default function AllExpensesPage() {
       fetchData();
     } catch {
       toast({ title: "Error", description: "Could not delete expense.", variant: "destructive" });
+    }
+    finally {
+      setDeleteCandidateId(null);
     }
   };
 
@@ -119,103 +124,119 @@ export default function AllExpensesPage() {
 
   // --- RENDER ---
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
-      <Topbar />
-      <main className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">All Expenses</h1>
-            <p className="text-sm text-zinc-400">Track and manage all your expenses.</p>
+    <>
+      <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+        <Topbar />
+        <main className="flex-1 p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">All Expenses</h1>
+              <p className="text-sm text-zinc-400">Track and manage all your expenses.</p>
+            </div>
+            <Button onClick={handleNew} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Expense
+            </Button>
           </div>
-          <Button onClick={handleNew} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Expense
-          </Button>
-        </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
-          <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard title="Total Amount" value={formatCurrency(stats.totalAmount)} icon={DollarSign} />
-              <StatCard title="Paid" value={formatCurrency(stats.paid)} icon={CheckCircle} color="text-green-400" />
-              <StatCard title="Due" value={formatCurrency(stats.due)} icon={AlertCircle} color="text-yellow-400" />
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="overflow-x-auto">
-                <DataTable columns={columns} data={data} filterColumn="title" meta={{ handleEdit, handleDelete }} />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+          <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+            <Card className="bg-transparent border-none">
+              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard title="Total Amount" value={formatCurrency(stats.totalAmount)} icon={DollarSign} />
+                <StatCard title="Paid" value={formatCurrency(stats.paid)} icon={CheckCircle} color="text-green-400" />
+                <StatCard title="Due" value={formatCurrency(stats.due)} icon={AlertCircle} color="text-yellow-400" />
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="overflow-x-auto">
+                  <DataTable columns={columns} data={data} filterColumn="title" meta={{ handleEdit, handleDelete: (id) => setDeleteCandidateId(id) }} />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-cyan-400">{editingExpense?._id ? "Edit Expense" : "Add New Expense"}</DialogTitle>
-              <DialogDescription className="text-zinc-400">Record or update an expense.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-zinc-300">Title</Label>
-                  <Input id="title" placeholder="e.g., Fiber Cable Purchase" value={editingExpense?.title || ''} onChange={(e) => setEditingExpense({ ...editingExpense, title: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
+              <DialogHeader>
+                <DialogTitle className="text-cyan-400">{editingExpense?._id ? "Edit Expense" : "Add New Expense"}</DialogTitle>
+                <DialogDescription className="text-zinc-400">Record or update an expense.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-zinc-300">Title</Label>
+                    <Input id="title" placeholder="e.g., Fiber Cable Purchase" value={editingExpense?.title || ''} onChange={(e) => setEditingExpense({ ...editingExpense, title: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount" className="text-zinc-300">Amount</Label>
+                    <Input id="amount" type="number" placeholder="e.g., 15000" value={editingExpense?.amount || ''} onChange={(e) => setEditingExpense({ ...editingExpense, amount: Number(e.target.value) })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-300">Type</Label>
+                    <Select value={typeof editingExpense?.expenseType === 'object' ? editingExpense.expenseType._id : editingExpense?.expenseType} onValueChange={(value) => {
+                      const selectedType = expenseTypes.find(type => type._id === value);
+                      setEditingExpense({ ...editingExpense, expenseType: selectedType })
+                    }}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a type" /></SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                        {expenseTypes.map(type => <SelectItem key={type._id} value={type._id}>{type.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-300">Expensed By</Label>
+                    <Select value={typeof editingExpense?.expenseBy === 'object' ? editingExpense.expenseBy._id : editingExpense?.expenseBy} onValueChange={(value) => {
+                      const selectedUser = users.find(user => user._id === value);
+                      setEditingExpense({ ...editingExpense, expenseBy: selectedUser })
+                    }}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a user" /></SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                        {users.map(u => <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expenseDate" className="text-zinc-300">Expense Date</Label>
+                    <Input id="expenseDate" type="date" value={editingExpense?.expenseDate?.toString().split('T')[0] || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expenseDate: e.target.value })} className="bg-zinc-800 border-zinc-700" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-300">Status</Label>
+                    <Select value={editingExpense?.status || 'Due'} onValueChange={(value) => setEditingExpense({ ...editingExpense, status: value as 'Due' | 'Paid' })}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                        <SelectItem value="Due">Due</SelectItem>
+                        <SelectItem value="Paid">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="amount" className="text-zinc-300">Amount</Label>
-                  <Input id="amount" type="number" placeholder="e.g., 15000" value={editingExpense?.amount || ''} onChange={(e) => setEditingExpense({ ...editingExpense, amount: Number(e.target.value) })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Type</Label>
-                  <Select value={typeof editingExpense?.expenseType === 'object' ? editingExpense.expenseType._id : editingExpense?.expenseType} onValueChange={(value) => {
-                    const selectedType = expenseTypes.find(type => type._id === value);
-                    setEditingExpense({ ...editingExpense, expenseType: selectedType })
-                  }}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a type" /></SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                      {expenseTypes.map(type => <SelectItem key={type._id} value={type._id}>{type.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Expensed By</Label>
-                  <Select value={typeof editingExpense?.expenseBy === 'object' ? editingExpense.expenseBy._id : editingExpense?.expenseBy} onValueChange={(value) => {
-                    const selectedUser = users.find(user => user._id === value);
-                    setEditingExpense({ ...editingExpense, expenseBy: selectedUser })
-                  }}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a user" /></SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                      {users.map(u => <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expenseDate" className="text-zinc-300">Expense Date</Label>
-                  <Input id="expenseDate" type="date" value={editingExpense?.expenseDate?.toString().split('T')[0] || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expenseDate: e.target.value })} className="bg-zinc-800 border-zinc-700" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Status</Label>
-                  <Select value={editingExpense?.status || 'Due'} onValueChange={(value) => setEditingExpense({ ...editingExpense, status: value as 'Due' | 'Paid' })}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                      <SelectItem value="Due">Due</SelectItem>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="description" className="text-zinc-300">Description</Label>
+                  <Textarea id="description" placeholder="e.g., Purchase of 500m of outdoor fiber optic cable." value={editingExpense?.description || ''} onChange={(e) => setEditingExpense({ ...editingExpense, description: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-zinc-300">Description</Label>
-                <Textarea id="description" placeholder="e.g., Purchase of 500m of outdoor fiber optic cable." value={editingExpense?.description || ''} onChange={(e) => setEditingExpense({ ...editingExpense, description: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+              <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
+                <Button onClick={handleSave} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">{editingExpense?._id ? "Update Expense" : "Add Expense"}</Button>
               </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
-              <Button onClick={handleSave} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">{editingExpense?._id ? "Update Expense" : "Add Expense"}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </main>
-    </div>
+            </DialogContent>
+          </Dialog>
+        </main>
+      </div>
+      <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the expense.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
