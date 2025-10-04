@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { PackageForm, PackageFormData } from "./package-form";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { PackageForm } from "./package-form";
 import { Package } from "@/types/mikrotik-package";
 import { motion } from "framer-motion";
 import { Topbar } from "@/components/topbar";
@@ -26,6 +27,7 @@ export default function PackagesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const fetchPackages = useCallback(async () => {
     if (!token) {
@@ -40,7 +42,8 @@ export default function PackagesPage() {
       setPackages(await response.json());
     } catch (err: unknown) {
       setError((err instanceof Error) ? err.message : 'Failed to fetch packages');
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   }, [token]);
@@ -68,7 +71,8 @@ export default function PackagesPage() {
       fetchPackages();
     } catch (error: unknown) {
       toast({ title: "Error", description: (error instanceof Error) ? error.message : `Failed to ${action} package.`, variant: "destructive" });
-    } finally {
+    }
+    finally {
       setIsSubmitting(false);
     }
   };
@@ -79,10 +83,26 @@ export default function PackagesPage() {
   };
 
   const handleDeletePackage = async () => {
-    // Delete logic here
+    if (!deleteCandidateId) return;
+    try {
+      const response = await fetch(`/api/mikrotik/packages/${deleteCandidateId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        throw new Error((await response.json()).message || 'Failed to delete package');
+      }
+      toast({ title: 'Package Deleted', description: 'The package has been successfully deleted.' });
+      fetchPackages();
+    } catch (error) {
+      toast({ title: 'Error', description: (error instanceof Error) ? error.message : 'An unexpected error occurred.', variant: 'destructive' });
+    }
+    finally {
+      setDeleteCandidateId(null);
+    }
   };
 
-  const columns = getColumns(handleOpenForm, handleDeletePackage);
+  const columns = getColumns(handleOpenForm, (id) => setDeleteCandidateId(id));
 
   const filteredPackages = useMemo(() => packages.filter(pkg => {
     const routerName = (pkg.mikrotikRouter && typeof pkg.mikrotikRouter !== 'string') ? pkg.mikrotikRouter.name : '';
@@ -137,6 +157,20 @@ export default function PackagesPage() {
         initialData={editingPackage}
         isSubmitting={isSubmitting}
       />
+      <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the package.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePackage}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
