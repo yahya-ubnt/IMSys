@@ -5,6 +5,8 @@ import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table'; // Import DataTable
 import { ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
 
+import { Badge } from '@/components/ui/badge';
+
 interface DhcpLease {
   '.id': string;
   address: string;
@@ -24,30 +26,22 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
     if (!token) return;
     try {
       const response = await fetch(`/api/routers/${routerId}/dashboard/dhcp-leases`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!response.ok) {
-        throw new Error('Failed to fetch DHCP leases');
-      }
+      if (!response.ok) throw new Error('Failed to fetch DHCP leases');
       const data = await response.json();
       setLeases(data);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred');
-      }
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId, setLeases, setError]);
+  }, [token, routerId]);
 
-  // Define columns for the DataTable
   const columns: ColumnDef<DhcpLease>[] = useMemo(
     () => [
       {
         accessorKey: 'address',
         header: 'IP Address',
+        cell: ({ row }) => <span className="font-medium text-white">{row.original.address}</span>,
       },
       {
         accessorKey: 'mac-address',
@@ -64,6 +58,11 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
       {
         accessorKey: 'status',
         header: 'Status',
+        cell: ({ row }) => (
+          <Badge variant={row.original.status === 'bound' ? 'success' : 'secondary'}>
+            {row.original.status}
+          </Badge>
+        ),
       },
     ],
     []
@@ -71,34 +70,29 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
 
   useEffect(() => {
     if (!routerId || !token) return;
-
-    const loadInitialData = async () => {
-        setLoading(true);
-        await fetchLeases();
-        setLoading(false);
-    }
-
-    loadInitialData();
-    const intervalId = setInterval(fetchLeases, 10000); // Poll every 10 seconds
-
-    return () => clearInterval(intervalId); // Cleanup on unmount
+    setLoading(true);
+    fetchLeases().finally(() => setLoading(false));
+    const intervalId = setInterval(fetchLeases, 10000);
+    return () => clearInterval(intervalId);
   }, [routerId, token, fetchLeases]);
 
   if (loading) {
-    return <div>Loading DHCP leases...</div>;
+    return <div className="text-center text-zinc-400">Loading DHCP leases...</div>;
   }
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="text-center text-red-500">Error: {error}</div>;
   }
 
   return (
     <DataTable
       columns={columns}
       data={leases}
-      filterColumn="address" // Allow filtering by IP address
-      className="text-lg [&_td]:p-2 [&_th]:p-2" // Apply styling
-      pageSizeOptions={[25, 50, 100, leases.length]} // Add page size options
+      filterColumn="address"
+      paginationEnabled={false}
+      tableClassName="[&_tr]:border-zinc-800"
+      headerClassName="[&_th]:text-zinc-400"
+      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }

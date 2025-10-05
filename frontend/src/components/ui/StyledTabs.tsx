@@ -1,53 +1,41 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
-import { motion } from "framer-motion"
+import * as React from 'react';
+import * as TabsPrimitive from '@radix-ui/react-tabs';
+import { cn } from '@/lib/utils';
 
-interface StyledTab {
-  id: string
-  label: string
-  icon?: React.ElementType
-}
+const StyledTabs = TabsPrimitive.Root;
 
-interface StyledTabsProps {
-  tabs: StyledTab[]
-  activeTab: string
-  onTabChange: (tabId: string) => void
-  children: React.ReactNode
-}
+const StyledTabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      'inline-flex h-10 items-center justify-center rounded-md bg-zinc-800/50 p-1 text-zinc-400 border border-zinc-700',
+      className
+    )}
+    {...props}
+  />
+));
+StyledTabsList.displayName = TabsPrimitive.List.displayName;
 
-export const StyledTabsRoot = ({
-  tabs,
-  activeTab,
-  onTabChange,
-  children,
-}: StyledTabsProps) => {
-  return (
-    <TabsPrimitive.Root value={activeTab} onValueChange={onTabChange}>
-      <TabsPrimitive.List className="relative flex w-full items-center justify-start border-b border-zinc-800 p-2">
-        {tabs.map((tab) => (
-          <TabsPrimitive.Trigger
-            key={tab.id}
-            value={tab.id}
-            className="relative px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white"
-          >
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="active-setting-tab-indicator"
-                className="absolute inset-0 bg-zinc-700/50 rounded-md"
-              />
-            )}
-            <span className="relative z-10 flex items-center">
-              {tab.icon && <tab.icon className="mr-2 h-4 w-4" />}
-              {tab.label}
-            </span>
-          </TabsPrimitive.Trigger>
-        ))}
-      </TabsPrimitive.List>
-      {children}
-    </TabsPrimitive.Root>
-  )
-}
+const StyledTabsTrigger = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-zinc-700 data-[state=active]:text-white data-[state=active]:shadow-sm',
+      className
+    )}
+    {...props}
+  />
+));
+StyledTabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
-export const StyledTabsContent = TabsPrimitive.Content
+const StyledTabsContent = TabsPrimitive.Content;
+
+export { StyledTabs, StyledTabsList, StyledTabsTrigger, StyledTabsContent };

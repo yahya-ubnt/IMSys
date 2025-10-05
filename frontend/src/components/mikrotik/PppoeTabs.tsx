@@ -1,22 +1,22 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StyledTabs, StyledTabsContent, StyledTabsList, StyledTabsTrigger } from '@/components/ui/StyledTabs';
 import { PppoeActiveTable } from './PppoeActiveTable';
 import { PppoeSecretsTable } from './PppoeSecretsTable';
 
 export function PppoeTabs({ routerId }: { routerId: string }) {
   return (
-    <Tabs defaultValue="active-sessions">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="active-sessions">Active Sessions</TabsTrigger>
-        <TabsTrigger value="secrets">Secrets</TabsTrigger>
-      </TabsList>
-      <TabsContent value="active-sessions">
+    <StyledTabs defaultValue="active-sessions" className="w-full">
+      <StyledTabsList className="grid w-full grid-cols-2">
+        <StyledTabsTrigger value="active-sessions">Active Sessions</StyledTabsTrigger>
+        <StyledTabsTrigger value="secrets">Secrets</StyledTabsTrigger>
+      </StyledTabsList>
+      <StyledTabsContent value="active-sessions" className="mt-4">
         <PppoeActiveTable routerId={routerId} />
-      </TabsContent>
-      <TabsContent value="secrets">
+      </StyledTabsContent>
+      <StyledTabsContent value="secrets" className="mt-4">
         <PppoeSecretsTable routerId={routerId} />
-      </TabsContent>
-    </Tabs>
+      </StyledTabsContent>
+    </StyledTabs>
   );
 }

@@ -20,11 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { PppoeSecretForm, PppoeSecretFormValues } from './PppoeSecretForm';
 import { useAuth } from '@/components/auth-provider';
-import { DataTable } from '@/components/data-table'; // Import DataTable
-import { ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
+import { DataTable } from '@/components/data-table';
+import { ColumnDef } from '@tanstack/react-table';
 
 interface Secret {
   '.id': string;
@@ -32,7 +33,7 @@ interface Secret {
   service: string;
   profile: string;
   'remote-address': string;
-  disabled: boolean;
+  disabled: 'true' | 'false';
 }
 
 export function PppoeSecretsTable({ routerId }: { routerId: string }) {
@@ -49,9 +50,7 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
     if (!token) return;
     try {
       const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/secrets`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
         throw new Error('Failed to fetch PPPoE secrets');
@@ -59,13 +58,9 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
       const data = await response.json();
       setSecrets(data);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred');
-      }
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId, setSecrets, setError]);
+  }, [token, routerId]);
 
   useEffect(() => {
     if (!routerId || !token) return;
@@ -99,11 +94,7 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
       setIsDialogOpen(false);
       setSelectedSecret(null);
     } catch (err) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('Error: An unknown error occurred');
-      }
+      alert(`Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -117,9 +108,7 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
         `/api/routers/${routerId}/dashboard/pppoe/secrets/${selectedSecret['.id']}`,
         {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         }
       );
 
@@ -131,20 +120,16 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
       setIsAlertOpen(false);
       setSelectedSecret(null);
     } catch (err) {
-      if (err instanceof Error) {
-        alert(`Error: ${err.message}`);
-      } else {
-        alert('Error: An unknown error occurred');
-      }
+      alert(`Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
     }
   };
 
-  // Define columns for the DataTable
   const columns: ColumnDef<Secret>[] = useMemo(
     () => [
       {
         accessorKey: 'name',
         header: 'Name',
+        cell: ({ row }) => <span className="font-medium text-white">{row.original.name}</span>,
       },
       {
         accessorKey: 'service',
@@ -161,32 +146,36 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
       {
         accessorKey: 'disabled',
         header: 'Status',
-        cell: ({ row }) => (row.original.disabled ? 'Disabled' : 'Enabled'),
+        cell: ({ row }) => (
+          <Badge variant={row.original.disabled === 'true' ? 'secondary' : 'success'}>
+            {row.original.disabled === 'true' ? 'Disabled' : 'Enabled'}
+          </Badge>
+        ),
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
-          <div className="space-x-2">
+          <div className="text-right space-x-2">
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
               onClick={() => {
                 setSelectedSecret(row.original);
                 setIsDialogOpen(true);
               }}
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4 text-zinc-400 hover:text-blue-500" />
             </Button>
             <Button
-              variant="destructive"
+              variant="ghost"
               size="icon"
               onClick={() => {
                 setSelectedSecret(row.original);
                 setIsAlertOpen(true);
               }}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" />
             </Button>
           </div>
         ),
@@ -196,37 +185,40 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
   );
 
   if (loading) {
-    return <div>Loading PPPoE secrets...</div>;
+    return <div className="text-center text-zinc-400">Loading PPPoE secrets...</div>;
   }
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="text-center text-red-500">Error: {error}</div>;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setSelectedSecret(null)}>
+            <Button 
+              onClick={() => setSelectedSecret(null)}
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105"
+            >
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Secret
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-zinc-900 border-zinc-700 text-white">
             <DialogHeader>
               <DialogTitle>{selectedSecret ? 'Edit' : 'Add'} PPPoE Secret</DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-zinc-400">
                 Make changes to the PPPoE secret here. Click save when you're done.
               </DialogDescription>
             </DialogHeader>
             <PppoeSecretForm
               initialData={selectedSecret ? {
                 name: selectedSecret.name,
-                password: '', // Password is not sent for security reasons, user needs to re-enter if they want to change it
+                password: '',
                 service: selectedSecret.service,
                 profile: selectedSecret.profile,
-                disabled: selectedSecret.disabled,
+                disabled: selectedSecret.disabled === 'true',
               } : undefined}
               onSubmit={handleFormSubmit}
               isSubmitting={isSubmitting}
@@ -237,22 +229,24 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
       <DataTable
         columns={columns}
         data={secrets}
-        filterColumn="name" // Allow filtering by secret name
-        className="text-lg [&_td]:p-2 [&_th]:p-2" // Apply styling
-        pageSizeOptions={[25, 50, 100, secrets.length]} // Add page size options
+        filterColumn="name"
+        paginationEnabled={false}
+        tableClassName="[&_tr]:border-zinc-800"
+        headerClassName="[&_th]:text-zinc-400"
+        rowClassName="hover:bg-zinc-800/50"
       />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-zinc-400">
               This action cannot be undone. This will permanently delete the PPPoE secret
               &quot;{selectedSecret?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedSecret(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

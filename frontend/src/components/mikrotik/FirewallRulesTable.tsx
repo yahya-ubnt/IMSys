@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react'; // Added useMemo
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
-import { DataTable } from '@/components/data-table'; // Import DataTable
-import { ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
+import { DataTable } from '@/components/data-table';
+import { ColumnDef } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge';
 
 interface FirewallRule {
   '.id': string;
-  chain: string;
-  action: string;
+  chain: 'input' | 'forward' | 'output';
+  action: 'accept' | 'drop' | 'reject' | 'jump';
   protocol: string;
-  'src-address': string;
-  'dst-address': string;
+  'src-address'?: string;
+  'dst-address'?: string;
+  disabled: 'true' | 'false';
 }
 
 export function FirewallRulesTable({ routerId }: { routerId: string }) {
@@ -20,21 +22,17 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
 
-  // Define columns for the DataTable
   const columns: ColumnDef<FirewallRule>[] = useMemo(
     () => [
       {
-        accessorFn: (row, index) => index, // Accessor for row index
-        header: '#',
-        id: 'row-index', // Unique ID for the column
-      },
-      {
         accessorKey: 'chain',
         header: 'Chain',
+        cell: ({ row }) => <Badge variant="secondary">{row.original.chain}</Badge>,
       },
       {
         accessorKey: 'action',
         header: 'Action',
+        cell: ({ row }) => <Badge variant="secondary">{row.original.action}</Badge>,
       },
       {
         accessorKey: 'protocol',
@@ -48,6 +46,15 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
         accessorKey: 'dst-address',
         header: 'Dst. Address',
       },
+      {
+        accessorKey: 'disabled',
+        header: 'Status',
+        cell: ({ row }) => (
+          <Badge variant="secondary">
+            {row.original.disabled === 'true' ? 'Disabled' : 'Enabled'}
+          </Badge>
+        ),
+      },
     ],
     []
   );
@@ -59,21 +66,13 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
       try {
         setLoading(true);
         const response = await fetch(`/api/routers/${routerId}/dashboard/firewall/filter`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
-        if (!response.ok) {
-          throw new Error('Failed to fetch firewall rules');
-        }
+        if (!response.ok) throw new Error('Failed to fetch firewall rules');
         const data = await response.json();
         setRules(data);
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unknown error occurred');
-        }
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
         setLoading(false);
       }
@@ -83,20 +82,22 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
   }, [routerId, token]);
 
   if (loading) {
-    return <div>Loading firewall rules...</div>;
+    return <div className="text-center text-zinc-400">Loading firewall rules...</div>;
   }
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="text-center text-red-500">Error: {error}</div>;
   }
 
   return (
     <DataTable
       columns={columns}
       data={rules}
-      filterColumn="chain" // Allow filtering by chain
-      className="text-lg [&_td]:p-2 [&_th]:p-2" // Apply styling
-      pageSizeOptions={[25, 50, 100, rules.length]} // Add page size options
+      filterColumn="chain"
+      paginationEnabled={false}
+      tableClassName="[&_tr]:border-zinc-800"
+      headerClassName="[&_th]:text-zinc-400"
+      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }
