@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Separator } from '@/components/ui/separator';
 import { LayoutGrid, Wifi, DollarSign, FileText, MessageSquare, Settings, Home, Users, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -25,55 +26,21 @@ interface MenuItem {
 }
 
 const mikrotikMenu: MenuItem[] = [
-  {
-    title: 'Overview',
-    url: '/mikrotik/routers/[id]/dashboard/overview',
-    icon: Home,
-  },
-  {
-    title: 'Interfaces',
-    url: '/mikrotik/routers/[id]/dashboard/interfaces',
-    icon: Wifi,
-  },
-  {
-    title: 'PPPoE',
-    url: '/mikrotik/routers/[id]/dashboard/pppoe',
-    icon: Users,
-  },
-  {
-    title: 'Queues',
-    url: '/mikrotik/routers/[id]/dashboard/queues',
-    icon: LayoutGrid,
-  },
-  {
-    title: 'Firewall',
-    url: '/mikrotik/routers/[id]/dashboard/firewall',
-    icon: Settings,
-  },
-  {
-    title: 'DHCP Leases',
-    url: '/mikrotik/routers/[id]/dashboard/dhcp-leases',
-    icon: DollarSign,
-  },
-  {
-    title: 'Logs',
-    url: '/mikrotik/routers/[id]/dashboard/logs',
-    icon: FileText,
-  },
-  {
-    title: 'Terminal',
-    url: '/mikrotik/routers/[id]/dashboard/terminal',
-    icon: MessageSquare,
-  },
+  { title: 'Overview', url: '/mikrotik/routers/[id]/dashboard/overview', icon: Home },
+  { title: 'Interfaces', url: '/mikrotik/routers/[id]/dashboard/interfaces', icon: Wifi },
+  { title: 'PPPoE', url: '/mikrotik/routers/[id]/dashboard/pppoe', icon: Users },
+  { title: 'Queues', url: '/mikrotik/routers/[id]/dashboard/queues', icon: LayoutGrid },
+  { title: 'Firewall', url: '/mikrotik/routers/[id]/dashboard/firewall', icon: Settings },
+  { title: 'DHCP Leases', url: '/mikrotik/routers/[id]/dashboard/dhcp-leases', icon: DollarSign },
+  { title: 'Logs', url: '/mikrotik/routers/[id]/dashboard/logs', icon: FileText },
+  { title: 'Terminal', url: '/mikrotik/routers/[id]/dashboard/terminal', icon: MessageSquare },
 ];
 
 export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   return (
     <Sidebar className="bg-zinc-900/50 backdrop-blur-lg border-r border-zinc-700">
@@ -100,13 +67,21 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
               const isActive = pathname === itemUrl;
               return (
                 <SidebarMenuItem key={item.title} className="relative">
-                  {isActive && (
-                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-cyan-400 rounded-r-full shadow-[0_0_10px_theme('colors.cyan.400')]" />
-                  )}
-                  <SidebarMenuButton asChild isActive={isActive} className="hover:bg-zinc-700/50 data-[active=true]:bg-zinc-700">
+                  <AnimatePresence>
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-pill"
+                        className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 rounded-lg border border-cyan-400/50 shadow-[0_0_15px_theme('colors.cyan.400/50')]"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                  <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="bg-transparent hover:bg-zinc-700/50 data-[active=true]:bg-transparent">
                     <Link href={itemUrl}>
-                      {item.icon && <item.icon className={`mr-3 size-5 ${isActive ? 'text-cyan-400' : 'text-zinc-400'}`} />}
-                      <span className={`flex-1 text-sm ${isActive ? 'text-white' : 'text-zinc-300'}`}>{item.title}</span>
+                      {item.icon && <item.icon className={`mr-3 size-5 transition-colors ${isActive ? 'text-cyan-300' : 'text-zinc-400'}`} />}
+                      <span className={`flex-1 text-sm transition-colors ${isActive ? 'text-white' : 'text-zinc-300'}`}>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
