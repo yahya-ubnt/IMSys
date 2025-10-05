@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Separator } from '@/components/ui/separator';
-import { LayoutGrid, Wifi, DollarSign, FileText, MessageSquare, Settings, Home, Users, Sun, Moon } from 'lucide-react';
+import { LayoutGrid, DollarSign, FileText, MessageSquare, Settings, Home, Users, Network, Sun, Moon } from 'lucide-react';
+import MikrotikRouterIcon from '@/components/icons/MikrotikRouterIcon';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
@@ -27,7 +28,7 @@ interface MenuItem {
 
 const mikrotikMenu: MenuItem[] = [
   { title: 'Overview', url: '/mikrotik/routers/[id]/dashboard/overview', icon: Home },
-  { title: 'Interfaces', url: '/mikrotik/routers/[id]/dashboard/interfaces', icon: Wifi },
+  { title: 'Interfaces', url: '/mikrotik/routers/[id]/dashboard/interfaces', icon: Network },
   { title: 'PPPoE', url: '/mikrotik/routers/[id]/dashboard/pppoe', icon: Users },
   { title: 'Queues', url: '/mikrotik/routers/[id]/dashboard/queues', icon: LayoutGrid },
   { title: 'Firewall', url: '/mikrotik/routers/[id]/dashboard/firewall', icon: Settings },
@@ -47,7 +48,7 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
       <SidebarHeader>
         <div className="flex items-center gap-3 px-4 py-6">
           <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 text-white">
-            <Wifi className="size-5" />
+            <MikrotikRouterIcon className="size-5" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-bold text-transparent bg-clip-text bg-gradient-to-r from-zinc-200 to-zinc-400">
