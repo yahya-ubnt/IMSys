@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/components/auth-provider';
 import { Cpu, HardDrive, MemoryStick, Globe } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SystemInfo {
   'board-name': string;
@@ -12,26 +12,27 @@ interface SystemInfo {
   uptime: string;
   'free-memory': string;
   'total-memory': string;
-  'hdd-free'?: string; // Added
-  'ip-address'?: string; // Added
+  'hdd-free'?: string;
+  'ip-address'?: string;
 }
 
 interface OverviewCardProps {
   title: string;
   value: string;
   icon: React.ElementType;
+  color?: string;
 }
 
-const OverviewCard: React.FC<OverviewCardProps> = ({ title, value, icon: Icon }) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-    </CardContent>
-  </Card>
+const OverviewCard: React.FC<OverviewCardProps> = ({ title, value, icon: Icon, color = "text-cyan-400" }) => (
+  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
+    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}>
+      <Icon className="h-5 w-5" />
+    </div>
+    <div>
+      <p className="text-xs text-zinc-400">{title}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    </div>
+  </div>
 );
 
 export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
@@ -47,9 +48,7 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
       try {
         setLoading(true);
         const response = await fetch(`/api/routers/${routerId}/dashboard/status`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
           throw new Error('Failed to fetch system info');
@@ -63,7 +62,10 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
       }
     };
 
-    fetchSystemInfo();
+    const interval = setInterval(fetchSystemInfo, 5000); // Refresh every 5 seconds
+    fetchSystemInfo(); // Initial fetch
+
+    return () => clearInterval(interval);
   }, [routerId, token]);
 
   const formatMemory = (bytes: string) => {
@@ -80,8 +82,12 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
     return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
-  if (loading) {
-    return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"><Card><CardContent>Loading...</CardContent></Card></div>;
+  if (loading && !systemInfo) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full bg-zinc-800/50 rounded-lg" />)}
+      </div>
+    );
   }
 
   if (error) {
@@ -93,26 +99,30 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <OverviewCard
         title="CPU Load"
         value={`${systemInfo['cpu-load']}%`}
         icon={Cpu}
+        color="text-green-400"
       />
       <OverviewCard
         title="Free Memory"
         value={formatMemory(systemInfo['free-memory'])}
         icon={MemoryStick}
+        color="text-blue-400"
       />
       <OverviewCard
         title="HDD Free"
         value={formatHddSpace(systemInfo['hdd-free'] || '0')}
         icon={HardDrive}
+        color="text-yellow-400"
       />
       <OverviewCard
-        title="IP Address"
-        value={systemInfo['ip-address'] || 'N/A'}
+        title="Uptime"
+        value={systemInfo.uptime || 'N/A'}
         icon={Globe}
+        color="text-purple-400"
       />
     </div>
   );

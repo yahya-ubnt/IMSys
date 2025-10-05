@@ -83,79 +83,79 @@ export function CombinedRouterInfoCard({ routerId }: { routerId: string }) {
   };
 
   return (
-    <Card className="w-full shadow-lg"> {/* Added futuristic styling */}
-      <CardHeader className="border-b border-gray-700 pb-4"> {/* Added bottom border */}
-        <CardTitle className="text-2xl font-bold text-blue-400">Router Details</CardTitle>
-        <CardDescription className="text-gray-400">Comprehensive information about your MikroTik router.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6"> {/* Adjusted grid and gap */}
+    <div>
+      <div className="border-b border-gray-700 pb-4">
+        <h2 className="text-2xl font-bold text-blue-400">Router Details</h2>
+        <p className="text-gray-400">Comprehensive information about your MikroTik router.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
         {/* System Info Section */}
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* CPU Load */}
-          <Cpu className="h-5 w-5 text-green-400" />
+          <Cpu className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">CPU Load</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo['cpu-load']}%</p>
+            <p className="text-lg font-semibold text-white">{systemInfo['cpu-load']}%</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* Free Memory */}
-          <Gauge className="h-5 w-5 text-purple-400" />
+          <Gauge className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">Free Memory</p>
-            <p className="text-lg font-semibold text-blue-300">{formatMemory(systemInfo['free-memory'])}</p>
+            <p className="text-lg font-semibold text-white">{formatMemory(systemInfo['free-memory'])}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* HDD Free */}
-          <HardDrive className="h-5 w-5 text-red-400" />
+          <HardDrive className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">HDD Free</p>
-            <p className="text-lg font-semibold text-blue-300">{formatHddSpace(systemInfo['hdd-free'])}</p>
+            <p className="text-lg font-semibold text-white">{formatHddSpace(systemInfo['hdd-free'])}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* IP Address */}
-          <Globe className="h-5 w-5 text-yellow-400" />
+          <Globe className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">IP Address</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo['ip-address']}</p>
+            <p className="text-lg font-semibold text-white">{systemInfo['ip-address']}</p>
           </div>
         </div>
 
         {/* Router Info Section */}
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* Uptime Duration */}
-          <Clock className="h-5 w-5 text-cyan-400" />
+          <Clock className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">Uptime Duration</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo.uptime}</p>
+            <p className="text-lg font-semibold text-white">{systemInfo.uptime}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* Device Name */}
-          <Server className="h-5 w-5 text-orange-400" />
+          <Server className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">Device Name</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo['board-name']}</p>
+            <p className="text-lg font-semibold text-white">{systemInfo['board-name']}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* Version */}
-          <GitBranch className="h-5 w-5 text-pink-400" />
+          <GitBranch className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">Version</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo.version}</p>
+            <p className="text-lg font-semibold text-white">{systemInfo.version}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* CPU Count */}
-          <Cpu className="h-5 w-5 text-green-400" />
+          <Cpu className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">CPU Count</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo['cpu-count'] || 'N/A'}</p>
+            <p className="text-lg font-semibold text-white">{systemInfo['cpu-count'] || 'N/A'}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-3"> {/* CPU Frequency */}
-          <Gauge className="h-5 w-5 text-purple-400" />
+          <Gauge className="h-5 w-5 text-zinc-400" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-400">CPU Frequency</p>
-            <p className="text-lg font-semibold text-blue-300">{systemInfo['cpu-frequency'] || 'N/A'}</p>
+            <p className="text-lg font-semibold text-white">{systemInfo['cpu-frequency'] || 'N/A'}</p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

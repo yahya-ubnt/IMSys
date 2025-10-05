@@ -2,7 +2,6 @@
 
 import { useParams } from 'next/navigation';
 import { MikrotikDashboardSidebar } from '@/components/mikrotik/MikrotikDashboardSidebar';
-import { Topbar } from '@/components/topbar';
 import React from 'react';
 
 export default function MikrotikRouterDashboardLayout({
@@ -18,10 +17,9 @@ export default function MikrotikRouterDashboardLayout({
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-zinc-900 text-white">
       <MikrotikDashboardSidebar routerId={routerId} />
       <main className="flex-1 overflow-y-auto">
-        <Topbar />
         {children}
       </main>
     </div>

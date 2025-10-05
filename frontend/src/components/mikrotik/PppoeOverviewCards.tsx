@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/components/auth-provider';
-import { Users, Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PppoeCounts {
   activePppoe: number;
@@ -14,18 +14,19 @@ interface OverviewCardProps {
   title: string;
   value: string;
   icon: React.ElementType;
+  color?: string;
 }
 
-const OverviewCard: React.FC<OverviewCardProps> = ({ title, value, icon: Icon }) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-    </CardContent>
-  </Card>
+const OverviewCard: React.FC<OverviewCardProps> = ({ title, value, icon: Icon, color = "text-cyan-400" }) => (
+  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
+    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}>
+      <Icon className="h-5 w-5" />
+    </div>
+    <div>
+      <p className="text-xs text-zinc-400">{title}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    </div>
+  </div>
 );
 
 export function PppoeOverviewCards({ routerId }: { routerId: string }) {
@@ -39,11 +40,9 @@ export function PppoeOverviewCards({ routerId }: { routerId: string }) {
 
     const fetchPppoeCounts = async () => {
       try {
-        setLoading(true);
+        // No setLoading(true) here to allow stale-while-revalidate feeling
         const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/counts`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
           throw new Error('Failed to fetch PPPoE counts');
@@ -57,11 +56,19 @@ export function PppoeOverviewCards({ routerId }: { routerId: string }) {
       }
     };
 
-    fetchPppoeCounts();
+    const interval = setInterval(fetchPppoeCounts, 5000); // Refresh every 5 seconds
+    fetchPppoeCounts(); // Initial fetch
+
+    return () => clearInterval(interval);
   }, [routerId, token]);
 
-  if (loading) {
-    return <div className="grid gap-4 md:grid-cols-2"><Card><CardContent>Loading PPPoE counts...</CardContent></Card></div>;
+  if (loading && !pppoeCounts) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Skeleton className="h-24 w-full bg-zinc-800/50 rounded-lg" />
+        <Skeleton className="h-24 w-full bg-zinc-800/50 rounded-lg" />
+      </div>
+    );
   }
 
   if (error) {
@@ -73,16 +80,18 @@ export function PppoeOverviewCards({ routerId }: { routerId: string }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <OverviewCard
         title="Active PPPoE Users"
         value={pppoeCounts.activePppoe.toString()}
         icon={Wifi}
+        color="text-green-400"
       />
       <OverviewCard
         title="Inactive PPPoE Users"
         value={pppoeCounts.inactivePppoe.toString()}
         icon={WifiOff}
+        color="text-yellow-400"
       />
     </div>
   );

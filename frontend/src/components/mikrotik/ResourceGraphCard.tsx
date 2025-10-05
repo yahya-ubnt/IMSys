@@ -107,71 +107,39 @@ export function ResourceGraphCard({ routerId, resourceType, title }: ResourceGra
     ? `${resourceValue !== null ? resourceValue.toFixed(0) : 'N/A'}%`
     : `${resourceValue !== null ? formatBytes(resourceValue) : 'N/A'}/${totalValue !== null ? formatBytes(totalValue) : 'N/A'}`;
 
-  const gradientId = `${resourceType}Gradient`;
-  const usedColor = resourceType === 'cpu' ? '#8884d8' : (resourceType === 'memory' ? '#82ca9d' : '#ffc658');
-  const freeColor = '#e0e0e0'; // Light gray for free part
-
-  let IconComponent;
-  if (resourceType === 'cpu') {
-    IconComponent = Cpu;
-  } else if (resourceType === 'memory') {
-    IconComponent = Gauge;
-  } else if (resourceType === 'disk') {
-    IconComponent = HardDrive;
-  }
+  const usedColor = resourceType === 'cpu' ? '#22d3ee' : (resourceType === 'memory' ? '#818cf8' : '#f59e0b');
 
   return (
-    <Card className="w-full shadow-lg"> {/* Added futuristic styling */}
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-gray-700"> {/* Modified CardHeader */}
-        <CardTitle className="text-sm font-medium text-blue-400">{title}</CardTitle>
-        {IconComponent && <IconComponent className="h-4 w-4 text-blue-400" />}
-      </CardHeader>
-      <CardContent className="flex items-center justify-center p-6"> {/* Added padding */}
-        {resourceValue !== null && totalValue !== null ? (
-          <div className="relative w-32 h-32"> {/* Reverted size */}
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={usedColor} stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor={usedColor} stopOpacity={0.2}/>
-                  </linearGradient>
-                </defs>
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40} // Adjusted size
-                  outerRadius={55} // Adjusted size
-                  paddingAngle={5}
-                  dataKey="value"
-                  startAngle={90}
-                  endAngle={-270}
-                >
-                  <Cell key="used" fill={`url(#${gradientId})`} /> {/* Used part with gradient */}
-                  <Cell key="free" fill={freeColor} /> {/* Free part */}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#333', border: '1px solid #555', color: '#eee' }}
-                  labelStyle={{ color: '#eee' }}
-                  itemStyle={{ color: '#eee' }}
-                  formatter={(value: number) => (resourceType === 'cpu' ? `${value.toFixed(0)}%` : formatBytes(value))}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-blue-300 drop-shadow-lg">{percentage}%</span> {/* Enhanced text */}
-            </div>
-          </div>
-        ) : (
-          <div className="text-gray-400">No data available.</div>
-        )}
-      </CardContent>
-      {resourceValue !== null && totalValue !== null && ( // Moved valueDisplay outside
-        <CardFooter className="flex justify-center text-base text-gray-400 mt-2"> {/* Enhanced text */}
-          {valueDisplay}
-        </CardFooter>
+    <div className="w-full h-28">
+      {resourceValue !== null && totalValue !== null ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius="60%"
+              outerRadius="80%"
+              startAngle={180}
+              endAngle={0}
+              dataKey="value"
+              stroke="none"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={index === 0 ? usedColor : '#3f3f46'} cornerRadius={index === 0 ? 5 : 0} />
+              ))}
+            </Pie>
+            <text x="50%" y="45%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="20" fontWeight="bold">
+              {percentage}%
+            </text>
+            <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fill="#a1a1aa" fontSize="10">
+              {title}
+            </text>
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="flex items-center justify-center h-full text-zinc-400">Loading...</div>
       )}
-    </Card>
+    </div>
   );
 }

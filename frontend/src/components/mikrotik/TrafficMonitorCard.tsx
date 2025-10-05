@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/components/auth-provider';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
 import { Activity } from 'lucide-react';
 
@@ -101,14 +101,14 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
   }
 
   return (
-    <Card className="w-full shadow-lg"> {/* Added futuristic styling */}
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-gray-700"> {/* Modified CardHeader */}
-        <CardTitle className="flex items-center gap-2 text-blue-400">Traffic Monitoring <Activity className="h-4 w-4 text-blue-400" /></CardTitle>
-        <Select onValueChange={setSelectedInterface} value={selectedInterface} disabled={availableInterfaces.length === 0}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select Interface" />
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-blue-400">Live Traffic Monitor</h3>
+        <Select onValueChange={setSelectedInterface} defaultValue={selectedInterface}>
+          <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+            <SelectValue placeholder="Select an interface" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-gray-800 border-gray-700 text-white">
             {availableInterfaces.map((iface) => (
               <SelectItem key={iface.name} value={iface.name}>
                 {iface.name}
@@ -116,46 +116,52 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
             ))}
           </SelectContent>
         </Select>
-      </CardHeader>
-      <CardContent>
-        {trafficHistory.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart
-              data={trafficHistory}
-              margin={{
-                top: 10,
-                right: 30,
-                left: 0,
-                bottom: 0,
-              }}
-            >
-              <defs>
-                <linearGradient id="colorRx" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorTx" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#4a4a4a" /> {/* Darker grid */}
-              <XAxis dataKey="timestamp" tickFormatter={(tick) => new Date(tick).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} stroke="#888" interval={10} />
-              <YAxis label={{ value: 'Mbps', angle: -90, position: 'insideLeft', fill: '#888' }} stroke="#888" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#333', border: '1px solid #555', color: '#eee' }}
-                labelStyle={{ color: '#eee' }}
-                itemStyle={{ color: '#eee' }}
-                formatter={(value: number) => `${value.toFixed(2)} Mbps`}
-              />
-              <Area type="monotone" dataKey="rxMbps" stroke="#8884d8" fillOpacity={1} fill="url(#colorRx)" name="Rx (Mbps)" />
-              <Area type="monotone" dataKey="txMbps" stroke="#82ca9d" fillOpacity={1} fill="url(#colorTx)" name="Tx (Mbps)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="text-gray-400">No traffic data available for {selectedInterface}.</div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      <div className="h-[200px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={trafficHistory} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <defs>
+              <linearGradient id="colorRx" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorTx" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis 
+              dataKey="timestamp" 
+              stroke="#888" 
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              interval={14}
+              tickFormatter={(timeStr) => new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            />
+            <YAxis stroke="#888" fontSize={12} />
+            <Tooltip content={<CustomTooltip />} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+            <Legend />
+            <Area type="monotone" dataKey="rxMbps" stroke="#22d3ee" fill="url(#colorRx)" name="Download (Mbps)" />
+            <Area type="monotone" dataKey="txMbps" stroke="#818cf8" fill="url(#colorTx)" name="Upload (Mbps)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const time = new Date(label).toLocaleTimeString();
+    return (
+      <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
+        <p className="font-bold">{time}</p>
+        <p style={{ color: '#22d3ee' }}>{`Download: ${payload[0].value.toFixed(2)} Mbps`}</p>
+        <p style={{ color: '#818cf8' }}>{`Upload: ${payload[1].value.toFixed(2)} Mbps`}</p>
+      </div>
+    );
+  }
+  return null;
+};

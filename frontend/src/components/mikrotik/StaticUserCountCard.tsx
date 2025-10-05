@@ -59,25 +59,21 @@ export function StaticUserCountCard({ routerId }: { routerId: string }) {
   }
 
   return (
-    <>
-      <Card> {/* Active Static - Green */}
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-green-400">Active Static</CardTitle>
-          <UserCheck className="h-4 w-4 text-green-400" />
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold text-green-300">{staticCounts.activeStatic}</p>
-        </CardContent>
-      </Card>
-      <Card> {/* Inactive Static - Red */}
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-red-400">Inactive Static</CardTitle>
-          <UserX className="h-4 w-4 text-red-400" />
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold text-red-300">{staticCounts.inactiveStatic}</p>
-        </CardContent>
-      </Card>
-    </>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="flex items-center space-x-3">
+        <UserCheck className="h-5 w-5 text-green-500" />
+        <div>
+          <p className="text-sm text-gray-400">Active Static</p>
+          <p className="text-lg font-bold text-white">{staticCounts.activeStatic}</p>
+        </div>
+      </div>
+      <div className="flex items-center space-x-3">
+        <UserX className="h-5 w-5 text-yellow-500" />
+        <div>
+          <p className="text-sm text-gray-400">Inactive Static</p>
+          <p className="text-lg font-bold text-white">{staticCounts.inactiveStatic}</p>
+        </div>
+      </div>
+    </div>
   );
 }
