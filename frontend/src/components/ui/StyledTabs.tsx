@@ -4,8 +4,6 @@ import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { cn } from '@/lib/utils';
 
-const StyledTabs = TabsPrimitive.Root;
-
 const StyledTabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -37,5 +35,37 @@ const StyledTabsTrigger = React.forwardRef<
 StyledTabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
 const StyledTabsContent = TabsPrimitive.Content;
+
+interface StyledTabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
+  tabs: { id: string; label: string; icon?: React.ElementType }[];
+  activeTab: string;
+  onTabChange: (id: string) => void;
+}
+
+const StyledTabs = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Root>,
+  StyledTabsProps
+>(({ className, tabs, activeTab, onTabChange, children, ...props }, ref) => {
+  return (
+    <TabsPrimitive.Root
+      ref={ref}
+      value={activeTab}
+      onValueChange={onTabChange}
+      className={cn('w-full', className)}
+      {...props}
+    >
+      <StyledTabsList>
+        {tabs.map((tab) => (
+          <StyledTabsTrigger key={tab.id} value={tab.id}>
+            {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+            {tab.label}
+          </StyledTabsTrigger>
+        ))}
+      </StyledTabsList>
+      {children}
+    </TabsPrimitive.Root>
+  );
+});
+StyledTabs.displayName = TabsPrimitive.Root.displayName;
 
 export { StyledTabs, StyledTabsList, StyledTabsTrigger, StyledTabsContent };

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Topbar } from "@/components/topbar"
 import {
-  StyledTabsRoot,
+  StyledTabs,
   StyledTabsContent,
 } from "@/components/ui/StyledTabs"
 import { Settings, CreditCard, MessageSquare, MessageCircle } from "lucide-react"
@@ -32,10 +32,10 @@ export default function MainSettingsPage() {
             Manage your application's configuration and payment integrations.
           </p>
         </div>
-        <StyledTabsRoot
+        <StyledTabs
           tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
+          value={activeTab}
+          onValueChange={setActiveTab}
         >
           <StyledTabsContent value="general" className="mt-4">
             <div className="flex justify-center">
@@ -65,7 +65,7 @@ export default function MainSettingsPage() {
               </div>
             </div>
           </StyledTabsContent>
-        </StyledTabsRoot>
+        </StyledTabs>
       </div>
     </div>
   )
