@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Separator } from '@/components/ui/separator';
-import { LayoutGrid, DollarSign, FileText, MessageSquare, Settings, Home, Users, Network, Sun, Moon } from 'lucide-react';
+import { LayoutGrid, DollarSign, FileText, MessageSquare, Settings, Home, Users, Network, Sun, Moon, LogOut } from 'lucide-react';
 import MikrotikRouterIcon from '@/components/icons/MikrotikRouterIcon';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,12 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
       <SidebarFooter>
         <Separator className="bg-zinc-700 my-2" />
         <div className="p-2 space-y-2">
+          <Button asChild variant="ghost" size="sm" className="w-full justify-start gap-2 text-zinc-400 hover:bg-zinc-700/50 hover:text-white">
+            <Link href="/">
+              <LogOut className="h-4 w-4" />
+              <span>Main Dashboard</span>
+            </Link>
+          </Button>
           <Button onClick={toggleTheme} variant="ghost" size="sm" className="w-full justify-start gap-2 text-zinc-400 hover:bg-zinc-700/50 hover:text-white">
             {theme === 'dark' ? (
               <>
