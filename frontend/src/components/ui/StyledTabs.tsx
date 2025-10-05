@@ -38,19 +38,15 @@ const StyledTabsContent = TabsPrimitive.Content;
 
 interface StyledTabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
   tabs: { id: string; label: string; icon?: React.ElementType }[];
-  activeTab: string;
-  onTabChange: (id: string) => void;
 }
 
 const StyledTabs = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Root>,
   StyledTabsProps
->(({ className, tabs, activeTab, onTabChange, children, ...props }, ref) => {
+>(({ className, tabs, children, ...props }, ref) => {
   return (
     <TabsPrimitive.Root
       ref={ref}
-      value={activeTab}
-      onValueChange={onTabChange}
       className={cn('w-full', className)}
       {...props}
     >
