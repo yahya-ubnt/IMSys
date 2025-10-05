@@ -101,7 +101,7 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
   }
 
   return (
-    <Card className="w-full bg-gray-900 text-white border-gray-700 shadow-lg"> {/* Added futuristic styling */}
+    <Card className="w-full shadow-lg"> {/* Added futuristic styling */}
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-gray-700"> {/* Modified CardHeader */}
         <CardTitle className="flex items-center gap-2 text-blue-400">Traffic Monitoring <Activity className="h-4 w-4 text-blue-400" /></CardTitle>
         <Select onValueChange={setSelectedInterface} value={selectedInterface} disabled={availableInterfaces.length === 0}>

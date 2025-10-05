@@ -6,17 +6,16 @@ import Link from 'next/link';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarRail, // Added SidebarRail
 } from '@/components/ui/sidebar';
-import { LayoutGrid, Wifi, DollarSign, FileText, MessageSquare, Settings, Home, Users, Sun, Moon } from 'lucide-react'; // Added Sun, Moon
-import { useTheme } from 'next-themes'; // Added useTheme
-import { Button } from '@/components/ui/button'; // Added Button
+import { LayoutGrid, Wifi, DollarSign, FileText, MessageSquare, Settings, Home, Users, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { Button } from '@/components/ui/button';
 
 interface MenuItem {
   title: string;
@@ -69,17 +68,17 @@ const mikrotikMenu: MenuItem[] = [
 
 export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme(); // Get theme and setTheme
+  const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
-    <Sidebar collapsible="icon" className="bg-gradient-to-b from-black to-zinc-950 border-r border-zinc-800 shadow-2xl">
-      <SidebarHeader className="border-b border-zinc-800 pb-4">
+    <Sidebar>
+      <SidebarHeader>
         <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex aspect-square size-10 items-center justify-center rounded-xl">
             <Wifi className="size-5" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
@@ -91,7 +90,7 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="py-4">
+      <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
             {mikrotikMenu.map((item) => {
@@ -99,16 +98,9 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
               const isActive = pathname === itemUrl;
               return (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={item.title}
-                    className={`
-                      relative transition-all duration-300 hover:bg-zinc-800 rounded-lg mx-2
-                      ${isActive ? 'bg-blue-700 text-white font-semibold shadow-md' : 'text-zinc-300'}
-                    `}
-                  >
-                    <Link href={itemUrl} className="flex items-center w-full px-3 py-2">
-                      {item.icon && <item.icon className={`mr-3 size-5 ${isActive ? 'text-white' : 'text-zinc-400'}`} />}
+                  <SidebarMenuButton asChild isActive={isActive}>
+                    <Link href={itemUrl}>
+                      {item.icon && <item.icon className="mr-3 size-5" />}
                       <span className="flex-1 text-sm">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -119,16 +111,11 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-zinc-800 pt-4">
+      <SidebarFooter>
         <div className="p-2 space-y-2">
           {/* Theme Toggle */}
           <div className="flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="w-full justify-start gap-2 hover:bg-zinc-800 text-zinc-300 transition-colors rounded-lg"
-            >
+            <Button onClick={toggleTheme} variant="ghost" size="sm" className="w-full justify-start gap-2">
               {theme === 'dark' ? (
                 <>
                   <Sun className="h-4 w-4 text-yellow-400" />
@@ -144,18 +131,17 @@ export function MikrotikDashboardSidebar({ routerId }: { routerId: string }) {
           </div>
 
           {/* User Profile - Placeholder for now */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 shadow-inner">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+            <div className="flex size-8 items-center justify-center rounded-lg text-sm font-bold">
               A
             </div>
             <div className="grid flex-1 leading-tight">
-              <div className="font-semibold text-sm text-zinc-200">Admin User</div>
-              <div className="text-xs text-zinc-400">Administrator</div>
+              <div className="font-semibold text-sm">Admin User</div>
+              <div className="text-xs text-muted-foreground">Administrator</div>
             </div>
           </div>
         </div>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

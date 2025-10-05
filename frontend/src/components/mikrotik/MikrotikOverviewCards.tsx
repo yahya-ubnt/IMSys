@@ -20,14 +20,13 @@ interface OverviewCardProps {
   title: string;
   value: string;
   icon: React.ElementType;
-  bgColor: string;
 }
 
-const OverviewCard: React.FC<OverviewCardProps> = ({ title, value, icon: Icon, bgColor }) => (
-  <Card className={`flex flex-col justify-between h-full ${bgColor} text-white`}>
+const OverviewCard: React.FC<OverviewCardProps> = ({ title, value, icon: Icon }) => (
+  <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-white">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-white" />
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <Icon className="h-4 w-4 text-muted-foreground" />
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">{value}</div>
@@ -99,25 +98,21 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
         title="CPU Load"
         value={`${systemInfo['cpu-load']}%`}
         icon={Cpu}
-        bgColor="bg-blue-500"
       />
       <OverviewCard
         title="Free Memory"
         value={formatMemory(systemInfo['free-memory'])}
         icon={MemoryStick}
-        bgColor="bg-green-500"
       />
       <OverviewCard
         title="HDD Free"
         value={formatHddSpace(systemInfo['hdd-free'] || '0')}
         icon={HardDrive}
-        bgColor="bg-yellow-500"
       />
       <OverviewCard
         title="IP Address"
         value={systemInfo['ip-address'] || 'N/A'}
         icon={Globe}
-        bgColor="bg-purple-500"
       />
     </div>
   );

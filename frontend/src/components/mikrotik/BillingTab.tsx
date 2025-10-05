@@ -11,7 +11,7 @@ interface BillingTabProps {
 }
 
 const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) => (
-  <div className="bg-zinc-800/50 p-4 rounded-lg flex items-center">
+  <div className="p-4 rounded-lg flex items-center">
     <Icon className="h-6 w-6 text-cyan-400 mr-4" />
     <div>
       <p className="text-sm text-zinc-400">{label}</p>
@@ -33,14 +33,14 @@ const BillingTab: React.FC<BillingTabProps> = ({ transactions }) => {
         <StatCard icon={Hash} label="Total Transactions" value={transactions.length} />
         <StatCard icon={TrendingUp} label="Avg. Transaction" value={`KES ${avgTransaction.toFixed(2)}`} />
       </div>
-      <Card className="bg-zinc-900/50 border-zinc-700">
+      <Card>
         <CardHeader>
           <CardTitle className="text-cyan-400">Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {transactions.map((tx) => (
-              <div key={tx._id} className="flex justify-between items-center p-3 bg-zinc-800/50 rounded-lg">
+              <div key={tx._id} className="flex justify-between items-center p-3 rounded-lg">
                 <div>
                   <p className="font-semibold text-white">{tx.transactionId}</p>
                   <p className="text-sm text-zinc-400">{format(new Date(tx.createdAt), 'PPpp')}</p>

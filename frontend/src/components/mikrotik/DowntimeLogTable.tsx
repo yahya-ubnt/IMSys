@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { History, CheckCircle } from "lucide-react";
 import { motion } from 'framer-motion';
@@ -80,14 +81,16 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
         {logs.map((log, index) => (
           <motion.div
             key={log._id}
-            className="bg-zinc-800/50 p-3 rounded-lg border border-zinc-700"
+            className="p-3 rounded-lg border"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${log.downEndTime ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                    <Badge variant={log.downEndTime ? 'success' : 'destructive'}>
+  {log.downEndTime ? 'Up' : 'Down'}
+</Badge>
                     <p className="text-sm font-semibold text-zinc-200">
                         {format(new Date(log.downStartTime), 'MMM d, yyyy')}
                     </p>
@@ -105,7 +108,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
   };
 
   return (
-    <Card className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex flex-col h-full">
+    <Card className="flex flex-col h-full">
       <CardHeader className="border-b border-zinc-800 p-3">
         <CardTitle className="text-base text-cyan-400 flex items-center"><History className="mr-2 h-5 w-5" />Downtime History</CardTitle>
         <div className="flex justify-between items-center text-xs text-zinc-400 pt-2">

@@ -60,7 +60,7 @@ export function PppoeUserCountCard({ routerId }: { routerId: string }) {
 
   return (
     <>
-      <Card className="bg-gray-800 text-white border-blue-600"> {/* Active PPPoE - Blue */}
+      <Card> {/* Active PPPoE - Blue */}
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-blue-400">Active PPPoE</CardTitle>
           <UserCheck className="h-4 w-4 text-blue-400" />
@@ -69,7 +69,7 @@ export function PppoeUserCountCard({ routerId }: { routerId: string }) {
           <p className="text-2xl font-bold text-blue-300">{pppoeCounts.activePppoe}</p>
         </CardContent>
       </Card>
-      <Card className="bg-gray-800 text-white border-red-600"> {/* Inactive PPPoE - Red */}
+      <Card> {/* Inactive PPPoE - Red */}
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-red-400">Inactive PPPoE</CardTitle>
           <UserX className="h-4 w-4 text-red-400" />

@@ -5,9 +5,9 @@ const asyncHandler = require('express-async-handler');
 // @access  Private/Admin
 const getRouterStatus = asyncHandler(async (req, res) => {
   try {
-    const [resources] = await req.client.rosApi.write('/system/resource/print');
-    const files = await req.client.rosApi.write('/file/print'); // For HDD Free
-    const ipAddresses = await req.client.rosApi.write('/ip/address/print'); // For IP Address
+    const [resources] = await req.mikrotikClient.write('/system/resource/print');
+    const files = await req.mikrotikClient.write('/file/print'); // For HDD Free
+    const ipAddresses = await req.mikrotikClient.write('/ip/address/print'); // For IP Address
 
     let hddFree = 'N/A';
     // Find the 'disk' entry or sum up free space from relevant disk entries
@@ -72,8 +72,8 @@ const getRouterStatus = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getRouterInterfaces = asyncHandler(async (req, res) => {
   try {
-    const interfaces = await req.client.rosApi.write('/interface/print');
-    const traffic = await req.client.rosApi.write('/interface/monitor-traffic', [
+    const interfaces = await req.mikrotikClient.write('/interface/print');
+    const traffic = await req.mikrotikClient.write('/interface/monitor-traffic', [
       '=interface=' + interfaces.map((i) => i.name).join(','),
       '=once=',
     ]);
@@ -106,7 +106,7 @@ const getInterfaceTraffic = asyncHandler(async (req, res) => {
   }
   try {
     // This command monitors traffic for a short period and returns the current stats
-    const [traffic] = await req.client.rosApi.write('/interface/monitor-traffic', [
+    const [traffic] = await req.mikrotikClient.write('/interface/monitor-traffic', [
       '=interface=' + interfaceName,
       '=once=',
     ]);
@@ -134,7 +134,7 @@ const getInterfaceTraffic = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getActivePppoeSessions = asyncHandler(async (req, res) => {
   try {
-    const activeSessions = await req.client.rosApi.write('/ppp/active/print');
+    const activeSessions = await req.mikrotikClient.write('/ppp/active/print');
     res.json(activeSessions);
   } catch (error) {
     console.error('Error fetching active PPPoE sessions:', error);
@@ -152,7 +152,7 @@ const disconnectPppoeUser = asyncHandler(async (req, res) => {
     throw new Error('PPPoE user ID is required');
   }
   try {
-    await req.client.rosApi.write('/ppp/active/remove', ['=.id=' + id]);
+    await req.mikrotikClient.write('/ppp/active/remove', ['=.id=' + id]);
     res.json({ message: 'PPPoE user disconnected successfully' });
   } catch (error) {
     console.error('Error disconnecting PPPoE user:', error);
@@ -165,7 +165,7 @@ const disconnectPppoeUser = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getPppoeSecrets = asyncHandler(async (req, res) => {
   try {
-    const secrets = await req.client.rosApi.write('/ppp/secret/print');
+    const secrets = await req.mikrotikClient.write('/ppp/secret/print');
     res.json(secrets);
   } catch (error) {
     console.error('Error fetching PPPoE secrets:', error);
@@ -193,7 +193,7 @@ const addPppoeSecret = asyncHandler(async (req, res) => {
     if (disabled !== undefined) {
       params.push('=disabled=' + (disabled ? 'yes' : 'no'));
     }
-    const secret = await req.client.rosApi.write('/ppp/secret/add', params);
+    const secret = await req.mikrotikClient.write('/ppp/secret/add', params);
 
     res.status(201).json(secret);
   } catch (error) {
@@ -219,7 +219,7 @@ const updatePppoeSecret = asyncHandler(async (req, res) => {
   }
 
   try {
-    const updatedSecret = await req.client.rosApi.write('/ppp/secret/set', params);
+    const updatedSecret = await req.mikrotikClient.write('/ppp/secret/set', params);
     res.json(updatedSecret);
   } catch (error) {
     console.error('Error updating PPPoE secret:', error);
@@ -233,7 +233,7 @@ const updatePppoeSecret = asyncHandler(async (req, res) => {
 const deletePppoeSecret = asyncHandler(async (req, res) => {
   const { secretId } = req.params;
   try {
-    await req.client.rosApi.write('/ppp/secret/remove', ['=.id=' + secretId]);
+    await req.mikrotikClient.write('/ppp/secret/remove', ['=.id=' + secretId]);
     res.json({ message: 'PPPoE secret removed successfully' });
   } catch (error) {
     console.error('Error deleting PPPoE secret:', error);
@@ -246,7 +246,7 @@ const deletePppoeSecret = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getQueues = asyncHandler(async (req, res) => {
   try {
-    const queues = await req.client.rosApi.write('/queue/simple/print');
+    const queues = await req.mikrotikClient.write('/queue/simple/print');
     res.json(queues);
   } catch (error) {
     console.error('Error fetching queues:', error);
@@ -278,7 +278,7 @@ const addQueue = asyncHandler(async (req, res) => {
       ...(comment ? ['=comment=' + comment] : []),
       ...(disabled ? ['=disabled=' + disabled] : []),
     ];
-    const newQueue = await req.client.rosApi.write('/queue/simple/add', params);
+    const newQueue = await req.mikrotikClient.write('/queue/simple/add', params);
 
     res.status(201).json(newQueue);
   } catch (error) {
@@ -312,7 +312,7 @@ const updateQueue = asyncHandler(async (req, res) => {
   }
 
   try {
-    const updatedQueue = await req.client.rosApi.write('/queue/simple/set', params);
+    const updatedQueue = await req.mikrotikClient.write('/queue/simple/set', params);
     res.json(updatedQueue);
   } catch (error) {
     console.error('Error updating simple queue:', error);
@@ -326,7 +326,7 @@ const updateQueue = asyncHandler(async (req, res) => {
 const deleteQueue = asyncHandler(async (req, res) => {
   const { queueId } = req.params;
   try {
-    await req.client.rosApi.write('/queue/simple/remove', ['=.id=' + queueId]);
+    await req.mikrotikClient.write('/queue/simple/remove', ['=.id=' + queueId]);
     res.json({ message: 'Simple queue removed successfully' });
   } catch (error) {
     console.error('Error deleting simple queue:', error);
@@ -339,7 +339,7 @@ const deleteQueue = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getFirewallFilters = asyncHandler(async (req, res) => {
   try {
-    const filters = await req.client.rosApi.write('/ip/firewall/filter/print');
+    const filters = await req.mikrotikClient.write('/ip/firewall/filter/print');
     res.json(filters);
   } catch (error) {
     console.error('Error fetching firewall filters:', error);
@@ -352,7 +352,7 @@ const getFirewallFilters = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getDhcpLeases = asyncHandler(async (req, res) => {
   try {
-    const leases = await req.client.rosApi.write('/ip/dhcp-server/lease/print');
+    const leases = await req.mikrotikClient.write('/ip/dhcp-server/lease/print');
     res.json(leases);
   } catch (error) {
     console.error('Error fetching DHCP leases:', error);
@@ -365,7 +365,7 @@ const getDhcpLeases = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getLogs = asyncHandler(async (req, res) => {
   try {
-    const logs = await req.client.rosApi.write('/log/print');
+    const logs = await req.mikrotikClient.write('/log/print');
     res.json(logs);
   } catch (error) {
     console.error('Error fetching logs:', error);
@@ -378,7 +378,7 @@ const getLogs = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getStaticUserCounts = asyncHandler(async (req, res) => {
   try {
-    const leases = await req.client.rosApi.write('/ip/dhcp-server/lease/print');
+    const leases = await req.mikrotikClient.write('/ip/dhcp-server/lease/print');
 
     let activeStatic = 0;
     let inactiveStatic = 0;
@@ -409,8 +409,8 @@ const getStaticUserCounts = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getPppoeUserCounts = asyncHandler(async (req, res) => {
   try {
-    const activeSessions = await req.client.rosApi.write('/ppp/active/print');
-    const secrets = await req.client.rosApi.write('/ppp/secret/print');
+    const activeSessions = await req.mikrotikClient.write('/ppp/active/print');
+    const secrets = await req.mikrotikClient.write('/ppp/secret/print');
 
     const activeCount = activeSessions.length;
     const inactiveCount = secrets.length - activeCount; // Assuming all secrets are potential users

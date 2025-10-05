@@ -121,7 +121,7 @@ export function ResourceGraphCard({ routerId, resourceType, title }: ResourceGra
   }
 
   return (
-    <Card className="w-full bg-gray-900 text-white border-gray-700 shadow-lg"> {/* Added futuristic styling */}
+    <Card className="w-full shadow-lg"> {/* Added futuristic styling */}
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-gray-700"> {/* Modified CardHeader */}
         <CardTitle className="text-sm font-medium text-blue-400">{title}</CardTitle>
         {IconComponent && <IconComponent className="h-4 w-4 text-blue-400" />}

@@ -83,7 +83,7 @@ export function CombinedRouterInfoCard({ routerId }: { routerId: string }) {
   };
 
   return (
-    <Card className="w-full bg-gray-900 text-white border-gray-700 shadow-lg"> {/* Added futuristic styling */}
+    <Card className="w-full shadow-lg"> {/* Added futuristic styling */}
       <CardHeader className="border-b border-gray-700 pb-4"> {/* Added bottom border */}
         <CardTitle className="text-2xl font-bold text-blue-400">Router Details</CardTitle>
         <CardDescription className="text-gray-400">Comprehensive information about your MikroTik router.</CardDescription>

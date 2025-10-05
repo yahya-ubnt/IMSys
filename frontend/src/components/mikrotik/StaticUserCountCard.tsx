@@ -60,7 +60,7 @@ export function StaticUserCountCard({ routerId }: { routerId: string }) {
 
   return (
     <>
-      <Card className="bg-gray-800 text-white border-green-600"> {/* Active Static - Green */}
+      <Card> {/* Active Static - Green */}
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-green-400">Active Static</CardTitle>
           <UserCheck className="h-4 w-4 text-green-400" />
@@ -69,7 +69,7 @@ export function StaticUserCountCard({ routerId }: { routerId: string }) {
           <p className="text-2xl font-bold text-green-300">{staticCounts.activeStatic}</p>
         </CardContent>
       </Card>
-      <Card className="bg-gray-800 text-white border-red-600"> {/* Inactive Static - Red */}
+      <Card> {/* Inactive Static - Red */}
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-red-400">Inactive Static</CardTitle>
           <UserX className="h-4 w-4 text-red-400" />
