@@ -40,6 +40,21 @@ export const useTerminalWebSocket = ({ terminalRef, routerId, token }: UseTermin
       term = new XtermTerminal({
         cursorBlink: true,
         convertEol: true,
+        theme: {
+          background: 'transparent',
+          foreground: '#d1d5db', // zinc-300
+          cursor: '#22d3ee', // cyan-400
+          selectionBackground: '#3f3f46', // zinc-700
+          selectionForeground: '#ffffff',
+          brightBlack: '#6b7280',
+          brightRed: '#ef4444',
+          brightGreen: '#22c55e',
+          brightYellow: '#eab308',
+          brightBlue: '#3b82f6',
+          brightMagenta: '#d946ef',
+          brightCyan: '#22d3ee',
+          brightWhite: '#f9fafb',
+        },
       });
       fitAddon = new FitAddon();
       term.loadAddon(fitAddon);
