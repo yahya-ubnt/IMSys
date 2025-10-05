@@ -1,9 +1,8 @@
-'use client';
-
-import { useEffect, useState, useMemo, useRef } from 'react'; // Added useMemo, useRef
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useAuth } from '@/components/auth-provider';
-import { DataTable } from '@/components/data-table'; // Import DataTable
-import { ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
+import { DataTable } from '@/components/data-table';
+import { ColumnDef } from '@tanstack/react-table';
+import { Badge } from '@/components/ui/badge'; // Import Badge
 
 interface Interface {
   '.id': string;
@@ -25,16 +24,21 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
     const value = parseInt(bitsPerSecond, 10);
     if (isNaN(value) || value === 0) return '0 bps';
     const units = ['bps', 'Kbps', 'Mbps', 'Gbps'];
-    const i = Math.floor(Math.log(value) / Math.log(1024));
-    return parseFloat((value / Math.pow(1024, i)).toFixed(2)) + ' ' + units[i];
+    let i = 0;
+    let rate = value;
+    while (rate >= 1024 && i < units.length - 1) {
+      rate /= 1024;
+      i++;
+    }
+    return `${rate.toFixed(2)} ${units[i]}`;
   };
 
-  // Define columns for the DataTable
   const columns: ColumnDef<Interface>[] = useMemo(
     () => [
       {
         accessorKey: 'name',
         header: 'Name',
+        cell: ({ row }) => <span className="font-medium text-white">{row.original.name}</span>,
       },
       {
         accessorKey: 'type',
@@ -43,23 +47,21 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
       {
         accessorKey: 'running',
         header: 'Status',
-        cell: ({ row }) => (row.original.running ? 'Running' : 'Stopped'),
+        cell: ({ row }) => (
+          <Badge variant={row.original.running ? 'success' : 'secondary'}>
+            {row.original.running ? 'Running' : 'Stopped'}
+          </Badge>
+        ),
       },
       {
         accessorKey: 'rx-byte',
-        header: 'RX Rate',
-        cell: ({ row }) => formatBitrate(row.original['rx-byte']),
-        meta: {
-          align: 'right', // Custom meta for right alignment
-        },
+        header: () => <div className="text-right">RX Rate</div>,
+        cell: ({ row }) => <div className="text-right">{formatBitrate(row.original['rx-byte'])}</div>,
       },
       {
         accessorKey: 'tx-byte',
-        header: 'TX Rate',
-        cell: ({ row }) => formatBitrate(row.original['tx-byte']),
-        meta: {
-          align: 'right', // Custom meta for right alignment
-        },
+        header: () => <div className="text-right">TX Rate</div>,
+        cell: ({ row }) => <div className="text-right">{formatBitrate(row.original['tx-byte'])}</div>,
       },
     ],
     []
@@ -70,14 +72,11 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
 
     const fetchInterfaces = async () => {
       try {
-        // Only show loading on initial mount
         if (isInitialMount.current) {
           setLoading(true);
         }
         const response = await fetch(`/api/routers/${routerId}/dashboard/interfaces`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
           throw new Error('Failed to fetch interfaces');
@@ -85,38 +84,36 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
         const data = await response.json();
         setInterfaces(data);
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unknown error occurred');
-        }
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
         setLoading(false);
-        isInitialMount.current = false; // Mark as not initial mount after first fetch
+        isInitialMount.current = false;
       }
     };
 
-    fetchInterfaces(); // Initial fetch
-    const intervalId = setInterval(fetchInterfaces, 3000); // Poll every 3 seconds
+    fetchInterfaces();
+    const intervalId = setInterval(fetchInterfaces, 3000);
 
-    return () => clearInterval(intervalId); // Cleanup on unmount
+    return () => clearInterval(intervalId);
   }, [routerId, token]);
 
   if (loading) {
-    return <div>Loading interfaces...</div>;
+    return <div className="text-center text-zinc-400">Loading interfaces...</div>;
   }
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="text-center text-red-500">Error: {error}</div>;
   }
 
   return (
     <DataTable
       columns={columns}
       data={interfaces}
-      filterColumn="name" // Allow filtering by interface name
-      className="text-lg [&_td]:p-2 [&_th]:p-2" // Adjust font size and padding
-      pageSizeOptions={[25, 50, 100, interfaces.length]} // Add page size options
+      filterColumn="name"
+      paginationEnabled={false}
+      tableClassName="[&_tr]:border-zinc-800"
+      headerClassName="[&_th]:text-zinc-400"
+      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }

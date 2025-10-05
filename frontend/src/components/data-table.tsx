@@ -50,6 +50,7 @@ interface DataTableProps<TData, TValue, TMeta extends Record<string, unknown>> {
   initialColumnVisibility?: VisibilityState
   meta?: TMeta // Allow passing meta data to the table
   pageSizeOptions?: number[] // New prop for page size options
+  paginationEnabled?: boolean // New prop to enable/disable pagination
 }
 
 export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>({
@@ -61,6 +62,7 @@ export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>(
   initialColumnVisibility,
   meta,
   pageSizeOptions,
+  paginationEnabled = true, // Default to true
   handleEdit,
   handleDelete,
 }: DataTableProps<TData, TValue, TMeta>) {
@@ -95,11 +97,17 @@ export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>(
     },
     initialState: {
       pagination: {
-        pageSize: pageSizeOptions?.[0] || 10, // Set initial page size
+        pageSize: pageSizeOptions?.[0] || data.length, // Show all if pagination is disabled
       },
     },
     onPaginationChange: setPagination, // Control pagination state
   })
+
+  React.useEffect(() => {
+    if (!paginationEnabled) {
+      table.setPageSize(data.length);
+    }
+  }, [paginationEnabled, data.length, table]);
 
   return (
     <div className={`w-full rounded-md overflow-x-auto bg-zinc-900 ${className || ''}`}> {/* Added futuristic styling */}
@@ -215,49 +223,49 @@ export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>(
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4 px-4"> {/* Styled pagination container */}
-        {/* Removed: Row selection info */}
-        {/* Pagination controls */}
-        <div className="flex items-center space-x-2">
-          {pageSizeOptions && pageSizeOptions.length > 0 && (
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
+      {paginationEnabled && (
+        <div className="flex items-center justify-end space-x-2 py-4 px-4">
+          <div className="flex items-center space-x-2">
+            {pageSizeOptions && pageSizeOptions.length > 0 && (
+              <Select
+                value={`${table.getState().pagination.pageSize}`}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value))
+                }}
+              >
+                <SelectTrigger className="h-8 w-[70px] bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">
+                  <SelectValue placeholder={table.getState().pagination.pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top" className="bg-zinc-800 text-white border-zinc-700">
+                  {pageSizeOptions.map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`} className="focus:bg-zinc-700 focus:text-white">
+                      {pageSize === data.length ? "All" : pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
             >
-              <SelectTrigger className="h-8 w-[70px] bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"> {/* Styled select trigger */}
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
-              </SelectTrigger>
-              <SelectContent side="top" className="bg-zinc-800 text-white border-zinc-700"> {/* Styled select content */}
-                {pageSizeOptions.map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`} className="focus:bg-zinc-700 focus:text-white"> {/* Styled select item */}
-                    {pageSize === data.length ? "All" : pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700" // Styled button
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700" // Styled button
-          >
-            Next
-          </Button>
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

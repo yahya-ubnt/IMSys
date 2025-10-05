@@ -1,31 +1,55 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Added CardDescription
+import { motion } from 'framer-motion';
 import { InterfacesTable } from '@/components/mikrotik/InterfacesTable';
+
+// Animation variants for Framer Motion
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+    },
+  },
+};
 
 export default function InterfacesPage() {
   const params = useParams();
   const routerId = params.id as string;
 
   return (
-    <div className="px-6 py-4 space-y-6 bg-gray-900 text-white min-h-screen"> {/* Added padding and spacing, futuristic background */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-blue-400">Interfaces</h1>
-          <p className="text-gray-400 text-base">Manage network interfaces of your MikroTik router.</p>
-        </div>
-      </div>
+    <motion.div 
+      className="p-6 space-y-6"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <motion.div variants={itemVariants}>
+        <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+          Network Interfaces
+        </h1>
+        <p className="text-sm text-zinc-400">Live status and traffic for all router interfaces.</p>
+      </motion.div>
 
-      <Card className="w-full bg-gray-800 text-white border-gray-700 shadow-lg"> {/* Added w-full, futuristic card styling */}
-        <CardHeader className="border-b border-gray-700 pb-4"> {/* Added bottom border */}
-          <CardTitle className="text-2xl font-bold text-blue-400">Interface List</CardTitle> {/* Changed title */}
-          <CardDescription className="text-gray-400">A list of all network interfaces.</CardDescription> {/* Added description */}
-        </CardHeader>
-        <CardContent>
-          <InterfacesTable routerId={routerId} />
-        </CardContent>
-      </Card>
-    </div>
+      <motion.div 
+        variants={itemVariants} 
+        className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl p-6"
+      >
+        <InterfacesTable routerId={routerId} />
+      </motion.div>
+    </motion.div>
   );
 }
