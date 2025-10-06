@@ -9,8 +9,8 @@ const { getDarajaToken } = require('../utils/darajaAuth');
 const { DARAJA_ENV } = require('../config/env');
 
 // Helper function to get M-Pesa configuration from the database
-const getMpesaConfig = async (type) => {
-  const settings = await ApplicationSettings.findOne();
+const getMpesaConfig = async (type, userId) => {
+  const settings = await ApplicationSettings.findOne({ user: userId });
   if (type === 'paybill' && settings?.mpesaPaybill) {
     return {
       shortcode: settings.mpesaPaybill.paybillNumber,
@@ -21,7 +21,7 @@ const getMpesaConfig = async (type) => {
   }
   if (type === 'till' && settings?.mpesaTill) {
     return {
-      shortcode: settings.mpesaTill.tillNumber,
+      shortcode: settings.mpesaTill.tillStoreNumber || settings.mpesaTill.tillNumber,
       passkey: settings.mpesaTill.passkey,
       consumerKey: settings.mpesaTill.consumerKey,
       consumerSecret: settings.mpesaTill.consumerSecret,
@@ -29,14 +29,14 @@ const getMpesaConfig = async (type) => {
   }
   // Fallback for STK push if no type is specified
   if (!type) {
-    if (settings?.mpesaPaybill?.activated) return getMpesaConfig('paybill');
-    if (settings?.mpesaTill?.activated) return getMpesaConfig('till');
+    if (settings?.mpesaPaybill?.activated) return getMpesaConfig('paybill', userId);
+    if (settings?.mpesaTill?.activated) return getMpesaConfig('till', userId);
   }
   throw new Error(`M-Pesa ${type || ''} is not configured.`);
 };
 
-const registerCallbackURL = async (type) => {
-  const config = await getMpesaConfig(type);
+const registerCallbackURL = async (type, userId) => {
+  const config = await getMpesaConfig(type, userId);
   const token = await getDarajaToken(config.consumerKey, config.consumerSecret);
 
   const url = DARAJA_ENV === 'production'
@@ -55,7 +55,7 @@ const registerCallbackURL = async (type) => {
   });
 
   // Update the activation status in the database
-  const settings = await ApplicationSettings.findOne();
+  const settings = await ApplicationSettings.findOne({ user: userId });
   if (type === 'paybill') {
     settings.mpesaPaybill.activated = true;
   } else if (type === 'till') {
@@ -225,7 +225,8 @@ const creditUserWallet = async (userId, amount, source, externalTransactionId, a
   await user.save();
 
   await WalletTransaction.create({
-    userId,
+    user: user.user, // SaaS user
+    mikrotikUser: userId, // Mikrotik user
     transactionId: `WT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type: 'Credit',
     amount,

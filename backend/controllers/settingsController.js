@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const { registerCallbackURL } = require('../services/mpesaService');
 
@@ -7,24 +8,27 @@ const { registerCallbackURL } = require('../services/mpesaService');
 // @route   GET /api/settings/general
 // @access  Private
 const getGeneralSettings = asyncHandler(async (req, res) => {
-  const settings = await ApplicationSettings.findOne();
+  let settings = await ApplicationSettings.findOne({ user: req.user._id });
 
-  if (settings) {
-    res.json(settings);
-  } else {
-    // If no settings exist, create default ones
-    const defaultSettings = await ApplicationSettings.create({});
-    res.json(defaultSettings);
+  if (!settings) {
+    // If no settings exist for this user, create default ones
+    settings = await ApplicationSettings.create({ user: req.user._id });
   }
+  res.json(settings);
 });
 
 // @desc    Update application general settings
 // @route   PUT /api/settings/general
 // @access  Private/Admin
 const updateGeneralSettings = asyncHandler(async (req, res) => {
-  let settings = await ApplicationSettings.findOne();
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  let settings = await ApplicationSettings.findOne({ user: req.user._id });
   if (!settings) {
-    settings = await ApplicationSettings.create({});
+    settings = await ApplicationSettings.create({ user: req.user._id });
   }
 
   // List of fields that can be updated
@@ -74,7 +78,7 @@ const updateGeneralSettings = asyncHandler(async (req, res) => {
 // @route   GET /api/settings/mpesa
 // @access  Private/Admin
 const getMpesaSettings = asyncHandler(async (req, res) => {
-  const settings = await ApplicationSettings.findOne().select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
+  const settings = await ApplicationSettings.findOne({ user: req.user._id }).select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
   
   if (settings) {
     res.json({
@@ -94,11 +98,16 @@ const getMpesaSettings = asyncHandler(async (req, res) => {
 // @route   PUT /api/settings/mpesa
 // @access  Private/Admin
 const updateMpesaSettings = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { type, data } = req.body; // type can be 'paybill' or 'till'
 
-  let settings = await ApplicationSettings.findOne();
+  let settings = await ApplicationSettings.findOne({ user: req.user._id });
   if (!settings) {
-    settings = await ApplicationSettings.create({});
+    settings = await ApplicationSettings.create({ user: req.user._id });
   }
 
   if (type === 'paybill') {
@@ -118,6 +127,11 @@ const updateMpesaSettings = asyncHandler(async (req, res) => {
 // @route   POST /api/settings/mpesa/activate
 // @access  Private/Admin
 const activateMpesa = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { type } = req.body; // type can be 'paybill' or 'till'
   if (!type) {
     res.status(400);
@@ -125,7 +139,7 @@ const activateMpesa = asyncHandler(async (req, res) => {
   }
 
   try {
-    const response = await registerCallbackURL(type);
+    const response = await registerCallbackURL(type, req.user._id); // Pass userId
     res.json({ message: 'M-Pesa callback URL registered successfully.', response });
   } catch (error) {
     res.status(500);

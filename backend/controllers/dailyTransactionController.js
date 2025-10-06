@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const DailyTransaction = require('../models/DailyTransaction');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Africa/Nairobi');
@@ -7,12 +8,12 @@ moment.tz.setDefault('Africa/Nairobi');
 // @route   POST /api/daily-transactions
 // @access  Private
 const createDailyTransaction = asyncHandler(async (req, res) => {
-  const { amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost, category } = req.body;
-
-  if (!amount || !method || !transactionMessage || !description || !label || !category) {
-    res.status(400);
-    throw new Error('Please fill all required fields');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost, category } = req.body;
 
   const dailyTransaction = new DailyTransaction({
     date: new Date(),
@@ -29,6 +30,7 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
     newBalance,
     transactionCost,
     category,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   const createdDailyTransaction = await dailyTransaction.save();
@@ -42,7 +44,7 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
 const getDailyTransactions = asyncHandler(async (req, res) => {
   const { startDate, endDate, method, label, search, category } = req.query;
 
-  const query = {};
+  const query = { user: req.user._id }; // Filter by user
 
   if (startDate) {
     query.date = { ...query.date, $gte: new Date(startDate) };
@@ -84,6 +86,11 @@ const getDailyTransactionById = asyncHandler(async (req, res) => {
   const dailyTransaction = await DailyTransaction.findById(req.params.id);
 
   if (dailyTransaction) {
+    // Check for ownership
+    if (dailyTransaction.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this transaction');
+    }
     res.json(dailyTransaction);
   } else {
     res.status(404);
@@ -100,6 +107,12 @@ const updateDailyTransaction = asyncHandler(async (req, res) => {
   const dailyTransaction = await DailyTransaction.findById(req.params.id);
 
   if (dailyTransaction) {
+    // Check for ownership
+    if (dailyTransaction.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to update this transaction');
+    }
+
     dailyTransaction.date = date || dailyTransaction.date;
     dailyTransaction.amount = amount || dailyTransaction.amount;
     dailyTransaction.method = method || dailyTransaction.method;
@@ -130,6 +143,11 @@ const deleteDailyTransaction = asyncHandler(async (req, res) => {
   const dailyTransaction = await DailyTransaction.findById(req.params.id);
 
   if (dailyTransaction) {
+    // Check for ownership
+    if (dailyTransaction.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to delete this transaction');
+    }
     await dailyTransaction.deleteOne();
     res.json({ message: 'Daily transaction removed' });
   } else {
@@ -148,6 +166,7 @@ const getDailyTransactionStats = asyncHandler(async (req, res) => {
   const startOfYear = moment().startOf('year');
 
   const stats = await DailyTransaction.aggregate([
+    { $match: { user: req.user._id } }, // Filter by user
     {
       $facet: {
         today: [
@@ -195,13 +214,17 @@ const getMonthlyTransactionTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
-  const matchQuery = category ? { category, date: {
-    $gte: new Date(parseInt(year), 0, 1),
-    $lt: new Date(parseInt(year) + 1, 0, 1),
-  }} : { date: {
-    $gte: new Date(parseInt(year), 0, 1),
-    $lt: new Date(parseInt(year) + 1, 0, 1),
-  }};
+  const matchQuery = {
+    user: req.user._id, // Filter by user
+    date: {
+      $gte: new Date(parseInt(year), 0, 1),
+      $lt: new Date(parseInt(year) + 1, 0, 1),
+    }
+  };
+
+  if (category) {
+    matchQuery.category = category;
+  }
 
   const monthlyTotals = await DailyTransaction.aggregate([
     {
@@ -250,6 +273,7 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const daysInMonth = endDate.date();
 
   const dailyTotals = await DailyTransaction.aggregate([
+    { $match: { user: req.user._id } }, // Filter by user
     {
       $match: {
         date: {
@@ -292,5 +316,3 @@ module.exports = {
   getMonthlyTransactionTotals,
   getDailyCollectionTotals,
 };
-  
-  

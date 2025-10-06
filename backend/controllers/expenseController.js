@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const Expense = require('../models/Expense');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Africa/Nairobi');
@@ -8,12 +9,12 @@ const mongoose = require('mongoose');
 // @route   POST /api/expenses
 // @access  Private
 const createExpense = asyncHandler(async (req, res) => {
-  const { title, amount, expenseType, description, expenseDate, status } = req.body;
-
-  if (!title || !amount || !expenseType || !expenseDate) {
-    res.status(400);
-    throw new Error('Please add all required fields: title, amount, expenseType, expenseDate');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { title, amount, expenseType, description, expenseDate, status } = req.body;
 
   const expense = await Expense.create({
     title,
@@ -51,6 +52,12 @@ const getExpenseById = asyncHandler(async (req, res) => {
     throw new Error('Expense not found');
   }
 
+  // Check for ownership
+  if (expense.expenseBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to view this expense');
+  }
+
   res.status(200).json(expense);
 });
 
@@ -67,7 +74,11 @@ const updateExpense = asyncHandler(async (req, res) => {
     throw new Error('Expense not found');
   }
 
-  // Add authorization check if needed
+  // Check for ownership
+  if (expense.expenseBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this expense');
+  }
 
   expense.title = title || expense.title;
   expense.amount = amount || expense.amount;
@@ -92,7 +103,11 @@ const deleteExpense = asyncHandler(async (req, res) => {
     throw new Error('Expense not found');
   }
 
-  // Add authorization check if needed
+  // Check for ownership
+  if (expense.expenseBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this expense');
+  }
 
   await expense.deleteOne();
 

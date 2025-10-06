@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const ScheduledTask = require('../models/ScheduledTask');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -30,7 +31,7 @@ const executeScript = (scriptPath) => {
 // @route   GET /api/scheduled-tasks
 // @access  Private/Admin
 const getScheduledTasks = asyncHandler(async (req, res) => {
-  const tasks = await ScheduledTask.find({}).sort({ createdAt: 'desc' });
+  const tasks = await ScheduledTask.find({ user: req.user._id }).sort({ createdAt: 'desc' });
   res.status(200).json(tasks);
 });
 
@@ -38,12 +39,12 @@ const getScheduledTasks = asyncHandler(async (req, res) => {
 // @route   POST /api/scheduled-tasks
 // @access  Private/Admin
 const createScheduledTask = asyncHandler(async (req, res) => {
-  const { name, description, scriptPath, schedule, isEnabled } = req.body;
-
-  if (!name || !scriptPath || !schedule) {
-    res.status(400);
-    throw new Error('Name, scriptPath, and schedule are required');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { name, description, scriptPath, schedule, isEnabled } = req.body;
 
   const task = await ScheduledTask.create({
     name,
@@ -51,6 +52,7 @@ const createScheduledTask = asyncHandler(async (req, res) => {
     scriptPath,
     schedule,
     isEnabled,
+    user: req.user._id, // Associate with the logged-in user
   });
   
   res.status(201).json(task);
@@ -66,6 +68,12 @@ const updateScheduledTask = asyncHandler(async (req, res) => {
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
+  }
+
+  // Check for ownership
+  if (task.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this task');
   }
 
   task.name = name || task.name;
@@ -92,6 +100,12 @@ const deleteScheduledTask = asyncHandler(async (req, res) => {
     throw new Error('Task not found');
   }
 
+  // Check for ownership
+  if (task.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this task');
+  }
+
   await task.deleteOne();
   
   res.status(200).json({ message: 'Task removed' });
@@ -106,6 +120,12 @@ const runScheduledTask = asyncHandler(async (req, res) => {
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
+  }
+
+  // Check for ownership
+  if (task.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to run this task');
   }
 
   console.log(`Manually running task: ${task.name}`);

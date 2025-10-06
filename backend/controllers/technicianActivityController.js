@@ -1,17 +1,17 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const TechnicianActivity = require('../models/TechnicianActivity');
 
 // @desc    Create a new technician activity
 // @route   POST /api/technician-activities
 // @access  Private (Admin/Technician)
 const createTechnicianActivity = asyncHandler(async (req, res) => {
-  const { technician, activityType, clientName, clientPhone, activityDate, description, installedEquipment, installationNotes, issueDescription, solutionProvided, partsReplaced, configurationChanges, unit, building, supportCategory } = req.body;
-
-  // Basic validation
-  if (!technician || !activityType || !clientName || !clientPhone || !activityDate || !description) {
-    res.status(400);
-    throw new Error('Please fill all required fields: technician, activityType, clientName, clientPhone, activityDate, description');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { technician, activityType, clientName, clientPhone, activityDate, description, installedEquipment, installationNotes, issueDescription, solutionProvided, partsReplaced, configurationChanges, unit, building, supportCategory } = req.body;
 
   // Type-specific validation
   if (activityType === 'Installation') {
@@ -51,6 +51,7 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
     configurationChanges: configurationChanges || undefined,
     unit: unit || undefined,
     building: building || undefined,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   res.status(201).json(activity);
@@ -62,7 +63,7 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
 const getTechnicianActivities = asyncHandler(async (req, res) => {
   const { technicianId, activityType, startDate, endDate, clientName, clientPhone } = req.query;
 
-  let query = {};
+  let query = { user: req.user._id }; // Filter by user
 
   if (technicianId) {
     query.technician = technicianId;
@@ -107,10 +108,11 @@ const getTechnicianActivityById = asyncHandler(async (req, res) => {
     throw new Error('Technician activity not found');
   }
 
-  // Optional: Add ownership/permission check if needed
-  // e.g., if (activity.technician.toString() !== req.user.id && !req.user.isAdmin) {
-  //   res.status(401); throw new Error('Not authorized');
-  // }
+  // Check for ownership
+  if (activity.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to view this activity');
+  }
 
   res.status(200).json(activity);
 });
@@ -128,10 +130,11 @@ const updateTechnicianActivity = asyncHandler(async (req, res) => {
     throw new Error('Technician activity not found');
   }
 
-  // Optional: Add ownership/permission check if needed
-  // e.g., if (activity.technician.toString() !== req.user.id && !req.user.isAdmin) {
-  //   res.status(401); throw new Error('Not authorized');
-  // }
+  // Check for ownership
+  if (activity.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this activity');
+  }
 
   // Update fields
   activity.technician = technician || activity.technician;
@@ -203,10 +206,11 @@ const deleteTechnicianActivity = asyncHandler(async (req, res) => {
     throw new Error('Technician activity not found');
   }
 
-  // Optional: Add ownership/permission check if needed
-  // e.g., if (activity.technician.toString() !== req.user.id && !req.user.isAdmin) {
-  //   res.status(401); throw new Error('Not authorized');
-  // }
+  // Check for ownership
+  if (activity.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this activity');
+  }
 
   await activity.deleteOne();
 

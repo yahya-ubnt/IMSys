@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser.js');
 const MikrotikRouter = require('../models/MikrotikRouter.js');
 const Device = require('../models/Device.js');
@@ -18,27 +19,37 @@ const addStep = (steps, stepName, status, summary, details = {}) => {
 // @route   POST /api/v1/users/:userId/diagnostics
 // @access  Private
 const runDiagnostic = asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { userId } = req.params;
     const steps = [];
     let finalConclusion = '';
 
-    // 1. Fetch the user
-    const user = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
-    if (!user) {
+    // 1. Fetch the Mikrotik user and ensure it belongs to the logged-in SaaS user
+    const mikrotikUser = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
+    if (!mikrotikUser) {
         res.status(404);
-        throw new Error('User not found');
+        throw new Error('Mikrotik User not found');
+    }
+    if (mikrotikUser.user.toString() !== req.user._id.toString()) {
+        res.status(401);
+        throw new Error('Not authorized to run diagnostics for this Mikrotik user');
     }
 
     // STEP 1: Billing Check
-    const isExpired = user.expiryDate < new Date();
+    const isExpired = mikrotikUser.expiryDate < new Date();
     if (isExpired) {
-        addStep(steps, 'Billing Check', 'Failure', `Client account expired on ${user.expiryDate.toLocaleDateString()}.`);
+        addStep(steps, 'Billing Check', 'Failure', `Client account expired on ${mikrotikUser.expiryDate.toLocaleDateString()}.`);
         finalConclusion = 'Client is offline due to an expired subscription.';
         
         const log = await DiagnosticLog.create({
-            user: userId,
-            router: user.mikrotikRouter?._id,
-            cpeDevice: user.station?._id,
+            user: req.user._id, // SaaS user
+            mikrotikUser: userId, // Mikrotik user
+            router: mikrotikUser.mikrotikRouter?._id,
+            cpeDevice: mikrotikUser.station?._id,
             steps,
             finalConclusion,
         });
@@ -47,12 +58,12 @@ const runDiagnostic = asyncHandler(async (req, res) => {
     addStep(steps, 'Billing Check', 'Success', 'Client account is active.');
 
     // STEP 2: Mikrotik Router Check
-    const router = user.mikrotikRouter;
+    const router = mikrotikUser.mikrotikRouter;
     if (!router) {
         addStep(steps, 'Mikrotik Router Check', 'Failure', 'No Mikrotik router is associated with this client.');
         finalConclusion = 'Configuration error: Client is not linked to a router.';
-        
-        const log = await DiagnosticLog.create({ user: userId, steps, finalConclusion });
+
+        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, steps, finalConclusion });
         return res.status(200).json(log);
     }
 
@@ -61,29 +72,29 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         addStep(steps, 'Mikrotik Router Check', 'Failure', `Router "${router.name}" (${router.ipAddress}) is offline.`);
         finalConclusion = `The core router "${router.name}" is offline, affecting all connected clients.`;
 
-        const log = await DiagnosticLog.create({ user: userId, router: router._id, steps, finalConclusion });
+        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, steps, finalConclusion });
         return res.status(200).json(log);
     }
     addStep(steps, 'Mikrotik Router Check', 'Success', `Router "${router.name}" (${router.ipAddress}) is online.`);
 
     // STEP 3: Client Status Check
-    const isClientOnline = await checkUserStatus(user, router);
+    const isClientOnline = await checkUserStatus(mikrotikUser, router);
     if (isClientOnline) {
         addStep(steps, 'Client Status Check', 'Success', 'Client is online and reachable.');
         finalConclusion = 'Client is online. No issues detected.';
 
-        const log = await DiagnosticLog.create({ user: userId, router: router._id, cpeDevice: user.station?._id, steps, finalConclusion });
+        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: mikrotikUser.station?._id, steps, finalConclusion });
         return res.status(200).json(log);
     }
     addStep(steps, 'Client Status Check', 'Failure', 'Client is offline.');
 
     // STEP 4: CPE (Station) Check
-    const cpe = user.station;
+    const cpe = mikrotikUser.station;
     if (!cpe) {
         addStep(steps, 'CPE Check', 'Warning', 'No CPE (station) is associated with this client.');
         finalConclusion = 'Client is offline, but no CPE is linked to them to continue diagnosis.';
         
-        const log = await DiagnosticLog.create({ user: userId, router: router._id, steps, finalConclusion });
+        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, steps, finalConclusion });
         return res.status(200).json(log);
     }
 
@@ -92,7 +103,7 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         addStep(steps, 'CPE Check', 'Failure', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is offline.`);
         finalConclusion = `The client's CPE is offline. This is likely a CPE power issue or a problem with the link to the router.`;
 
-        const log = await DiagnosticLog.create({ user: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
+        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
         return res.status(200).json(log);
     }
     addStep(steps, 'CPE Check', 'Success', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is online.`);
@@ -103,7 +114,7 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         addStep(steps, 'Neighbor Analysis', 'Warning', 'No other clients are connected to this CPE.');
         finalConclusion = 'Client is offline. The issue is isolated to this client as their CPE is online and has no other users.';
 
-        const log = await DiagnosticLog.create({ user: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
+        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
         return res.status(200).json(log);
     }
 
@@ -127,7 +138,7 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         finalConclusion = "Client is offline, but their CPE and all neighbors are online. The issue is isolated to this client's indoor wiring, router, or device.";
     }
 
-    const log = await DiagnosticLog.create({ user: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
+    const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
     res.status(200).json(log);
 });
 
@@ -135,8 +146,13 @@ const runDiagnostic = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/users/:userId/diagnostics
 // @access  Private
 const getDiagnosticHistory = asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { userId } = req.params;
-    const logs = await DiagnosticLog.find({ user: userId }).sort({ createdAt: -1 });
+    const logs = await DiagnosticLog.find({ user: req.user._id, mikrotikUser: userId }).sort({ createdAt: -1 });
     res.status(200).json(logs);
 });
 

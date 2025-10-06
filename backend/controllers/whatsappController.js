@@ -83,7 +83,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
       templateUsed: templateId,
       status: 'Pending',
       variablesUsed: variables,
-      sentBy: req.user._id,
+      user: req.user._id,
     });
 
     try {

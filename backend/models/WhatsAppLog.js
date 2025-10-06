@@ -18,7 +18,7 @@ const whatsAppLogSchema = new mongoose.Schema({
   providerResponse: {
     type: mongoose.Schema.Types.Mixed,
   },
-  sentBy: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },

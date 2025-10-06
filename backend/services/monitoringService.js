@@ -11,6 +11,7 @@ const handleSuccessfulPing = async (device) => {
   if (device.status === 'DOWN') {
     console.log(`Device ${device.ipAddress} is back UP.`);
     const openLog = await DowntimeLog.findOne({
+      user: device.user,
       device: device._id,
       downEndTime: null,
     }).sort({ downStartTime: -1 });
@@ -27,11 +28,12 @@ const handleSuccessfulPing = async (device) => {
 };
 
 const handleFailedPing = async (device) => {
-  const openLog = await DowntimeLog.findOne({ device: device._id, downEndTime: null });
+  const openLog = await DowntimeLog.findOne({ user: device.user, device: device._id, downEndTime: null });
 
   if (!openLog) {
     console.log(`Device ${device.ipAddress} is DOWN. Creating new downtime log.`);
     await DowntimeLog.create({
+      user: device.user,
       device: device._id,
       downStartTime: new Date(),
     });

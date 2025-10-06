@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { body } = require('express-validator');
 const multer = require('multer');
 const path = require('path');
 const {
@@ -40,8 +41,37 @@ const upload = multer({
   },
 });
 
-router.route('/general').get(protect, getGeneralSettings).put(protect, admin, upload.fields([{ name: 'logoIcon', maxCount: 1 }, { name: 'favicon', maxCount: 1 }]), updateGeneralSettings);
-router.route('/mpesa').get(protect, admin, getMpesaSettings).put(protect, admin, updateMpesaSettings);
-router.route('/mpesa/activate').post(protect, admin, activateMpesa);
+router.route('/general').get(protect, getGeneralSettings).put(
+  protect,
+  admin,
+  upload.fields([{ name: 'logoIcon', maxCount: 1 }, { name: 'favicon', maxCount: 1 }]),
+  [
+    body('paymentGracePeriodDays', 'Payment grace period must be a number').optional().isNumeric(),
+    body('taxRate', 'Tax rate must be a number').optional().isNumeric(),
+    body('disconnectTime', 'Invalid disconnect time').optional().isIn(['expiry_time', 'end_of_day']),
+  ],
+  updateGeneralSettings
+);
+router.route('/mpesa').get(protect, admin, getMpesaSettings).put(
+  protect,
+  admin,
+  [
+    body('type', 'M-Pesa type (paybill or till) is required').isIn(['paybill', 'till']),
+    body('data.consumerKey', 'Consumer Key is required').not().isEmpty(),
+    body('data.consumerSecret', 'Consumer Secret is required').not().isEmpty(),
+    body('data.passkey', 'Passkey is required').not().isEmpty(),
+    body('data.paybillNumber', 'Paybill Number is required').if(body('type').equals('paybill')).not().isEmpty(),
+    body('data.tillNumber', 'Till Number is required').if(body('type').equals('till')).not().isEmpty(),
+  ],
+  updateMpesaSettings
+);
+router.route('/mpesa/activate').post(
+  protect,
+  admin,
+  [
+    body('type', 'M-Pesa type (paybill or till) is required').isIn(['paybill', 'till']),
+  ],
+  activateMpesa
+);
 
 module.exports = router;

@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
 const WalletTransactionSchema = new mongoose.Schema({
-  userId: {
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  mikrotikUser: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'MikrotikUser',
     required: true,

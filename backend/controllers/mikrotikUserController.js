@@ -868,12 +868,17 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
             res.status(404);
             throw new Error('User not found');
         }
+        // Check for ownership
+        if (user.user.toString() !== req.user._id.toString()) {
+            res.status(401);
+            throw new Error('Not authorized to view payment stats for this Mikrotik user');
+        }
 
         // Fetch application settings to get the grace period
-        const settings = await ApplicationSettings.findOne();
+        const settings = await ApplicationSettings.findOne({ user: req.user._id });
         const gracePeriodDays = settings ? settings.paymentGracePeriodDays : 3; // Default to 3 if not set
 
-        const transactions = await WalletTransaction.find({ userId }).sort({ createdAt: 'asc' });
+        const transactions = await WalletTransaction.find({ user: req.user._id, mikrotikUser: userId }).sort({ createdAt: 'asc' });
 
         const debitTransactions = transactions.filter(t => t.type === 'Debit');
         const creditTransactions = transactions.filter(t => t.type === 'Credit');

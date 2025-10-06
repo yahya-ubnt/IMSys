@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { body } = require('express-validator');
 const {
   getScheduledTasks,
   updateScheduledTask,
@@ -11,7 +12,16 @@ const { protect, admin } = require('../middlewares/protect');
 
 router.route('/')
   .get(protect, admin, getScheduledTasks)
-  .post(protect, admin, createScheduledTask);
+  .post(
+    protect,
+    admin,
+    [
+      body('name', 'Name is required').not().isEmpty(),
+      body('scriptPath', 'Script path is required').not().isEmpty(),
+      body('schedule', 'Schedule is required').not().isEmpty(),
+    ],
+    createScheduledTask
+  );
 
 router.route('/:id')
   .put(protect, admin, updateScheduledTask)

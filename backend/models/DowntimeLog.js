@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const downtimeLogSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
     device: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

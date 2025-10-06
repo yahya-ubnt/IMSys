@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const whatsAppTemplateSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'User',
+  },
   templateName: {
     type: String,
     required: [true, 'A friendly template name is required.'],

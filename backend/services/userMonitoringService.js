@@ -106,7 +106,8 @@ async function performUserStatusCheck() {
                 // User went offline
                 console.log(`[${new Date().toISOString()}] User ${user.username} went offline. Logging downtime.`);
                 const newDowntime = new UserDowntimeLog({
-                    user: user._id,
+                    user: user.user, // SaaS user
+                    mikrotikUser: user._id, // Mikrotik user
                     downStartTime: new Date(),
                 });
                 await newDowntime.save();
@@ -114,7 +115,8 @@ async function performUserStatusCheck() {
                 // User came back online
                 console.log(`[${new Date().toISOString()}] User ${user.username} came back online. Updating downtime log.`);
                 const openDowntime = await UserDowntimeLog.findOne({
-                    user: user._id,
+                    user: user.user, // SaaS user
+                    mikrotikUser: user._id, // Mikrotik user
                     downEndTime: null,
                 }).sort({ downStartTime: -1 });
 

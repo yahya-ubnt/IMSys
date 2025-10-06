@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const ApplicationSettingsSchema = mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+      unique: true, // Each user should have only one settings document
+    },
     appName: {
       type: String,
       required: true,

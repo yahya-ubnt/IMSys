@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const TechnicianActivitySchema = mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
     technician: {
       type: String,
       required: true,

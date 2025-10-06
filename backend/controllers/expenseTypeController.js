@@ -1,18 +1,19 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const ExpenseType = require('../models/ExpenseType');
 
 // @desc    Create a new expense type
 // @route   POST /api/expensetypes
 // @access  Private
 const createExpenseType = asyncHandler(async (req, res) => {
-  const { name, description } = req.body;
-
-  if (!name) {
-    res.status(400);
-    throw new Error('Please add a name for the expense type');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
 
-  const expenseTypeExists = await ExpenseType.findOne({ name });
+  const { name, description } = req.body;
+
+  const expenseTypeExists = await ExpenseType.findOne({ name, addedBy: req.user._id });
 
   if (expenseTypeExists) {
     res.status(400);
@@ -47,6 +48,12 @@ const getExpenseTypeById = asyncHandler(async (req, res) => {
     throw new Error('Expense type not found');
   }
 
+  // Check for ownership
+  if (expenseType.addedBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to view this expense type');
+  }
+
   res.status(200).json(expenseType);
 });
 
@@ -63,8 +70,11 @@ const updateExpenseType = asyncHandler(async (req, res) => {
     throw new Error('Expense type not found');
   }
 
-  // Optional: Check if user is authorized to update (e.g., admin)
-  // This depends on your app's authorization logic
+  // Check for ownership
+  if (expenseType.addedBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this expense type');
+  }
 
   expenseType.name = name || expenseType.name;
   expenseType.description = description || expenseType.description;
@@ -86,7 +96,11 @@ const deleteExpenseType = asyncHandler(async (req, res) => {
     throw new Error('Expense type not found');
   }
 
-  // Optional: Check if user is authorized to delete
+  // Check for ownership
+  if (expenseType.addedBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this expense type');
+  }
 
   await expenseType.deleteOne();
 
