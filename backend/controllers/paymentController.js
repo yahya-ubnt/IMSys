@@ -1,11 +1,12 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
 const { reconnectMikrotikUser } = require('../utils/mikrotikUtils');
-const { 
-  initiateStkPushService, 
-  processStkCallback, 
+const {
+  initiateStkPushService,
+  processStkCallback,
   processC2bCallback,
   creditUserWallet,
 } = require('../services/mpesaService');
@@ -14,13 +15,13 @@ const {
 // @route   POST /api/payments/initiate-stk
 // @access  Private
 const initiateStkPush = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { amount, phoneNumber, accountReference } = req.body;
   const userId = req.user._id;
-
-  if (!amount || !phoneNumber || !accountReference) {
-    res.status(400);
-    throw new Error('Please provide amount, phoneNumber, and accountReference');
-  }
 
   try {
     const responseData = await initiateStkPushService(amount, phoneNumber, accountReference, userId);
@@ -33,7 +34,6 @@ const initiateStkPush = asyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Failed to initiate STK push.' });
   }
 });
-
 // @desc    Handle Daraja C2B and STK Callbacks
 // @route   POST /api/payments/daraja-callback
 // @access  Public
@@ -70,12 +70,12 @@ const getTransactions = asyncHandler(async (req, res) => {
 // @route   POST /api/payments/cash
 // @access  Private
 const createCashPayment = asyncHandler(async (req, res) => {
-  const { userId, amount, transactionId, comment } = req.body;
-
-  if (!userId || !amount || !transactionId) {
-    res.status(400);
-    throw new Error('User ID, amount, and transaction ID are required');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { userId, amount, transactionId, comment } = req.body;
 
   const user = await MikrotikUser.findById(userId);
 
@@ -98,10 +98,11 @@ const createCashPayment = asyncHandler(async (req, res) => {
     amount,
     referenceNumber: user.username, // Use username as the reference for cash payments
     officialName: user.officialName,
-    msisdn: user.mobileNumber, // Use the user's stored mobile number
+    msisdn: user.mobileNumber,
     transactionDate: new Date(),
     paymentMethod: 'Cash',
     comment,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   await creditUserWallet(user._id, amount, 'Cash', transactionId, req.user._id);
@@ -152,12 +153,12 @@ const getWalletTransactionById = asyncHandler(async (req, res) => {
 // @route   POST /api/payments/wallet
 // @access  Private (Admin only)
 const createWalletTransaction = asyncHandler(async (req, res) => {
-  const { userId, type, amount, source, comment, transactionId } = req.body;
-
-  if (!userId || !type || !amount || !source) {
-    res.status(400);
-    throw new Error('User ID, type, amount, and source are required');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { userId, type, amount, source, comment, transactionId } = req.body;
 
   const user = await MikrotikUser.findById(userId);
   if (!user) {
@@ -182,7 +183,8 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
   await user.save();
 
   const walletTransaction = await WalletTransaction.create({
-    userId,
+    user: req.user._id, // Associate with the logged-in user
+    mikrotikUser: userId, // Associate with the Mikrotik user
     transactionId: transactionId || `MANUAL-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
     type,
     amount,

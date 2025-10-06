@@ -11,6 +11,12 @@ const connectToRouter = asyncHandler(async (req, res, next) => {
     throw new Error('Router not found');
   }
 
+  // Check for ownership
+  if (router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to access this router');
+  }
+
   let decryptedPassword;
   try {
     decryptedPassword = decrypt(router.apiPassword);

@@ -33,7 +33,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('User IDs are required for sending to users');
       }
-      const users = await User.find({ _id: { $in: userIds } }).select('phoneNumber');
+      const users = await User.find({ _id: { $in: userIds }, user: req.user._id }).select('phoneNumber');
       recipientPhoneNumbers = users.map(user => user.phoneNumber).filter(Boolean);
       break;
 
@@ -43,7 +43,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         throw new Error('Mikrotik Router ID is required for sending to Mikrotik group');
       }
       // Assuming MikrotikUser model has a reference to MikrotikRouter and a phoneNumber
-      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId }).select('phoneNumber');
+      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, user: req.user._id }).select('phoneNumber');
       recipientPhoneNumbers = mikrotikUsers.map(user => user.phoneNumber).filter(Boolean);
       break;
 
@@ -53,7 +53,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         throw new Error('Building ID is required for sending to location');
       }
       // Assuming Unit model has a reference to Building and User, and User has phoneNumber
-      const unitsInBuilding = await Unit.find({ building: buildingId }).populate('user', 'phoneNumber');
+      const unitsInBuilding = await Unit.find({ building: buildingId, user: req.user._id }).populate('user', 'phoneNumber');
       recipientPhoneNumbers = unitsInBuilding.map(unit => unit.user ? unit.user.phoneNumber : null).filter(Boolean);
       break;
 
@@ -83,7 +83,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
       message: message,
       messageType: messageType,
       smsStatus: 'Pending',
-      // sentBy: req.user._id, // Assumes user is available on req object from protect middleware
+      user: req.user._id, // Associate with the logged-in user
     });
 
     try {
@@ -115,7 +115,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
   const pageSize = Number(req.query.limit) || 25;
   const page = Number(req.query.page) || 1;
 
-  const query = {};
+  const query = { user: req.user._id }; // Filter by user
 
   if (req.query.mobileNumber) {
     query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };
@@ -157,7 +157,7 @@ const { json2csv } = require('json-2-csv');
 // @route   GET /api/sms/log/export
 // @access  Private
 const exportSmsLogs = asyncHandler(async (req, res) => {
-  const query = {};
+  const query = { user: req.user._id }; // Filter by user
 
   if (req.query.mobileNumber) {
     query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };

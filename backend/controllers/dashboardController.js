@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 const Expense = require('../models/Expense');
 const User = require('../models/User');
@@ -38,7 +39,7 @@ const getCollectionsSummary = asyncHandler(async (req, res) => {
     const result = await Transaction.aggregate([
       {
         $match: {
-          // Removed status: 'Paid' as Transaction implies successful payment
+          user: req.user._id, // Filter by user
           transactionDate: {
             $gte: startDate,
             $lte: endDate,
@@ -69,17 +70,18 @@ const getCollectionsSummary = asyncHandler(async (req, res) => {
 });
 
 const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
-  const { year } = req.query;
-
-  if (!year) {
-    res.status(400);
-    throw new Error('Please provide a year for monthly data.');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { year } = req.query;
 
   const parsedYear = parseInt(year);
 
   // Fetch monthly collections
   const monthlyCollections = await Transaction.aggregate([
+    { $match: { user: req.user._id } }, // Filter by user
     {
       $match: {
         $expr: { $eq: [{ $year: '$transactionDate' }, parsedYear] }
@@ -102,6 +104,7 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
   // Fetch monthly expenses
   const monthlyExpenses = await Expense.aggregate([
+    { $match: { expenseBy: req.user._id } }, // Filter by user
     {
       $match: {
         $expr: { $eq: [{ $year: '$expenseDate' }, parsedYear] } // Assuming 'expenseDate' field for expenses
@@ -156,6 +159,7 @@ const getMonthlyExpenseSummary = asyncHandler(async (req, res) => {
   const result = await Expense.aggregate([
     {
       $match: {
+        expenseBy: req.user._id, // Filter by user
         expenseDate: {
           $gte: startOfMonth,
           $lte: endOfMonth,
@@ -184,6 +188,7 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const count = await User.countDocuments({
+    _id: req.user._id, // Filter by user
     createdAt: {
       $gte: startOfMonth,
       $lte: today,
@@ -197,7 +202,7 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
 // @route   GET /api/dashboard/users/total
 // @access  Public
 const getTotalUsersCount = asyncHandler(async (req, res) => {
-  const count = await User.countDocuments({});
+  const count = await User.countDocuments({ _id: req.user._id }); // Filter by user
   res.json({ totalUsers: count });
 });
 
@@ -207,6 +212,7 @@ const getTotalUsersCount = asyncHandler(async (req, res) => {
 const getActiveUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
   const count = await MikrotikUser.countDocuments({
+    user: req.user._id, // Filter by user
     expiryDate: { $gte: today },
     isSuspended: false,
   });
@@ -219,6 +225,7 @@ const getActiveUsersCount = asyncHandler(async (req, res) => {
 const getExpiredUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
   const count = await MikrotikUser.countDocuments({
+    user: req.user._id, // Filter by user
     $or: [
       { expiryDate: { $lt: today } },
       { isSuspended: true },

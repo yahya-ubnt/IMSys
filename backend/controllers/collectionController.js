@@ -7,7 +7,7 @@ moment.tz.setDefault('Africa/Nairobi');
 // @route   GET /api/collections
 // @access  Private
 const getCollections = asyncHandler(async (req, res) => {
-  const collections = await Transaction.find({}).sort({ transactionDate: -1 });
+  const collections = await Transaction.find({ user: req.user._id }).sort({ transactionDate: -1 });
   res.json(collections);
 });
 
@@ -27,6 +27,7 @@ const getCollectionStats = asyncHandler(async (req, res) => {
   console.log('This Year (start): ', startOfYear.toDate());
 
   const stats = await Transaction.aggregate([
+    { $match: { user: req.user._id } }, // Filter by user
     {
       $facet: {
         today: [
@@ -74,6 +75,7 @@ const getMonthlyCollectionTotals = asyncHandler(async (req, res) => {
   }
 
   const monthlyTotals = await Transaction.aggregate([
+    { $match: { user: req.user._id } }, // Filter by user
     {
       $match: {
         transactionDate: {
@@ -124,6 +126,7 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const daysInMonth = endDate.date();
 
   const dailyTotals = await Transaction.aggregate([
+    { $match: { user: req.user._id } }, // Filter by user
     {
       $match: {
         transactionDate: {

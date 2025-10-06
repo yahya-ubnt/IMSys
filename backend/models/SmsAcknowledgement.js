@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const SmsAcknowledgementSchema = mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
     triggerType: {
       type: String,
       required: [true, 'Please specify the trigger type'],

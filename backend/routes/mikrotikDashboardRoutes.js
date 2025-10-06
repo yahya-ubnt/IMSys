@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
+const { body, param } = require('express-validator');
 const {
   getRouterStatus,
   getRouterInterfaces,
@@ -33,7 +34,17 @@ router.route('/pppoe/active/disconnect').post(disconnectPppoeUser);
 router.route('/pppoe/secrets').get(getPppoeSecrets).post(addPppoeSecret);
 router
   .route('/pppoe/secrets/:secretId')
-  .put(updatePppoeSecret)
+  .put(
+    [
+      param('secretId', 'Secret ID is required').not().isEmpty(),
+      body('name', 'Name must be a string').optional().isString(),
+      body('password', 'Password must be a string').optional().isString(),
+      body('service', 'Service must be a string').optional().isString(),
+      body('profile', 'Profile must be a string').optional().isString(),
+      body('disabled', 'Disabled must be a boolean').optional().isBoolean(),
+    ],
+    updatePppoeSecret
+  )
   .delete(deletePppoeSecret);
 router.route('/queues').get(getQueues).post(addQueue);
 router

@@ -28,7 +28,18 @@ router.route('/').get(protect, admin, getUsers).post(
 router
   .route('/:id')
   .get(protect, admin, getUserById)
-  .put(protect, admin, updateUser)
+  .put(
+    protect,
+    admin,
+    [
+      body('fullName', 'Full name must be a string').optional().isString(),
+      body('email', 'Please include a valid email').optional().isEmail(),
+      body('password', 'Password must be 6 or more characters').optional().isLength({ min: 6 }),
+      body('phone', 'Phone number must be valid').optional().matches(/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/),
+      body('isAdmin', 'isAdmin must be a boolean').optional().isBoolean(),
+    ],
+    updateUser
+  )
   .delete(protect, admin, deleteUser);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const Device = require('../models/Device');
 const MikrotikUser = require('../models/MikrotikUser');
 const DiagnosticLog = require('../models/DiagnosticLog');
@@ -6,23 +7,27 @@ const { checkCPEStatus, checkUserStatus } = require('../utils/mikrotikUtils');
 
 // --- Main Diagnostic Function ---
 const runBulkDiagnostic = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { deviceId, userId } = req.body;
   const adminUserId = req.user._id;
 
-  if (!deviceId) {
-    res.status(400).send('Device ID is required');
-    return;
-  }
-
-  const initialDevice = await Device.findById(deviceId).populate('router');
+  const initialDevice = await Device.findOne({ _id: deviceId, user: adminUserId }).populate('router');
   if (!initialDevice) {
-    res.status(404).send('Initial device not found');
+    res.status(404).send('Initial device not found or not authorized');
     return;
   }
   
   let targetUser = null;
   if (userId) {
-      targetUser = await MikrotikUser.findById(userId);
+      targetUser = await MikrotikUser.findOne({ _id: userId, user: adminUserId });
+      if (!targetUser) {
+          res.status(404).send('Target user not found or not authorized');
+          return;
+      }
   }
 
   const steps = [];
@@ -41,7 +46,7 @@ const runBulkDiagnostic = asyncHandler(async (req, res) => {
   // Step 2: Check connected devices and users if initial device is UP
   if (initialDeviceStatus.status === 'UP') {
     if (initialDevice.deviceType === 'Access') {
-      const stations = await Device.find({ deviceType: 'Station', ssid: initialDevice.ssid }).populate('router');
+      const stations = await Device.find({ deviceType: 'Station', ssid: initialDevice.ssid, user: adminUserId }).populate('router');
       steps.push({ stepName: 'AP Detected', status: 'Success', summary: `Found ${stations.length} station(s) connected to ${initialDevice.deviceName}.` });
       for (const station of stations) {
         const stationStatus = await checkDeviceStatus(station);
@@ -52,11 +57,11 @@ const runBulkDiagnostic = asyncHandler(async (req, res) => {
           summary: stationStatus.message,
         });
         if (stationStatus.status === 'UP') {
-          await checkUsersForDevice(station, userChecks, steps, station.router);
+          await checkUsersForDevice(station, userChecks, steps, station.router, adminUserId);
         }
       }
     } else if (initialDevice.deviceType === 'Station') {
-      await checkUsersForDevice(initialDevice, userChecks, steps, initialDevice.router);
+      await checkUsersForDevice(initialDevice, userChecks, steps, initialDevice.router, adminUserId);
     }
   }
 
@@ -87,8 +92,8 @@ const checkDeviceStatus = async (device) => {
   };
 };
 
-const checkUsersForDevice = async (station, userChecks, steps, router) => {
-  const users = await MikrotikUser.find({ station: station._id }).populate('package');
+const checkUsersForDevice = async (station, userChecks, steps, router, adminUserId) => {
+  const users = await MikrotikUser.find({ station: station._id, user: adminUserId }).populate('package');
   steps.push({ stepName: `User Query for ${station.deviceName}`, status: 'Success', summary: `Found ${users.length} user(s) associated with this station.` });
   for (const user of users) {
     const isOnline = await checkUserStatus(user, router);

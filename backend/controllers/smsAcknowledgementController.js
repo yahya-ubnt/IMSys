@@ -1,11 +1,12 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const SmsAcknowledgement = require('../models/SmsAcknowledgement');
 
 // @desc    Get all SMS acknowledgement mappings
 // @route   GET /api/smsacknowledgements
 // @access  Private
 const getAcknowledgements = asyncHandler(async (req, res) => {
-  const acknowledgements = await SmsAcknowledgement.find({}).populate('smsTemplate', 'name messageBody');
+  const acknowledgements = await SmsAcknowledgement.find({ user: req.user._id }).populate('smsTemplate', 'name messageBody');
   res.json(acknowledgements);
 });
 
@@ -16,6 +17,11 @@ const getAcknowledgementById = asyncHandler(async (req, res) => {
   const acknowledgement = await SmsAcknowledgement.findById(req.params.id).populate('smsTemplate', 'name messageBody');
 
   if (acknowledgement) {
+    // Check for ownership
+    if (acknowledgement.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this acknowledgement mapping');
+    }
     res.json(acknowledgement);
   } else {
     res.status(404);
@@ -27,14 +33,21 @@ const getAcknowledgementById = asyncHandler(async (req, res) => {
 // @route   POST /api/smsacknowledgements
 // @access  Private
 const createAcknowledgement = asyncHandler(async (req, res) => {
-  const { triggerType, description, smsTemplate, status } = req.body;
-
-  if (!triggerType || !smsTemplate) {
-    res.status(400);
-    throw new Error('Please provide a triggerType and an smsTemplate');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
 
-  const mappingExists = await SmsAcknowledgement.findOne({ triggerType });
+  const { triggerType, description, smsTemplate, status } = req.body;
+
+  // Verify ownership of smsTemplate
+  const template = await SmsTemplate.findById(smsTemplate);
+  if (!template || template.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to use this SMS template');
+  }
+
+  const mappingExists = await SmsAcknowledgement.findOne({ triggerType, user: req.user._id });
 
   if (mappingExists) {
     res.status(400);
@@ -46,6 +59,7 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
     description,
     smsTemplate,
     status,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   if (acknowledgement) {
@@ -65,6 +79,12 @@ const updateAcknowledgement = asyncHandler(async (req, res) => {
   const acknowledgement = await SmsAcknowledgement.findById(req.params.id);
 
   if (acknowledgement) {
+    // Check for ownership
+    if (acknowledgement.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to update this acknowledgement mapping');
+    }
+
     acknowledgement.triggerType = triggerType || acknowledgement.triggerType;
     acknowledgement.description = description || acknowledgement.description;
     acknowledgement.smsTemplate = smsTemplate || acknowledgement.smsTemplate;
@@ -85,6 +105,11 @@ const deleteAcknowledgement = asyncHandler(async (req, res) => {
   const acknowledgement = await SmsAcknowledgement.findById(req.params.id);
 
   if (acknowledgement) {
+    // Check for ownership
+    if (acknowledgement.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to delete this acknowledgement mapping');
+    }
     await acknowledgement.remove();
     res.json({ message: 'SMS Acknowledgement mapping removed' });
   } else {

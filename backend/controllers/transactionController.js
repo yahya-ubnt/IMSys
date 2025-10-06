@@ -1,16 +1,17 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 
 // @desc    Create new daily transaction
 // @route   POST /api/daily-transactions
 // @access  Private
 const createTransaction = asyncHandler(async (req, res) => {
-  const { date, amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost } = req.body;
-
-  if (!date || !amount || !method || !transactionMessage || !description || !label) {
-    res.status(400);
-    throw new Error('Please fill all required fields');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { date, amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost } = req.body;
 
   const dailyTransaction = new Transaction({
     date,
@@ -26,6 +27,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     phoneNumber,
     newBalance,
     transactionCost,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   const createdTransaction = await dailyTransaction.save();

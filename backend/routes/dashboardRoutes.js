@@ -1,4 +1,5 @@
 const express = require('express');
+const { query } = require('express-validator');
 const {
   getCollectionsSummary,
   getMonthlyCollectionsAndExpenses,
@@ -12,7 +13,12 @@ const {
 const router = express.Router();
 
 router.route('/collections/summary').get(getCollectionsSummary);
-router.route('/collections-and-expenses/monthly').get(getMonthlyCollectionsAndExpenses);
+router.route('/collections-and-expenses/monthly').get(
+  [
+    query('year', 'Year is required and must be a number').isNumeric(),
+  ],
+  getMonthlyCollectionsAndExpenses
+);
 router.route('/expenses/monthly-summary').get(getMonthlyExpenseSummary);
 router.route('/subscriptions/new').get(getNewSubscriptionsCount);
 router.route('/users/total').get(getTotalUsersCount);
