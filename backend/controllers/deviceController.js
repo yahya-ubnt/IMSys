@@ -1,11 +1,18 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const Device = require('../models/Device');
 const DowntimeLog = require('../models/DowntimeLog');
+const MikrotikRouter = require('../models/MikrotikRouter'); // Import MikrotikRouter
 
 // @desc    Create a new device
 // @route   POST /api/devices
 // @access  Admin
 const createDevice = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const {
     router,
     ipAddress,
@@ -20,10 +27,15 @@ const createDevice = asyncHandler(async (req, res) => {
     wirelessPassword,
   } = req.body;
 
-  // Basic validation
-  if (!router || !ipAddress || !macAddress || !deviceType) {
-    res.status(400);
-    throw new Error('Router, IP Address, MAC Address, and Device Type are required');
+  // Verify ownership of the router
+  const parentRouter = await MikrotikRouter.findById(router);
+  if (!parentRouter) {
+    res.status(404);
+    throw new Error('Router not found');
+  }
+  if (parentRouter.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to use this router');
   }
 
   const deviceExists = await Device.findOne({ macAddress });
@@ -45,6 +57,7 @@ const createDevice = asyncHandler(async (req, res) => {
     loginPassword, // Will be encrypted by pre-save hook
     ssid,
     wirelessPassword, // Will be encrypted by pre-save hook
+    user: req.user._id, // Associate with the logged-in user
   });
 
   const createdDevice = await device.save();
@@ -56,7 +69,7 @@ const createDevice = asyncHandler(async (req, res) => {
 // @access  Admin
 const getDevices = asyncHandler(async (req, res) => {
   const { deviceType } = req.query;
-  let query = {};
+  let query = { user: req.user._id }; // Filter by user
 
   if (deviceType) {
     query.deviceType = deviceType;
@@ -73,6 +86,12 @@ const getDeviceById = asyncHandler(async (req, res) => {
   const device = await Device.findById(req.params.id).populate('router', 'name ipAddress');
 
   if (device) {
+    // Check for ownership
+    if (device.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this device');
+    }
+
     let responseDevice = device.toObject(); // Convert to plain object to add properties
 
     if (responseDevice.deviceType === 'Access' && responseDevice.ssid) {
@@ -99,6 +118,12 @@ const updateDevice = asyncHandler(async (req, res) => {
   if (!device) {
     res.status(404);
     throw new Error('Device not found');
+  }
+
+  // Check for ownership
+  if (device.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this device');
   }
 
   // Update fields
@@ -131,6 +156,12 @@ const deleteDevice = asyncHandler(async (req, res) => {
   const device = await Device.findById(req.params.id);
 
   if (device) {
+    // Check for ownership
+    if (device.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to delete this device');
+    }
+
     // First, delete all associated downtime logs
     await DowntimeLog.deleteMany({ device: device._id });
     // Then, remove the device itself
@@ -151,6 +182,12 @@ const getDeviceDowntimeLogs = asyncHandler(async (req, res) => {
   if (!device) {
     res.status(404);
     throw new Error('Device not found');
+  }
+
+  // Check for ownership
+  if (device.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to view downtime logs for this device');
   }
 
   const logs = await DowntimeLog.find({ device: device._id }).sort({ downStartTime: -1 });

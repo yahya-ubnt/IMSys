@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { body } = require('express-validator');
 const {
   getSmsProviders,
   getSmsProviderById,
@@ -13,7 +14,16 @@ const { protect, admin } = require('../middlewares/authMiddleware'); // Assuming
 // All these routes should be protected and restricted to admins.
 router.route('/')
   .get(protect, admin, getSmsProviders)
-  .post(protect, admin, createSmsProvider);
+  .post(
+    protect,
+    admin,
+    [
+      body('name', 'Provider name is required').not().isEmpty(),
+      body('providerType', 'Invalid provider type').isIn(['celcom', 'africastalking', 'twilio', 'generic_http']),
+      body('credentials', 'Credentials are required').isObject(),
+    ],
+    createSmsProvider
+  );
 
 router.route('/:id')
   .get(protect, admin, getSmsProviderById)

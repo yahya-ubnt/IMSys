@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const TransactionSchema = mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
     transactionId: {
       type: String,
       required: true,

@@ -23,9 +23,7 @@ const handleSuccessfulPing = async (device) => {
     }
   }
 
-  device.status = 'UP';
-  device.lastSeen = new Date();
-  await device.save();
+  await Device.updateOne({ _id: device._id }, { $set: { status: 'UP', lastSeen: new Date() } });
 };
 
 const handleFailedPing = async (device) => {
@@ -40,8 +38,7 @@ const handleFailedPing = async (device) => {
     sendAlert(device, 'DOWN');
   }
 
-  device.status = 'DOWN';
-  await device.save();
+  await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
 };
 
 const pingDevice = async (device) => {

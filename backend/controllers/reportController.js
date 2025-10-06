@@ -96,6 +96,7 @@ const getMpesaReport = asyncHandler(async (req, res) => {
   }
 
   const transactions = await Transaction.find({
+    user: req.user._id, // Filter by user
     transactionDate: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
