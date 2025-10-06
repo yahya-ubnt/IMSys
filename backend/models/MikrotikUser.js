@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const MikrotikUserSchema = mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
     // Connection & Service Details
     mikrotikRouter: {
       type: mongoose.Schema.ObjectId,

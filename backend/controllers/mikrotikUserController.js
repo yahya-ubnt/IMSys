@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser');
 const Package = require('../models/Package');
 const MikrotikRouter = require('../models/MikrotikRouter');
@@ -42,6 +43,11 @@ const formatUpdateArgs = (argsObject) => {
 // @route   POST /api/mikrotik/users
 // @access  Private
 const createMikrotikUser = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const {
     mikrotikRouter,
     serviceType,
@@ -62,16 +68,18 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     station,
   } = req.body;
 
-  // Basic validation
-  if (!mikrotikRouter || !serviceType || !packageId || !username || !officialName || !billingCycle || !mobileNumber || !expiryDate) {
-    res.status(400);
-    throw new Error('Please fill all required fields');
+  // Verify ownership of router
+  const router = await MikrotikRouter.findById(mikrotikRouter);
+  if (!router || router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to use this router');
   }
 
+  // Verify ownership of package
   const selectedPackage = await Package.findById(packageId);
-  if (!selectedPackage) {
-    res.status(404);
-    throw new Error('Selected package not found');
+  if (!selectedPackage || selectedPackage.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to use this package');
   }
 
   if (selectedPackage.serviceType !== serviceType) {
@@ -95,13 +103,13 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     finalMPesaRefNo = generateRandom6LetterString();
   }
 
-  const userExists = await MikrotikUser.findOne({ username });
+  const userExists = await MikrotikUser.findOne({ username, user: req.user._id });
   if (userExists) {
     res.status(400);
     throw new Error('A user with this username already exists');
   }
 
-  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo });
+  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo, user: req.user._id });
   if (mPesaRefNoExists) {
     res.status(400);
     throw new Error('M-Pesa Reference Number must be unique');
@@ -125,15 +133,10 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     mobileNumber,
     expiryDate,
     station,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   if (mikrotikUser) {
-    const router = await MikrotikRouter.findById(mikrotikRouter);
-    if (!router) {
-      res.status(404);
-      throw new Error('Associated Mikrotik Router not found');
-    }
-
     let client;
     try {
       client = new RouterOSAPI({
@@ -188,7 +191,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users
 // @access  Private
 const getMikrotikUsers = asyncHandler(async (req, res) => {
-  const users = await MikrotikUser.find({})
+  const users = await MikrotikUser.find({ user: req.user._id })
     .populate('mikrotikRouter')
     .populate('package');
   res.status(200).json(users);
@@ -204,6 +207,11 @@ const getMikrotikUserById = asyncHandler(async (req, res) => {
     .populate('station');
 
   if (user) {
+    // Check for ownership
+    if (user.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this Mikrotik user');
+    }
     res.status(200).json(user);
   } else {
     res.status(404);
@@ -419,6 +427,12 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
   if (!user) {
     res.status(404);
     throw new Error('Mikrotik User not found');
+  }
+
+  // Check for ownership
+  if (user.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this Mikrotik user');
   }
 
   const router = await MikrotikRouter.findById(user.mikrotikRouter);

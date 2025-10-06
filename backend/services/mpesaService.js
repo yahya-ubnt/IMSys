@@ -137,7 +137,7 @@ const processStkCallback = async (callbackData) => {
 
     if (!user) {
       const alertMessage = `STK payment of KES ${transAmount} received for username '${accountReference}', but no user was found. (Receipt: ${transId})`;
-      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: accountReference });
+      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: accountReference, user: requestDetails.userId });
       throw new Error(alertMessage);
     }
 
@@ -150,7 +150,7 @@ const processStkCallback = async (callbackData) => {
 
     if (!reconnectionSuccessful) {
       const alertMessage = `User ${user.officialName} (${user.username}) paid KES ${transAmount} via STK (Receipt: ${transId}), but automatic reconnection failed.`;
-      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: accountReference });
+      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: accountReference, user: user.user });
       console.error(alertMessage);
     } else {
       console.log(`Successfully processed STK payment and reconnected user ${user.username}`);
@@ -162,6 +162,7 @@ const processStkCallback = async (callbackData) => {
         msisdn: msisdn,
         transactionDate: new Date(),
         paymentMethod: 'M-Pesa',
+        user: user.user,
       });
       await creditUserWallet(user._id, transAmount, 'M-Pesa', transId);
     }
@@ -182,7 +183,7 @@ const processC2bCallback = async (callbackData) => {
 
   if (!user) {
     const alertMessage = `C2B payment of KES ${TransAmount} received from ${FirstName} ${LastName} (${MSISDN}) for username '${BillRefNumber}', but no user was found.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber });
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, user: user.user });
     throw new Error(alertMessage);
   }
 
@@ -195,7 +196,7 @@ const processC2bCallback = async (callbackData) => {
 
   if (!reconnectionSuccessful) {
     const alertMessage = `User ${user.officialName} (${user.username}) paid KES ${TransAmount} (Trans ID: ${TransID}), but automatic reconnection failed.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber });
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, user: user.user });
     console.error(alertMessage);
   } else {
     console.log(`Successfully processed C2B payment and reconnected user ${user.username}`);
@@ -208,6 +209,7 @@ const processC2bCallback = async (callbackData) => {
       balance: OrgAccountBalance,
       transactionDate: new Date(),
       paymentMethod: 'M-Pesa',
+      user: user.user,
     });
     await creditUserWallet(user._id, TransAmount, 'M-Pesa', TransID);
   }

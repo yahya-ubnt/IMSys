@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser');
 const Building = require('../models/Building');
 const Package = require('../models/Package');
@@ -65,7 +66,7 @@ const getLocationReport = asyncHandler(async (req, res) => {
 // @route   GET /api/reports/mpesa-alerts
 // @access  Private
 const getMpesaAlerts = asyncHandler(async (req, res) => {
-  const alerts = await MpesaAlert.find({}).sort({ createdAt: -1 });
+  const alerts = await MpesaAlert.find({ user: req.user._id }).sort({ createdAt: -1 });
   res.status(200).json(alerts);
 });
 
@@ -76,6 +77,11 @@ const deleteMpesaAlert = asyncHandler(async (req, res) => {
   const alert = await MpesaAlert.findById(req.params.id);
 
   if (alert) {
+    // Check for ownership
+    if (alert.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to delete this alert');
+    }
     await alert.remove();
     res.json({ message: 'Alert removed' });
   } else {
@@ -88,12 +94,12 @@ const deleteMpesaAlert = asyncHandler(async (req, res) => {
 // @route   POST /api/reports/mpesa-report
 // @access  Private
 const getMpesaReport = asyncHandler(async (req, res) => {
-  const { startDate, endDate } = req.body;
-
-  if (!startDate || !endDate) {
-    res.status(400);
-    throw new Error('Please provide start date and end date.');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
+  const { startDate, endDate } = req.body;
 
   const transactions = await Transaction.find({
     user: req.user._id, // Filter by user
