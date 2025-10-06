@@ -6,7 +6,7 @@ require('dotenv').config({ path: './.env' });
 
 module.exports = {
   MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/referral_system',
-  JWT_SECRET: process.env.JWT_SECRET || 'supersecretjwtkey',
+  JWT_SECRET: process.env.JWT_SECRET,
   SMS_API_KEY: process.env.SMS_API_KEY,
 
   // M-Pesa Daraja API Configuration

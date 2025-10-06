@@ -72,7 +72,11 @@ const getTickets = asyncHandler(async (req, res) => {
   if (req.query.assignedTo) {
     query.assignedTo = req.query.assignedTo;
   }
-  // Add more filters as needed (e.g., date range, clientName, ticketRef)
+
+  // If user is not an admin, only show their tickets
+  if (!req.user.isAdmin) {
+    query.createdBy = req.user._id;
+  }
 
   const tickets = await Ticket.find(query)
     .populate('createdBy', 'fullName email') // Populate creator info
@@ -93,6 +97,11 @@ const getTicketById = asyncHandler(async (req, res) => {
     .populate('notes.addedBy', 'fullName email');
 
   if (ticket) {
+    // Check for ownership if user is not an admin
+    if (!req.user.isAdmin && ticket.createdBy._id.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this ticket');
+    }
     res.status(200).json(ticket);
   } else {
     res.status(404);
@@ -104,6 +113,12 @@ const getTicketById = asyncHandler(async (req, res) => {
 // @route   PUT /api/tickets/:id
 // @access  Admin
 const updateTicket = asyncHandler(async (req, res) => {
+  // Ensure only admins can update tickets
+  if (!req.user.isAdmin) {
+    res.status(401);
+    throw new Error('Not authorized to update tickets');
+  }
+
   const { status, assignedTo, notes, ...otherUpdates } = req.body;
 
   const ticket = await Ticket.findById(req.params.id);
@@ -163,6 +178,12 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
     throw new Error('Ticket not found');
   }
 
+  // Check for ownership if user is not an admin
+  if (!req.user.isAdmin && ticket.createdBy.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to add a note to this ticket');
+  }
+
   ticket.notes.push({ content, addedBy: req.user.id });
 
   const updatedTicket = await ticket.save();
@@ -174,6 +195,12 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/stats
 // @access  Admin
 const getTicketStats = asyncHandler(async (req, res) => {
+  // Ensure only admins can access stats
+  if (!req.user.isAdmin) {
+    res.status(401);
+    throw new Error('Not authorized to access ticket statistics');
+  }
+
   const stats = await Ticket.aggregate([
     {
       $group: {
@@ -199,6 +226,12 @@ const getTicketStats = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/monthly-totals
 // @access  Admin
 const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
+  // Ensure only admins can access stats
+  if (!req.user.isAdmin) {
+    res.status(401);
+    throw new Error('Not authorized to access ticket statistics');
+  }
+
   const year = parseInt(req.query.year);
 
   if (isNaN(year)) {

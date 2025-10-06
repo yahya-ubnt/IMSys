@@ -1,4 +1,11 @@
 require('./config/env'); // Load environment variables
+
+// Fail-safe check for JWT_SECRET
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL ERROR: JWT_SECRET is not defined.');
+  process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');

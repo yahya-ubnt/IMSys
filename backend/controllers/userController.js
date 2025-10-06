@@ -60,6 +60,10 @@ const getUserProfile = asyncHandler(async (req, res) => {
 // @route   GET /api/users
 // @access  Private/Admin
 const getUsers = asyncHandler(async (req, res) => {
+  if (!req.user.isAdmin) {
+    res.status(401);
+    throw new Error('Not authorized, admin only');
+  }
   const users = await User.find({});
   res.json(users);
 });

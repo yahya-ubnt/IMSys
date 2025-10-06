@@ -14,11 +14,15 @@ const createPackage = asyncHandler(async (req, res) => {
     throw new Error('Please add all required fields: mikrotikRouter, serviceType, name, price, status');
   }
 
-  // Check if Mikrotik Router exists
+  // Check if Mikrotik Router exists and belongs to the user
   const routerExists = await MikrotikRouter.findById(mikrotikRouter);
   if (!routerExists) {
     res.status(404);
     throw new Error('Mikrotik Router not found');
+  }
+  if (routerExists.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to use this router');
   }
 
   if (serviceType === 'pppoe') {
@@ -56,6 +60,7 @@ const createPackage = asyncHandler(async (req, res) => {
     status,
     profile,
     rateLimit,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   if (newPackage) {
@@ -70,7 +75,7 @@ const createPackage = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages
 // @access  Private
 const getPackages = asyncHandler(async (req, res) => {
-  const packages = await Package.find({}).populate('mikrotikRouter');
+  const packages = await Package.find({ user: req.user._id }).populate('mikrotikRouter');
   res.status(200).json(packages);
 });
 
@@ -81,6 +86,11 @@ const getPackageById = asyncHandler(async (req, res) => {
   const singlePackage = await Package.findById(req.params.id).populate('mikrotikRouter');
 
   if (singlePackage) {
+    // Check for ownership
+    if (singlePackage.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this package');
+    }
     res.status(200).json(singlePackage);
   } else {
     res.status(404);
@@ -99,6 +109,25 @@ const updatePackage = asyncHandler(async (req, res) => {
   if (!packageToUpdate) {
     res.status(404);
     throw new Error('Package not found');
+  }
+
+  // Check for ownership
+  if (packageToUpdate.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this package');
+  }
+
+  // If router is being updated, check ownership of new router
+  if (mikrotikRouter && mikrotikRouter.toString() !== packageToUpdate.mikrotikRouter.toString()) {
+    const routerExists = await MikrotikRouter.findById(mikrotikRouter);
+    if (!routerExists) {
+      res.status(404);
+      throw new Error('Mikrotik Router not found');
+    }
+    if (routerExists.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to use this router');
+    }
   }
 
   const finalServiceType = serviceType || packageToUpdate.serviceType;
@@ -153,6 +182,12 @@ const deletePackage = asyncHandler(async (req, res) => {
   if (!singlePackage) {
     res.status(404);
     throw new Error('Package not found');
+  }
+
+  // Check for ownership
+  if (singlePackage.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this package');
   }
 
   await Package.findByIdAndDelete(req.params.id);

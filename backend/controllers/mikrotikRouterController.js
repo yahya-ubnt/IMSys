@@ -33,6 +33,7 @@ const createMikrotikRouter = asyncHandler(async (req, res) => {
     apiPassword: encryptedPassword, // Save the encrypted password
     apiPort,
     location,
+    user: req.user._id, // Associate with the logged-in user
   });
 
   if (router) {
@@ -54,7 +55,7 @@ const createMikrotikRouter = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/routers
 // @access  Private
 const getMikrotikRouters = asyncHandler(async (req, res) => {
-  const routers = await MikrotikRouter.find({});
+  const routers = await MikrotikRouter.find({ user: req.user._id });
   res.status(200).json(routers);
 });
 
@@ -65,6 +66,11 @@ const getMikrotikRouterById = asyncHandler(async (req, res) => {
   const router = await MikrotikRouter.findById(req.params.id);
 
   if (router) {
+    // Check for ownership
+    if (router.user.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized to view this router');
+    }
     res.status(200).json(router);
   } else {
     res.status(404);
@@ -83,6 +89,12 @@ const updateMikrotikRouter = asyncHandler(async (req, res) => {
   if (!router) {
     res.status(404);
     throw new Error('Router not found');
+  }
+
+  // Check for ownership
+  if (router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to update this router');
   }
 
   // Handle password update separately if provided
@@ -120,6 +132,12 @@ const deleteMikrotikRouter = asyncHandler(async (req, res) => {
     console.log(`Router with ID: ${req.params.id} not found.`); // Log if not found
     res.status(404);
     throw new Error('Router not found');
+  }
+
+  // Check for ownership
+  if (router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to delete this router');
   }
 
   console.log(`Found router: ${router.name}. Attempting to delete associated users...`); // Log found router
@@ -190,6 +208,12 @@ const getMikrotikPppProfiles = asyncHandler(async (req, res) => {
     throw new Error('Mikrotik Router not found');
   }
 
+  // Check for ownership
+  if (router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to access this router');
+  }
+
   let client;
   try {
     const { decrypt } = require('../utils/crypto'); // Import decrypt function
@@ -223,6 +247,12 @@ const getMikrotikPppServices = asyncHandler(async (req, res) => {
   if (!router) {
     res.status(404);
     throw new Error('Mikrotik Router not found');
+  }
+
+  // Check for ownership
+  if (router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to access this router');
   }
 
   let client;
@@ -261,6 +291,12 @@ const getMikrotikRouterStatus = asyncHandler(async (req, res) => {
   if (!router) {
     res.status(404);
     throw new Error('Mikrotik Router not found');
+  }
+
+  // Check for ownership
+  if (router.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized to access this router');
   }
 
   let client;
