@@ -60,7 +60,7 @@ export default function NewMikrotikUserPage() {
     const [mikrotikRouterId, setMikrotikRouterId] = useState("");
     const [serviceType, setServiceType] = useState<"pppoe" | "static" | undefined>(undefined);
     const [packageId, setPackageId] = useState("");
-    const [stationId, setStationId] = useState("");
+    const [stationId, setStationId] = useState<string | undefined>(undefined);
     const [username, setUsername] = useState("");
     const [pppoePassword, setPppoePassword] = useState("");
     const [ipAddress, setIpAddress] = useState("");
@@ -140,7 +140,7 @@ export default function NewMikrotikUserPage() {
 
     // --- Step Navigation ---
     const handleNext = () => {
-        if (mikrotikRouterId && serviceType && packageId && stationId) {
+        if (mikrotikRouterId && serviceType && packageId) {
             setDirection(1);
             setStep(2);
         } else {

@@ -137,7 +137,7 @@ export default function EditMikrotikUserPage() {
 
     // --- Event Handlers ---
     const handleNext = () => {
-        if (mikrotikRouterId && serviceType && packageId && stationId) {
+        if (mikrotikRouterId && serviceType && packageId) {
             setDirection(1);
             setStep(2);
         } else {

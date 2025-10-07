@@ -33,7 +33,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ transactions }) => {
         <StatCard icon={Hash} label="Total Transactions" value={transactions.length} />
         <StatCard icon={TrendingUp} label="Avg. Transaction" value={`KES ${avgTransaction.toFixed(2)}`} />
       </div>
-      <Card>
+      <Card className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
         <CardHeader>
           <CardTitle className="text-cyan-400">Transaction History</CardTitle>
         </CardHeader>

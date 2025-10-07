@@ -87,6 +87,16 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     throw new Error('Service type of user must match selected package service type');
   }
 
+  // Validate package profile/rateLimit based on serviceType
+  if (serviceType === 'pppoe' && !selectedPackage.profile) {
+    res.status(400);
+    throw new Error('The selected package is missing a PPP profile. Please edit the package to include a profile.');
+  }
+  if (serviceType === 'static' && !selectedPackage.rateLimit) {
+    res.status(400);
+    throw new Error('The selected package is missing a rate limit. Please edit the package to include a rate limit.');
+  }
+
   // Validate PPPoE specific fields
   if (serviceType === 'pppoe') {
     if (!pppoePassword) {

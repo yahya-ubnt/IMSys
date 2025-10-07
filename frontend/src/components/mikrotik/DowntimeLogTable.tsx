@@ -108,7 +108,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
   };
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex flex-col h-full">
       <CardHeader className="border-b border-zinc-800 p-3">
         <CardTitle className="text-base text-cyan-400 flex items-center"><History className="mr-2 h-5 w-5" />Downtime History</CardTitle>
         <div className="flex justify-between items-center text-xs text-zinc-400 pt-2">
