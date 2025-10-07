@@ -45,7 +45,7 @@ export default function NewPackagePage() {
     const [step, setStep] = useState(1);
     const [direction, setDirection] = useState(1);
     const [mikrotikRouterId, setMikrotikRouterId] = useState("");
-    const [serviceType, setServiceType] = useState<"pppoe" | "static" | undefined>(undefined);
+    const [serviceType, setServiceType] = useState<"pppoe" | "static" | '' >('');
     const [name, setName] = useState("");
     const [price, setPrice] = useState("");
     const [profile, setProfile] = useState("");

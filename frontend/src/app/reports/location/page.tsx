@@ -44,7 +44,7 @@ export default function LocationReportPage() {
         const response = await fetch('/api/mikrotik/users', { headers: { 'Authorization': `Bearer ${token}` } })
         if (!response.ok) throw new Error('Failed to fetch users')
         const users: MikrotikUser[] = await response.json()
-        const uniqueApartmentHouseNumbers = Array.from(new Set(users.map(user => user.apartment_house_number).filter(Boolean)));
+        const uniqueApartmentHouseNumbers = ['All', ...Array.from(new Set(users.map(user => user.apartment_house_number).filter(Boolean)))];
         setApartmentHouseNumbers(uniqueApartmentHouseNumbers as string[]);
       } catch (error) {
         toast({ title: 'Error', description: 'Failed to load locations.', variant: 'destructive' })
@@ -107,7 +107,7 @@ export default function LocationReportPage() {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="location-select">Location</Label>
-                  <Select value={selectedApartmentHouseNumber} onValueChange={setSelectedApartmentHouseNumber}>
+                  <Select value={selectedApartmentHouseNumber || ''} onValueChange={setSelectedApartmentHouseNumber}>
                     <SelectTrigger id="location-select" className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
                       <SelectValue placeholder="Select a location" />
                     </SelectTrigger>

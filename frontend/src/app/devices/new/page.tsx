@@ -42,7 +42,7 @@ export default function NewDevicePage() {
 
     // Form State
     const [routerId, setRouterId] = useState("");
-    const [deviceType, setDeviceType] = useState<"Access" | "Station" | undefined>(undefined);
+    const [deviceType, setDeviceType] = useState<"Access" | "Station" | '' >('');
     const [deviceName, setDeviceName] = useState("");
     const [deviceModel, setDeviceModel] = useState("");
     const [location, setLocation] = useState("");

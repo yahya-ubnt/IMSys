@@ -58,7 +58,7 @@ export default function NewMikrotikUserPage() {
 
     // Form Fields State
     const [mikrotikRouterId, setMikrotikRouterId] = useState("");
-    const [serviceType, setServiceType] = useState<"pppoe" | "static" | undefined>(undefined);
+    const [serviceType, setServiceType] = useState<"pppoe" | "static" | '' >('');
     const [packageId, setPackageId] = useState("");
     const [stationId, setStationId] = useState<string | undefined>(undefined);
     const [username, setUsername] = useState("");
