@@ -13,9 +13,6 @@ const path = require('path'); // Import path module
 
 // Import routes
 const leadRoutes = require('./routes/leadRoutes');
-const buildingRoutes = require('./routes/buildingRoutes');
-const unitRoutes = require('./routes/unitRoutes');
-const unitDirectRoutes = require('./routes/unitDirectRoutes');
 const userRoutes = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes'); // Import upload routes
 
@@ -48,10 +45,6 @@ const expenseRoutes = require('./routes/expenseRoutes');
 const ticketRoutes = require('./routes/ticketRoutes'); // Import ticket routes
 // const issueTypeRoutes = require('./routes/issueTypeRoutes'); // Import issue type routes
 
-
-
-// Mount unit routes under building routes
-buildingRoutes.use('/:buildingId/units', unitRoutes);
 
 
 const app = express();
@@ -96,8 +89,6 @@ app.use('/api/devices', deviceRoutes); // CPE & AP Devices
 app.use('/api/bulk-diagnostics', bulkDiagnosticRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
-app.use('/api/buildings', buildingRoutes);
-app.use('/api/units', unitDirectRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 
@@ -127,8 +118,6 @@ app.use('/api/tickets', ticketRoutes); // Add ticket routes
 
 
 // Simple GET routes for testing wiring
-app.get('/api/test/buildings', (req, res) => res.json({ message: 'GET /api/buildings endpoint is wired.' }));
-app.get('/api/test/units', (req, res) => res.json({ message: 'GET /api/units endpoint is wired.' }));
 
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));

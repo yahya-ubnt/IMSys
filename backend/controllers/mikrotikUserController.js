@@ -58,8 +58,8 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     ipAddress,
     officialName,
     emailAddress,
-    buildingName,
-    unitLabel,
+    apartment_house_number,
+    door_number_unit_label,
     mPesaRefNo,
     installationFee,
     billingCycle,
@@ -135,8 +135,8 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     ipAddress,
     officialName,
     emailAddress,
-    buildingName,
-    unitLabel,
+    apartment_house_number,
+    door_number_unit_label,
     mPesaRefNo: finalMPesaRefNo,
     installationFee,
     billingCycle,
@@ -250,8 +250,8 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
     ipAddress,
     officialName,
     emailAddress,
-    buildingName,
-    unitLabel,
+    apartment_house_number,
+    door_number_unit_label,
     mPesaRefNo,
     installationFee,
     billingCycle,
@@ -274,8 +274,8 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
   user.ipAddress = ipAddress || user.ipAddress;
   user.officialName = officialName || user.officialName;
   user.emailAddress = emailAddress || user.emailAddress;
-  user.buildingName = buildingName || user.buildingName;
-  user.unitLabel = unitLabel || user.unitLabel;
+  user.apartment_house_number = apartment_house_number || user.apartment_house_number;
+  user.door_number_unit_label = door_number_unit_label || user.door_number_unit_label;
   user.mPesaRefNo = mPesaRefNo || user.mPesaRefNo; // Handle mPesaRefNo update
   user.installationFee = installationFee || user.installationFee;
   user.billingCycle = billingCycle || user.billingCycle;

@@ -3,7 +3,6 @@ export interface CaretakerAgent {
   name: string;
   email: string;
   phone: string;
-  assignedBuildings: string[]; // Array of building IDs
   createdAt: string;
   updatedAt: string;
 }

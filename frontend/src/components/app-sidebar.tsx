@@ -183,34 +183,6 @@ const menuCategories: MenuCategory[] = [
     label: "Core Management",
     items: [
       {
-        title: "Buildings",
-        icon: Building2,
-        items: [
-          {
-            title: "View All Buildings",
-            url: "/buildings",
-          },
-          {
-            title: "Add New Building",
-            url: "/buildings/new",
-          },
-        ],
-      },
-      {
-        title: "Units",
-        icon: LayoutGrid,
-        items: [
-          {
-            title: "View All Units",
-            url: "/units",
-          },
-          {
-            title: "Add New Unit",
-            url: "/units/new",
-          },
-        ],
-      },
-      {
         title: "Leads",
         icon: UserPlus,
         items: [
@@ -390,9 +362,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Determine which menu should be open based on current pathname
   React.useEffect(() => {
-    if (pathname.startsWith("/buildings")) {
-      setOpenMenu("Buildings")
-    } else if (pathname.startsWith("/leads")) {
+    if (pathname.startsWith("/leads")) {
       setOpenMenu("Leads")
     
     } else if (pathname.startsWith("/transactions")) {

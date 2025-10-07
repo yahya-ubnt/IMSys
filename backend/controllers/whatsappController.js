@@ -3,7 +3,6 @@ const WhatsAppLog = require('../models/WhatsAppLog');
 const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 const User = require('../models/User');
 const MikrotikUser = require('../models/MikrotikUser');
-const Unit = require('../models/Unit');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 
 // @desc    Compose and send a new WhatsApp message
@@ -16,7 +15,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
     sendToType, // 'users', 'mikrotikGroup', 'location', 'unregistered'
     userIds,
     mikrotikRouterId,
-    buildingId,
+    apartment_house_number,
     unregisteredMobileNumber,
   } = req.body;
 
@@ -52,12 +51,12 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
       recipientPhoneNumbers = mikrotikUsers.map(user => user.phoneNumber).filter(Boolean);
       break;
     case 'location':
-      if (!buildingId) {
-        res.status(400).json({ message: 'Building ID is required' });
+      if (!apartment_house_number) {
+        res.status(400).json({ message: 'Apartment/House Number is required for sending to location' });
         return;
       }
-      const unitsInBuilding = await Unit.find({ building: buildingId }).populate('user', 'phoneNumber');
-      recipientPhoneNumbers = unitsInBuilding.map(unit => unit.user?.phoneNumber).filter(Boolean);
+      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, user: req.user._id }).select('mobileNumber');
+      recipientPhoneNumbers = usersInLocation.map(user => user.mobileNumber).filter(Boolean);
       break;
     case 'unregistered':
       if (!unregisteredMobileNumber) {

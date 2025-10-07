@@ -141,10 +141,6 @@ This is the most critical feature of the advanced leads module.
   "name": "Jane Smith",
   "phoneNumber": "+254722000111",
   "leadSource": "Caretaker",
-  "building": {
-    "_id": "building_456",
-    "name": "Greenwood Towers"
-  },
   "unitNumber": "A5",
   "location": "Westlands, Nairobi",
   "desiredPackage": {

@@ -41,11 +41,9 @@ Integrate the ISP Management System with Mikrotik routers to automate user provi
     - `username`: String (Required. This will be the username for the PPPoE secret created on the Mikrotik router.)
     - `officialName`: String (Required)
     - `emailAddress`: String (Optional)
-    - `buildingName`: String (Optional)
-    - `unitLabel`: String (Optional)
     - `pppoePassword`: String (Required only for PPPoE service type. This will be the password for the PPPoE secret. The admin can input it manually or use a generator button to create a random 6-digit or 6-letter password.)
   - **Package Selection:**
-    - Select a **Package** from a dropdown list. The list will be filtered based on the selected Mikrotik router and service type. This selection will determine the user's service level and monthly bill.
+    - Select a **Package** from a dropdown list. The list will be filtered based on the selected Mikrotik router and service type. This selection will determine the user's service level and their monthly bill.
   - **Personal & Billing Information:**
     - `mPesaRefNo`: String (Required. This is the client's unique account number for billing. It can be input manually or generated automatically by the system as a unique 6-digit number.)
     - `installationFee`: Number (Optional)
@@ -111,8 +109,6 @@ Integrate the ISP Management System with Mikrotik routers to automate user provi
   // Personal & Billing Information
   - `officialName`: String (required)
   - `emailAddress`: String
-  - `buildingName`: String
-  - `unitLabel`: String
   - `mPesaRefNo`: String (required)
   - `installationFee`: Number
   - `billingCycle`: String (required)

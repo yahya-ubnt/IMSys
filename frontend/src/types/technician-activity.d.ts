@@ -10,14 +10,11 @@ export type TechnicianActivity = {
   installedEquipment?: string;
   installationNotes?: string;
   // Fields specific to Support
-  supportCategory?: 'Client Problem' | 'Building Issue'; // ADDED FIELD
+  supportCategory?: 'Client Problem'; // ADDED FIELD
   issueDescription?: string;
   solutionProvided?: string;
   partsReplaced?: string;
   configurationChanges?: string;
-  // Optional: Link to a Unit or Building if applicable (for CRM context)
-  unit?: string; // Unit ID
-  building?: string; // Building ID
   createdAt: Date;
   updatedAt: Date;
 };

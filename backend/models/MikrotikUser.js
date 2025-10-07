@@ -55,15 +55,11 @@ const MikrotikUserSchema = mongoose.Schema(
       type: String,
       match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address'],
     },
-    buildingName: {
+    apartment_house_number: {
       type: String,
     },
-    unitLabel: {
+    door_number_unit_label: {
       type: String,
-    },
-    unitId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Unit',
     },
     mPesaRefNo: {
       type: String,

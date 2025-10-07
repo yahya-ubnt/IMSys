@@ -1,7 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser');
-const Building = require('../models/Building');
 const Package = require('../models/Package');
 const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
@@ -10,29 +9,20 @@ const Transaction = require('../models/Transaction');
 // @route   POST /api/reports/location
 // @access  Private
 const getLocationReport = asyncHandler(async (req, res) => {
-  const { startDate, endDate, buildingId } = req.body;
+  const { startDate, endDate, apartment_house_number } = req.body;
 
-  if (!startDate || !endDate || !buildingId) {
+  if (!startDate || !endDate || !apartment_house_number) {
     res.status(400);
-    throw new Error('Please provide start date, end date, and a building ID.');
+    throw new Error('Please provide start date, end date, and an apartment/house number.');
   }
 
-  // 1. Find the building to get its name
-  const building = await Building.findById(buildingId);
-  if (!building) {
-    res.status(404);
-    throw new Error('Building not found');
-  }
-  const buildingName = building.name;
-
-  // 2. Find all Mikrotik users in that building within the date range
   const mikrotikUsers = await MikrotikUser.find({
-    buildingName: buildingName,
+    apartment_house_number: apartment_house_number,
     createdAt: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
     },
-  }).populate('package', 'price'); // Populate the price from the package
+  }).populate('package', 'price');
 
   if (!mikrotikUsers || mikrotikUsers.length === 0) {
     res.json({
@@ -43,7 +33,6 @@ const getLocationReport = asyncHandler(async (req, res) => {
     return;
   }
 
-  // 3. Process the records to generate the report
   let totalAmount = 0;
   const reportData = mikrotikUsers.map((user, index) => {
     const amount = user.package ? user.package.price : 0;
@@ -59,8 +48,6 @@ const getLocationReport = asyncHandler(async (req, res) => {
 
   res.status(200).json({ reportData, totalAmount });
 });
-
-
 
 // @desc    Get all M-Pesa alerts
 // @route   GET /api/reports/mpesa-alerts

@@ -45,7 +45,7 @@ const TechnicianActivitySchema = mongoose.Schema(
     // Fields specific to Support
     supportCategory: { // ADDED FIELD
       type: String,
-      enum: ['Client Problem', 'Building Issue'],
+      enum: ['Client Problem'],
       required: function() { return this.activityType === 'Support'; }
     },
     issueDescription: { // What was the client's reported issue?
@@ -61,15 +61,6 @@ const TechnicianActivitySchema = mongoose.Schema(
     },
     configurationChanges: { // e.g., "Changed Wi-Fi password, updated router firmware"
       type: String,
-    },
-    // Optional: Link to a Unit or Building if applicable (for CRM context)
-    unit: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Unit',
-    },
-    building: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Building',
     },
   },
   {

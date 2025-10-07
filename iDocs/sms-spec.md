@@ -67,12 +67,12 @@ This page allows users to send SMS messages to various recipients. The page will
     -   **Message Body**: A textarea for composing the SMS message.
     -   **Send SMS Button**: A button to dispatch the message to all users managed by the selected router.
 
-### 2.3. Send to Location
+### 2.3. Send to Apartment/House Number
 
 -   **UI Element**: A tab or radio button labeled "Location".
--   **Functionality**: Sends an SMS to all users within a specific registered building or location.
+-   **Functionality**: Sends an SMS to all users within a specific apartment or house number.
 -   **Components**:
-    -   **Select Location/Building**: A dropdown menu to select a specific building.
+    -   **Select Apartment/House Number**: A dropdown menu to select a specific apartment or house number.
     -   **Message Body**: A textarea for composing the SMS message.
     -   **Send SMS Button**: A button to dispatch the message to all users registered in that location.
 

@@ -2,8 +2,6 @@ const asyncHandler = require('express-async-handler');
 const SmsLog = require('../models/SmsLog');
 const User = require('../models/User'); // Assuming User model has phoneNumber
 const MikrotikUser = require('../models/MikrotikUser'); // Assuming MikrotikUser model
-const Building = require('../models/Building'); // Assuming Building model
-const Unit = require('../models/Unit'); // Assuming Unit model
 const { sendSMS } = require('../services/smsService');
 
 // @desc    Compose and send a new SMS
@@ -15,7 +13,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
     sendToType, // 'users', 'mikrotikGroup', 'location', 'unregistered'
     userIds,
     mikrotikRouterId,
-    buildingId,
+    apartment_house_number,
     unregisteredMobileNumber,
   } = req.body;
 
@@ -48,13 +46,12 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
       break;
 
     case 'location':
-      if (!buildingId) {
+      if (!apartment_house_number) {
         res.status(400);
-        throw new Error('Building ID is required for sending to location');
+        throw new Error('Apartment/House Number is required for sending to location');
       }
-      // Assuming Unit model has a reference to Building and User, and User has phoneNumber
-      const unitsInBuilding = await Unit.find({ building: buildingId, user: req.user._id }).populate('user', 'phoneNumber');
-      recipientPhoneNumbers = unitsInBuilding.map(unit => unit.user ? unit.user.phoneNumber : null).filter(Boolean);
+      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, user: req.user._id }).select('mobileNumber');
+      recipientPhoneNumbers = usersInLocation.map(user => user.mobileNumber).filter(Boolean);
       break;
 
     case 'unregistered':

@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Device { _id: string; deviceName: string; ipAddress: string; }
 import { Package } from "@/types/mikrotik-package";
-interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; officialName: string; emailAddress?: string; buildingName?: string; unitLabel?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; }
+interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; officialName: string; emailAddress?: string; apartment_house_number?: string; door_number_unit_label?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -63,6 +63,8 @@ export default function EditMikrotikUserPage() {
     const [mobileNumber, setMobileNumber] = useState("");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
     const [stationId, setStationId] = useState("");
+    const [apartmentHouseNumber, setApartmentHouseNumber] = useState("");
+    const [doorNumberUnitLabel, setDoorNumberUnitLabel] = useState("");
 
     // Data & UI State
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
@@ -108,6 +110,8 @@ export default function EditMikrotikUserPage() {
                 setIpAddress(userData.ipAddress || "");
                 setOfficialName(userData.officialName);
                 setEmailAddress(userData.emailAddress || "");
+                setApartmentHouseNumber(userData.apartment_house_number || "");
+                setDoorNumberUnitLabel(userData.door_number_unit_label || "");
                 setMPesaRefNo(userData.mPesaRefNo);
                 setInstallationFee(userData.installationFee?.toString() || "");
                 setBillingCycle(userData.billingCycle);
@@ -163,6 +167,8 @@ export default function EditMikrotikUserPage() {
             username,
             officialName,
             emailAddress,
+            apartment_house_number: apartmentHouseNumber,
+            door_number_unit_label: doorNumberUnitLabel,
             mPesaRefNo,
             installationFee: installationFee ? parseFloat(installationFee) : undefined,
             billingCycle,
@@ -246,6 +252,8 @@ export default function EditMikrotikUserPage() {
                                                         <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> Personal & Billing</CardTitle>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                             <div className="space-y-1"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                            <div className="space-y-1"><Label className="text-xs">Apartment/House Number</Label><Input value={apartmentHouseNumber} onChange={e => setApartmentHouseNumber(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                            <div className="space-y-1"><Label className="text-xs">Door Number/Unit Label</Label><Input value={doorNumberUnitLabel} onChange={e => setDoorNumberUnitLabel(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><Input value={mPesaRefNo} disabled className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Billing Cycle</Label><Select onValueChange={setBillingCycle} value={billingCycle} required><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="monthly" className="text-sm">Monthly</SelectItem><SelectItem value="quarterly" className="text-sm">Quarterly</SelectItem><SelectItem value="annually" className="text-sm">Annually</SelectItem></SelectContent></Select></div>

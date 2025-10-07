@@ -24,9 +24,10 @@ type MikrotikRouter = {
   name: string
 }
 
-type Building = {
-  _id: string
-  name: string
+interface MikrotikUser {
+  _id: string;
+  officialName: string;
+  apartment_house_number?: string;
 }
 
 const TABS = [
@@ -42,7 +43,7 @@ export default function ComposeSmsPage() {
   const { token } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [mikrotikRouters, setMikrotikRouters] = useState<MikrotikRouter[]>([])
-  const [buildings, setBuildings] = useState<Building[]>([])
+  const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
@@ -50,8 +51,9 @@ export default function ComposeSmsPage() {
   const [message, setMessage] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [selectedRouter, setSelectedRouter] = useState("")
-  const [selectedBuilding, setSelectedBuilding] = useState("")
+  const [selectedApartmentHouseNumber, setSelectedApartmentHouseNumber] = useState("")
   const [unregisteredPhone, setUnregisteredPhone] = useState("")
+  const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,19 +64,23 @@ export default function ComposeSmsPage() {
       }
       setIsLoading(true)
       try {
-        const [usersRes, routersRes, buildingsRes] = await Promise.all([
+        const [usersRes, routersRes, mikrotikUsersRes] = await Promise.all([
           fetch("/api/mikrotik/users/clients-for-sms", { headers: { "Authorization": `Bearer ${token}` } }),
           fetch("/api/mikrotik/routers", { headers: { "Authorization": `Bearer ${token}` } }),
-          fetch("/api/buildings", { headers: { "Authorization": `Bearer ${token}` } }),
+          fetch("/api/mikrotik/users", { headers: { "Authorization": `Bearer ${token}` } }),
         ])
 
-        if (!usersRes.ok || !routersRes.ok || !buildingsRes.ok) {
+        if (!usersRes.ok || !routersRes.ok || !mikrotikUsersRes.ok) {
           throw new Error("Failed to fetch required data")
         }
 
+        const mikrotikUsersData = await mikrotikUsersRes.json();
         setUsers(await usersRes.json())
         setMikrotikRouters(await routersRes.json())
-        setBuildings(await buildingsRes.json())
+        setMikrotikUsers(mikrotikUsersData)
+
+        const uniqueApartmentHouseNumbers = Array.from(new Set(mikrotikUsersData.map((user: MikrotikUser) => user.apartment_house_number).filter(Boolean)));
+        setApartmentHouseNumbers(uniqueApartmentHouseNumbers as string[]);
 
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -98,25 +104,20 @@ export default function ComposeSmsPage() {
     }
     setIsSubmitting(true)
 
-    let endpoint = ""
-    let payload: { message: string; userIds?: string[]; routerId?: string; buildingId?: string; phone?: string; } = { message }
+    let payload: { message: string; sendToType: string; userIds?: string[]; routerId?: string; apartment_house_number?: string; unregisteredMobileNumber?: string; } = { message, sendToType: activeTab }
 
     switch (activeTab) {
       case "users":
-        endpoint = "/api/sms/send-to-users";
         payload.userIds = selectedUsers;
         break
       case "mikrotik":
-        endpoint = "/api/sms/send-to-mikrotik-group";
         payload.routerId = selectedRouter;
         break
       case "location":
-        endpoint = "/api/sms/send-to-location";
-        payload.buildingId = selectedBuilding;
+        payload.apartment_house_number = selectedApartmentHouseNumber;
         break
       case "unregistered":
-        endpoint = "/api/sms/send-to-unregistered";
-        payload.phone = unregisteredPhone;
+        payload.unregisteredMobileNumber = unregisteredPhone;
         break
       default:
         toast({ title: "Error", description: "Invalid recipient group.", variant: "destructive" })
@@ -125,7 +126,7 @@ export default function ComposeSmsPage() {
     }
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/sms/compose", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -236,10 +237,10 @@ export default function ComposeSmsPage() {
                           )}
                           {activeTab === "location" && (
                               <div className="space-y-2">
-                                  <Label htmlFor="location" className="text-zinc-300">Select Location/Building</Label>
-                                  <Select onValueChange={setSelectedBuilding}>
-                                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a building" /></SelectTrigger>
-                                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">{buildings.map((building) => <SelectItem key={building._id} value={building._id} className="focus:bg-zinc-800">{building.name}</SelectItem>)}</SelectContent>
+                                  <Label htmlFor="location" className="text-zinc-300">Select Apartment/House Number</Label>
+                                  <Select onValueChange={setSelectedApartmentHouseNumber}>
+                                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a location" /></SelectTrigger>
+                                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">{apartmentHouseNumbers.map((ahn) => <SelectItem key={ahn} value={ahn} className="focus:bg-zinc-800">{ahn}</SelectItem>)}</SelectContent>
                                   </Select>
                               </div>
                           )}

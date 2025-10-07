@@ -187,13 +187,6 @@ As the code loops through each bill and its corresponding payment, it calculates
 
 -   **Lifetime Value:** The sum of the `amount` of all `creditTransactions` (i.e., the total amount of money the customer has ever paid).
 
-### Step 4: Building the Detailed Payment History Table
-
-Simultaneously, as the backend performs these calculations, it also builds the row-by-row data for the "Detailed Payment History" table.
-
--   If a bill (`Debit`) is matched with a payment (`Credit`), it adds an entry to the history with the due date, the paid date, the amount, and a status of either **"Paid (On-Time)"** or **"Paid (Late)"**.
--   If the code cannot find a match for a particular bill, it means that bill is still unpaid. It then adds an entry to the history with the due date, a `null` paid date, the amount, and a status of **"Pending"**.
-
 ### Step 5: Displaying the Results (Frontend)
 
 Finally, the backend bundles all of this calculated data into a single JSON object and sends it to the frontend.

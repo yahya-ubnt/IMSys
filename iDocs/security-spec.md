@@ -33,7 +33,6 @@ This document summarizes the security enhancements implemented to prepare the pr
 These items are crucial for a fully secure and compliant SaaS product but **have not yet been implemented in the codebase**. They are documented here as recommendations for future work.
 
 1.  **Complete Multi-Tenancy for Remaining Models:**
-    *   **`Building` and `Unit` Models:** These were explicitly ignored during this phase. For a truly secure and isolated SaaS, these *must* be made multi-tenant. The `getLocationReport` will remain insecure until `Building` data is isolated.
     *   **Thorough Review:** Conduct a full audit of *all* remaining models and their associated controllers/services to ensure every piece of tenant-specific data is correctly isolated.
 
 2.  **Comprehensive Input Validation (Ongoing):**

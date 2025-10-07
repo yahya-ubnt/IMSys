@@ -22,7 +22,7 @@ import { DiagnosticLog } from "@/types/diagnostics";
 import { DiagnosticModal } from "@/components/diagnostics/DiagnosticModal";
 
 // --- Interface Definitions ---
-interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; buildingName?: string; unitLabel?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
+interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
 
 // --- Sub-components ---
 const DetailItem = ({ icon: Icon, label, value, isPassword }: { icon: React.ElementType; label: string; value: string | number | undefined; isPassword?: boolean }) => {
@@ -155,8 +155,8 @@ export default function MikrotikUserDetailsPage() {
                                             <DetailItem icon={Wifi} label="Service Type" value={userData.serviceType.toUpperCase()} />
                                             <DetailItem icon={RouterIcon} label="Mikrotik Router" value={userData.mikrotikRouter.name} />
                                             <DetailItem icon={RouterIcon} label="Station" value={userData.station?.deviceName} />
-                                            <DetailItem icon={Building} label="Building Name" value={userData.buildingName} />
-                                            <DetailItem icon={Home} label="Unit Label" value={userData.unitLabel} />
+                                            <DetailItem icon={Building} label="Apartment/House Number" value={userData.apartment_house_number} />
+                                            <DetailItem icon={Home} label="Door Number/Unit Label" value={userData.door_number_unit_label} />
                                             {userData.serviceType === 'pppoe' && <DetailItem icon={Lock} label="PPPoE Password" value={userData.pppoePassword} isPassword />}
                                             {userData.serviceType === 'static' && <DetailItem icon={Hash} label="IP Address" value={userData.ipAddress} />}
                                         </div>

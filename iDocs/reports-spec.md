@@ -14,7 +14,7 @@ A new top-level menu item labeled "Reports" will be added to the main navigation
 
 ## 2. Location Report
 
-The Location Report provides a way to view revenue generated from specific buildings over a defined period.
+The Location Report provides a way to view revenue generated from specific apartment/house numbers over a defined period.
 
 ### 2.1. User Interface
 
@@ -22,14 +22,14 @@ The UI will consist of the following components:
 
 -   **Select Starting Date:** A date picker that allows the user to select the start date for the report. The picker should allow selecting the year and month.
 -   **Select Ending Date:** A date picker that allows the user to select the end date for the report. The picker should also allow selecting the year and month.
--   **Select Location:** A dropdown menu populated with the list of all buildings registered in the system.
+-   **Select Location:** A dropdown menu populated with the list of all unique apartment/house numbers registered in the system.
 -   **Generate Report Button:** A button that, when clicked, generates and displays the report based on the selected criteria.
 
 ### 2.2. Report Generation
 
 When the "Generate Report" button is clicked, the system will fetch and display the data in a table format.
 
--   Above the table, a summary will show the **Total Revenue** for the selected location and period. The text will read: "Total revenue from [Building Name] between [Start Date] and [End Date] is [Total Amount]."
+-   Above the table, a summary will show the **Total Revenue** for the selected location and period. The text will read: "Total revenue from [Apartment/House Number] between [Start Date] and [End Date] is [Total Amount]."
 
 ### 2.3. Report Table
 
