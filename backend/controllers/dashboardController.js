@@ -187,8 +187,8 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const count = await User.countDocuments({
-    _id: req.user._id, // Filter by user
+  const count = await MikrotikUser.countDocuments({
+    user: req.user._id, // Filter by user
     createdAt: {
       $gte: startOfMonth,
       $lte: today,
@@ -202,7 +202,7 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
 // @route   GET /api/dashboard/users/total
 // @access  Public
 const getTotalUsersCount = asyncHandler(async (req, res) => {
-  const count = await User.countDocuments({ _id: req.user._id }); // Filter by user
+  const count = await MikrotikUser.countDocuments({ user: req.user._id }); // Filter by user
   res.json({ totalUsers: count });
 });
 

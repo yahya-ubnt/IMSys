@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const Lead = require('../models/Lead');
 const MikrotikUser = require('../models/MikrotikUser');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Create a new lead
 // @route   POST /api/leads
@@ -22,7 +23,7 @@ const createLead = asyncHandler(async (req, res) => {
       address,
       serviceOfInterest,
       leadSource,
-      notes,
+      notes: sanitizeString(notes), // Sanitize notes field
       user: req.user._id, // Associate with the logged-in user
     });
 
@@ -156,7 +157,7 @@ const updateLead = asyncHandler(async (req, res) => {
     lead.leadSource = req.body.leadSource || lead.leadSource;
     lead.desiredPackage = req.body.desiredPackage || lead.desiredPackage;
     lead.currentIsp = req.body.currentIsp || lead.currentIsp;
-    lead.notes = req.body.notes || lead.notes;
+    lead.notes = req.body.notes ? sanitizeString(req.body.notes) : lead.notes;
     lead.broughtInBy = req.body.broughtInBy || lead.broughtInBy;
     lead.broughtInByContact = req.body.broughtInByContact || lead.broughtInByContact;
     lead.agreedInstallationFee =

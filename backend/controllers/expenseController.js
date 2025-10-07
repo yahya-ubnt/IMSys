@@ -4,6 +4,7 @@ const Expense = require('../models/Expense');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Africa/Nairobi');
 const mongoose = require('mongoose');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Create a new expense
 // @route   POST /api/expenses
@@ -20,7 +21,7 @@ const createExpense = asyncHandler(async (req, res) => {
     title,
     amount,
     expenseType,
-    description,
+    description: sanitizeString(description), // Sanitize description
     expenseDate,
     status,
     expenseBy: req.user._id,
@@ -83,7 +84,7 @@ const updateExpense = asyncHandler(async (req, res) => {
   expense.title = title || expense.title;
   expense.amount = amount || expense.amount;
   expense.expenseType = expenseType || expense.expenseType;
-  expense.description = description || expense.description;
+  expense.description = description ? sanitizeString(description) : expense.description;
   expense.expenseDate = expenseDate || expense.expenseDate;
   expense.status = status || expense.status;
 

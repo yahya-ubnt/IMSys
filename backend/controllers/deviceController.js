@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const Device = require('../models/Device');
 const DowntimeLog = require('../models/DowntimeLog');
 const MikrotikRouter = require('../models/MikrotikRouter'); // Import MikrotikRouter
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Create a new device
 // @route   POST /api/devices
@@ -50,12 +51,12 @@ const createDevice = asyncHandler(async (req, res) => {
     ipAddress,
     macAddress,
     deviceType,
-    location,
-    deviceName,
-    deviceModel,
-    loginUsername,
+    location: sanitizeString(location),
+    deviceName: sanitizeString(deviceName),
+    deviceModel: sanitizeString(deviceModel),
+    loginUsername: sanitizeString(loginUsername),
     loginPassword, // Will be encrypted by pre-save hook
-    ssid,
+    ssid: sanitizeString(ssid),
     wirelessPassword, // Will be encrypted by pre-save hook
     user: req.user._id, // Associate with the logged-in user
   });
@@ -131,11 +132,11 @@ const updateDevice = asyncHandler(async (req, res) => {
   device.ipAddress = req.body.ipAddress || device.ipAddress;
   device.macAddress = req.body.macAddress || device.macAddress;
   device.deviceType = req.body.deviceType || device.deviceType;
-  device.location = req.body.location || device.location;
-  device.deviceName = req.body.deviceName || device.deviceName;
-  device.deviceModel = req.body.deviceModel || device.deviceModel;
-  device.loginUsername = req.body.loginUsername || device.loginUsername;
-  device.ssid = req.body.ssid || device.ssid;
+  device.location = req.body.location ? sanitizeString(req.body.location) : device.location;
+  device.deviceName = req.body.deviceName ? sanitizeString(req.body.deviceName) : device.deviceName;
+  device.deviceModel = req.body.deviceModel ? sanitizeString(req.body.deviceModel) : device.deviceModel;
+  device.loginUsername = req.body.loginUsername ? sanitizeString(req.body.loginUsername) : device.loginUsername;
+  device.ssid = req.body.ssid ? sanitizeString(req.body.ssid) : device.ssid;
 
   // Handle password updates
   if (req.body.loginPassword) {

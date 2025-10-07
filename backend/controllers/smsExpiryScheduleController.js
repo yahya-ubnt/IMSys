@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const SmsExpirySchedule = require('../models/SmsExpirySchedule');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Get all SMS expiry schedules
 // @route   GET /api/smsexpiryschedules
@@ -70,6 +71,7 @@ const createSchedule = asyncHandler(async (req, res) => {
     smsTemplate,
     whatsAppTemplate,
     status,
+    messageBody: sanitizeString(messageBody), // Sanitize messageBody
     user: req.user._id, // Associate with the logged-in user
   });
 
@@ -99,7 +101,7 @@ const updateSchedule = asyncHandler(async (req, res) => {
     schedule.name = name || schedule.name;
     schedule.days = days || schedule.days;
     schedule.timing = timing || schedule.timing;
-    schedule.messageBody = messageBody || schedule.messageBody;
+    schedule.messageBody = messageBody ? sanitizeString(messageBody) : schedule.messageBody;
     schedule.status = status || schedule.status;
 
     const updatedSchedule = await schedule.save();

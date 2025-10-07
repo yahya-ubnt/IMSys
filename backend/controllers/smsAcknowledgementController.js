@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const SmsAcknowledgement = require('../models/SmsAcknowledgement');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Get all SMS acknowledgement mappings
 // @route   GET /api/smsacknowledgements
@@ -56,7 +57,7 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
 
   const acknowledgement = await SmsAcknowledgement.create({
     triggerType,
-    description,
+    description: sanitizeString(description), // Sanitize description
     smsTemplate,
     status,
     user: req.user._id, // Associate with the logged-in user
@@ -86,7 +87,7 @@ const updateAcknowledgement = asyncHandler(async (req, res) => {
     }
 
     acknowledgement.triggerType = triggerType || acknowledgement.triggerType;
-    acknowledgement.description = description || acknowledgement.description;
+    acknowledgement.description = description ? sanitizeString(description) : acknowledgement.description;
     acknowledgement.smsTemplate = smsTemplate || acknowledgement.smsTemplate;
     acknowledgement.status = status || acknowledgement.status;
 

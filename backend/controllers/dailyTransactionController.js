@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const DailyTransaction = require('../models/DailyTransaction');
 const moment = require('moment-timezone');
 moment.tz.setDefault('Africa/Nairobi');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Create new daily transaction
 // @route   POST /api/daily-transactions
@@ -19,13 +20,13 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
     date: new Date(),
     amount,
     method,
-    transactionMessage,
-    description,
-    label,
-    transactionId,
+    transactionMessage: sanitizeString(transactionMessage),
+    description: sanitizeString(description),
+    label: sanitizeString(label),
+    transactionId: sanitizeString(transactionId),
     transactionDate,
-    transactionTime,
-    receiverEntity,
+    transactionTime: sanitizeString(transactionTime),
+    receiverEntity: sanitizeString(receiverEntity),
     phoneNumber,
     newBalance,
     transactionCost,
@@ -116,13 +117,13 @@ const updateDailyTransaction = asyncHandler(async (req, res) => {
     dailyTransaction.date = date || dailyTransaction.date;
     dailyTransaction.amount = amount || dailyTransaction.amount;
     dailyTransaction.method = method || dailyTransaction.method;
-    dailyTransaction.transactionMessage = transactionMessage || dailyTransaction.transactionMessage;
-    dailyTransaction.description = description || dailyTransaction.description;
-    dailyTransaction.label = label || dailyTransaction.label;
-    dailyTransaction.transactionId = transactionId || dailyTransaction.transactionId;
+    dailyTransaction.transactionMessage = transactionMessage ? sanitizeString(transactionMessage) : dailyTransaction.transactionMessage;
+    dailyTransaction.description = description ? sanitizeString(description) : dailyTransaction.description;
+    dailyTransaction.label = label ? sanitizeString(label) : dailyTransaction.label;
+    dailyTransaction.transactionId = transactionId ? sanitizeString(transactionId) : dailyTransaction.transactionId;
     dailyTransaction.transactionDate = transactionDate || dailyTransaction.transactionDate;
-    dailyTransaction.transactionTime = transactionTime || dailyTransaction.transactionTime;
-    dailyTransaction.receiverEntity = receiverEntity || dailyTransaction.receiverEntity;
+    dailyTransaction.transactionTime = transactionTime ? sanitizeString(transactionTime) : dailyTransaction.transactionTime;
+    dailyTransaction.receiverEntity = receiverEntity ? sanitizeString(receiverEntity) : dailyTransaction.receiverEntity;
     dailyTransaction.phoneNumber = phoneNumber || dailyTransaction.phoneNumber;
     dailyTransaction.newBalance = newBalance || dailyTransaction.newBalance;
     dailyTransaction.transactionCost = transactionCost || dailyTransaction.transactionCost;

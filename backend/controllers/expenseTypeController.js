@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const ExpenseType = require('../models/ExpenseType');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Create a new expense type
 // @route   POST /api/expensetypes
@@ -22,7 +23,7 @@ const createExpenseType = asyncHandler(async (req, res) => {
 
   const expenseType = await ExpenseType.create({
     name,
-    description,
+    description: sanitizeString(description), // Sanitize description
     addedBy: req.user._id,
   });
 
@@ -77,7 +78,7 @@ const updateExpenseType = asyncHandler(async (req, res) => {
   }
 
   expenseType.name = name || expenseType.name;
-  expenseType.description = description || expenseType.description;
+  expenseType.description = description ? sanitizeString(description) : expenseType.description;
   expenseType.status = status || expenseType.status;
 
   const updatedExpenseType = await expenseType.save();

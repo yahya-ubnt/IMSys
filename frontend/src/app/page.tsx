@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Topbar } from "@/components/topbar";
 import { DollarSign, TrendingUp, Calendar, Globe, BarChart2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from '@/components/auth-provider';
 
 // --- Interface Definitions ---
 interface CollectionsSummary { today: number; weekly: number; monthly: number; yearly: number; }
@@ -14,6 +15,7 @@ interface MonthlyDataPoint { month: string; collections: number; expenses: numbe
 
 // --- Main Page Component ---
 export default function DashboardPage() {
+  const { token } = useAuth();
   const [summary, setSummary] = useState<CollectionsSummary | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -22,12 +24,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!token) {
+        setError("Authentication token not found. Please log in.");
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
         const [summaryRes, monthlyRes] = await Promise.all([
-          fetch('/api/dashboard/collections/summary'),
-          fetch(`/api/dashboard/collections-and-expenses/monthly?year=${selectedYear}`)
+          fetch('/api/dashboard/collections/summary', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch(`/api/dashboard/collections-and-expenses/monthly?year=${selectedYear}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
         ]);
 
         if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.statusText}`);
@@ -43,7 +54,7 @@ export default function DashboardPage() {
       }
     };
     fetchDashboardData();
-  }, [selectedYear]);
+  }, [selectedYear, token]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
@@ -123,7 +134,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div key={i} style={{ color: pld.stroke }}>
             {pld.name}: KES {pld.value.toLocaleString()}
           </div>
-        ))}
+        ))}"
       </div>
     );
   }

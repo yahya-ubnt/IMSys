@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const Bill = require('../models/Bill');
+const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Create a new bill
 // @route   POST /api/bills
@@ -36,7 +37,7 @@ const createBill = asyncHandler(async (req, res) => {
     amount,
     dueDate,
     category,
-    description,
+    description: sanitizeString(description), // Sanitize description
     user,
     month: currentMonth,
     year: currentYear,
@@ -108,12 +109,12 @@ const updateBill = asyncHandler(async (req, res) => {
   bill.amount = amount || bill.amount; // ADDED
   bill.dueDate = dueDate || bill.dueDate; // ADDED
   bill.status = status || bill.status;
-  bill.description = description || bill.description;
+  bill.description = description ? sanitizeString(description) : bill.description;
 
   if (bill.status === 'Paid') {
     bill.paymentDate = paymentDate || new Date(); // Set to current date if not provided
     bill.method = method || bill.method; // Method is required if status is Paid
-    bill.transactionMessage = transactionMessage || bill.transactionMessage;
+    bill.transactionMessage = transactionMessage ? sanitizeString(transactionMessage) : bill.transactionMessage;
 
     if (!bill.method) {
       res.status(400);
