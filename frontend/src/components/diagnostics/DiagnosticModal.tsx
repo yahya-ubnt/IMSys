@@ -29,7 +29,7 @@ const stepIcons = {
 export function DiagnosticModal({ isOpen, onClose, log, status }: { isOpen: boolean; onClose: () => void; log: DiagnosticLog | null; status: 'running' | 'viewing' | 'idle' }) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white shadow-2xl shadow-blue-500/10 rounded-xl">
+      <DialogContent className="max-w-[95vw] h-[95vh] w-full bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white shadow-2xl shadow-blue-500/10 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 text-2xl flex items-center gap-2">
             <ShieldCheck size={24} />
@@ -53,17 +53,17 @@ const ReportContent = ({ log }: { log: DiagnosticLog }) => {
   const analysisSteps = log.steps.filter(s => s.stepName.includes('Neighbor Analysis'));
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.1 } } }} className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4">
-      {/* Left Column: Timeline */}
-      <div className="lg:col-span-1">
+    <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.1 } } }} className="flex flex-col gap-8 p-4">
+      {/* Timeline Section */}
+      <div>
         <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2"><ListChecks size={18} /> Diagnostic Timeline</h3>
         <div className="relative flex flex-col gap-4">
           {timelineSteps.map((step, index) => <TimelineStep key={index} step={step} isLast={index === timelineSteps.length - 1} />)}
         </div>
       </div>
 
-      {/* Right Column: Analysis */}
-      <div className="lg:col-span-2">
+      {/* Analysis Section */}
+      <div>
         {analysisSteps.length > 0 ? (
           <AnalysisTabs analysisSteps={analysisSteps} />
         ) : (
