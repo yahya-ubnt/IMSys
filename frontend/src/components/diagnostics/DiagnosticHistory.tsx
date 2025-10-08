@@ -16,6 +16,7 @@ interface DiagnosticHistoryProps {
 }
 
 const getBadgeVariant = (conclusion: string): "secondary" | "outline" | "destructive" => {
+  if (!conclusion) return 'secondary';
   if (conclusion.includes('online')) return 'secondary';
   if (conclusion.includes('expired')) return 'outline';
   return 'destructive';
