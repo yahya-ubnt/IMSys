@@ -1,26 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
-import { DiagnosticLog } from '@/types/diagnostics';
 
 interface DiagnosticButtonProps {
   userId: string;
-  onRunStart: () => void;
-  onRunComplete: (log: DiagnosticLog) => void;
 }
 
-export function DiagnosticButton({ userId, onRunStart, onRunComplete }: DiagnosticButtonProps) {
+export function DiagnosticButton({ userId }: DiagnosticButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { token } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleRunDiagnostic = async () => {
     setIsLoading(true);
-    onRunStart();
 
     try {
       const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics`, {
@@ -38,22 +36,12 @@ export function DiagnosticButton({ userId, onRunStart, onRunComplete }: Diagnost
         throw new Error(result.message || 'Failed to run diagnostics.');
       }
       
-      onRunComplete(result as DiagnosticLog);
+      // Navigate to the new dedicated page for the diagnostic report
+      router.push(`/mikrotik/users/${userId}/diagnostics/${result._id}`);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       toast({ title: 'Diagnostic Error', description: errorMessage, variant: 'destructive' });
-      onRunComplete({
-        _id: 'error',
-        user: userId,
-        finalConclusion: 'Diagnostic process failed.',
-        steps: [{
-          stepName: 'Critical Error',
-          status: 'Failure',
-          summary: errorMessage,
-        }],
-        createdAt: new Date().toISOString(),
-      });
     } finally {
       setIsLoading(false);
     }

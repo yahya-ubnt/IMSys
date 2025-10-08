@@ -183,7 +183,33 @@ const getDiagnosticHistory = asyncHandler(async (req, res) => {
     res.status(200).json(logs);
 });
 
+// @desc    Get a single diagnostic log by ID
+// @route   GET /api/v1/users/:userId/diagnostics/:logId
+// @access  Private
+const getDiagnosticLogById = asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { userId, logId } = req.params;
+    const log = await DiagnosticLog.findById(logId);
+
+    if (!log) {
+        res.status(404);
+        throw new Error('Diagnostic log not found');
+    }
+
+    if (log.user.toString() !== req.user._id.toString() || log.mikrotikUser.toString() !== userId) {
+        res.status(403);
+        throw new Error('Not authorized to view this diagnostic log');
+    }
+
+    res.status(200).json(log);
+});
+
 module.exports = {
   runDiagnostic,
   getDiagnosticHistory,
+  getDiagnosticLogById,
 };

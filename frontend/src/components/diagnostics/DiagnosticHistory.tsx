@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/components/auth-provider';
@@ -12,7 +13,6 @@ import { Eye } from 'lucide-react';
 
 interface DiagnosticHistoryProps {
   userId: string;
-  onViewReport: (log: DiagnosticLog) => void;
 }
 
 const getBadgeVariant = (conclusion: string): "secondary" | "outline" | "destructive" => {
@@ -21,7 +21,7 @@ const getBadgeVariant = (conclusion: string): "secondary" | "outline" | "destruc
   return 'destructive';
 };
 
-export function DiagnosticHistory({ userId, onViewReport }: DiagnosticHistoryProps) {
+export function DiagnosticHistory({ userId }: DiagnosticHistoryProps) {
   const [logs, setLogs] = useState<DiagnosticLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { token } = useAuth();
@@ -81,10 +81,12 @@ export function DiagnosticHistory({ userId, onViewReport }: DiagnosticHistoryPro
                     <Badge variant={getBadgeVariant(log.finalConclusion)}>{log.finalConclusion}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => onViewReport(log)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Report
-                    </Button>
+                    <Link href={`/mikrotik/users/${userId}/diagnostics/${log._id}`}>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Report
+                      </Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

@@ -1,12 +1,17 @@
 'use client';
 
 import * as Tabs from "@radix-ui/react-tabs";
-import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ShieldCheck, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ShieldCheck, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info, ArrowLeft } from 'lucide-react';
 import { DiagnosticLog, DiagnosticStep } from '@/types/diagnostics';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from "@/components/auth-provider";
+import { useToast } from "@/hooks/use-toast";
+import { Topbar } from "@/components/topbar";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // --- Status & Icon Configuration ---
 const statusInfo = {
@@ -25,27 +30,53 @@ const stepIcons = {
   "Neighbor Analysis (Apartment-Based)": Building,
 };
 
-// --- Main Modal Component ---
-export function DiagnosticModal({ isOpen, onClose, log, status }: { isOpen: boolean; onClose: () => void; log: DiagnosticLog | null; status: 'running' | 'viewing' | 'idle' }) {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[98vw] h-[98vh] w-full bg-zinc-900/95 backdrop-blur-xl border-zinc-700 text-white shadow-2xl shadow-blue-500/10 rounded-2xl flex flex-col">
-        <DialogHeader className="p-6 border-b border-zinc-800">
-          <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 text-3xl font-bold flex items-center gap-3">
-            <ShieldCheck size={30} />
-            {status === 'running' ? "Running Live Diagnostic" : "Diagnostic Report"}
-          </DialogTitle>
-          {status === 'viewing' && log && <DialogDescription className="text-zinc-400 mt-1">Generated on {new Date(log.createdAt).toLocaleString()}</DialogDescription>}
-        </DialogHeader>
+// --- Main Page Component ---
+export default function DiagnosticReportPage() {
+    const params = useParams();
+    const { id: userId, logId } = params;
+    const [log, setLog] = useState<DiagnosticLog | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { token } = useAuth();
+    const { toast } = useToast();
 
-        <div className="flex-1 overflow-y-auto p-6">
-          {status === 'running' && <SkeletonLoader />}
-          {status === 'viewing' && log && <ReportContent log={log} />}
+    useEffect(() => {
+        if (!logId || !token) return;
+        const fetchLog = async () => {
+            try {
+                const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics/${logId}`, { headers: { Authorization: `Bearer ${token}` } });
+                if (!response.ok) throw new Error("Failed to fetch diagnostic log");
+                setLog(await response.json());
+            } catch {
+                toast({ title: "Error", description: "Failed to load diagnostic log.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLog();
+    }, [logId, userId, token, toast]);
+
+    return (
+        <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+            <Topbar />
+            <main className="flex-1 p-6 flex flex-col space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link href={`/mikrotik/users/${userId}/details`}><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Diagnostic Report</h1>
+                            {log && <p className="text-sm text-zinc-400">Generated on {new Date(log.createdAt).toLocaleString()}</p>}
+                        </div>
+                    </div>
+                </div>
+
+                {loading && <SkeletonLoader />}
+                {!loading && log && <ReportContent log={log} />}
+                {!loading && !log && <div className="flex h-full items-center justify-center text-zinc-500">Diagnostic log not found.</div>}
+            </main>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
+    );
 }
+
 
 // --- Report Content & Layout ---
 const ReportContent = ({ log }: { log: DiagnosticLog }) => {

@@ -18,8 +18,6 @@ import DowntimeLogTable from "@/components/mikrotik/DowntimeLogTable";
 import BillingTab from "@/components/mikrotik/BillingTab";
 import { DiagnosticButton } from "@/components/diagnostics/DiagnosticButton";
 import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
-import { DiagnosticLog } from "@/types/diagnostics";
-import { DiagnosticModal } from "@/components/diagnostics/DiagnosticModal";
 
 // --- Interface Definitions ---
 interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
@@ -49,8 +47,6 @@ export default function MikrotikUserDetailsPage() {
     const [userData, setUserData] = useState<MikrotikUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [mpesaTransactions, setMpesaTransactions] = useState<MpesaTransaction[]>([]);
-    const [modalStatus, setModalStatus] = useState<'idle' | 'running' | 'viewing'>('idle');
-    const [currentLog, setCurrentLog] = useState<DiagnosticLog | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
     const { token } = useAuth();
     const { toast } = useToast();
@@ -92,16 +88,6 @@ export default function MikrotikUserDetailsPage() {
         return { days, label: days > 0 ? `${days} days remaining` : 'Expired' };
     }, [userData?.expiryDate]);
 
-    const handleRunStart = () => {
-        setCurrentLog({ _id: 'running', user: id as string, steps: [], finalConclusion: 'Running diagnostic...', createdAt: new Date().toISOString() });
-        setModalStatus('running');
-    };
-    const handleRunComplete = (log: DiagnosticLog) => {
-        setCurrentLog(log);
-        setModalStatus('viewing');
-    };
-    const handleViewReport = (log: DiagnosticLog) => { setCurrentLog(log); setModalStatus('viewing'); };
-
     if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading user profile...</div>;
     if (!userData) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">User not found.</div>;
 
@@ -128,7 +114,7 @@ export default function MikrotikUserDetailsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 mr-2" />Edit User</Button>
-                            <DiagnosticButton userId={userData._id} onRunStart={handleRunStart} onRunComplete={handleRunComplete} />
+                            <DiagnosticButton userId={userData._id} />
                         </div>
                     </div>
 
@@ -169,14 +155,13 @@ export default function MikrotikUserDetailsPage() {
                                     </TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="usage" className="h-full"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full"><MikrotikUserTrafficChart userId={userData._id} /><DowntimeLogTable userId={userData._id} /></div></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab transactions={mpesaTransactions} /></TabsPrimitive.Content>
-                                    <TabsPrimitive.Content value="diagnostics" className="h-full"><DiagnosticHistory userId={userData._id} onViewReport={handleViewReport} /></TabsPrimitive.Content>
+                                    <TabsPrimitive.Content value="diagnostics" className="h-full"><DiagnosticHistory userId={userData._id} /></TabsPrimitive.Content>
                                 </CardContent>
                             </TabsPrimitive.Root>
                         </Card>
                     </motion.div>
                 </div>
             </div>
-            <DiagnosticModal isOpen={modalStatus !== 'idle'} onClose={() => setModalStatus('idle')} log={currentLog} status={modalStatus} />
         </>
     );
 }
