@@ -47,6 +47,9 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         const isRouterOnline = await checkRouterStatus(router);
         addStep('Mikrotik Router Check', isRouterOnline ? 'Success' : 'Failure', `Router "${router.name}" (${router.ipAddress}) is ${isRouterOnline ? 'online' : 'offline'}.`);
         if (isRouterOnline) {
+          const isClientOnline = await checkUserStatus(mikrotikUser, router);
+          addStep('Client Status Check', isClientOnline ? 'Success' : 'Failure', `Client "${mikrotikUser.username}" is ${isClientOnline ? 'online' : 'offline'}.`);
+
           if (mikrotikUser.station) await runCpeDiagnosticPath(addStep, mikrotikUser);
           if (mikrotikUser.apartment_house_number) await runApartmentDiagnosticPath(addStep, mikrotikUser);
         }
@@ -81,6 +84,9 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         const isRouterOnline = await checkRouterStatus(router);
         addStep('Mikrotik Router Check', isRouterOnline ? 'Success' : 'Failure', `Router "${router.name}" (${router.ipAddress}) is ${isRouterOnline ? 'online' : 'offline'}.`);
         if (isRouterOnline) {
+          const isClientOnline = await checkUserStatus(mikrotikUser, router);
+          addStep('Client Status Check', isClientOnline ? 'Success' : 'Failure', `Client "${mikrotikUser.username}" is ${isClientOnline ? 'online' : 'offline'}.`);
+
           if (mikrotikUser.station) await runCpeDiagnosticPath(addStep, mikrotikUser);
           if (mikrotikUser.apartment_house_number) await runApartmentDiagnosticPath(addStep, mikrotikUser);
         }
