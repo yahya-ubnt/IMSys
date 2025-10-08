@@ -62,7 +62,7 @@ export default function MikrotikUserDetailsPage() {
                 const response = await fetch(`/api/mikrotik/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
                 if (!response.ok) throw new Error("Failed to fetch user details");
                 setUserData(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load user data.", variant: "destructive" });
             } finally {
                 setLoading(false);
@@ -92,8 +92,14 @@ export default function MikrotikUserDetailsPage() {
         return { days, label: days > 0 ? `${days} days remaining` : 'Expired' };
     }, [userData?.expiryDate]);
 
-    const handleRunStart = () => { setCurrentLog(null); setModalStatus('running'); };
-    const handleRunComplete = (log: DiagnosticLog) => { setCurrentLog(log); };
+    const handleRunStart = () => {
+        setCurrentLog({ _id: 'running', user: id as string, steps: [], finalConclusion: 'Running diagnostic...', createdAt: new Date().toISOString() });
+        setModalStatus('running');
+    };
+    const handleRunComplete = (log: DiagnosticLog) => {
+        setCurrentLog(log);
+        setModalStatus('viewing');
+    };
     const handleViewReport = (log: DiagnosticLog) => { setCurrentLog(log); setModalStatus('viewing'); };
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading user profile...</div>;

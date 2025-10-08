@@ -62,27 +62,35 @@ export default function NetworkHealthCheckPage() {
 
     const deviceIdToRun = entity.type === 'User' ? entity.entity.station : entity._id;
     if (!deviceIdToRun) {
-      toast.error("This user is not associated with a station and cannot be diagnosed.");
-      setActiveDiagnosticId(null);
-      return;
+        toast.error("This user is not associated with a station and cannot be diagnosed.");
+        setActiveDiagnosticId(null);
+        return;
     }
 
     try {
-      const res = await fetch('/api/bulk-diagnostics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ 
-            deviceId: deviceIdToRun,
-            userId: entity.type === 'User' ? entity._id : undefined 
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json()).message || 'An error occurred.');
-      setDiagnosticLog(await res.json());
-      toast.success(`Diagnostic on ${entity.name} completed.`);
+        const response = await fetch('/api/bulk-diagnostics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+                deviceIds: [deviceIdToRun],
+                userChecks: entity.type === 'User' ? [entity.name] : [],
+                stream: false // Explicitly disable streaming
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+            throw new Error(errorData.message || 'An error occurred during diagnostics.');
+        }
+
+        const results = await response.json();
+        setDiagnosticLog(results);
+        toast.success(`Diagnostic on ${entity.name} completed.`);
+
     } catch (error: any) {
-      toast.error(`Diagnostic failed: ${error.message}`);
+        toast.error(`Diagnostic failed: ${error.message}`);
     } finally {
-      setActiveDiagnosticId(null);
+        setActiveDiagnosticId(null);
     }
   };
 

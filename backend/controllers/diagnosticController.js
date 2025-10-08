@@ -1,146 +1,173 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser.js');
-const MikrotikRouter = require('../models/MikrotikRouter.js');
-const Device = require('../models/Device.js');
 const DiagnosticLog = require('../models/DiagnosticLog.js');
-const { decrypt } = require('../utils/crypto.js');
-const RouterOSAPI = require('node-routeros').RouterOSAPI;
-const { checkRouterStatus, checkUserStatus, checkCPEStatus } = require('../utils/mikrotikUtils');
-
-
-// A helper function to add a step to the diagnostic log
-const addStep = (steps, stepName, status, summary, details = {}) => {
-  steps.push({ stepName, status, summary, details });
-};
-
+const { checkRouterStatus, checkUserStatus, checkCPEStatus, getMikrotikApiClient } = require('../utils/mikrotikUtils');
+const Device = require('../models/Device.js');
 
 // @desc    Run a new diagnostic check for a user
 // @route   POST /api/v1/users/:userId/diagnostics
 // @access  Private
 const runDiagnostic = asyncHandler(async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+  const { stream = true } = req.body;
 
-    const { userId } = req.params;
+  if (stream) {
+    // --- STREAMING LOGIC ---
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendEvent = (event, data) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
     const steps = [];
-    let finalConclusion = '';
+    const addStep = (stepName, status, summary, details = {}) => {
+      const step = { stepName, status, summary, details };
+      steps.push(step);
+      sendEvent('step', step);
+    };
 
-    // 1. Fetch the Mikrotik user and ensure it belongs to the logged-in SaaS user
-    const mikrotikUser = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
-    if (!mikrotikUser) {
-        res.status(404);
-        throw new Error('Mikrotik User not found');
-    }
-    if (mikrotikUser.user.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('Not authorized to run diagnostics for this Mikrotik user');
-    }
+    const run = async () => {
+      sendEvent('start', { message: 'Diagnostic process initiated...' });
+      const { userId } = req.params;
+      const mikrotikUser = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
+      if (!mikrotikUser) throw new Error('Mikrotik User not found');
+      if (mikrotikUser.user.toString() !== req.user._id.toString()) throw new Error('Not authorized to run diagnostics for this Mikrotik user');
 
-    // STEP 1: Billing Check
-    const isExpired = mikrotikUser.expiryDate < new Date();
-    if (isExpired) {
-        addStep(steps, 'Billing Check', 'Failure', `Client account expired on ${mikrotikUser.expiryDate.toLocaleDateString()}.`);
-        finalConclusion = 'Client is offline due to an expired subscription.';
-        
-        const log = await DiagnosticLog.create({
-            user: req.user._id, // SaaS user
-            mikrotikUser: userId, // Mikrotik user
-            router: mikrotikUser.mikrotikRouter?._id,
-            cpeDevice: mikrotikUser.station?._id,
-            steps,
-            finalConclusion,
-        });
-        return res.status(200).json(log);
-    }
-    addStep(steps, 'Billing Check', 'Success', 'Client account is active.');
+      const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
+      addStep('Billing Check', isExpired ? 'Failure' : 'Success', isExpired ? `Client account expired on ${new Date(mikrotikUser.expiryDate).toLocaleDateString()}.` : 'Client account is active.');
 
-    // STEP 2: Mikrotik Router Check
-    const router = mikrotikUser.mikrotikRouter;
-    if (!router) {
-        addStep(steps, 'Mikrotik Router Check', 'Failure', 'No Mikrotik router is associated with this client.');
-        finalConclusion = 'Configuration error: Client is not linked to a router.';
-
-        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, steps, finalConclusion });
-        return res.status(200).json(log);
-    }
-
-    const isRouterOnline = await checkRouterStatus(router);
-    if (!isRouterOnline) {
-        addStep(steps, 'Mikrotik Router Check', 'Failure', `Router "${router.name}" (${router.ipAddress}) is offline.`);
-        finalConclusion = `The core router "${router.name}" is offline, affecting all connected clients.`;
-
-        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, steps, finalConclusion });
-        return res.status(200).json(log);
-    }
-    addStep(steps, 'Mikrotik Router Check', 'Success', `Router "${router.name}" (${router.ipAddress}) is online.`);
-
-    // STEP 3: Client Status Check
-    const isClientOnline = await checkUserStatus(mikrotikUser, router);
-    if (isClientOnline) {
-        addStep(steps, 'Client Status Check', 'Success', 'Client is online and reachable.');
-        finalConclusion = 'Client is online. No issues detected.';
-
-        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: mikrotikUser.station?._id, steps, finalConclusion });
-        return res.status(200).json(log);
-    }
-    addStep(steps, 'Client Status Check', 'Failure', 'Client is offline.');
-
-    // STEP 4: CPE (Station) Check
-    const cpe = mikrotikUser.station;
-    if (!cpe) {
-        addStep(steps, 'CPE Check', 'Warning', 'No CPE (station) is associated with this client.');
-        finalConclusion = 'Client is offline, but no CPE is linked to them to continue diagnosis.';
-        
-        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, steps, finalConclusion });
-        return res.status(200).json(log);
-    }
-
-    const isCPEOnline = await checkCPEStatus(cpe, router);
-    if (!isCPEOnline) {
-        addStep(steps, 'CPE Check', 'Failure', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is offline.`);
-        finalConclusion = `The client's CPE is offline. This is likely a CPE power issue or a problem with the link to the router.`;
-
-        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
-        return res.status(200).json(log);
-    }
-    addStep(steps, 'CPE Check', 'Success', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is online.`);
-
-    // STEP 5: Neighbor Analysis
-    const neighbors = await MikrotikUser.find({ station: cpe._id, _id: { $ne: userId } });
-    if (neighbors.length === 0) {
-        addStep(steps, 'Neighbor Analysis', 'Warning', 'No other clients are connected to this CPE.');
-        finalConclusion = 'Client is offline. The issue is isolated to this client as their CPE is online and has no other users.';
-
-        const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
-        return res.status(200).json(log);
-    }
-
-    const onlineNeighbors = [];
-    const offlineNeighbors = [];
-    for (const neighbor of neighbors) {
-        const isNeighborOnline = await checkUserStatus(neighbor, router);
-        if (isNeighborOnline) {
-            onlineNeighbors.push({ name: neighbor.officialName, phone: neighbor.mobileNumber });
-        } else {
-            offlineNeighbors.push({ name: neighbor.officialName, phone: neighbor.mobileNumber });
+      const router = mikrotikUser.mikrotikRouter;
+      if (!router) {
+        addStep('Mikrotik Router Check', 'Failure', 'No Mikrotik router is associated with this client.');
+      } else {
+        const isRouterOnline = await checkRouterStatus(router);
+        addStep('Mikrotik Router Check', isRouterOnline ? 'Success' : 'Failure', `Router "${router.name}" (${router.ipAddress}) is ${isRouterOnline ? 'online' : 'offline'}.`);
+        if (isRouterOnline) {
+          if (mikrotikUser.station) await runCpeDiagnosticPath(addStep, mikrotikUser);
+          if (mikrotikUser.apartment_house_number) await runApartmentDiagnosticPath(addStep, mikrotikUser);
         }
+      }
+      const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, steps });
+      sendEvent('done', log);
+    };
+
+    run().catch(error => {
+      console.error('Diagnostic Error:', error);
+      sendEvent('error', { message: error.message || 'An unknown error occurred.' });
+    }).finally(() => res.end());
+
+  } else {
+    // --- NON-STREAMING LOGIC ---
+    try {
+      const steps = [];
+      const addStep = (stepName, status, summary, details = {}) => steps.push({ stepName, status, summary, details });
+
+      const { userId } = req.params;
+      const mikrotikUser = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
+      if (!mikrotikUser) return res.status(404).json({ message: 'Mikrotik User not found' });
+      if (mikrotikUser.user.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not authorized to run diagnostics for this Mikrotik user' });
+
+      const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
+      addStep('Billing Check', isExpired ? 'Failure' : 'Success', isExpired ? `Client account expired on ${new Date(mikrotikUser.expiryDate).toLocaleDateString()}.` : 'Client account is active.');
+
+      const router = mikrotikUser.mikrotikRouter;
+      if (!router) {
+        addStep('Mikrotik Router Check', 'Failure', 'No Mikrotik router is associated with this client.');
+      } else {
+        const isRouterOnline = await checkRouterStatus(router);
+        addStep('Mikrotik Router Check', isRouterOnline ? 'Success' : 'Failure', `Router "${router.name}" (${router.ipAddress}) is ${isRouterOnline ? 'online' : 'offline'}.`);
+        if (isRouterOnline) {
+          if (mikrotikUser.station) await runCpeDiagnosticPath(addStep, mikrotikUser);
+          if (mikrotikUser.apartment_house_number) await runApartmentDiagnosticPath(addStep, mikrotikUser);
+        }
+      }
+
+      const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, steps });
+      res.status(200).json(log);
+    } catch (error) {
+      console.error('Diagnostic Error:', error);
+      res.status(500).json({ message: error.message || 'An unknown error occurred.' });
     }
-
-    const summary = `${onlineNeighbors.length} neighbor(s) online, ${offlineNeighbors.length} neighbor(s) offline.`;
-    addStep(steps, 'Neighbor Analysis', 'Success', summary, { onlineNeighbors, offlineNeighbors });
-
-    if (offlineNeighbors.length > 0) {
-        finalConclusion = "Multiple clients on the same CPE are offline. This suggests a problem with the CPE or the switch/cabling at the client's building.";
-    } else {
-        finalConclusion = "Client is offline, but their CPE and all neighbors are online. The issue is isolated to this client's indoor wiring, router, or device.";
-    }
-
-    const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, router: router._id, cpeDevice: cpe._id, steps, finalConclusion });
-    res.status(200).json(log);
+  }
 });
+
+// --- Diagnostic Paths Helpers ---
+
+const runCpeDiagnosticPath = async (addStep, mikrotikUser) => {
+  const cpe = mikrotikUser.station;
+  const router = mikrotikUser.mikrotikRouter;
+
+  // 1. CPE (Station) Check
+  if (!cpe) {
+    addStep('CPE Check', 'Warning', 'No CPE (station) is associated with this client.');
+    return; // Cannot proceed with this path
+  }
+  const isCPEOnline = await checkCPEStatus(cpe, router);
+  if (!isCPEOnline) {
+    addStep('CPE Check', 'Failure', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is offline.`);
+    return; // Stop this path if CPE is offline
+  }
+  addStep('CPE Check', 'Success', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is online.`);
+
+  // 2. AP (Access Point) Check
+  const ap = await Device.findOne({ deviceType: 'Access', ssid: cpe.ssid, router: router._id });
+  if (!ap) {
+    addStep('AP Check', 'Warning', `No Access Point found with the same SSID (${cpe.ssid}) as the CPE.`);
+  } else {
+    const isAPOnline = await checkCPEStatus(ap, router);
+    const apStatus = isAPOnline ? 'Success' : 'Failure';
+    const apSummary = isAPOnline ? `Access Point "${ap.deviceName}" (${ap.ipAddress}) is online.` : `Access Point "${ap.deviceName}" (${ap.ipAddress}) is offline.`;
+    addStep('AP Check', apStatus, apSummary);
+  }
+
+  // 3. Station-Based Neighbor Analysis
+  const stationNeighbors = await MikrotikUser.find({ station: cpe._id });
+  await performNeighborAnalysis(addStep, stationNeighbors, router, 'Station-Based', mikrotikUser._id);
+};
+
+const runApartmentDiagnosticPath = async (addStep, mikrotikUser) => {
+  const apartmentNeighbors = await MikrotikUser.find({ 
+    apartment_house_number: mikrotikUser.apartment_house_number,
+    user: mikrotikUser.user 
+  });
+  await performNeighborAnalysis(addStep, apartmentNeighbors, mikrotikUser.mikrotikRouter, 'Apartment-Based', mikrotikUser._id);
+};
+
+const performNeighborAnalysis = async (addStep, neighbors, router, analysisType, targetUserId) => {
+  if (neighbors.length <= 1) { // <= 1 because the target user is in the list
+    addStep(`Neighbor Analysis (${analysisType})`, 'Success', 'No other clients found for this analysis.');
+    return;
+  }
+
+  const neighborResults = [];
+  for (const neighbor of neighbors) {
+    if (neighbor._id.toString() === targetUserId.toString()) continue;
+
+    const isOnline = await checkUserStatus(neighbor, router);
+    const isExpired = neighbor.expiryDate < new Date();
+    const accountStatus = isExpired ? 'Expired' : 'Active';
+    let reason = 'N/A';
+
+    if (!isOnline) {
+      reason = isExpired ? `Account expired on ${neighbor.expiryDate.toLocaleDateString()}` : 'Network/Hardware Issue';
+    }
+
+    neighborResults.push({
+      name: neighbor.officialName,
+      isOnline,
+      accountStatus,
+      reason,
+    });
+  }
+
+  const summary = `Analyzed ${neighborResults.length} other user(s) in the same ${analysisType === 'Station-Based' ? 'station' : 'building'}.`;
+  addStep(`Neighbor Analysis (${analysisType})`, 'Success', summary, { neighbors: neighborResults });
+};
+
 
 // @desc    Get diagnostic history for a user
 // @route   GET /api/v1/users/:userId/diagnostics

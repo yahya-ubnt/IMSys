@@ -5,19 +5,32 @@ const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const { decrypt } = require('../utils/crypto.js');
 
 
+const getMikrotikApiClient = async (router) => {
+  const client = new RouterOSAPI({
+    host: router.ipAddress,
+    user: router.apiUsername,
+    password: decrypt(router.apiPassword),
+    port: router.apiPort,
+    timeout: 3000,
+  });
+
+  try {
+    await client.connect();
+    return client;
+  } catch (error) {
+    console.error(`Failed to connect to Mikrotik router: ${router.name}`, error);
+    return null;
+  }
+};
+
 const checkRouterStatus = async (router) => {
   let isOnline = false;
   let client = null;
   try {
-    client = new RouterOSAPI({
-      host: router.ipAddress,
-      user: router.apiUsername,
-      password: decrypt(router.apiPassword),
-      port: router.apiPort,
-      timeout: 2000,
-    });
-    await client.connect();
-    isOnline = true;
+    client = await getMikrotikApiClient(router);
+    if (client) {
+      isOnline = true;
+    }
   } catch (error) {
     isOnline = false;
   } finally {
@@ -30,16 +43,11 @@ const checkRouterStatus = async (router) => {
 
 const checkUserStatus = async (user, router) => {
     let isOnline = false;
-    const client = new RouterOSAPI({
-        host: router.ipAddress,
-        user: router.apiUsername,
-        password: decrypt(router.apiPassword),
-        port: router.apiPort,
-        timeout: 2000,
-    });
+    const client = await getMikrotikApiClient(router);
+
+    if (!client) return false;
 
     try {
-        await client.connect();
         if (user.serviceType === 'pppoe') {
             const pppActive = await client.write('/ppp/active/print');
             isOnline = pppActive.some(session => session.name === user.username);
@@ -59,15 +67,11 @@ const checkUserStatus = async (user, router) => {
 
 const checkCPEStatus = async (device, router) => {
     let isOnline = false;
-    const client = new RouterOSAPI({
-        host: router.ipAddress,
-        user: router.apiUsername,
-        password: decrypt(router.apiPassword),
-        port: router.apiPort,
-        timeout: 2000,
-    });
+    const client = await getMikrotikApiClient(router);
+
+    if (!client) return false;
+
     try {
-        await client.connect();
         const response = await client.write('/ping', [`=address=${device.ipAddress}`, '=count=1']);
         if (response && response.length > 0 && response[0].received > 0) {
             isOnline = true;
@@ -98,14 +102,8 @@ const reconnectMikrotikUser = async (userId) => {
 
   let client;
   try {
-    client = new RouterOSAPI({
-      host: router.ipAddress,
-      user: router.apiUsername,
-      password: router.apiPassword,
-      port: router.apiPort,
-    });
-
-    await client.connect();
+    client = await getMikrotikApiClient(router);
+    if (!client) return false;
 
     if (user.serviceType === 'pppoe') {
       const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
@@ -131,10 +129,10 @@ const reconnectMikrotikUser = async (userId) => {
     console.error(`Mikrotik API reconnection error for user ${user.username}: ${error.message}`);
     return false;
   } finally {
-    if (client) {
+    if (client && client.connected) {
       client.close();
     }
   }
 };
 
-module.exports = { reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus };
+module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus };

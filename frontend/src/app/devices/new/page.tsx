@@ -95,7 +95,7 @@ export default function NewDevicePage() {
         if (!deviceType) { toast({ title: "Device Type is required", variant: "destructive" }); return; }
         setLoading(true);
         const deviceData: Partial<Device> = {
-            router: { _id: routerId, name: '' }, deviceType, deviceName, deviceModel, location, ipAddress,
+            router: routerId, deviceType, deviceName, deviceModel, location, ipAddress,
             macAddress, loginUsername, ssid,
         };
         if (loginPassword) deviceData.loginPassword = loginPassword;
