@@ -74,7 +74,6 @@ const mikrotikUserRoutes = require('./routes/mikrotikUserRoutes');
 const mikrotikDashboardRoutes = require('./routes/mikrotikDashboardRoutes');
 const deviceRoutes = require('./routes/deviceRoutes'); // CPE & AP Devices
 const dashboardRoutes = require('./routes/dashboardRoutes');
-const bulkDiagnosticRoutes = require('./routes/bulkDiagnosticRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
 
@@ -86,7 +85,6 @@ app.use('/api/mikrotik/packages', packageRoutes);
 app.use('/api/mikrotik/users', mikrotikUserRoutes);
 app.use('/api/routers/:routerId/dashboard', mikrotikDashboardRoutes);
 app.use('/api/devices', deviceRoutes); // CPE & AP Devices
-app.use('/api/bulk-diagnostics', bulkDiagnosticRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/users', userRoutes);
