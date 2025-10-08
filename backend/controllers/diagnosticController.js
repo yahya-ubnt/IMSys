@@ -115,9 +115,9 @@ const runCpeDiagnosticPath = async (addStep, mikrotikUser) => {
   const isCPEOnline = await checkCPEStatus(cpe, router);
   if (!isCPEOnline) {
     addStep('CPE Check', 'Failure', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is offline.`);
-    return; // Stop this path if CPE is offline
+  } else {
+    addStep('CPE Check', 'Success', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is online.`);
   }
-  addStep('CPE Check', 'Success', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is online.`);
 
   // 2. AP (Access Point) Check
   const ap = await Device.findOne({ deviceType: 'Access', ssid: cpe.ssid, router: router._id });
