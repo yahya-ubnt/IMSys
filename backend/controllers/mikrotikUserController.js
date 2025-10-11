@@ -812,7 +812,14 @@ const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:userId/downtime-logs
 // @access  Private/Admin
 const getDowntimeLogs = asyncHandler(async (req, res) => {
-  const logs = await UserDowntimeLog.find({ user: req.params.userId }).sort({ downStartTime: -1 });
+  // First, ensure the MikrotikUser exists and belongs to the requesting user.
+  const mikrotikUser = await MikrotikUser.findById(req.params.userId);
+  if (!mikrotikUser || mikrotikUser.user.toString() !== req.user._id.toString()) {
+    res.status(404);
+    throw new Error('Mikrotik user not found or not authorized');
+  }
+
+  const logs = await UserDowntimeLog.find({ mikrotikUser: req.params.userId }).sort({ downStartTime: -1 });
   res.status(200).json(logs);
 });
 
