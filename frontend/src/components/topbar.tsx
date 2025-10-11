@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
+import NotificationBell from "./notifications/NotificationBell"
 
 export function Topbar() {
   const { user, logout } = useAuth()
@@ -64,10 +65,7 @@ export function Topbar() {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="h-9 w-9" style={{ color: 'var(--muted-foreground)' }}>
-            <Bell className="h-4 w-4" />
-            <span className="sr-only">Notifications</span>
-          </Button>
+          <NotificationBell />
 
           {/* User Menu */}
           <DropdownMenu>

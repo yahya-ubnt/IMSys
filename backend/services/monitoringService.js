@@ -22,7 +22,7 @@ const handleSuccessfulPing = async (device) => {
       openLog.downEndTime = new Date();
       openLog.durationSeconds = Math.round((openLog.downEndTime - openLog.downStartTime) / 1000);
       await openLog.save();
-      sendAlert(device, 'UP');
+      sendAlert(device, 'UP', device.user);
     }
   }
 
@@ -39,14 +39,14 @@ const handleFailedPing = async (device) => {
       device: device._id,
       downStartTime: new Date(),
     });
-    sendAlert(device, 'DOWN');
+    sendAlert(device, 'DOWN', device.user);
   }
 
   await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
 };
 
 const checkAllDevices = async () => {
-  const devices = await Device.find({}).populate('router');
+  const devices = await Device.find({}).populate('router').populate('user');
   if (devices.length === 0) {
     return;
   }

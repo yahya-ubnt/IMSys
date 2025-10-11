@@ -43,6 +43,7 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const expenseTypeRoutes = require('./routes/expenseTypeRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const ticketRoutes = require('./routes/ticketRoutes'); // Import ticket routes
+const notificationRoutes = require('./routes/notificationRoutes');
 // const issueTypeRoutes = require('./routes/issueTypeRoutes'); // Import issue type routes
 
 
@@ -89,6 +90,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 // app.use('/api/providers', require('./routes/providerRoutes')); // Add provider routes
