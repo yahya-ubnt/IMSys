@@ -5,6 +5,45 @@ const { decrypt } = require('../utils/crypto');
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay
 
+async function checkRouter(router) {
+    let isOnline = false;
+    let attempts = 0;
+
+    while (attempts < RETRY_ATTEMPTS) {
+        attempts++;
+        let client = null;
+        try {
+            client = new RouterOSAPI({
+                host: router.ipAddress,
+                user: router.apiUsername,
+                password: decrypt(router.apiPassword),
+                port: router.apiPort,
+                timeout: 2000, // 2 second timeout for each attempt
+            });
+
+            await client.connect();
+            isOnline = true;
+            console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is ONLINE (Attempt ${attempts}/${RETRY_ATTEMPTS}).`);
+            break; // Exit retry loop on success
+        } catch (error) {
+            console.warn(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) connection failed (Attempt ${attempts}/${RETRY_ATTEMPTS}): ${error.message}`);
+            if (attempts < RETRY_ATTEMPTS) {
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+            }
+        } finally {
+            if (client) {
+                client.close();
+            }
+        }
+    }
+
+    await MikrotikRouter.findByIdAndUpdate(router._id, {
+        isOnline: isOnline,
+        lastChecked: new Date(),
+    });
+    console.log(`[${new Date().toISOString()}] Updated status for router ${router.name} to ${isOnline ? 'ONLINE' : 'OFFLINE'}.`);
+}
+
 async function performRouterStatusCheck() {
     console.log(`[${new Date().toISOString()}] Performing router status check...`);
 
@@ -16,45 +55,7 @@ async function performRouterStatusCheck() {
             return;
         }
 
-        for (const router of routers) {
-            let isOnline = false;
-            let attempts = 0;
-            let client = null;
-
-            while (attempts < RETRY_ATTEMPTS) {
-                attempts++;
-                try {
-                    client = new RouterOSAPI({
-                        host: router.ipAddress,
-                        user: router.apiUsername,
-                        password: decrypt(router.apiPassword),
-                        port: router.apiPort,
-                        timeout: 2000, // 2 second timeout for each attempt
-                    });
-
-                    await client.connect();
-                    isOnline = true;
-                    console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is ONLINE (Attempt ${attempts}/${RETRY_ATTEMPTS}).`);
-                    break; // Exit retry loop on success
-                } catch (error) {
-                    console.warn(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) connection failed (Attempt ${attempts}/${RETRY_ATTEMPTS}): ${error.message}`);
-                    console.error(`[${new Date().toISOString()}] Detailed error for ${router.name}:`, error);
-                    if (attempts < RETRY_ATTEMPTS) {
-                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-                    }
-                } finally {
-                    if (client) {
-                        client.close();
-                    }
-                }
-            }
-
-            await MikrotikRouter.findByIdAndUpdate(router._id, {
-                isOnline: isOnline,
-                lastChecked: new Date(),
-            });
-            console.log(`[${new Date().toISOString()}] Updated status for router ${router.name} to ${isOnline ? 'ONLINE' : 'OFFLINE'}.`);
-        }
+        await Promise.all(routers.map(checkRouter));
 
     } catch (error) {
         console.error(`[${new Date().toISOString()}] Error during router status check:`, error);
