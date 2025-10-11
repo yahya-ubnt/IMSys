@@ -1,3 +1,5 @@
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const MikrotikRouter = require('../models/MikrotikRouter');
 const { decrypt } = require('../utils/crypto');
@@ -5,9 +7,22 @@ const { decrypt } = require('../utils/crypto');
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay
 
+async function pingHost(ipAddress) {
+    try {
+        const { stdout, stderr } = await exec(`ping -c 1 ${ipAddress}`);
+        return !stderr && stdout && stdout.includes('1 packets transmitted, 1 received');
+    } catch (error) {
+        return false;
+    }
+}
+
 async function checkRouter(router) {
     let isOnline = false;
+    let location = router.location || '';
     let attempts = 0;
+
+    // Clean up previous status from location
+    location = location.replace(/\s*\((API Unreachable|Offline)\)$/, '');
 
     while (attempts < RETRY_ATTEMPTS) {
         attempts++;
@@ -18,17 +33,28 @@ async function checkRouter(router) {
                 user: router.apiUsername,
                 password: decrypt(router.apiPassword),
                 port: router.apiPort,
-                timeout: 2000, // 2 second timeout for each attempt
+                timeout: 2000,
             });
 
             await client.connect();
             isOnline = true;
-            console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is ONLINE (Attempt ${attempts}/${RETRY_ATTEMPTS}).`);
-            break; // Exit retry loop on success
+            console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is ONLINE.`);
+            break;
         } catch (error) {
-            console.warn(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) connection failed (Attempt ${attempts}/${RETRY_ATTEMPTS}): ${error.message}`);
+            console.warn(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) connection failed on attempt ${attempts}/${RETRY_ATTEMPTS}: ${error.message}`);
             if (attempts < RETRY_ATTEMPTS) {
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+            } else {
+                const isPingable = await pingHost(router.ipAddress);
+                if (isPingable) {
+                    isOnline = true; // Still considered "online" as it's pingable
+                    location += ' (API Unreachable)';
+                    console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is UNREACHABLE (ping OK, API failed).`);
+                } else {
+                    isOnline = false;
+                    location += ' (Offline)';
+                    console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is OFFLINE (ping failed).`);
+                }
             }
         } finally {
             if (client) {
@@ -39,9 +65,10 @@ async function checkRouter(router) {
 
     await MikrotikRouter.findByIdAndUpdate(router._id, {
         isOnline: isOnline,
+        location: location,
         lastChecked: new Date(),
     });
-    console.log(`[${new Date().toISOString()}] Updated status for router ${router.name} to ${isOnline ? 'ONLINE' : 'OFFLINE'}.`);
+    console.log(`[${new Date().toISOString()}] Updated status for router ${router.name}.`);
 }
 
 async function performRouterStatusCheck() {
@@ -70,9 +97,7 @@ function startRouterMonitoring(intervalMs) {
         clearInterval(monitoringInterval);
     }
     console.log(`[${new Date().toISOString()}] Starting router monitoring every ${intervalMs / 1000} seconds.`);
-    // Perform an initial check immediately
     performRouterStatusCheck();
-    // Then set up the interval
     monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
 }
 
@@ -87,5 +112,5 @@ function stopRouterMonitoring() {
 module.exports = {
     startRouterMonitoring,
     stopRouterMonitoring,
-    performRouterStatusCheck // Export for immediate manual trigger if needed
+    performRouterStatusCheck
 };
