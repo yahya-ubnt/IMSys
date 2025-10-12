@@ -80,6 +80,18 @@ const ApplicationSettingsSchema = mongoose.Schema(
       consumerSecret: { type: String, trim: true },
       passkey: { type: String, trim: true },
       activated: { type: Boolean, default: false }
+    },
+    adminNotificationEmails: {
+      type: [String],
+      default: []
+    },
+    smtpSettings: {
+      host: { type: String, default: "" },
+      port: { type: Number, default: 587 },
+      secure: { type: Boolean, default: false },
+      user: { type: String, default: "" },
+      pass: { type: String, default: "" }, // Encrypted
+      from: { type: String, default: "" }
     }
   },
   {

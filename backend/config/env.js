@@ -2,7 +2,7 @@
 // This file is for environment variables. In a real application, you would use a .env file and a library like `dotenv`.
 
 const path = require('path');
-require('dotenv').config({ path: './.env' });
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 module.exports = {
   MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/referral_system',

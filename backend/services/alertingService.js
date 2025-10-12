@@ -1,4 +1,6 @@
 const Notification = require('../models/Notification');
+const ApplicationSettings = require('../models/ApplicationSettings'); // Import ApplicationSettings
+const { sendEmail } = require('./emailService'); // Import sendEmail
 const io = require('../socket').getIO(); // Import the initialized socket.io instance
 
 const sendConsolidatedAlert = async (entities, status, user = null, entityType = 'Device') => {
@@ -52,6 +54,23 @@ const sendConsolidatedAlert = async (entities, status, user = null, entityType =
       user: user ? user._id : null,
     });
     await notification.save();
+
+    // --- Begin Email Logic ---
+    if (!user) { // This is a system-wide notification, send to admins
+      try {
+        const settings = await ApplicationSettings.findOne();
+        if (settings && settings.adminNotificationEmails && settings.adminNotificationEmails.length > 0) {
+          const subject = `System Alert: ${message}`;
+          const text = message;
+          settings.adminNotificationEmails.forEach(email => {
+            sendEmail({ to: email, subject, text }).catch(console.error);
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending admin notification email:', emailError);
+      }
+    }
+    // --- End Email Logic ---
 
     // Emit a websocket event to the specific user's room
     if (user) {

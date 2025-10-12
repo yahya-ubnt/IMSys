@@ -2,13 +2,14 @@ const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const { registerCallbackURL } = require('../services/mpesaService');
+const { encrypt } = require('../utils/crypto'); // Import encrypt
 
 
 // @desc    Get application general settings
 // @route   GET /api/settings/general
 // @access  Private
 const getGeneralSettings = asyncHandler(async (req, res) => {
-  let settings = await ApplicationSettings.findOne({ user: req.user._id });
+  let settings = await ApplicationSettings.findOne({ user: req.user._id }).select('-smtpSettings.pass'); // Exclude encrypted pass
 
   if (!settings) {
     // If no settings exist for this user, create default ones
@@ -42,6 +43,20 @@ const updateGeneralSettings = asyncHandler(async (req, res) => {
       settings[field] = req.body[field];
     }
   });
+
+  // Handle admin notification emails
+  if (req.body.adminNotificationEmails && Array.isArray(req.body.adminNotificationEmails)) {
+    settings.adminNotificationEmails = req.body.adminNotificationEmails;
+  }
+
+  // Handle SMTP settings
+  if (req.body.smtpSettings) {
+    const { pass, ...otherSmtpSettings } = req.body.smtpSettings;
+    settings.smtpSettings = { ...settings.smtpSettings, ...otherSmtpSettings };
+    if (pass) { // Only update password if a new one is provided
+      settings.smtpSettings.pass = encrypt(pass);
+    }
+  }
 
   // Handle nested objects separately
   if (req.body.companyInfo) {

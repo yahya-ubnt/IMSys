@@ -1,18 +1,40 @@
-const CryptoJS = require('crypto-js');
-const { CRYPTO_SECRET } = require('../config/env'); // Import CRYPTO_SECRET from env config
+const crypto = require('crypto');
 
-if (!CRYPTO_SECRET) {
-  throw new Error('CRYPTO_SECRET is not defined in the environment variables.');
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // Must be 256 bits (32 characters)
+const IV_LENGTH = 16; // For AES, this is always 16
+
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
+  throw new Error('ENCRYPTION_KEY must be a 64-character hex string (32 bytes).');
 }
 
-// Encrypt function
-const encrypt = (text) => {
-  return CryptoJS.AES.encrypt(text.toString(), CRYPTO_SECRET).toString();
-};
+const key = Buffer.from(ENCRYPTION_KEY, 'hex');
 
-const decrypt = (ciphertext) => {
-  const bytes = CryptoJS.AES.decrypt(ciphertext.toString(), CRYPTO_SECRET);
-  return bytes.toString(CryptoJS.enc.Utf8);
-};
+function encrypt(text) {
+  if (text === null || typeof text === 'undefined') {
+    return text;
+  }
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  let encrypted = cipher.update(text);
+
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+function decrypt(text) {
+  if (text === null || typeof text === 'undefined') {
+    return text;
+  }
+  const textParts = text.split(':');
+  const iv = Buffer.from(textParts.shift(), 'hex');
+  const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  let decrypted = decipher.update(encryptedText);
+
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+
+  return decrypted.toString();
+}
 
 module.exports = { encrypt, decrypt };

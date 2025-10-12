@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState } from "react"
 import { Topbar } from "@/components/topbar"
@@ -6,11 +6,12 @@ import {
   StyledTabs,
   StyledTabsContent,
 } from "@/components/ui/StyledTabs"
-import { Settings, CreditCard, MessageSquare, MessageCircle } from "lucide-react"
+import { Settings, CreditCard, MessageSquare, MessageCircle, Bell } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
 import SmsSettingsPage from "./sms/page"
 import WhatsAppSettingsPage from "./whatsapp/page"
 import GeneralSettingsForm from "./general/page"
+import EmailSettingsPage from "./email/page" // Import the new page
 
 export default function MainSettingsPage() {
   const [activeTab, setActiveTab] = useState("general")
@@ -20,6 +21,7 @@ export default function MainSettingsPage() {
     { id: "mpesa", label: "M-Pesa", icon: CreditCard },
     { id: "sms", label: "SMS", icon: MessageSquare },
     { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+    { id: "email", label: "Email", icon: Bell }, // Add new tab
   ]
 
   return (
@@ -62,6 +64,14 @@ export default function MainSettingsPage() {
             <div className="flex justify-center">
               <div className="w-full max-w-3xl">
                 <WhatsAppSettingsPage />
+              </div>
+            </div>
+          </StyledTabsContent>
+          {/* Add content for the new tab */}
+          <StyledTabsContent value="email" className="mt-4">
+            <div className="flex justify-center">
+              <div className="w-full max-w-3xl">
+                <EmailSettingsPage />
               </div>
             </div>
           </StyledTabsContent>
