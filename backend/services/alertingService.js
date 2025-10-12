@@ -1,14 +1,34 @@
 const Notification = require('../models/Notification');
 const io = require('../socket').getIO(); // Import the initialized socket.io instance
 
-const sendAlert = async (entity, status, user = null, entityType = 'Device') => {
-  let entityIdentifier = '';
-  if (entityType === 'Device') {
-    entityIdentifier = entity.deviceName || entity.macAddress;
-  } else if (entityType === 'User') {
-    entityIdentifier = entity.username;
+const sendConsolidatedAlert = async (entities, status, user = null, entityType = 'Device') => {
+  let message;
+  if (!Array.isArray(entities) || entities.length === 0) {
+    console.warn('sendConsolidatedAlert called with empty or invalid entities array.');
+    return;
   }
-  const message = `ALERT: ${entityType} ${entityIdentifier} (${entity.ipAddress || 'N/A'}) is now ${status}.`;
+
+  if (entities.length === 1) {
+    const entity = entities[0];
+    let entityIdentifier = '';
+    if (entityType === 'Device') {
+      entityIdentifier = entity.deviceName || entity.macAddress;
+    } else if (entityType === 'User') {
+      entityIdentifier = entity.username;
+    }
+    message = `ALERT: ${entityType} ${entityIdentifier} (${entity.ipAddress || 'N/A'}) is now ${status}.`;
+  } else {
+    const identifiers = entities.map(entity => {
+      if (entityType === 'Device') {
+        return entity.deviceName || entity.macAddress;
+      } else if (entityType === 'User') {
+        return entity.username;
+      }
+      return 'Unknown';
+    }).join(', ');
+    message = `ALERT: Multiple ${entityType}s (${identifiers}) are now ${status}.`;
+  }
+
   console.log(message); // Keep console log for debugging
 
   try {
@@ -28,4 +48,4 @@ const sendAlert = async (entity, status, user = null, entityType = 'Device') => 
   }
 };
 
-module.exports = { sendAlert };
+module.exports = { sendConsolidatedAlert };

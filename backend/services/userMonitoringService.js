@@ -3,7 +3,7 @@ const MikrotikUser = require('../models/MikrotikUser');
 const UserDowntimeLog = require('../models/UserDowntimeLog');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const { decrypt } = require('../utils/crypto');
-const { sendAlert } = require('../services/alertingService'); // Import sendAlert
+const { sendConsolidatedAlert } = require('../services/alertingService'); // Import sendConsolidatedAlert
 const User = require('../models/User'); // Import User model
 
 const RETRY_ATTEMPTS = 3;
@@ -81,6 +81,9 @@ async function performUserStatusCheck() {
                 const onlinePppoeUsers = new Set(pppActiveSessions.map(s => s.name));
                 
                 const potentiallyOfflineUsers = [];
+                const usersOnline = [];
+                const usersOffline = [];
+                const usersOfflineRouterUnreachable = [];
 
                 // 4. Initial online status check
                 for (const user of users) {
@@ -110,20 +113,21 @@ async function performUserStatusCheck() {
                                                     await openDowntime.save();
                                                     console.log(`[${new Date().toISOString()}] User ${user.username} came back online. Updated downtime log.`);
                                                 }
-                                                // --- ADD ALERT HERE ---
-                                                const adminUser = await User.findOne({ isAdmin: true }); // Assuming User model is available
-                                                if (adminUser) {
-                                                    await sendAlert({
-                                                        username: user.username, // Using username for alert
-                                                        ipAddress: user.ipAddress || 'N/A'
-                                                    }, 'ONLINE', adminUser, 'User');
-                                                }
+                                                usersOnline.push(user);
                         }
                     } else {
                         if (user.isOnline) {
                             // User might be offline, add to potentially offline list for retry
                             potentiallyOfflineUsers.push(user);
                         }
+                    }
+                }
+
+                // Send consolidated alert for users who came online
+                if (usersOnline.length > 0) {
+                    const adminUser = await User.findOne({ isAdmin: true });
+                    if (adminUser) {
+                        await sendConsolidatedAlert(usersOnline, 'ONLINE', adminUser, 'User');
                     }
                 }
 
@@ -163,14 +167,15 @@ async function performUserStatusCheck() {
                             downStartTime: new Date(),
                         });
                         await newDowntime.save();
-                        // --- ADD ALERT HERE ---
-                        const adminUser = await User.findOne({ isAdmin: true });
-                        if (adminUser) {
-                            await sendAlert({
-                                username: user.username,
-                                ipAddress: user.ipAddress || 'N/A'
-                            }, 'OFFLINE', adminUser, 'User');
-                        }
+                        usersOffline.push(user);
+                    }
+                }
+
+                // Send consolidated alert for users who went offline
+                if (usersOffline.length > 0) {
+                    const adminUser = await User.findOne({ isAdmin: true });
+                    if (adminUser) {
+                        await sendConsolidatedAlert(usersOffline, 'OFFLINE', adminUser, 'User');
                     }
                 }
 
@@ -189,14 +194,14 @@ async function performUserStatusCheck() {
                             downStartTime: new Date(),
                         });
                         await newDowntime.save();
-                        // --- ADD ALERT HERE ---
-                        const adminUser = await User.findOne({ isAdmin: true });
-                        if (adminUser) {
-                            await sendAlert({
-                                username: user.username,
-                                ipAddress: user.ipAddress || 'N/A'
-                            }, 'OFFLINE (Router Unreachable)', adminUser, 'User');
-                        }
+                        usersOfflineRouterUnreachable.push(user);
+                    }
+                }
+                // Send consolidated alert for users who went offline due to router unreachability
+                if (usersOfflineRouterUnreachable.length > 0) {
+                    const adminUser = await User.findOne({ isAdmin: true });
+                    if (adminUser) {
+                        await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', adminUser, 'User');
                     }
                 }
             } finally {

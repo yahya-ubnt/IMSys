@@ -3,13 +3,14 @@ const Device = require('../models/Device');
 const DowntimeLog = require('../models/DowntimeLog');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const { decrypt } = require('../utils/crypto');
-const { sendAlert } = require('./alertingService');
+const { sendConsolidatedAlert } = require('./alertingService');
+const User = require('../models/User'); // Import User model
 
 const PING_INTERVAL = 5000; // 5 seconds
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000; // 1 second
 
-const handleSuccessfulPing = async (device) => {
+const handleSuccessfulPing = async (device, devicesUp) => {
   if (device.status === 'DOWN') {
     console.log(`Device ${device.ipAddress} is back UP.`);
     const openLog = await DowntimeLog.findOne({
@@ -22,14 +23,14 @@ const handleSuccessfulPing = async (device) => {
       openLog.downEndTime = new Date();
       openLog.durationSeconds = Math.round((openLog.downEndTime - openLog.downStartTime) / 1000);
       await openLog.save();
-      sendAlert(device, 'UP', device.user);
+      devicesUp.push(device);
     }
   }
 
   await Device.updateOne({ _id: device._id }, { $set: { status: 'UP', lastSeen: new Date() } });
 };
 
-const handleFailedPing = async (device) => {
+const handleFailedPing = async (device, devicesDown) => {
   const openLog = await DowntimeLog.findOne({ user: device.user, device: device._id, downEndTime: null });
 
   if (!openLog) {
@@ -39,7 +40,7 @@ const handleFailedPing = async (device) => {
       device: device._id,
       downStartTime: new Date(),
     });
-    sendAlert(device, 'DOWN', device.user);
+    devicesDown.push(device);
   }
 
   await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
@@ -83,12 +84,14 @@ const checkAllDevices = async () => {
       await client.connect();
 
       const potentiallyOfflineDevices = [];
+      const devicesUp = []; // Array to collect devices that come online
+      const devicesDown = []; // Array to collect devices that go offline
 
       const pingPromises = routerDevices.map(async (device) => {
         try {
           const response = await client.write('/ping', [`=address=${device.ipAddress}`, '=count=1']);
           if (response && response.some(r => r.received && parseInt(r.received, 10) > 0)) {
-            await handleSuccessfulPing(device);
+            await handleSuccessfulPing(device, devicesUp);
           } else {
             if (device.status === 'UP') {
               potentiallyOfflineDevices.push(device);
@@ -103,6 +106,14 @@ const checkAllDevices = async () => {
       });
 
       await Promise.all(pingPromises);
+
+      // Send consolidated alert for devices that came online
+      if (devicesUp.length > 0) {
+        const adminUser = await User.findOne({ isAdmin: true });
+        if (adminUser) {
+          await sendConsolidatedAlert(devicesUp, 'UP', adminUser, 'Device');
+        }
+      }
 
       for (const device of potentiallyOfflineDevices) {
         let isStillDown = true;
@@ -120,14 +131,37 @@ const checkAllDevices = async () => {
         }
 
         if (isStillDown) {
-          await handleFailedPing(device);
+          await handleFailedPing(device, devicesDown);
+        }
+      }
+
+      // Send consolidated alert for devices that went offline
+      if (devicesDown.length > 0) {
+        const adminUser = await User.findOne({ isAdmin: true });
+        if (adminUser) {
+          await sendConsolidatedAlert(devicesDown, 'DOWN', adminUser, 'Device');
         }
       }
 
     } catch (error) {
       console.error(`Failed to connect to router ${router.name}:`, error.message);
+      const devicesDownRouterUnreachable = [];
       for (const device of routerDevices) {
-        await handleFailedPing(device);
+        if (device.status === 'UP') {
+          await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
+          await DowntimeLog.create({
+            user: device.user,
+            device: device._id,
+            downStartTime: new Date(),
+          });
+          devicesDownRouterUnreachable.push(device);
+        }
+      }
+      if (devicesDownRouterUnreachable.length > 0) {
+        const adminUser = await User.findOne({ isAdmin: true });
+        if (adminUser) {
+          await sendConsolidatedAlert(devicesDownRouterUnreachable, 'DOWN (Router Unreachable)', adminUser, 'Device');
+        }
       }
     } finally {
       if (client && client.connected) {
