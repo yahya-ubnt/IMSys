@@ -1,5 +1,5 @@
 import { Notification } from '@/types/notification';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns'; // Changed from formatDistanceToNow
 import { Wifi, WifiOff, Bell, X, Server, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,7 @@ const NotificationItem = ({ notification, onItemClick, onDelete }: NotificationI
       <div className="flex-grow mx-3">
         <p className="text-sm text-gray-200">{notification.message}</p>
         <p className="text-xs text-gray-400 mt-1">
-          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+          {format(new Date(notification.createdAt), 'MMM dd, yyyy hh:mm a')}
         </p>
       </div>
       <div className="absolute top-2 right-2">
