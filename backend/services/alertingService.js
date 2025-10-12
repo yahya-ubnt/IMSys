@@ -1,8 +1,14 @@
 const Notification = require('../models/Notification');
 const io = require('../socket').getIO(); // Import the initialized socket.io instance
 
-const sendAlert = async (device, status, user = null) => {
-  const message = `ALERT: Device ${device.deviceName || device.macAddress} (${device.ipAddress}) is now ${status}.`;
+const sendAlert = async (entity, status, user = null, entityType = 'Device') => {
+  let entityIdentifier = '';
+  if (entityType === 'Device') {
+    entityIdentifier = entity.deviceName || entity.macAddress;
+  } else if (entityType === 'User') {
+    entityIdentifier = entity.username;
+  }
+  const message = `ALERT: ${entityType} ${entityIdentifier} (${entity.ipAddress || 'N/A'}) is now ${status}.`;
   console.log(message); // Keep console log for debugging
 
   try {

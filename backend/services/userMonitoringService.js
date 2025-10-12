@@ -3,6 +3,8 @@ const MikrotikUser = require('../models/MikrotikUser');
 const UserDowntimeLog = require('../models/UserDowntimeLog');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const { decrypt } = require('../utils/crypto');
+const { sendAlert } = require('../services/alertingService'); // Import sendAlert
+const User = require('../models/User'); // Import User model
 
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay
@@ -102,12 +104,20 @@ async function performUserStatusCheck() {
                                 downEndTime: null,
                             }).sort({ downStartTime: -1 });
 
-                            if (openDowntime) {
-                                openDowntime.downEndTime = new Date();
-                                openDowntime.durationSeconds = Math.floor((openDowntime.downEndTime - openDowntime.downStartTime) / 1000);
-                                await openDowntime.save();
-                                console.log(`[${new Date().toISOString()}] User ${user.username} came back online. Updated downtime log.`);
-                            }
+                                                if (openDowntime) {
+                                                    openDowntime.downEndTime = new Date();
+                                                    openDowntime.durationSeconds = Math.floor((openDowntime.downEndTime - openDowntime.downStartTime) / 1000);
+                                                    await openDowntime.save();
+                                                    console.log(`[${new Date().toISOString()}] User ${user.username} came back online. Updated downtime log.`);
+                                                }
+                                                // --- ADD ALERT HERE ---
+                                                const adminUser = await User.findOne({ isAdmin: true }); // Assuming User model is available
+                                                if (adminUser) {
+                                                    await sendAlert({
+                                                        username: user.username, // Using username for alert
+                                                        ipAddress: user.ipAddress || 'N/A'
+                                                    }, 'ONLINE', adminUser, 'User');
+                                                }
                         }
                     } else {
                         if (user.isOnline) {
@@ -153,6 +163,14 @@ async function performUserStatusCheck() {
                             downStartTime: new Date(),
                         });
                         await newDowntime.save();
+                        // --- ADD ALERT HERE ---
+                        const adminUser = await User.findOne({ isAdmin: true });
+                        if (adminUser) {
+                            await sendAlert({
+                                username: user.username,
+                                ipAddress: user.ipAddress || 'N/A'
+                            }, 'OFFLINE', adminUser, 'User');
+                        }
                     }
                 }
 
@@ -171,6 +189,14 @@ async function performUserStatusCheck() {
                             downStartTime: new Date(),
                         });
                         await newDowntime.save();
+                        // --- ADD ALERT HERE ---
+                        const adminUser = await User.findOne({ isAdmin: true });
+                        if (adminUser) {
+                            await sendAlert({
+                                username: user.username,
+                                ipAddress: user.ipAddress || 'N/A'
+                            }, 'OFFLINE (Router Unreachable)', adminUser, 'User');
+                        }
                     }
                 }
             } finally {
@@ -211,3 +237,4 @@ module.exports = {
     stopUserMonitoring,
     performUserStatusCheck // Export for immediate manual trigger if needed
 };
+
