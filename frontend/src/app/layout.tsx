@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { SettingsProvider } from "@/hooks/use-settings"
 import { initSocket, disconnectSocket, getSocket } from "../services/socketService" // Adjust path as needed
 import { useToast } from "@/hooks/use-toast" // Correct import for toast
+import { NotificationProvider } from "../context/NotificationContext" // Import NotificationProvider
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -29,11 +30,13 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
           <AuthProvider>
             <SettingsProvider>
-              <SocketInitializer> {/* New component to handle socket logic */}
-                <ProtectedLayout>
-                  <AppLayoutContent>{children}</AppLayoutContent>
-                </ProtectedLayout>
-              </SocketInitializer>
+              <NotificationProvider> {/* Wrap with NotificationProvider */}
+                <SocketInitializer> {/* New component to handle socket logic */}
+                  <ProtectedLayout>
+                    <AppLayoutContent>{children}</AppLayoutContent>
+                  </ProtectedLayout>
+                </SocketInitializer>
+              </NotificationProvider>
             </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>

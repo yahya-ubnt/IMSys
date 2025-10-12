@@ -3,93 +3,25 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Notification } from '@/types/notification';
-import { useAuth } from '@/components/auth-provider';
+import { useAuth } from '@/components/auth-provider'; // Keep useAuth for token if needed for other actions
 import NotificationItem from '@/components/notifications/NotificationItem';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BellRing, Info } from 'lucide-react';
 import { Topbar } from "@/components/topbar"; // Import Topbar
 import { isToday, isYesterday, isBefore, startOfDay } from 'date-fns'; // Import date-fns functions
+import { useNotifications } from '../../context/NotificationContext'; // Import useNotifications
 
 export default function NotificationsPage() {
-  const { token } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotifications(); // Consume from context
 
-  const fetchNotifications = async () => {
-    if (!token) return;
-    try {
-      const response = await fetch('/api/notifications', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        cache: 'no-store',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications', error);
-    }
-  };
+  // Remove fetchNotifications and useEffect related to fetching
 
+  // Call fetchNotifications once on mount for this page
   useEffect(() => {
     fetchNotifications();
-  }, [token]);
+  }, [fetchNotifications]);
 
-  const handleMarkAsRead = async (id: string) => {
-    if (!token) return;
-    const notification = notifications.find(n => n._id === id);
-    if (notification && notification.status === 'read') return;
-
-    try {
-      const response = await fetch(`/api/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        setNotifications(notifications.map(n => n._id === id ? { ...n, status: 'read' } : n));
-      }
-    } catch (error) {
-      console.error('Failed to mark notification as read', error);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!token) return;
-    try {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        setNotifications(notifications.filter(n => n._id !== id));
-      }
-    } catch (error) {
-      console.error('Failed to delete notification', error);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    if (!token) return;
-    try {
-      const response = await fetch('/api/notifications/read/all', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        setNotifications(notifications.map(n => ({ ...n, status: 'read' })));
-      }
-    } catch (error) {
-      console.error('Failed to mark all notifications as read', error);
-    }
-  };
 
   const groupedNotifications = useMemo(() => {
     const groups: { today: Notification[]; yesterday: Notification[]; older: Notification[] } = {
@@ -127,7 +59,7 @@ export default function NotificationsPage() {
           </div>
           {notifications.length > 0 && (
             <Button
-              onClick={handleMarkAllAsRead}
+              onClick={markAllAsRead}
               className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105"
             >
               Mark all as read
@@ -152,8 +84,8 @@ export default function NotificationsPage() {
                         <NotificationItem
                           key={notification._id}
                           notification={notification}
-                          onItemClick={handleMarkAsRead}
-                          onDelete={handleDelete}
+                          onItemClick={markAsRead}
+                          onDelete={deleteNotification}
                         />
                       ))}
                     </div>
@@ -168,8 +100,8 @@ export default function NotificationsPage() {
                         <NotificationItem
                           key={notification._id}
                           notification={notification}
-                          onItemClick={handleMarkAsRead}
-                          onDelete={handleDelete}
+                          onItemClick={markAsRead}
+                          onDelete={deleteNotification}
                         />
                       ))}
                     </div>
@@ -184,8 +116,8 @@ export default function NotificationsPage() {
                         <NotificationItem
                           key={notification._id}
                           notification={notification}
-                          onItemClick={handleMarkAsRead}
-                          onDelete={handleDelete}
+                          onItemClick={markAsRead}
+                          onDelete={deleteNotification}
                         />
                       ))}
                     </div>

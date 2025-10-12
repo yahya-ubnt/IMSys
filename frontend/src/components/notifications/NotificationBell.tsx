@@ -1,117 +1,16 @@
 import { Bell } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react'; // Import useRef
+import { useState } from 'react'; // Remove useEffect, useRef
 import { Notification } from '@/types/notification';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/components/auth-provider';
 import NotificationItem from './NotificationItem';
 import Link from 'next/link';
-import { getSocket } from '../../services/socketService'; // Import getSocket
+import { useNotifications } from '../../context/NotificationContext'; // Import useNotifications
 
 const NotificationBell = () => {
-  const { token } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const hasFetched = useRef(false); // New ref to track if fetchNotifications has been called
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(); // Consume from context
 
-  const fetchNotifications = async () => {
-    if (!token || hasFetched.current) return; // Check ref
-    hasFetched.current = true; // Set ref to true after first call
-    try {
-      const response = await fetch('/api/notifications', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        cache: 'no-store',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-        setUnreadCount(data.filter((n: Notification) => n.status === 'unread').length);
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications(); // Initial fetch
-
-    if (token) {
-      const socket = getSocket();
-
-      const handleNewNotification = (newNotification: Notification) => {
-        setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
-        setUnreadCount(prevCount => prevCount + 1);
-      };
-
-      socket.on('new_notification', handleNewNotification);
-
-      return () => {
-        socket.off('new_notification', handleNewNotification);
-      };
-    }
-  }, [token]);
-
-  const handleMarkAsRead = async (id: string) => {
-    if (!token) return;
-    const notification = notifications.find(n => n._id === id);
-    if (notification && notification.status === 'read') return;
-
-    try {
-      const response = await fetch(`/api/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        setNotifications(notifications.map(n => n._id === id ? { ...n, status: 'read' } : n));
-        setUnreadCount(prev => prev - 1);
-      }
-    } catch (error) {
-      console.error('Failed to mark notification as read', error);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!token) return;
-    try {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        setNotifications(notifications.filter(n => n._id !== id));
-        const deletedNotification = notifications.find(n => n._id === id);
-        if (deletedNotification && deletedNotification.status === 'unread') {
-          setUnreadCount(prev => prev - 1);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to delete notification', error);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    if (!token) return;
-    try {
-      const response = await fetch('/api/notifications/read/all', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        setNotifications(notifications.map(n => ({ ...n, status: 'read' })));
-        setUnreadCount(0); // All are read
-      }
-    } catch (error) {
-      console.error('Failed to mark all notifications as read', error);
-    }
-  };
+  // Remove fetchNotifications, useEffect, and hasFetched ref
 
   return (
     <DropdownMenu>
@@ -129,7 +28,7 @@ const NotificationBell = () => {
       <DropdownMenuContent className="w-80 p-0 bg-zinc-900">
         <div className="flex items-center justify-between p-3 border-b border-zinc-800">
           <h3 className="text-md font-semibold">Notifications ({unreadCount})</h3>
-          <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} className="text-xs text-blue-400 hover:underline">
+          <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs text-blue-400 hover:underline">
             Mark all as read
           </Button>
         </div>
@@ -141,8 +40,8 @@ const NotificationBell = () => {
               <NotificationItem
                 key={notification._id}
                 notification={notification}
-                onItemClick={handleMarkAsRead}
-                onDelete={handleDelete}
+                onItemClick={markAsRead}
+                onDelete={deleteNotification}
               />
             ))}
           </div>
