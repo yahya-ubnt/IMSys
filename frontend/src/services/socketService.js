@@ -3,7 +3,8 @@ import { io } from 'socket.io-client';
 let socket;
 
 export const initSocket = (token) => {
-  socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+  const socketUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  socket = io(socketUrl, {
     auth: {
       token,
     },
