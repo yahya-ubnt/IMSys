@@ -11,12 +11,17 @@ const sendConsolidatedAlert = async (entities, status, user = null, entityType =
   if (entities.length === 1) {
     const entity = entities[0];
     let entityIdentifier = '';
+    let specificEntityType = entityType;
+
     if (entityType === 'Device') {
       entityIdentifier = entity.deviceName || entity.macAddress;
+      if (entity.deviceType) {
+        specificEntityType = entity.deviceType; // Use 'Access' or 'Station'
+      }
     } else if (entityType === 'User') {
       entityIdentifier = entity.username;
     }
-    message = `ALERT: ${entityType} ${entityIdentifier} (${entity.ipAddress || 'N/A'}) is now ${status}.`;
+    message = `ALERT: ${specificEntityType} ${entityIdentifier} (${entity.ipAddress || 'N/A'}) is now ${status}.`;
   } else {
     const identifiers = entities.map(entity => {
       if (entityType === 'Device') {
@@ -26,7 +31,16 @@ const sendConsolidatedAlert = async (entities, status, user = null, entityType =
       }
       return 'Unknown';
     }).join(', ');
-    message = `ALERT: Multiple ${entityType}s (${identifiers}) are now ${status}.`;
+
+    let specificEntityType = entityType;
+    // If all devices in the batch are of the same type, use that type
+    if (entityType === 'Device' && entities.every(e => e.deviceType === entities[0].deviceType)) {
+      specificEntityType = entities[0].deviceType; // e.g., 'Access' or 'Station'
+    } else if (entityType === 'Device') {
+      specificEntityType = 'Devices'; // Fallback to plural 'Devices' if mixed types
+    }
+
+    message = `ALERT: Multiple ${specificEntityType} (${identifiers}) are now ${status}.`;
   }
 
   console.log(message); // Keep console log for debugging
