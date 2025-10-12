@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Notification } from '@/types/notification';
 import { useAuth } from '@/components/auth-provider';
 import NotificationItem from '@/components/notifications/NotificationItem';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BellRing, Info } from 'lucide-react';
 import { Topbar } from "@/components/topbar"; // Import Topbar
+import { isToday, isYesterday, isBefore, startOfDay } from 'date-fns'; // Import date-fns functions
 
 export default function NotificationsPage() {
   const { token } = useAuth();
@@ -90,6 +91,31 @@ export default function NotificationsPage() {
     }
   };
 
+  const groupedNotifications = useMemo(() => {
+    const groups: { today: Notification[]; yesterday: Notification[]; older: Notification[] } = {
+      today: [],
+      yesterday: [],
+      older: [],
+    };
+
+    const now = new Date();
+    const startOfToday = startOfDay(now);
+    const startOfYesterday = startOfDay(new Date(now.setDate(now.getDate() - 1)));
+
+    notifications.forEach(notification => {
+      const notificationDate = new Date(notification.createdAt);
+      if (isToday(notificationDate)) {
+        groups.today.push(notification);
+      } else if (isYesterday(notificationDate)) {
+        groups.yesterday.push(notification);
+      } else {
+        groups.older.push(notification);
+      }
+    });
+
+    return groups;
+  }, [notifications]);
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
@@ -117,15 +143,54 @@ export default function NotificationsPage() {
                 <p className="text-sm">Check back later for updates.</p>
               </div>
             ) : (
-              <div className="space-y-2 p-4">
-                {notifications.map((notification) => (
-                  <NotificationItem
-                    key={notification._id}
-                    notification={notification}
-                    onItemClick={handleMarkAsRead}
-                    onDelete={handleDelete}
-                  />
-                ))}
+              <div className="space-y-4 p-4">
+                {groupedNotifications.today.length > 0 && (
+                  <>
+                    <h2 className="text-lg font-semibold text-zinc-300">Today</h2>
+                    <div className="space-y-2">
+                      {groupedNotifications.today.map((notification) => (
+                        <NotificationItem
+                          key={notification._id}
+                          notification={notification}
+                          onItemClick={handleMarkAsRead}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {groupedNotifications.yesterday.length > 0 && (
+                  <>
+                    <h2 className="text-lg font-semibold text-zinc-300 mt-4">Yesterday</h2>
+                    <div className="space-y-2">
+                      {groupedNotifications.yesterday.map((notification) => (
+                        <NotificationItem
+                          key={notification._id}
+                          notification={notification}
+                          onItemClick={handleMarkAsRead}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {groupedNotifications.older.length > 0 && (
+                  <>
+                    <h2 className="text-lg font-semibold text-zinc-300 mt-4">Older</h2>
+                    <div className="space-y-2">
+                      {groupedNotifications.older.map((notification) => (
+                        <NotificationItem
+                          key={notification._id}
+                          notification={notification}
+                          onItemClick={handleMarkAsRead}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </CardContent>
