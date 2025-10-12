@@ -20,9 +20,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchNotifications = useCallback(async () => {
-    console.log('NotificationContext: fetchNotifications called', { token });
     if (!token) {
-      console.log('NotificationContext: fetchNotifications skipped, no token');
       return;
     }
     try {
@@ -104,14 +102,12 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
   // Initial fetch and WebSocket listener
   useEffect(() => {
-    console.log('NotificationContext: useEffect running', { token, fetchNotificationsRef: fetchNotifications });
     if (token) {
       fetchNotifications();
 
       const socket = getSocket();
 
       const handleNewNotification = (newNotification: Notification) => {
-        console.log('NotificationContext: New notification received via WebSocket', newNotification);
         setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
         setUnreadCount(prevCount => prevCount + 1);
       };
@@ -119,7 +115,6 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       socket.on('new_notification', handleNewNotification);
 
       return () => {
-        console.log('NotificationContext: useEffect cleanup');
         socket.off('new_notification', handleNewNotification);
       };
     }
