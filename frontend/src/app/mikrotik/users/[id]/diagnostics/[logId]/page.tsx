@@ -61,7 +61,7 @@ export default function DiagnosticReportPage() {
             <main className="flex-1 p-6 flex flex-col space-y-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href={`/mikrotik/users/${userId}/details`}><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>
+                        <Link href={`/mikrotik/users/${userId}`}><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Diagnostic Report</h1>
                             {log && <p className="text-sm text-zinc-400">Generated on {new Date(log.createdAt).toLocaleString()}</p>}

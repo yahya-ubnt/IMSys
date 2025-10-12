@@ -23,7 +23,7 @@ export const columns: ColumnDef<MikrotikUser>[] = [
     cell: ({ row }) => {
       const user = row.original
       return (
-        <Link href={`/mikrotik/users/${user._id}/details`} className="font-medium hover:underline">
+        <Link href={`/mikrotik/users/${user._id}`} className="font-medium hover:underline">
           {user.username}
         </Link>
       )

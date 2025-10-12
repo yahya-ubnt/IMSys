@@ -192,7 +192,7 @@ export default function EditMikrotikUserPage() {
             }
 
             toast({ title: "Success", description: "Mikrotik user updated successfully." });
-            router.push(`/mikrotik/users/${id}/details`);
+            router.push(`/mikrotik/users/${id}`);
         } catch (error: unknown) {
             toast({
                 title: "Error",
@@ -212,7 +212,7 @@ export default function EditMikrotikUserPage() {
             <div className="flex-1 p-6 space-y-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href={`/mikrotik/users/${id}/details`}><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>
+                        <Link href={`/mikrotik/users/${id}`}><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Edit: {officialName}</h1>
                             <p className="text-sm text-zinc-400">Update the details for @{username}</p>

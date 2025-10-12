@@ -122,7 +122,43 @@ app.use('/api/tickets', ticketRoutes); // Add ticket routes
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
-const server = app.listen(PORT, () => {
+const http = require('http'); // Import http module
+const socketio = require('./socket'); // Import socket.js
+const jwt = require('jsonwebtoken'); // Import jwt
+const server = http.createServer(app); // Create HTTP server
+
+const io = socketio.init(server); // Initialize socket.io
+
+// Middleware to authenticate socket connections
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error('Authentication error: No token provided'));
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = await User.findById(decoded.id).select('-password');
+    if (!socket.user) {
+      return next(new Error('Authentication error: User not found'));
+    }
+    next();
+  } catch (error) {
+    next(new Error('Authentication error: Invalid token'));
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+  // Join a room based on the user ID for targeted notifications
+  socket.join(socket.user.id);
+  console.log(`Client ${socket.id} joined room ${socket.user.id}`);
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 

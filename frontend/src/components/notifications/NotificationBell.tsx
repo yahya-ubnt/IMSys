@@ -1,19 +1,22 @@
 import { Bell } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // Import useRef
 import { Notification } from '@/types/notification';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import NotificationItem from './NotificationItem';
 import Link from 'next/link';
+import { getSocket } from '../../services/socketService'; // Import getSocket
 
 const NotificationBell = () => {
   const { token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const hasFetched = useRef(false); // New ref to track if fetchNotifications has been called
 
   const fetchNotifications = async () => {
-    if (!token) return;
+    if (!token || hasFetched.current) return; // Check ref
+    hasFetched.current = true; // Set ref to true after first call
     try {
       const response = await fetch('/api/notifications', {
         headers: {
@@ -32,9 +35,22 @@ const NotificationBell = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
-    const intervalId = setInterval(fetchNotifications, 5000);
-    return () => clearInterval(intervalId);
+    fetchNotifications(); // Initial fetch
+
+    if (token) {
+      const socket = getSocket();
+
+      const handleNewNotification = (newNotification: Notification) => {
+        setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
+        setUnreadCount(prevCount => prevCount + 1);
+      };
+
+      socket.on('new_notification', handleNewNotification);
+
+      return () => {
+        socket.off('new_notification', handleNewNotification);
+      };
+    }
   }, [token]);
 
   const handleMarkAsRead = async (id: string) => {
