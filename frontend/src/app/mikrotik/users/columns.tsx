@@ -47,7 +47,7 @@ export const getColumns = (
       </Button>
     ),
     cell: ({ row }) => (
-      <Link href={`/mikrotik/users/${row.original._id}`} className="font-medium text-blue-400 hover:underline">
+      <Link href={`/mikrotik/users/${row.original._id}/details`} className="font-medium text-blue-400 hover:underline">
         {row.original.username}
       </Link>
     ),
@@ -106,7 +106,7 @@ export const getColumns = (
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>View Details</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}/details`}>View Details</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>Edit User</Link></DropdownMenuItem>
             <DropdownMenuSeparator className="bg-zinc-700" />
             {onDelete && (
