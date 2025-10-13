@@ -230,9 +230,9 @@ const DonutChartCard = ({ active, expired, total }: any) => (
 const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter }: any) => (
   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
     <div className="flex items-center gap-2">
-      <Button size="sm" variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => onStatusFilter('all')}>All</Button>
-      <Button size="sm" variant={statusFilter === 'active' ? 'default' : 'outline'} onClick={() => onStatusFilter('active')}>Active</Button>
-      <Button size="sm" variant={statusFilter === 'expired' ? 'default' : 'outline'} onClick={() => onStatusFilter('expired')}>Expired</Button>
+      <Button size="sm" className={statusFilter === 'all' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('all')}>All</Button>
+      <Button size="sm" className={statusFilter === 'active' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('active')}>Active</Button>
+      <Button size="sm" className={statusFilter === 'expired' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('expired')}>Expired</Button>
     </div>
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />

@@ -207,7 +207,7 @@ export default function GeneralSettingsForm() {
             </Card>
           </motion.div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={brandingForm.formState.isSubmitting}>
+            <Button type="submit" className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white" disabled={brandingForm.formState.isSubmitting}>
               {brandingForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save Branding
             </Button>
@@ -280,7 +280,7 @@ export default function GeneralSettingsForm() {
             </Card>
           </motion.div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={companyInfoForm.formState.isSubmitting}>
+            <Button type="submit" className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white" disabled={companyInfoForm.formState.isSubmitting}>
               {companyInfoForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save Company Info
             </Button>
@@ -353,7 +353,7 @@ export default function GeneralSettingsForm() {
             </Card>
           </motion.div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={billingForm.formState.isSubmitting}>
+            <Button type="submit" className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white" disabled={billingForm.formState.isSubmitting}>
               {billingForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Save Billing Settings
             </Button>
