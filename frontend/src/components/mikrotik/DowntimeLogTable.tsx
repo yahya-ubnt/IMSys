@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { History, CheckCircle } from "lucide-react";
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 // --- Interface Definitions ---
 interface DowntimeLog {
@@ -77,33 +79,30 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
     }
 
     return (
-      <div className="space-y-3">
-        {logs.map((log, index) => (
-          <motion.div
-            key={log._id}
-            className="p-3 rounded-lg border"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Badge variant={log.downEndTime ? 'success' : 'destructive'}>
-  {log.downEndTime ? 'Up' : 'Down'}
-</Badge>
-                    <p className="text-sm font-semibold text-zinc-200">
-                        {format(new Date(log.downStartTime), 'MMM d, yyyy')}
-                    </p>
-                </div>
-                <p className="text-sm font-bold text-zinc-300">{formatDuration(log.durationSeconds)}</p>
-            </div>
-            <div className="text-xs text-zinc-400 mt-1 pl-4 border-l-2 border-zinc-700 ml-1">
-                <p>From: {format(new Date(log.downStartTime), 'p')}</p>
-                <p>To: {log.downEndTime ? format(new Date(log.downEndTime), 'p') : 'Now'}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Status</TableHead>
+            <TableHead>Start Time</TableHead>
+            <TableHead>End Time</TableHead>
+            <TableHead className="text-right">Duration</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {logs.map((log) => (
+            <TableRow key={log._id}>
+              <TableCell>
+                <Badge variant={log.downEndTime ? 'success' : 'destructive'}>
+                  {log.downEndTime ? 'Up' : 'Down'}
+                </Badge>
+              </TableCell>
+              <TableCell>{format(new Date(log.downStartTime), 'MMM d, yyyy p')}</TableCell>
+              <TableCell>{log.downEndTime ? format(new Date(log.downEndTime), 'MMM d, yyyy p') : 'Now'}</TableCell>
+              <TableCell className="text-right">{formatDuration(log.durationSeconds)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     );
   };
 
