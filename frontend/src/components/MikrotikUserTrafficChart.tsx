@@ -46,6 +46,21 @@ const StatCard = ({ icon: Icon, label, value, color }: { icon: React.ElementType
   </div>
 );
 
+// --- Custom Tooltip Component ---
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-2 bg-zinc-800/80 backdrop-blur-sm border border-zinc-700 rounded-lg shadow-lg">
+        <p className="text-sm text-zinc-400">{new Date(label).toLocaleTimeString()}</p>
+        <p className="text-sm" style={{ color: payload[0].stroke }}>{`Download: ${formatSpeed(payload[0].value)}`}</p>
+        <p className="text-sm" style={{ color: payload[1].stroke }}>{`Upload: ${formatSpeed(payload[1].value)}`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+
 // --- Main Component ---
 const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ userId }) => {
   const { token } = useAuth();
@@ -155,11 +170,9 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
 
     return (
       <motion.div variants={containerVariants} initial="initial" animate="animate" exit="exit" className="p-4 space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard icon={Download} label="Download" value={formatSpeed(currentTraffic?.txRate ?? 0)} color="text-green-400" />
-          <StatCard icon={Upload} label="Upload" value={formatSpeed(currentTraffic?.rxRate ?? 0)} color="text-red-400" />
-          <StatCard icon={TrendingDown} label="Session Peak Down" value={formatSpeed(stats.peakTx)} color="text-red-400" />
-          <StatCard icon={TrendingUp} label="Session Peak Up" value={formatSpeed(stats.peakRx)} color="text-green-400" />
+        <div className="grid grid-cols-2 lg:grid-cols-2 gap-3">
+          <StatCard icon={Download} label="Download" value={formatSpeed(currentTraffic?.txRate ?? 0)} color="text-blue-400" />
+          <StatCard icon={Upload} label="Upload" value={formatSpeed(currentTraffic?.rxRate ?? 0)} color="text-cyan-400" />
         </div>
         <motion.div 
           className="h-60"
@@ -171,24 +184,20 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
             <AreaChart data={trafficHistory} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
               <defs>
                 <linearGradient id="colorDownload" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorUpload" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-              <XAxis dataKey="timestamp" tickFormatter={(ts) => new Date(ts).toLocaleTimeString()} stroke="#a1a1aa" fontSize={12} ticks={trafficHistory.length > 0 ? [trafficHistory[trafficHistory.length - 1].timestamp] : []} />
+              <XAxis dataKey="timestamp" tickFormatter={(ts) => new Date(ts).toLocaleTimeString()} stroke="#a1a1aa" fontSize={12} />
               <YAxis tickFormatter={formatSpeed} stroke="#a1a1aa" fontSize={12} tickCount={6} domain={[0, 'auto']} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.5rem' }} 
-                formatter={(value: number, name: string) => [formatSpeed(value), name]}
-                labelFormatter={() => ''}
-              />
-              <Area type="monotone" dataKey="txRate" name="Download" stroke="#22c55e" fillOpacity={1} fill="url(#colorDownload)" animationDuration={500} />
-              <Area type="monotone" dataKey="rxRate" name="Upload" stroke="#ef4444" fillOpacity={1} fill="url(#colorUpload)" animationDuration={500} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="txRate" name="Download" stroke="#3b82f6" fillOpacity={1} fill="url(#colorDownload)" animationDuration={300} />
+              <Area type="monotone" dataKey="rxRate" name="Upload" stroke="#22d3ee" fillOpacity={1} fill="url(#colorUpload)" animationDuration={300} />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>

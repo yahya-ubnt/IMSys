@@ -70,7 +70,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
   const renderLogList = () => {
     if (logs.length === 0) {
       return (
-        <div className="text-center py-10">
+        <div className="text-center h-60 flex flex-col justify-center">
           <CheckCircle className="mx-auto h-12 w-12 text-green-500/30" />
           <h3 className="mt-2 text-lg font-medium text-zinc-300">Perfect Uptime</h3>
           <p className="mt-1 text-sm text-zinc-500">No downtime has been recorded for this user.</p>
@@ -79,30 +79,32 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
     }
 
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Status</TableHead>
-            <TableHead>Start Time</TableHead>
-            <TableHead>End Time</TableHead>
-            <TableHead className="text-right">Duration</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {logs.map((log) => (
-            <TableRow key={log._id}>
-              <TableCell>
-                <Badge variant={log.downEndTime ? 'success' : 'destructive'}>
-                  {log.downEndTime ? 'Up' : 'Down'}
-                </Badge>
-              </TableCell>
-              <TableCell>{format(new Date(log.downStartTime), 'MMM d, yyyy p')}</TableCell>
-              <TableCell>{log.downEndTime ? format(new Date(log.downEndTime), 'MMM d, yyyy p') : 'Now'}</TableCell>
-              <TableCell className="text-right">{formatDuration(log.durationSeconds)}</TableCell>
+      <div className="h-60 overflow-y-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Status</TableHead>
+              <TableHead>Start Time</TableHead>
+              <TableHead>End Time</TableHead>
+              <TableHead className="text-right">Duration</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {logs.map((log) => (
+              <TableRow key={log._id}>
+                <TableCell>
+                  <Badge variant={log.downEndTime ? 'success' : 'destructive'}>
+                    {log.downEndTime ? 'Up' : 'Down'}
+                  </Badge>
+                </TableCell>
+                <TableCell>{format(new Date(log.downStartTime), 'MMM d, yyyy p')}</TableCell>
+                <TableCell>{log.downEndTime ? format(new Date(log.downEndTime), 'MMM d, yyyy p') : 'Now'}</TableCell>
+                <TableCell className="text-right">{formatDuration(log.durationSeconds)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     );
   };
 
@@ -115,7 +117,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
             <span>Total: {formatDuration(totalDowntime)}</span>
         </div>
       </CardHeader>
-      <CardContent className="p-3 overflow-y-auto">
+      <CardContent className="p-3">
         {loading ? <p className="text-center text-zinc-400">Loading history...</p> : renderLogList()}
       </CardContent>
     </Card>
