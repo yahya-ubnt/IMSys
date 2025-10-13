@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MpesaTransaction } from '@/app/mikrotik/users/[id]/details/mpesa-columns';
 import { format } from 'date-fns';
 import { DollarSign, Calendar, Hash, TrendingUp } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface BillingTabProps {
   transactions: MpesaTransaction[];
 }
 
 const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) => (
-  <div className="p-4 rounded-lg flex items-center">
+  <div className="p-4 rounded-lg bg-zinc-800/50 flex items-center">
     <Icon className="h-6 w-6 text-cyan-400 mr-4" />
     <div>
       <p className="text-sm text-zinc-400">{label}</p>
@@ -38,16 +39,25 @@ const BillingTab: React.FC<BillingTabProps> = ({ transactions }) => {
           <CardTitle className="text-cyan-400">Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {transactions.map((tx) => (
-              <div key={tx._id} className="flex justify-between items-center p-3 rounded-lg">
-                <div>
-                  <p className="font-semibold text-white">{tx.transactionId}</p>
-                  <p className="text-sm text-zinc-400">{format(new Date(tx.createdAt), 'PPpp')}</p>
-                </div>
-                <p className="text-lg font-bold text-green-400">KES {tx.amount.toLocaleString()}</p>
-              </div>
-            ))}
+          <div className="h-96 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Transaction ID</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((tx) => (
+                  <TableRow key={tx._id}>
+                    <TableCell className="font-semibold">{tx.transactionId}</TableCell>
+                    <TableCell>{format(new Date(tx.createdAt), 'PPpp')}</TableCell>
+                    <TableCell className="text-right font-bold text-green-400">KES {tx.amount.toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
