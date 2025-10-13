@@ -14,6 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Search, Server, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { motion } from "framer-motion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -24,6 +32,7 @@ export default function DevicesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "UP" | "DOWN">("all");
+  const [deviceTypeFilter, setDeviceTypeFilter] = useState<"all" | "Access" | "Station">("all");
 
   const fetchDevices = useCallback(async () => {
     if (!token) {
@@ -33,14 +42,15 @@ export default function DevicesPage() {
     }
     try {
       setLoading(true);
-      const data = await getDevices(token);
+      const deviceType = deviceTypeFilter === "all" ? undefined : deviceTypeFilter;
+      const data = await getDevices(token, deviceType);
       setDevices(data);
     } catch (err: unknown) {
       setError((err instanceof Error) ? err.message : "Failed to fetch devices");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, deviceTypeFilter]);
 
   useEffect(() => {
     fetchDevices();
@@ -79,9 +89,10 @@ export default function DevicesPage() {
         device.macAddress.toLowerCase().includes(search)
       );
       const matchesStatus = statusFilter === "all" || device.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesDeviceType = deviceTypeFilter === "all" || device.deviceType === deviceTypeFilter;
+      return matchesSearch && matchesStatus && matchesDeviceType;
     });
-  }, [devices, searchTerm, statusFilter]);
+  }, [devices, searchTerm, statusFilter, deviceTypeFilter]);
 
   const totalDevices = devices.length;
   const devicesUp = devices.filter(d => d.status === 'UP').length;
@@ -112,7 +123,14 @@ export default function DevicesPage() {
               <StatCard title="Offline" value={devicesDown} icon={ArrowDownCircle} color="text-red-400" />
             </CardHeader>
             <div className="p-4 border-t border-zinc-800">
-              <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} statusFilter={statusFilter} onStatusFilter={setStatusFilter} />
+              <DataTableToolbar 
+                searchTerm={searchTerm} 
+                onSearch={setSearchTerm} 
+                statusFilter={statusFilter} 
+                onStatusFilter={setStatusFilter}
+                deviceTypeFilter={deviceTypeFilter}
+                onDeviceTypeFilter={setDeviceTypeFilter}
+              />
             </div>
             <div className="overflow-x-auto">
               <DataTable
@@ -139,21 +157,33 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter }: any) => (
+const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter, deviceTypeFilter, onDeviceTypeFilter }: any) => (
   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
     <div className="flex items-center gap-2">
       <Button size="sm" variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => onStatusFilter('all')}>All</Button>
       <Button size="sm" variant={statusFilter === 'UP' ? 'default' : 'outline'} onClick={() => onStatusFilter('UP')}>Online</Button>
       <Button size="sm" variant={statusFilter === 'DOWN' ? 'default' : 'outline'} onClick={() => onStatusFilter('DOWN')}>Offline</Button>
     </div>
-    <div className="relative w-full sm:max-w-xs">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-      <Input
-        placeholder="Search by name, IP, or MAC..."
-        value={searchTerm}
-        onChange={e => onSearch(e.target.value)}
-        className="pl-10 h-9 bg-zinc-800 border-zinc-700"
-      />
+    <div className="flex items-center gap-2">
+        <Select value={deviceTypeFilter} onValueChange={onDeviceTypeFilter}>
+          <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="Access">Access Points</SelectItem>
+            <SelectItem value="Station">Stations</SelectItem>
+          </SelectContent>
+        </Select>
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+        <Input
+          placeholder="Search by name, IP, or MAC..."
+          value={searchTerm}
+          onChange={e => onSearch(e.target.value)}
+          className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+        />
+      </div>
     </div>
   </div>
 );
