@@ -59,6 +59,11 @@ export const getColumns = (
   {
     accessorKey: "apartment_house_number",
     header: "Apartment/House",
+    cell: ({ row }) => (
+      <div className="pl-4">
+        {row.original.apartment_house_number}
+      </div>
+    ),
   },
   {
     accessorKey: "mobileNumber",
