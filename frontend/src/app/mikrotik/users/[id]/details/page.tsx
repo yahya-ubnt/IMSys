@@ -23,7 +23,7 @@ import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
 interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
 
 // --- Sub-components ---
-const DetailItem = ({ icon: Icon, label, value, isPassword }: { icon: React.ElementType; label: string; value: string | number | undefined; isPassword?: boolean }) => {
+const DetailItem = ({ icon: Icon, label, value, href, isPassword }: { icon: React.ElementType; label: string; value: string | number | undefined; href?: string; isPassword?: boolean }) => {
     const [isVisible, setIsVisible] = useState(!isPassword);
     return (
         <div className="flex items-start space-x-3 rounded-lg p-2 hover:bg-zinc-800/50 transition-colors">
@@ -31,7 +31,13 @@ const DetailItem = ({ icon: Icon, label, value, isPassword }: { icon: React.Elem
             <div className="flex-grow">
                 <p className="text-xs text-zinc-400">{label}</p>
                 <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-zinc-100">{isVisible ? (value || 'N/A') : '••••••••'}</p>
+                    {href ? (
+                        <Link href={href} className="text-sm font-semibold text-blue-400 hover:underline">
+                            {isVisible ? (value || 'N/A') : '••••••••'}
+                        </Link>
+                    ) : (
+                        <p className="text-sm font-semibold text-zinc-100">{isVisible ? (value || 'N/A') : '••••••••'}</p>
+                    )}
                     {isPassword && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsVisible(!isVisible)}>{isVisible ? <EyeOff size={14} /> : <Eye size={14} />}</Button>}
                 </div>
             </div>
@@ -146,7 +152,7 @@ export default function MikrotikUserDetailsPage() {
                                             <DetailItem icon={AtSign} label="Email Address" value={userData.emailAddress} />
                                             <DetailItem icon={Wifi} label="Service Type" value={userData.serviceType.toUpperCase()} />
                                             <DetailItem icon={RouterIcon} label="Mikrotik Router" value={userData.mikrotikRouter.name} />
-                                            <DetailItem icon={RouterIcon} label="Station" value={userData.station?.deviceName} />
+                                            <DetailItem icon={RouterIcon} label="Station" value={userData.station?.deviceName} href={userData.station?._id ? `/devices/${userData.station._id}` : undefined} />
                                             <DetailItem icon={Building} label="Apartment/House Number" value={userData.apartment_house_number} />
                                             <DetailItem icon={Home} label="Door Number/Unit Label" value={userData.door_number_unit_label} />
                                             {userData.serviceType === 'pppoe' && <DetailItem icon={Lock} label="PPPoE Password" value={userData.pppoePassword} isPassword />}
