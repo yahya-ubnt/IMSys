@@ -64,37 +64,43 @@ export function DiagnosticHistory({ userId }: DiagnosticHistoryProps) {
       </CardHeader>
       <CardContent className="pt-2">
         {isLoading ? (
-          <p className="text-zinc-400 py-4">Loading history...</p>
+          <div className="h-96 flex items-center justify-center">
+            <p className="text-zinc-400">Loading history...</p>
+          </div>
         ) : logs.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow className="border-zinc-800">
-                <TableHead className="text-zinc-300">Date</TableHead>
-                <TableHead className="text-zinc-300">Conclusion</TableHead>
-                <TableHead className="text-zinc-300 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.map(log => (
-                <TableRow key={log._id} className="border-zinc-800">
-                  <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={getBadgeVariant(log.finalConclusion)}>{log.finalConclusion}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/mikrotik/users/${userId}/diagnostics/${log._id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Report
-                      </Button>
-                    </Link>
-                  </TableCell>
+          <div className="h-96 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-zinc-800">
+                  <TableHead className="text-zinc-300">Date</TableHead>
+                  <TableHead className="text-zinc-300">Conclusion</TableHead>
+                  <TableHead className="text-zinc-300 text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {logs.map(log => (
+                  <TableRow key={log._id} className="border-zinc-800">
+                    <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={getBadgeVariant(log.finalConclusion)}>{log.finalConclusion}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/mikrotik/users/${userId}/diagnostics/${log._id}`}>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Report
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
-          <p className="text-zinc-400 py-4">No diagnostic history found for this user.</p>
+          <div className="h-96 flex items-center justify-center">
+            <p className="text-zinc-400">No diagnostic history found for this user.</p>
+          </div>
         )}
       </CardContent>
     </Card>
