@@ -14,10 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table";
 import { columns as downtimeColumns } from "./columns";
 import { connectedStationsColumns } from "./connected-stations-columns";
-import { columns as userColumns } from "./connected-users-columns";
+import { getConnectedUserColumns } from "./connected-users-columns";
 import { motion } from "framer-motion";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { MikrotikUser } from "@/types/mikrotik";
+import { MikrotikUser } from "@/app/mikrotik/users/page";
 
 // --- Sub-components ---
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number | undefined; }) => (
@@ -94,6 +94,8 @@ export default function DeviceDetailsPage() {
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading device profile...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
   if (!device) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Device not found.</div>;
+
+  const userColumns = getConnectedUserColumns();
 
   const tabs = [
     { id: "overview", label: "Overview", icon: HardDrive },
