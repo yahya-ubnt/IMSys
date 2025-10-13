@@ -160,9 +160,9 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
 const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter, deviceTypeFilter, onDeviceTypeFilter }: any) => (
   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
     <div className="flex items-center gap-2">
-      <Button size="sm" variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => onStatusFilter('all')}>All</Button>
-      <Button size="sm" variant={statusFilter === 'UP' ? 'default' : 'outline'} onClick={() => onStatusFilter('UP')}>Online</Button>
-      <Button size="sm" variant={statusFilter === 'DOWN' ? 'default' : 'outline'} onClick={() => onStatusFilter('DOWN')}>Offline</Button>
+      <Button size="sm" className={statusFilter === 'all' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('all')}>All</Button>
+      <Button size="sm" className={statusFilter === 'UP' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('UP')}>Online</Button>
+      <Button size="sm" className={statusFilter === 'DOWN' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('DOWN')}>Offline</Button>
     </div>
     <div className="flex items-center gap-2">
         <Select value={deviceTypeFilter} onValueChange={onDeviceTypeFilter}>
