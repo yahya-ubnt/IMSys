@@ -41,12 +41,19 @@ export const getColumns = (
     header: "IP Address",
   },
   {
-    accessorKey: "macAddress",
-    header: "MAC Address",
-  },
-  {
     accessorKey: "deviceType",
     header: "Type",
+    cell: ({ row }) => {
+      const deviceType = row.original.deviceType;
+      const color = deviceType === 'Access' 
+        ? "bg-blue-800/20 text-blue-300 border-blue-700/30" 
+        : "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
+      return <Badge variant="outline" className={`capitalize ${color}`}>{deviceType}</Badge>;
+    },
+  },
+  {
+    accessorKey: "macAddress",
+    header: "MAC Address",
   },
   {
     accessorKey: "status",
