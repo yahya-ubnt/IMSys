@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import React from "react";
@@ -13,6 +13,8 @@ import { Topbar } from "@/components/topbar";
 import { motion } from "framer-motion";
 import { MikrotikUser } from "@/app/mikrotik/users/page"; // Re-use the same interface
 import { ColumnDef } from "@tanstack/react-table";
+import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function DelayedPaymentsPage() {
   const [users, setUsers] = useState<MikrotikUser[]>([]);
@@ -60,58 +62,63 @@ export default function DelayedPaymentsPage() {
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
       <div className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">Delayed Payments</h1>
-            <p className="text-sm text-zinc-400">View users who are overdue on their payments.</p>
-          </div>
-        </div>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Delayed Payments Report</h1>
+          <p className="text-sm text-zinc-400 mt-1">Identify and manage users with overdue payments.</p>
+        </motion.div>
 
-        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-orange-500/10 rounded-xl overflow-hidden">
-          <Card className="bg-transparent border-none">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
             <CardHeader>
-              <CardTitle>Filter Overdue Users</CardTitle>
+              <CardTitle className="text-cyan-400">Filter Options</CardTitle>
+              <p className="text-sm text-zinc-400">Specify criteria to find overdue users.</p>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <Input
-                  type="number"
-                  placeholder="Min. Days Overdue"
-                  value={daysOverdue}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value, 10);
-                    setDaysOverdue(isNaN(value) ? 0 : value);
-                  }}
-                  className="max-w-xs bg-zinc-800 border-zinc-700"
-                />
-                <Input
-                  type="text"
-                  placeholder="Search by name or username..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-xs bg-zinc-800 border-zinc-700"
-                />
-                <Button onClick={fetchDelayedUsers} className="bg-gradient-to-r from-orange-600 to-yellow-500 text-white">
-                  {loading ? 'Loading...' : 'Filter'}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="space-y-2">
+                  <label htmlFor="days-overdue" className="text-sm font-medium text-zinc-300">Minimum Days Overdue</label>
+                  <Input
+                    id="days-overdue"
+                    type="number"
+                    placeholder="e.g., 3"
+                    value={daysOverdue}
+                    onChange={(e) => setDaysOverdue(isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value))}
+                    className="bg-zinc-800 border-zinc-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="search-term" className="text-sm font-medium text-zinc-300">Search by Name/Username</label>
+                  <Input
+                    id="search-term"
+                    type="text"
+                    placeholder="Enter name or username..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="bg-zinc-800 border-zinc-700"
+                  />
+                </div>
+                <Button onClick={fetchDelayedUsers} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white self-end">
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching...</> : 'Search'}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
-          <Card className="bg-transparent border-none">
-            <CardHeader>
-                <CardTitle>Overdue Subscribers</CardTitle>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-blue-400">Overdue Subscribers</CardTitle>
+              <Badge variant="secondary">{users.length} users found</Badge>
             </CardHeader>
             <CardContent>
-                {loading ? (
-                    <div className="flex justify-center items-center h-64">
-                        <p>Loading data...</p>
-                    </div>
-                ) : (
-                    <DataTable columns={columns} data={users as (MikrotikUser & { daysOverdue: number; })[]} filterColumn="username" />
-                )}
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 text-zinc-500 animate-spin" />
+                </div>
+              ) : (
+                <DataTable columns={columns} data={users as (MikrotikUser & { daysOverdue: number; })[]} filterColumn="username" />
+              )}
             </CardContent>
           </Card>
         </motion.div>
