@@ -76,7 +76,9 @@ const getDevices = asyncHandler(async (req, res) => {
     query.deviceType = deviceType;
   }
 
-  const devices = await Device.find(query).populate('router', 'name ipAddress');
+  const devices = await Device.find(query)
+    .populate('router', 'name ipAddress')
+    .sort({ deviceType: 1 }); // Sort by deviceType, 'Access' then 'Station'
   res.json(devices);
 });
 

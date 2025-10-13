@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -16,6 +16,7 @@ import { useAuth } from "@/components/auth-provider"
 // --- Zod Schema Definition ---
 const emailSettingsSchema = z.object({
   adminNotificationEmails: z.array(z.string().email({ message: "Invalid email address." })).optional(),
+  newEmailInput: z.string().optional(), // Add newEmailInput to schema
   smtpSettings: z.object({
     host: z.string().min(1, "Host is required."),
     port: z.coerce.number().min(1, "Port is required."),
@@ -30,12 +31,14 @@ type EmailSettingsFormValues = z.infer<typeof emailSettingsSchema>;
 // --- Main Component ---
 export default function EmailSettingsPage() {
   const { token } = useAuth();
+  const [isLoading, setIsLoading] = useState(true); // Re-introduce isLoading state
 
   const form = useForm<EmailSettingsFormValues>({
     resolver: zodResolver(emailSettingsSchema),
     defaultValues: {
       adminNotificationEmails: [],
-      smtpSettings: { host: "", port: 587, user: "", pass: "", from: "" },
+      newEmailInput: "", // Initialize newEmailInput
+      smtpSettings: { host: "smtp.gmail.com", port: 587, user: "", pass: "", from: "" },
     },
   });
 
@@ -47,16 +50,31 @@ export default function EmailSettingsPage() {
   useEffect(() => {
     if (!token) return;
     const fetchSettings = async () => {
+      setIsLoading(true); // Set loading true before fetch
       try {
         const response = await fetch("/api/settings/general", { headers: { Authorization: `Bearer ${token}` } });
         if (!response.ok) throw new Error("Failed to fetch settings.");
         const data = await response.json();
+
+        // Normalize smtpSettings to prevent controlled/uncontrolled input warning
+        const smtp = data.smtpSettings || {};
+        const normalizedSmtp = {
+          host: smtp.host || "",
+          port: smtp.port || 587,
+          user: smtp.user || "",
+          from: smtp.from || "",
+          pass: "", // Always keep pass empty on load
+        };
+
         form.reset({
           adminNotificationEmails: data.adminNotificationEmails || [],
-          smtpSettings: data.smtpSettings || { host: "", port: 587, user: "", from: "" },
+          newEmailInput: "", // Explicitly reset newEmailInput on initial load
+          smtpSettings: normalizedSmtp,
         });
       } catch (error) {
         toast.error((error as Error).message);
+      } finally {
+        setIsLoading(false); // Set loading false after fetch
       }
     };
     fetchSettings();
@@ -64,6 +82,7 @@ export default function EmailSettingsPage() {
 
   const onSubmit = async (data: EmailSettingsFormValues) => {
     if (!token) return;
+    setIsLoading(true); // Set loading true before submit
     try {
       const settingsToSave = { ...data };
       if (settingsToSave.smtpSettings && !settingsToSave.smtpSettings.pass) {
@@ -82,11 +101,14 @@ export default function EmailSettingsPage() {
       const responseData = await response.json();
       form.reset({
         adminNotificationEmails: responseData.adminNotificationEmails || [],
+        newEmailInput: "", // Explicitly reset newEmailInput
         smtpSettings: responseData.smtpSettings || { host: "", port: 587, user: "", from: "" },
       });
 
     } catch (error) {
       toast.error((error as Error).message);
+    } finally {
+      setIsLoading(false); // Set loading false after submit
     }
   };
 
@@ -104,7 +126,7 @@ export default function EmailSettingsPage() {
     }
   };
 
-  if (!form.formState.isDirty && form.formState.isLoading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-blue-400" /></div>;
   }
 
