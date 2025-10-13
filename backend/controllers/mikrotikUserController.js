@@ -203,7 +203,8 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
 const getMikrotikUsers = asyncHandler(async (req, res) => {
   const users = await MikrotikUser.find({ user: req.user._id })
     .populate('mikrotikRouter')
-    .populate('package');
+    .populate('package')
+    .populate('station');
   res.status(200).json(users);
 });
 

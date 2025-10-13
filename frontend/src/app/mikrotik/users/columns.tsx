@@ -57,6 +57,10 @@ export const getColumns = (
     header: "Official Name",
   },
   {
+    accessorKey: "apartment_house_number",
+    header: "Apartment/House",
+  },
+  {
     accessorKey: "mobileNumber",
     header: "Mobile Number",
   },
@@ -68,6 +72,19 @@ export const getColumns = (
   {
     accessorKey: "mikrotikRouter.name",
     header: "Mikrotik Router",
+  },
+  {
+    accessorKey: "station.deviceName",
+    header: "Station",
+    cell: ({ row }) => {
+      const station = row.original.station;
+      if (!station) return 'N/A';
+      return (
+        <Link href={`/devices/${station._id}`} className="font-medium text-blue-400 hover:underline">
+          {station.deviceName}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "expiryDate",
