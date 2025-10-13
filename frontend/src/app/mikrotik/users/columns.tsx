@@ -66,6 +66,10 @@ export const getColumns = (
     cell: ({ row }) => row.original.package?.name || 'N/A',
   },
   {
+    accessorKey: "mikrotikRouter.name",
+    header: "Mikrotik Router",
+  },
+  {
     accessorKey: "expiryDate",
     header: "Expiry Date",
     cell: ({ row }) => new Date(row.getValue("expiryDate")).toLocaleDateString(),
