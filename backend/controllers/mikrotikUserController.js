@@ -146,6 +146,25 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     user: req.user._id, // Associate with the logged-in user
   });
 
+  // If there is an installation fee, create an initial debit for it.
+  if (mikrotikUser && installationFee && parseFloat(installationFee) > 0) {
+    const fee = parseFloat(installationFee);
+    mikrotikUser.walletBalance -= fee;
+
+    await WalletTransaction.create({
+      user: req.user._id,
+      mikrotikUser: mikrotikUser._id,
+      transactionId: `DEBIT-INSTALL-${Date.now()}-${mikrotikUser.username}`,
+      type: 'Debit',
+      amount: fee,
+      source: 'Installation Fee',
+      balanceAfter: mikrotikUser.walletBalance,
+      comment: 'Initial installation fee.',
+    });
+
+    await mikrotikUser.save();
+  }
+
   if (mikrotikUser) {
     let client;
     try {

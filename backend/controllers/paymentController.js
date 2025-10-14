@@ -1,19 +1,34 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
+const axios = require('axios');
+const moment = require('moment');
 const MikrotikUser = require('../models/MikrotikUser');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
-const { reconnectMikrotikUser } = require('../utils/mikrotikUtils');
-const {
-  initiateStkPushService,
-  processStkCallback,
-  processC2bCallback,
-  creditUserWallet,
-} = require('../services/mpesaService');
+const { processSubscriptionPayment } = require('../utils/paymentProcessing');
+const { DARAJA_ENV, DARAJA_CONSUMER_KEY, DARAJA_CONSUMER_SECRET, DARAJA_SHORTCODE, DARAJA_PASSKEY } = require('../config/env');
 
-// @desc    Initiate STK Push
-// @route   POST /api/payments/initiate-stk
-// @access  Private
+const getDarajaAxiosInstance = async () => {
+  const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
+  const response = await axios.get(
+    `https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials`,
+    {
+      headers: {
+        'Authorization': `Basic ${auth}`
+      }
+    }
+  );
+  const accessToken = response.data.access_token;
+
+  return axios.create({
+    baseURL: DARAJA_ENV === 'sandbox' ? 'https://sandbox.safaricom.co.ke' : 'https://api.safaricom.co.ke',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+};
+
 const initiateStkPush = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -21,46 +36,61 @@ const initiateStkPush = asyncHandler(async (req, res) => {
   }
 
   const { amount, phoneNumber, accountReference } = req.body;
-  const userId = req.user._id;
+  const timestamp = moment().format('YYYYMMDDHHmmss');
+  const password = Buffer.from(`${DARAJA_SHORTCODE}${DARAJA_PASSKEY}${timestamp}`).toString('base64');
 
-  try {
-    const responseData = await initiateStkPushService(amount, phoneNumber, accountReference, userId);
-    res.status(200).json({
-      message: responseData.ResponseDescription,
-      checkoutRequestID: responseData.CheckoutRequestID,
-    });
-  } catch (error) {
-    console.error('Error initiating STK push:', error.response ? error.response.data : error.message);
-    res.status(500).json({ message: 'Failed to initiate STK push.' });
-  }
+  const stkPushPayload = {
+    BusinessShortCode: DARAJA_SHORTCODE,
+    Password: password,
+    Timestamp: timestamp,
+    TransactionType: 'CustomerPayBillOnline',
+    Amount: amount,
+    PartyA: phoneNumber,
+    PartyB: DARAJA_SHORTCODE,
+    PhoneNumber: phoneNumber,
+    CallBackURL: `https://your-callback-url.com/api/payments/daraja-callback`, // Replace with your actual callback URL
+    AccountReference: accountReference,
+    TransactionDesc: 'Subscription Payment'
+  };
+
+  const darajaAxios = await getDarajaAxiosInstance();
+  const response = await darajaAxios.post('/mpesa/stkpush/v1/processrequest', stkPushPayload);
+
+  res.status(200).json(response.data);
 });
-// @desc    Handle Daraja C2B and STK Callbacks
-// @route   POST /api/payments/daraja-callback
-// @access  Public
+
 const handleDarajaCallback = asyncHandler(async (req, res) => {
-  console.log('--- Daraja Callback Received ---');
-  console.log(JSON.stringify(req.body, null, 2));
+  console.log('M-Pesa Callback Received:', JSON.stringify(req.body, null, 2));
 
-  // Acknowledge receipt immediately
-  res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+  const { Body } = req.body;
+  if (Body && Body.stkCallback && Body.stkCallback.ResultCode === 0) {
+    const { MpesaReceiptNumber, Amount, PhoneNumber } = Body.stkCallback.CallbackMetadata.Item.reduce((acc, item) => {
+      acc[item.Name] = item.Value;
+      return acc;
+    }, {});
 
-  try {
-    // Check if it's an STK Push callback
-    if (req.body.Body && req.body.Body.stkCallback) {
-      await processStkCallback(req.body.Body.stkCallback);
-    } else {
-      // Assume it's a C2B callback
-      await processC2bCallback(req.body);
+    const transaction = await Transaction.create({
+      transactionId: MpesaReceiptNumber,
+      amount: Amount,
+      referenceNumber: Body.stkCallback.CheckoutRequestID,
+      officialName: '', // You might want to get this from the user who initiated the payment
+      msisdn: PhoneNumber,
+      transactionDate: new Date(),
+      paymentMethod: 'M-Pesa',
+      comment: 'STK Push Payment',
+      user: null // You need to associate this with a user
+    });
+
+    // Find the user by phone number and process the payment
+    const user = await MikrotikUser.findOne({ mobileNumber: PhoneNumber });
+    if (user) {
+      await processSubscriptionPayment(user._id, Amount, 'M-Pesa', MpesaReceiptNumber, null);
     }
-  } catch (error) {
-    console.error('Error processing Daraja callback:', error.message);
-    // We've already sent a 200 response, so we just log the error
   }
+
+  res.status(200).send('Callback received');
 });
 
-// @desc    Get all transactions
-// @route   GET /api/payments/transactions
-// @access  Private
 const getTransactions = asyncHandler(async (req, res) => {
   const { page = 1, limit = 15, searchTerm, startDate, endDate } = req.query;
 
@@ -82,36 +112,14 @@ const getTransactions = asyncHandler(async (req, res) => {
     };
   }
 
-  const totalTransactions = await Transaction.countDocuments(query);
-  const totalPages = Math.ceil(totalTransactions / limit);
-
   const transactions = await Transaction.find(query)
     .sort({ transactionDate: -1 })
     .skip((page - 1) * limit)
     .limit(parseInt(limit));
 
-  // Calculate stats based on the filtered query
-  const allFilteredTransactions = await Transaction.find(query);
-  const totalVolume = allFilteredTransactions.reduce((acc, t) => acc + t.amount, 0);
-  const transactionCount = allFilteredTransactions.length;
-  const averageTransaction = transactionCount > 0 ? totalVolume / transactionCount : 0;
-
-  res.status(200).json({
-    transactions,
-    page: parseInt(page),
-    pages: totalPages,
-    stats: {
-      totalVolume,
-      transactionCount,
-      averageTransaction,
-    },
-  });
+  res.status(200).json(transactions);
 });
 
-
-// @desc    Create a cash payment
-// @route   POST /api/payments/cash
-// @access  Private
 const createCashPayment = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -119,67 +127,16 @@ const createCashPayment = asyncHandler(async (req, res) => {
   }
 
   const { userId, amount, transactionId, comment } = req.body;
+  const amountPaid = parseFloat(amount);
 
-  // Populate the package details to get the price
-  const user = await MikrotikUser.findById(userId).populate('package');
-
+  const user = await MikrotikUser.findById(userId);
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  if (!user.package || !user.package.price || user.package.price <= 0) {
-    res.status(400);
-    throw new Error('User does not have a valid package with a price. Cannot process payment.');
-  }
+  await processSubscriptionPayment(userId, amountPaid, 'Cash', transactionId, req.user._id);
 
-  const packagePrice = user.package.price;
-  const amountPaid = parseFloat(amount);
-
-  // Calculate how many months are being paid for
-  const monthsPaid = Math.floor(amountPaid / packagePrice);
-  const remainder = amountPaid % packagePrice;
-  const daysToExtend = monthsPaid * 30; // Assuming 30 days per month
-
-  // Only extend subscription if at least one month is paid for
-  if (daysToExtend > 0) {
-    const now = new Date();
-    let newExpiryDate = new Date(user.expiryDate || now);
-
-    // If the expiry date is in the past, start the new subscription from today
-    if (newExpiryDate < now) {
-      newExpiryDate = now;
-    }
-
-    newExpiryDate.setDate(newExpiryDate.getDate() + daysToExtend);
-    user.expiryDate = newExpiryDate;
-  }
-
-  // Add any remainder to the user's wallet
-  if (remainder > 0) {
-    user.walletBalance += remainder;
-    // Create a wallet transaction for the remainder
-    await WalletTransaction.create({
-      user: req.user._id,
-      mikrotikUser: userId,
-      transactionId: `WT-REMAINDER-${Date.now()}`,
-      type: 'Credit',
-      amount: remainder,
-      source: 'Overpayment',
-      balanceAfter: user.walletBalance,
-      comment: `Remainder from cash payment ${transactionId}`,
-      processedBy: req.user._id,
-    });
-  }
-
-  await user.save();
-
-  // Reconnect user if their subscription was extended
-  if (daysToExtend > 0) {
-    await reconnectMikrotikUser(user._id);
-  }
-
-  // Create a main transaction record for the full amount
   const transaction = await Transaction.create({
     transactionId,
     amount: amountPaid,
@@ -195,49 +152,22 @@ const createCashPayment = asyncHandler(async (req, res) => {
   res.status(201).json(transaction);
 });
 
-
-// @desc    Get all wallet transactions
-// @route   GET /api/payments/wallet
-// @access  Private
 const getWalletTransactions = asyncHandler(async (req, res) => {
-  const { userId, type, startDate, endDate } = req.query;
-  const filter = {};
-
-  if (userId) filter.userId = userId;
-  if (type) filter.type = type;
-  if (startDate || endDate) {
-    filter.createdAt = {};
-    if (startDate) filter.createdAt.$gte = new Date(startDate);
-    if (endDate) filter.createdAt.$lte = new Date(endDate);
-  }
-
-  const transactions = await WalletTransaction.find(filter)
-    .populate('userId', 'officialName username') // Populate user details
-    .populate('processedBy', 'name') // Populate admin user details
-    .sort({ createdAt: -1 });
-
+  const transactions = await WalletTransaction.find({ user: req.user._id }).sort({ createdAt: -1 });
   res.status(200).json(transactions);
 });
 
-// @desc    Get single wallet transaction by ID
-// @route   GET /api/payments/wallet/:id
-// @access  Private
 const getWalletTransactionById = asyncHandler(async (req, res) => {
-  const transaction = await WalletTransaction.findById(req.params.id)
-    .populate('userId', 'officialName username')
-    .populate('processedBy', 'name');
+  const transaction = await WalletTransaction.findById(req.params.id);
 
-  if (!transaction) {
+  if (transaction && transaction.user.toString() === req.user._id.toString()) {
+    res.status(200).json(transaction);
+  } else {
     res.status(404);
-    throw new Error('Wallet transaction not found');
+    throw new Error('Transaction not found');
   }
-
-  res.status(200).json(transaction);
 });
 
-// @desc    Create a manual wallet transaction (Credit/Debit/Adjustment)
-// @route   POST /api/payments/wallet
-// @access  Private (Admin only)
 const createWalletTransaction = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -246,41 +176,17 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
 
   const { userId, type, amount, source, comment, transactionId } = req.body;
 
-  const user = await MikrotikUser.findById(userId);
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
-  }
-
-  let newBalance = user.walletBalance;
-  if (type === 'Credit') {
-    newBalance += amount;
-  } else if (type === 'Debit') {
-    newBalance -= amount;
-  } else if (type === 'Adjustment') {
-    // For adjustment, the amount can be positive or negative
-    newBalance += amount;
-  } else {
-    res.status(400);
-    throw new Error('Invalid transaction type');
-  }
-
-  user.walletBalance = newBalance;
-  await user.save();
-
-  const walletTransaction = await WalletTransaction.create({
-    user: req.user._id, // Associate with the logged-in user
-    mikrotikUser: userId, // Associate with the Mikrotik user
-    transactionId: transactionId || `MANUAL-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+  const transaction = await WalletTransaction.create({
+    user: userId,
     type,
     amount,
     source,
-    balanceAfter: newBalance,
     comment,
-    processedBy: req.user._id, // The logged-in admin user
+    transactionId,
+    balanceAfter: 0 // This should be calculated based on the user's wallet balance
   });
 
-  res.status(201).json(walletTransaction);
+  res.status(201).json(transaction);
 });
 
 module.exports = {
