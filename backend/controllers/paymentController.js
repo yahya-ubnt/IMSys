@@ -77,45 +77,81 @@ const createCashPayment = asyncHandler(async (req, res) => {
 
   const { userId, amount, transactionId, comment } = req.body;
 
-  const user = await MikrotikUser.findById(userId);
+  // Populate the package details to get the price
+  const user = await MikrotikUser.findById(userId).populate('package');
 
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  // Process payment - extend expiry and reconnect
-  const now = new Date();
-  let newExpiryDate = new Date(user.expiryDate || now);
-
-  // If the expiry date is in the past, start the new subscription from today
-  if (newExpiryDate < now) {
-    newExpiryDate = now;
+  if (!user.package || !user.package.price || user.package.price <= 0) {
+    res.status(400);
+    throw new Error('User does not have a valid package with a price. Cannot process payment.');
   }
 
-  newExpiryDate.setDate(newExpiryDate.getDate() + 30);
-  user.expiryDate = newExpiryDate;
+  const packagePrice = user.package.price;
+  const amountPaid = parseFloat(amount);
+
+  // Calculate how many months are being paid for
+  const monthsPaid = Math.floor(amountPaid / packagePrice);
+  const remainder = amountPaid % packagePrice;
+  const daysToExtend = monthsPaid * 30; // Assuming 30 days per month
+
+  // Only extend subscription if at least one month is paid for
+  if (daysToExtend > 0) {
+    const now = new Date();
+    let newExpiryDate = new Date(user.expiryDate || now);
+
+    // If the expiry date is in the past, start the new subscription from today
+    if (newExpiryDate < now) {
+      newExpiryDate = now;
+    }
+
+    newExpiryDate.setDate(newExpiryDate.getDate() + daysToExtend);
+    user.expiryDate = newExpiryDate;
+  }
+
+  // Add any remainder to the user's wallet
+  if (remainder > 0) {
+    user.walletBalance += remainder;
+    // Create a wallet transaction for the remainder
+    await WalletTransaction.create({
+      user: req.user._id,
+      mikrotikUser: userId,
+      transactionId: `WT-REMAINDER-${Date.now()}`,
+      type: 'Credit',
+      amount: remainder,
+      source: 'Overpayment',
+      balanceAfter: user.walletBalance,
+      comment: `Remainder from cash payment ${transactionId}`,
+      processedBy: req.user._id,
+    });
+  }
+
   await user.save();
 
-  await reconnectMikrotikUser(user._id);
+  // Reconnect user if their subscription was extended
+  if (daysToExtend > 0) {
+    await reconnectMikrotikUser(user._id);
+  }
 
-  // Create transaction record
+  // Create a main transaction record for the full amount
   const transaction = await Transaction.create({
     transactionId,
-    amount,
-    referenceNumber: user.username, // Use username as the reference for cash payments
+    amount: amountPaid,
+    referenceNumber: user.username,
     officialName: user.officialName,
     msisdn: user.mobileNumber,
     transactionDate: new Date(),
     paymentMethod: 'Cash',
     comment,
-    user: req.user._id, // Associate with the logged-in user
+    user: req.user._id,
   });
-
-  await creditUserWallet(user._id, amount, 'Cash', transactionId, req.user._id);
 
   res.status(201).json(transaction);
 });
+
 
 // @desc    Get all wallet transactions
 // @route   GET /api/payments/wallet

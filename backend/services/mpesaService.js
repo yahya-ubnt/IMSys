@@ -133,7 +133,7 @@ const processStkCallback = async (callbackData) => {
   const { accountReference } = requestDetails;
 
   try {
-    const user = await MikrotikUser.findOne({ username: accountReference });
+    const user = await MikrotikUser.findOne({ username: accountReference }).populate('package');
 
     if (!user) {
       const alertMessage = `STK payment of KES ${transAmount} received for username '${accountReference}', but no user was found. (Receipt: ${transId})`;
@@ -141,9 +141,47 @@ const processStkCallback = async (callbackData) => {
       throw new Error(alertMessage);
     }
 
-    const newExpiryDate = new Date(user.expiryDate || new Date());
-    newExpiryDate.setDate(newExpiryDate.getDate() + 30);
-    user.expiryDate = newExpiryDate;
+    if (!user.package || !user.package.price || user.package.price <= 0) {
+      const alertMessage = `STK payment of KES ${transAmount} for ${user.username} received, but user has no valid package price. Amount credited to wallet.`;
+      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: accountReference, user: requestDetails.userId });
+      await creditUserWallet(user._id, transAmount, 'M-Pesa', transId);
+      return;
+    }
+
+    const packagePrice = user.package.price;
+    const amountPaid = parseFloat(transAmount);
+
+    const monthsPaid = Math.floor(amountPaid / packagePrice);
+    const remainder = amountPaid % packagePrice;
+    const daysToExtend = monthsPaid * 30;
+
+    if (daysToExtend > 0) {
+      const now = new Date();
+      let newExpiryDate = new Date(user.expiryDate || now);
+
+      if (newExpiryDate < now) {
+        newExpiryDate = now;
+      }
+
+      newExpiryDate.setDate(newExpiryDate.getDate() + daysToExtend);
+      user.expiryDate = newExpiryDate;
+    }
+
+    if (remainder > 0) {
+      user.walletBalance += remainder;
+      await WalletTransaction.create({
+        user: user.user,
+        mikrotikUser: user._id,
+        transactionId: `WT-REMAINDER-${Date.now()}`,
+        type: 'Credit',
+        amount: remainder,
+        source: 'Overpayment',
+        balanceAfter: user.walletBalance,
+        comment: `Remainder from M-Pesa payment ${transId}`,
+        processedBy: null,
+      });
+    }
+
     await user.save();
 
     const reconnectionSuccessful = await reconnectMikrotikUser(user._id);
@@ -164,7 +202,6 @@ const processStkCallback = async (callbackData) => {
         paymentMethod: 'M-Pesa',
         user: user.user,
       });
-      await creditUserWallet(user._id, transAmount, 'M-Pesa', transId);
     }
   } finally {
     pendingStkRequests.delete(CheckoutRequestID);
@@ -179,7 +216,7 @@ const processC2bCallback = async (callbackData) => {
     return;
   }
 
-  const user = await MikrotikUser.findOne({ username: BillRefNumber });
+  const user = await MikrotikUser.findOne({ username: BillRefNumber }).populate('package');
 
   if (!user) {
     const alertMessage = `C2B payment of KES ${TransAmount} received from ${FirstName} ${LastName} (${MSISDN}) for username '${BillRefNumber}', but no user was found.`;
@@ -187,9 +224,47 @@ const processC2bCallback = async (callbackData) => {
     throw new Error(alertMessage);
   }
 
-  const newExpiryDate = new Date(user.expiryDate || new Date());
-  newExpiryDate.setDate(newExpiryDate.getDate() + 30);
-  user.expiryDate = newExpiryDate;
+  if (!user.package || !user.package.price || user.package.price <= 0) {
+    const alertMessage = `C2B payment of KES ${TransAmount} for ${user.username} received, but user has no valid package price. Amount credited to wallet.`;
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, user: user.user });
+    await creditUserWallet(user._id, TransAmount, 'M-Pesa', TransID);
+    return;
+  }
+
+  const packagePrice = user.package.price;
+  const amountPaid = parseFloat(TransAmount);
+
+  const monthsPaid = Math.floor(amountPaid / packagePrice);
+  const remainder = amountPaid % packagePrice;
+  const daysToExtend = monthsPaid * 30;
+
+  if (daysToExtend > 0) {
+    const now = new Date();
+    let newExpiryDate = new Date(user.expiryDate || now);
+
+    if (newExpiryDate < now) {
+      newExpiryDate = now;
+    }
+
+    newExpiryDate.setDate(newExpiryDate.getDate() + daysToExtend);
+    user.expiryDate = newExpiryDate;
+  }
+
+  if (remainder > 0) {
+    user.walletBalance += remainder;
+    await WalletTransaction.create({
+      user: user.user,
+      mikrotikUser: user._id,
+      transactionId: `WT-REMAINDER-${Date.now()}`,
+      type: 'Credit',
+      amount: remainder,
+      source: 'Overpayment',
+      balanceAfter: user.walletBalance,
+      comment: `Remainder from M-Pesa payment ${TransID}`,
+      processedBy: null,
+    });
+  }
+
   await user.save();
 
   const reconnectionSuccessful = await reconnectMikrotikUser(user._id);
@@ -211,9 +286,9 @@ const processC2bCallback = async (callbackData) => {
       paymentMethod: 'M-Pesa',
       user: user.user,
     });
-    await creditUserWallet(user._id, TransAmount, 'M-Pesa', TransID);
   }
 };
+
 
 // Helper function to credit a user's wallet
 const creditUserWallet = async (userId, amount, source, externalTransactionId, adminId = null) => {
