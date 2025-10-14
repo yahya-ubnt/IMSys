@@ -85,7 +85,14 @@ const createCashPayment = asyncHandler(async (req, res) => {
   }
 
   // Process payment - extend expiry and reconnect
-  const newExpiryDate = new Date(user.expiryDate || new Date());
+  const now = new Date();
+  let newExpiryDate = new Date(user.expiryDate || now);
+
+  // If the expiry date is in the past, start the new subscription from today
+  if (newExpiryDate < now) {
+    newExpiryDate = now;
+  }
+
   newExpiryDate.setDate(newExpiryDate.getDate() + 30);
   user.expiryDate = newExpiryDate;
   await user.save();

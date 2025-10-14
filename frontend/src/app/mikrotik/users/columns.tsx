@@ -33,7 +33,7 @@ const getRemainingDays = (expiryDateString: string): string => {
 
   const diffTime = expiryDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays.toString();
+  return Math.max(0, diffDays).toString();
 };
 
 export const getColumns = (
