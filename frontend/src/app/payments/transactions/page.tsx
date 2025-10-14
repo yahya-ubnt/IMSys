@@ -85,8 +85,8 @@ export default function MpesaTransactionsPage() {
       <main className="flex-1 p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">M-Pesa Transactions</h1>
-            <p className="text-sm text-zinc-400">Review and manage all M-Pesa payment transactions.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Payment Transactions</h1>
+            <p className="text-sm text-zinc-400">Review and manage all payment transactions.</p>
           </div>
           <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
             <Download className="mr-2 h-4 w-4" /> Export Data

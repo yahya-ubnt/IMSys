@@ -62,9 +62,52 @@ const handleDarajaCallback = asyncHandler(async (req, res) => {
 // @route   GET /api/payments/transactions
 // @access  Private
 const getTransactions = asyncHandler(async (req, res) => {
-  const transactions = await Transaction.find({}).sort({ createdAt: -1 });
-  res.status(200).json(transactions);
+  const { page = 1, limit = 15, searchTerm, startDate, endDate } = req.query;
+
+  const query = {};
+
+  if (searchTerm) {
+    query.$or = [
+      { officialName: { $regex: searchTerm, $options: 'i' } },
+      { referenceNumber: { $regex: searchTerm, $options: 'i' } },
+      { msisdn: { $regex: searchTerm, $options: 'i' } },
+      { transactionId: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
+
+  if (startDate && endDate) {
+    query.transactionDate = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate),
+    };
+  }
+
+  const totalTransactions = await Transaction.countDocuments(query);
+  const totalPages = Math.ceil(totalTransactions / limit);
+
+  const transactions = await Transaction.find(query)
+    .sort({ transactionDate: -1 })
+    .skip((page - 1) * limit)
+    .limit(parseInt(limit));
+
+  // Calculate stats based on the filtered query
+  const allFilteredTransactions = await Transaction.find(query);
+  const totalVolume = allFilteredTransactions.reduce((acc, t) => acc + t.amount, 0);
+  const transactionCount = allFilteredTransactions.length;
+  const averageTransaction = transactionCount > 0 ? totalVolume / transactionCount : 0;
+
+  res.status(200).json({
+    transactions,
+    page: parseInt(page),
+    pages: totalPages,
+    stats: {
+      totalVolume,
+      transactionCount,
+      averageTransaction,
+    },
+  });
 });
+
 
 // @desc    Create a cash payment
 // @route   POST /api/payments/cash
