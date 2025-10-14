@@ -153,7 +153,13 @@ const createCashPayment = asyncHandler(async (req, res) => {
 });
 
 const getWalletTransactions = asyncHandler(async (req, res) => {
-  const transactions = await WalletTransaction.find({ user: req.user._id }).sort({ createdAt: -1 });
+  let query = {};
+  if (req.params.id) {
+    query = { mikrotikUser: req.params.id };
+  } else {
+    query = { user: req.user._id };
+  }
+  const transactions = await WalletTransaction.find(query).sort({ createdAt: -1 });
   res.status(200).json(transactions);
 });
 

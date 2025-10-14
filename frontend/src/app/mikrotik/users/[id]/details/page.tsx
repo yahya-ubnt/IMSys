@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
+import { WalletTransaction } from "./wallet-columns";
 import { differenceInDays, parseISO } from 'date-fns';
 import MikrotikUserTrafficChart from "@/components/MikrotikUserTrafficChart";
 import DowntimeLogTable from "@/components/mikrotik/DowntimeLogTable";
@@ -53,6 +54,7 @@ export default function MikrotikUserDetailsPage() {
     const [userData, setUserData] = useState<MikrotikUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [mpesaTransactions, setMpesaTransactions] = useState<MpesaTransaction[]>([]);
+    const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
     const [activeTab, setActiveTab] = useState("overview");
     const { token } = useAuth();
     const { toast } = useToast();
@@ -87,6 +89,20 @@ export default function MikrotikUserDetailsPage() {
         };
         fetchMpesaTransactions();
     }, [token, userData, toast]);
+
+    useEffect(() => {
+        if (!id || !token) return;
+        const fetchWalletTransactions = async () => {
+            try {
+                const response = await fetch(`/api/payments/wallet/user/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                if (!response.ok) throw new Error("Failed to fetch wallet transactions");
+                setWalletTransactions(await response.json());
+            } catch (err) {
+                toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" });
+            }
+        };
+        fetchWalletTransactions();
+    }, [id, token, toast]);
 
     const daysToExpire = useMemo(() => {
         if (!userData?.expiryDate) return { days: 0, label: 'Expired' };
@@ -160,7 +176,7 @@ export default function MikrotikUserDetailsPage() {
                                         </div>
                                     </TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="usage" className="h-full"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full"><MikrotikUserTrafficChart userId={userData._id} /><DowntimeLogTable userId={userData._id} /></div></TabsPrimitive.Content>
-                                    <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab transactions={mpesaTransactions} /></TabsPrimitive.Content>
+                                    <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab mpesaTransactions={mpesaTransactions} walletTransactions={walletTransactions} /></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="diagnostics" className="h-full"><DiagnosticHistory userId={userData._id} /></TabsPrimitive.Content>
                                 </CardContent>
                             </TabsPrimitive.Root>

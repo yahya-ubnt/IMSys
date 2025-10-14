@@ -49,6 +49,10 @@ router.route('/transactions').get(protect, getTransactions);
 // @desc    Private route to fetch all wallet transactions
 router.route('/wallet').get(protect, getWalletTransactions);
 
+// @route   GET /api/payments/wallet/user/:id
+// @desc    Private route to fetch all wallet transactions for a specific user
+router.route('/wallet/user/:id').get(protect, getWalletTransactions);
+
 // @route   POST /api/payments/wallet
 // @desc    Private route to create a manual wallet transaction
 router.route('/wallet').post(
