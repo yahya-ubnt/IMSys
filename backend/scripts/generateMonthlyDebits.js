@@ -4,6 +4,19 @@ const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
 const Package = require('../models/Package');
 
+// Helper function to convert billing cycle string to days
+const getBillingCycleInDays = (billingCycleString) => {
+  switch (billingCycleString) {
+    case 'quarterly':
+      return 90;
+    case 'annually':
+      return 365;
+    case 'monthly':
+    default:
+      return 30;
+  }
+};
+
 // Connect to the database
 connectDB();
 
@@ -15,14 +28,14 @@ const generateMonthlyDebits = async () => {
     const today = new Date();
 
     for (const user of users) {
-      if (!user.package) {
-        console.log(`Skipping user ${user.username} (ID: ${user._id}) - No package assigned.`);
+      if (!user.package || !user.package.price || user.package.price <= 0) {
+        console.log(`Skipping user ${user.username} (ID: ${user._id}) - No package with a valid price assigned.`);
         continue;
       }
 
       // Find the last debit transaction for this user
       const lastDebit = await WalletTransaction.findOne({
-        userId: user._id,
+        mikrotikUser: user._id,
         type: 'Debit',
         source: 'Monthly Bill',
       }).sort({ createdAt: -1 });
@@ -33,12 +46,10 @@ const generateMonthlyDebits = async () => {
         shouldGenerateDebit = true;
         console.log(`No previous debit found for ${user.username}. Generating first debit.`);
       } else {
-        // Check if the last debit was more than the billing cycle ago
         const lastDebitDate = new Date(lastDebit.createdAt);
         const daysSinceLastDebit = (today.getTime() - lastDebitDate.getTime()) / (1000 * 3600 * 24);
         
-        // Use user's billing cycle, default to 30 days
-        const billingCycleDays = user.billingCycle || 30; 
+        const billingCycleDays = getBillingCycleInDays(user.billingCycle);
 
         if (daysSinceLastDebit >= billingCycleDays) {
           shouldGenerateDebit = true;
@@ -54,7 +65,8 @@ const generateMonthlyDebits = async () => {
 
         // Create the debit transaction
         await WalletTransaction.create({
-          userId: user._id,
+          mikrotikUser: user._id,
+          user: user.user, // Associate with the main SaaS user
           transactionId: `DEBIT-${Date.now()}-${user.username}`,
           type: 'Debit',
           amount: debitAmount,

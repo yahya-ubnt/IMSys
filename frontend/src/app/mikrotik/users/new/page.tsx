@@ -70,7 +70,7 @@ export default function NewMikrotikUserPage() {
     const [apartmentHouseNumber, setApartmentHouseNumber] = useState("");
     const [doorNumberUnitLabel, setDoorNumberUnitLabel] = useState("");
     const [mPesaRefNo, setMPesaRefNo] = useState("");
-    const [billingCycle, setBillingCycle] = useState("");
+    const [billingCycle, setBillingCycle] = useState("monthly");
     const [mobileNumber, setMobileNumber] = useState("");
     const [installationFee, setInstallationFee] = useState("");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(new Date());
