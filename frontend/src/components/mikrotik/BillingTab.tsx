@@ -44,7 +44,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ mpesaTransactions, walletTransa
         <CardHeader>
           <div>
             <CardTitle className="text-cyan-400">Transaction History</CardTitle>
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-4">
               <Button 
                 variant={activeTable === 'mpesa' ? 'default' : 'outline'} 
                 onClick={() => setActiveTable('mpesa')}
@@ -64,7 +64,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ mpesaTransactions, walletTransa
         </CardHeader>
         <CardContent>
           {activeTable === 'mpesa' ? (
-            <div className="h-96 overflow-y-auto">
+            <div className="h-64 overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
