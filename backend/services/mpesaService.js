@@ -5,7 +5,7 @@ const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
 const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 const { getDarajaToken } = require('../utils/darajaAuth');
-const { DARAJA_ENV, DARAJA_SHORTCODE, DARAJA_PASSKEY } = require('../config/env');
+const { DARAJA_ENV, DARAJA_SHORTCODE, DARAJA_PASSKEY, DARAJA_CALLBACK_URL } = require('../config/env');
 
 const getDarajaAxiosInstance = async () => {
   const accessToken = await getDarajaToken();
@@ -31,7 +31,7 @@ const initiateStkPushService = async (amount, phoneNumber, accountReference) => 
     PartyA: phoneNumber,
     PartyB: DARAJA_SHORTCODE,
     PhoneNumber: phoneNumber,
-    CallBackURL: `https://your-callback-url.com/api/payments/daraja-callback`, // Replace with your actual callback URL
+    CallBackURL: DARAJA_CALLBACK_URL, // Replace with your actual callback URL
     AccountReference: accountReference,
     TransactionDesc: 'Subscription Payment'
   };

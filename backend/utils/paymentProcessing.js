@@ -1,3 +1,4 @@
+const moment = require('moment');
 const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
 const { reconnectMikrotikUser } = require('./mikrotikUtils');
@@ -22,7 +23,6 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   }
 
   // 1. Credit the full amount to the user's wallet
-  const initialBalance = user.walletBalance;
   user.walletBalance += amountPaid;
 
   await WalletTransaction.create({
@@ -44,17 +44,16 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   }
 
   const packagePrice = user.package.price;
-  let daysExtended = 0;
-  const now = new Date();
+  let monthsExtended = 0;
+  const now = moment();
 
   // 2. Pay for one month of service if the subscription is expired and wallet has sufficient funds
-  let newExpiryDate = new Date(user.expiryDate || now);
-  if (newExpiryDate < now && user.walletBalance >= packagePrice) {
+  let newExpiryDate = moment(user.expiryDate || now);
+  if (newExpiryDate.isBefore(now) && user.walletBalance >= packagePrice) {
     user.walletBalance -= packagePrice;
-    newExpiryDate = new Date(now);
-    newExpiryDate.setDate(newExpiryDate.getDate() + 30);
-    user.expiryDate = newExpiryDate;
-    daysExtended += 30;
+    newExpiryDate = now.add(1, 'months');
+    user.expiryDate = newExpiryDate.toDate();
+    monthsExtended += 1;
 
     await WalletTransaction.create({
       user: user.user,
@@ -77,10 +76,9 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
     const costOfFutureMonths = futureMonthsToBuy * packagePrice;
 
     if (futureMonthsToBuy > 0) {
-      let currentExpiry = new Date(user.expiryDate);
-      currentExpiry.setDate(currentExpiry.getDate() + (futureMonthsToBuy * 30));
-      user.expiryDate = currentExpiry;
-      daysExtended += futureMonthsToBuy * 30;
+      let currentExpiry = moment(user.expiryDate);
+      user.expiryDate = currentExpiry.add(futureMonthsToBuy, 'months').toDate();
+      monthsExtended += futureMonthsToBuy;
 
       user.walletBalance -= costOfFutureMonths;
 
@@ -100,11 +98,11 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
 
   await user.save();
 
-  if (daysExtended > 0) {
+  if (monthsExtended > 0) {
     await reconnectMikrotikUser(user._id);
   }
 
-  console.log(`Payment processing complete for ${user.username}. Service extended by ${daysExtended} days. New balance: ${user.walletBalance.toFixed(2)}`);
+  console.log(`Payment processing complete for ${user.username}. Service extended by ${monthsExtended} month(s). New balance: ${user.walletBalance.toFixed(2)}`);
 };
 
 module.exports = { processSubscriptionPayment };
