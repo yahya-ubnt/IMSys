@@ -14,7 +14,8 @@ const initiateStkPush = asyncHandler(async (req, res) => {
   const { amount, phoneNumber, accountReference } = req.body;
 
   try {
-    const response = await initiateStkPushService(amount, phoneNumber, accountReference);
+    // Pass the logged-in user's ID to the service
+    const response = await initiateStkPushService(req.user._id, amount, phoneNumber, accountReference);
     res.status(200).json(response);
   } catch (error) {
     console.error('Error initiating STK push:', error);

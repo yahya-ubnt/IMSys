@@ -3,14 +3,46 @@ const moment = require('moment');
 const MikrotikUser = require('../models/MikrotikUser');
 const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
+const ApplicationSettings = require('../models/ApplicationSettings'); // Import ApplicationSettings
 const { processSubscriptionPayment } = require('../utils/paymentProcessing');
-const { getDarajaToken } = require('../utils/darajaAuth');
-const { DARAJA_ENV, DARAJA_SHORTCODE, DARAJA_PASSKEY, DARAJA_CALLBACK_URL } = require('../config/env');
+const { DARAJA_CALLBACK_URL } = require('../config/env');
 
-const getDarajaAxiosInstance = async () => {
-  const accessToken = await getDarajaToken();
+/**
+ * Fetches M-Pesa credentials for a specific user from the database.
+ * @param {string} userId - The ID of the user/tenant.
+ * @returns {object} The M-Pesa credentials.
+ */
+const getTenantMpesaCredentials = async (userId) => {
+  const settings = await ApplicationSettings.findOne({ user: userId });
+  if (!settings || !settings.mpesaPaybill || !settings.mpesaPaybill.consumerKey) {
+    throw new Error(`M-Pesa settings not configured for user ${userId}`);
+  }
+  // Assuming paybill is the primary configuration for STK
+  return settings.mpesaPaybill;
+};
+
+/**
+ * Creates a Daraja API Axios instance configured for a specific tenant.
+ * @param {string} userId - The ID of the user/tenant.
+ * @returns {axios.AxiosInstance} An Axios instance configured with the tenant's credentials.
+ */
+const getDarajaAxiosInstance = async (userId) => {
+  const credentials = await getTenantMpesaCredentials(userId);
+
+  const auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
+  const url = (credentials.environment || 'sandbox') === 'production' 
+    ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
+    : 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
+
+  const tokenResponse = await axios.get(url, { headers: { 'Authorization': `Basic ${auth}` } });
+  const accessToken = tokenResponse.data.access_token;
+
+  const baseURL = (credentials.environment || 'sandbox') === 'production' 
+    ? 'https://api.safaricom.co.ke' 
+    : 'https://sandbox.safaricom.co.ke';
+
   return axios.create({
-    baseURL: DARAJA_ENV === 'sandbox' ? 'https://sandbox.safaricom.co.ke' : 'https://api.safaricom.co.ke',
+    baseURL,
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json'
@@ -18,34 +50,54 @@ const getDarajaAxiosInstance = async () => {
   });
 };
 
-const initiateStkPushService = async (amount, phoneNumber, accountReference) => {
+/**
+ * Initiates an STK push for a specific tenant.
+ * @param {string} userId - The ID of the tenant.
+ * @param {number} amount - The amount to charge.
+ * @param {string} phoneNumber - The customer's phone number.
+ * @param {string} accountReference - The customer's account reference.
+ * @returns {object} The response from the Daraja API.
+ */
+const initiateStkPushService = async (userId, amount, phoneNumber, accountReference) => {
+  const credentials = await getTenantMpesaCredentials(userId);
+  const darajaAxios = await getDarajaAxiosInstance(userId);
+  
   const timestamp = moment().format('YYYYMMDDHHmmss');
-  const password = Buffer.from(`${DARAJA_SHORTCODE}${DARAJA_PASSKEY}${timestamp}`).toString('base64');
+  const password = Buffer.from(`${credentials.paybillNumber}${credentials.passkey}${timestamp}`).toString('base64');
 
   const stkPushPayload = {
-    BusinessShortCode: DARAJA_SHORTCODE,
+    BusinessShortCode: credentials.paybillNumber,
     Password: password,
     Timestamp: timestamp,
     TransactionType: 'CustomerPayBillOnline',
     Amount: amount,
     PartyA: phoneNumber,
-    PartyB: DARAJA_SHORTCODE,
+    PartyB: credentials.paybillNumber,
     PhoneNumber: phoneNumber,
-    CallBackURL: DARAJA_CALLBACK_URL, // Replace with your actual callback URL
+    CallBackURL: DARAJA_CALLBACK_URL,
     AccountReference: accountReference,
     TransactionDesc: 'Subscription Payment'
   };
 
-  const darajaAxios = await getDarajaAxiosInstance();
   const response = await darajaAxios.post('/mpesa/stkpush/v1/processrequest', stkPushPayload);
-
   return response.data;
 };
 
-const registerCallbackURL = async (validationURL, confirmationURL) => {
-  const darajaAxios = await getDarajaAxiosInstance();
+/**
+ * Registers the C2B callback URLs for a specific tenant.
+ * @param {string} userId - The ID of the tenant.
+ * @returns {object} The response from the Daraja API.
+ */
+const registerCallbackURL = async (userId) => {
+  const credentials = await getTenantMpesaCredentials(userId);
+  const darajaAxios = await getDarajaAxiosInstance(userId);
+
+  // These URLs should ideally be tenant-specific if the routing structure supports it
+  const confirmationURL = DARAJA_CALLBACK_URL;
+  const validationURL = DARAJA_CALLBACK_URL; // Using the same for simplicity
+
   const response = await darajaAxios.post('/mpesa/c2b/v1/registerurl', {
-    ShortCode: DARAJA_SHORTCODE,
+    ShortCode: credentials.paybillNumber,
     ResponseType: 'Completed',
     ConfirmationURL: confirmationURL,
     ValidationURL: validationURL
@@ -53,6 +105,8 @@ const registerCallbackURL = async (validationURL, confirmationURL) => {
 
   return response.data;
 };
+
+// --- Callback Processing (Remains mostly the same, as it doesn't initiate API calls) ---
 
 const processStkCallback = async (callbackData) => {
   const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;

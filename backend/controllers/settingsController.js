@@ -147,14 +147,8 @@ const activateMpesa = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { type } = req.body; // type can be 'paybill' or 'till'
-  if (!type) {
-    res.status(400);
-    throw new Error('M-Pesa type (paybill or till) is required.');
-  }
-
   try {
-    const response = await registerCallbackURL(type, req.user._id); // Pass userId
+    const response = await registerCallbackURL(req.user._id); // Pass only userId
     res.json({ message: 'M-Pesa callback URL registered successfully.', response });
   } catch (error) {
     res.status(500);
