@@ -3,32 +3,22 @@ const moment = require('moment');
 const MikrotikUser = require('../models/MikrotikUser');
 const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
-const ApplicationSettings = require('../models/ApplicationSettings'); // Import ApplicationSettings
+const ApplicationSettings = require('../models/ApplicationSettings');
+const StkRequest = require('../models/StkRequest');
 const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
+const { formatPhoneNumber } = require('../utils/formatters');
 
-/**
- * Fetches M-Pesa credentials for a specific user from the database.
- * @param {string} userId - The ID of the user/tenant.
- * @returns {object} The M-Pesa credentials.
- */
 const getTenantMpesaCredentials = async (userId) => {
   const settings = await ApplicationSettings.findOne({ user: userId });
   if (!settings || !settings.mpesaPaybill || !settings.mpesaPaybill.consumerKey) {
     throw new Error(`M-Pesa settings not configured for user ${userId}`);
   }
-  // Assuming paybill is the primary configuration for STK
   return settings.mpesaPaybill;
 };
 
-/**
- * Creates a Daraja API Axios instance configured for a specific tenant.
- * @param {string} userId - The ID of the user/tenant.
- * @returns {axios.AxiosInstance} An Axios instance configured with the tenant's credentials.
- */
 const getDarajaAxiosInstance = async (userId) => {
   const credentials = await getTenantMpesaCredentials(userId);
-
   const auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
   const url = (credentials.environment || 'sandbox') === 'production' 
     ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -50,20 +40,13 @@ const getDarajaAxiosInstance = async (userId) => {
   });
 };
 
-/**
- * Initiates an STK push for a specific tenant.
- * @param {string} userId - The ID of the tenant.
- * @param {number} amount - The amount to charge.
- * @param {string} phoneNumber - The customer's phone number.
- * @param {string} accountReference - The customer's account reference.
- * @returns {object} The response from the Daraja API.
- */
 const initiateStkPushService = async (userId, amount, phoneNumber, accountReference) => {
   const credentials = await getTenantMpesaCredentials(userId);
   const darajaAxios = await getDarajaAxiosInstance(userId);
   
   const timestamp = moment().format('YYYYMMDDHHmmss');
   const password = Buffer.from(`${credentials.paybillNumber}${credentials.passkey}${timestamp}`).toString('base64');
+  const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
   const stkPushPayload = {
     BusinessShortCode: credentials.paybillNumber,
@@ -71,30 +54,31 @@ const initiateStkPushService = async (userId, amount, phoneNumber, accountRefere
     Timestamp: timestamp,
     TransactionType: 'CustomerPayBillOnline',
     Amount: amount,
-    PartyA: phoneNumber,
+    PartyA: formattedPhoneNumber,
     PartyB: credentials.paybillNumber,
-    PhoneNumber: phoneNumber,
+    PhoneNumber: formattedPhoneNumber,
     CallBackURL: DARAJA_CALLBACK_URL,
     AccountReference: accountReference,
     TransactionDesc: 'Subscription Payment'
   };
 
   const response = await darajaAxios.post('/mpesa/stkpush/v1/processrequest', stkPushPayload);
+
+  await StkRequest.create({
+    userId,
+    checkoutRequestId: response.data.CheckoutRequestID,
+    accountReference,
+  });
+
   return response.data;
 };
 
-/**
- * Registers the C2B callback URLs for a specific tenant.
- * @param {string} userId - The ID of the tenant.
- * @returns {object} The response from the Daraja API.
- */
 const registerCallbackURL = async (userId) => {
   const credentials = await getTenantMpesaCredentials(userId);
   const darajaAxios = await getDarajaAxiosInstance(userId);
 
-  // These URLs should ideally be tenant-specific if the routing structure supports it
   const confirmationURL = DARAJA_CALLBACK_URL;
-  const validationURL = DARAJA_CALLBACK_URL; // Using the same for simplicity
+  const validationURL = DARAJA_CALLBACK_URL;
 
   const response = await darajaAxios.post('/mpesa/c2b/v1/registerurl', {
     ShortCode: credentials.paybillNumber,
@@ -105,8 +89,6 @@ const registerCallbackURL = async (userId) => {
 
   return response.data;
 };
-
-// --- Callback Processing (Remains mostly the same, as it doesn't initiate API calls) ---
 
 const processStkCallback = async (callbackData) => {
   const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
@@ -121,14 +103,26 @@ const processStkCallback = async (callbackData) => {
     return acc;
   }, {});
 
-  const transAmount = metadata.Amount;
   const transId = metadata.MpesaReceiptNumber;
+  const existingTransaction = await Transaction.findOne({ transactionId: transId });
+  if (existingTransaction) {
+    console.log(`Transaction ${transId} already processed.`);
+    return;
+  }
+
+  const stkRequest = await StkRequest.findOne({ checkoutRequestId: CheckoutRequestID });
+  if (!stkRequest) {
+    console.error(`STK request not found for CheckoutRequestID: ${CheckoutRequestID}`);
+    return;
+  }
+
+  const transAmount = metadata.Amount;
   const msisdn = metadata.PhoneNumber.toString();
-  const user = await MikrotikUser.findOne({ mPesaRefNo: metadata.AccountReference });
+  const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference });
 
   if (!user) {
-    const alertMessage = `STK payment of KES ${transAmount} received for account '${metadata.AccountReference}', but no user was found.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: metadata.AccountReference });
+    const alertMessage = `STK payment of KES ${transAmount} received for account '${stkRequest.accountReference}', but no user was found.`;
+    await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: stkRequest.accountReference });
     return;
   }
 
@@ -144,6 +138,8 @@ const processStkCallback = async (callbackData) => {
     paymentMethod: 'M-Pesa',
     user: user.user,
   });
+
+  await StkRequest.deleteOne({ _id: stkRequest._id });
 };
 
 const processC2bCallback = async (callbackData) => {

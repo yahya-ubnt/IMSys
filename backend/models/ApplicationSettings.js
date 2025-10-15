@@ -67,6 +67,7 @@ const ApplicationSettingsSchema = mongoose.Schema(
       client: { type: String, default: "" },
     },
     mpesaPaybill: {
+      environment: { type: String, default: 'sandbox' },
       paybillNumber: { type: String, trim: true },
       consumerKey: { type: String, trim: true },
       consumerSecret: { type: String, trim: true },
@@ -74,6 +75,7 @@ const ApplicationSettingsSchema = mongoose.Schema(
       activated: { type: Boolean, default: false }
     },
     mpesaTill: {
+      environment: { type: String, default: 'sandbox' },
       tillStoreNumber: { type: String, trim: true },
       tillNumber: { type: String, trim: true },
       consumerKey: { type: String, trim: true },

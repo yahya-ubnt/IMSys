@@ -12,6 +12,70 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, Save, Loader2, Settings, CreditCard } from "lucide-react"
+import { useAuth } from "@/components/auth-provider";
+
+// --- Zod Schema Definitions ---
+const mpesaConfigSchema = z.object({
+    environment: z.enum(["sandbox", "production"]),
+    consumerKey: z.string(),
+    consumerSecret: z.string(),
+    passkey: z.string(),
+    paybillNumber: z.string().optional(),
+    tillStoreNumber: z.string().optional(),
+    tillNumber: z.string().optional(),
+});
+
+const formSchema = z.object({
+  configType: z.enum(["paybill", "till"]),
+    paybill: mpesaConfigSchema,
+    till: mpesaConfigSchema,
+}).superRefine((data, ctx) => {
+    const requiredFields = ['consumerKey', 'consumerSecret', 'passkey'];
+    if (data.configType === 'paybill') {
+        requiredFields.forEach(field => {
+            if (!data.paybill[field]) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['paybill', field],
+                    message: `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`,
+                });
+            }
+        });
+        if (!data.paybill.paybillNumber) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['paybill', 'paybillNumber'],
+                message: 'Paybill Number is required.',
+            });
+        }
+    } else if (data.configType === 'till') {
+        requiredFields.forEach(field => {
+            if (!data.till[field]) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['till', field],
+                    message: `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`,
+                });
+            }
+        });
+         if (!data.till.tillStoreNumber) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['till', 'tillStoreNumber'],
+                message: 'Store Number is required.',
+            });
+        }
+        if (!data.till.tillNumber) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['till', 'tillNumber'],
+                message: 'Till Number is required.',
+            });
+        }
+    }
+});
+
+type MpesaSettingsFormValues = z.infer<typeof formSchema>;
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -35,26 +99,6 @@ const formVariants = {
     exit: (direction: number) => ({ opacity: 0, x: direction < 0 ? 50 : -50, transition: { duration: 0.2, ease: "easeInOut" } }),
 };
 
-// --- Zod Schema Definitions ---
-const mpesaConfigSchema = z.object({
-    consumerKey: z.string().min(1, "Consumer Key is required."),
-    consumerSecret: z.string().min(1, "Consumer Secret is required."),
-    passkey: z.string().min(1, "Passkey is required."),
-    paybillNumber: z.string().optional(),
-    tillStoreNumber: z.string().optional(),
-    tillNumber: z.string().optional(),
-});
-
-const formSchema = z.object({
-  configType: z.enum(["paybill", "till"]),
-    paybill: mpesaConfigSchema,
-    till: mpesaConfigSchema,
-});
-
-type MpesaSettingsFormValues = z.infer<typeof formSchema>;
-
-import { useAuth } from "@/components/auth-provider";
-
 // --- Main Component ---
 export default function MpesaSettingsPage() {
   const { token } = useAuth();
@@ -65,9 +109,9 @@ export default function MpesaSettingsPage() {
     const form = useForm<MpesaSettingsFormValues>({
       resolver: zodResolver(formSchema),
       defaultValues: {
-      configType: "paybill",
-      paybill: { consumerKey: "", consumerSecret: "", passkey: "", paybillNumber: "" },
-      till: { consumerKey: "", consumerSecret: "", passkey: "", tillStoreNumber: "", tillNumber: "" },
+        configType: "paybill",
+        paybill: { environment: "sandbox", consumerKey: "", consumerSecret: "", passkey: "", paybillNumber: "" },
+        till: { environment: "sandbox", consumerKey: "", consumerSecret: "", passkey: "", tillStoreNumber: "", tillNumber: "" },
       },
   });
 
@@ -90,12 +134,14 @@ export default function MpesaSettingsPage() {
           form.reset({
             configType: data.mpesaPaybill?.consumerKey ? "paybill" : "till",
             paybill: {
+              environment: paybillData.environment || "sandbox",
               consumerKey: paybillData.consumerKey || "",
               consumerSecret: paybillData.consumerSecret || "",
               passkey: paybillData.passkey || "",
               paybillNumber: paybillData.paybillNumber || "",
             },
             till: {
+              environment: tillData.environment || "sandbox",
               consumerKey: tillData.consumerKey || "",
               consumerSecret: tillData.consumerSecret || "",
               passkey: tillData.passkey || "",
@@ -175,6 +221,7 @@ export default function MpesaSettingsPage() {
                                         <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><CreditCard size={18} /> {configType === 'paybill' ? 'Paybill' : 'Till'} Credentials</CardTitle>
                                         {configType === 'paybill' ? (
                                             <>
+                                                <FormField control={form.control} name="paybill.environment" render={({ field }) => (<FormItem><FormLabel className="text-xs">Environment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 text-sm"><SelectValue /></SelectTrigger></FormControl><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="sandbox">Sandbox (Testing)</SelectItem><SelectItem value="production">Production (Live)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="paybill.paybillNumber" render={({ field }) => (<FormItem><FormLabel className="text-xs">Paybill Number</FormLabel><FormControl><Input placeholder="e.g., 888888" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="paybill.consumerKey" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Key</FormLabel><FormControl><Input placeholder="Your Consumer Key" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="paybill.consumerSecret" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Secret</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
@@ -182,6 +229,7 @@ export default function MpesaSettingsPage() {
                                             </>
                                         ) : (
                                             <>
+                                                <FormField control={form.control} name="till.environment" render={({ field }) => (<FormItem><FormLabel className="text-xs">Environment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 text-sm"><SelectValue /></SelectTrigger></FormControl><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="sandbox">Sandbox (Testing)</SelectItem><SelectItem value="production">Production (Live)</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="till.tillStoreNumber" render={({ field }) => (<FormItem><FormLabel className="text-xs">Store Number</FormLabel><FormControl><Input placeholder="e.g., 123456" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="till.tillNumber" render={({ field }) => (<FormItem><FormLabel className="text-xs">Till Number</FormLabel><FormControl><Input placeholder="e.g., 654321" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="till.consumerKey" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Key</FormLabel><FormControl><Input placeholder="Your Consumer Key" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
