@@ -100,7 +100,7 @@ const processC2bCallback = async (callbackData) => {
     return;
   }
 
-  const user = await MikrotikUser.findOne({ username: BillRefNumber });
+  const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber });
 
   if (!user) {
     const alertMessage = `C2B payment of KES ${TransAmount} for '${BillRefNumber}' received, but no user was found.`;
