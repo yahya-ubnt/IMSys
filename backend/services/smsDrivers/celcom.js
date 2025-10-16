@@ -19,21 +19,25 @@ exports.sendMessage = async (credentials, phoneNumber, message) => {
 
   const endpoint = 'https://isms.celcomafrica.com/api/services/sendsms/';
   
-  const params = new URLSearchParams();
-  params.append('partnerID', partnerID);
-  params.append('apikey', apiKey);
-  params.append('shortcode', senderId);
-  params.append('mobile', phoneNumber);
-  params.append('message', message);
+  const data = new URLSearchParams();
+  data.append('partnerID', partnerID);
+  data.append('apikey', apiKey);
+  data.append('shortcode', senderId);
+  data.append('mobile', phoneNumber);
+  data.append('message', message);
 
   try {
-    const response = await axios.get(endpoint, { params });
+    const response = await axios.post(endpoint, data, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
 
-    // According to docs, the response is a JSON object within a string, so we parse it.
     const responseData = response.data;
     
-    if (responseData && responseData.responses && responseData.responses[0].response-code === 200) {
-      return { success: true, message: `SMS sent successfully to ${phoneNumber}. Message ID: ${responseData.responses[0]['message-id']}` };
+    // Use bracket notation for property with a hyphen
+    if (responseData && responseData.responses && responseData.responses[0]['response-code'] === 200) {
+      return { success: true, message: `SMS sent successfully to ${phoneNumber}. Message ID: ${responseData.responses[0].messageid}` };
     } else {
       const errorMessage = responseData.responses ? responseData.responses[0]['response-description'] : 'Unknown error from Celcom Africa';
       return { success: false, message: `Celcom Africa API Error: ${errorMessage}` };
