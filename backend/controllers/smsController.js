@@ -84,7 +84,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
     });
 
     try {
-      const gatewayResponse = await sendSMS(phoneNumber, message);
+      const gatewayResponse = await sendSMS(req.user._id, phoneNumber, message);
 
       // Update the log with the gateway's response
       log.smsStatus = gatewayResponse.success ? 'Success' : 'Failed';
