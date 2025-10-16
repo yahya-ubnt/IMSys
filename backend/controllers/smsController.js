@@ -135,7 +135,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
 
   const count = await SmsLog.countDocuments(query);
   const logs = await SmsLog.find(query)
-    .populate('sentBy', 'fullName email')
+    .populate('user', 'fullName email')
     .limit(pageSize)
     .skip(pageSize * (page - 1))
     .sort({ createdAt: -1 });

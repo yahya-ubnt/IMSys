@@ -4,6 +4,9 @@ const Package = require('../models/Package');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const { decrypt } = require('../utils/crypto.js');
 
+const formatUpdateArgs = (argsObject) => {
+  return Object.entries(argsObject).map(([key, value]) => `=${key}=${value}`);
+};
 
 const getMikrotikApiClient = async (router) => {
   const client = new RouterOSAPI({
@@ -121,9 +124,25 @@ const reconnectMikrotikUser = async (userId) => {
         return false;
       }
     } else if (user.serviceType === 'static') {
-      // Logic for static IP users would go here
-      console.warn(`Reconnection for static user ${user.username} not fully implemented.`);
-      return true; // For now, assume success for static users
+      const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+      if (simpleQueues.length > 0) {
+        const queueId = simpleQueues[0]['.id'];
+        const selectedPackage = user.package; // user.package is already populated
+
+        const updateArgs = {
+          name: user.username,
+          target: user.ipAddress,
+          'max-limit': selectedPackage.rateLimit,
+          disabled: 'no', // Enable the queue
+        };
+
+        await client.write('/queue/simple/set', [`=.id=${queueId}`, ...formatUpdateArgs(updateArgs)]);
+        console.log(`Successfully reconnected static user ${user.username} by enabling simple queue.`);
+        return true;
+      } else {
+        console.error(`Simple Queue for static user ${user.username} not found on Mikrotik. Cannot reconnect.`);
+        return false;
+      }
     }
   } catch (error) {
     console.error(`Mikrotik API reconnection error for user ${user.username}: ${error.message}`);
