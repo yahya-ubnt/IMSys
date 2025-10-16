@@ -55,8 +55,8 @@ const getTransactions = asyncHandler(async (req, res) => {
     query.$or = [
       { officialName: { $regex: searchTerm, $options: 'i' } },
       { referenceNumber: { $regex: searchTerm, $options: 'i' } },
-      { msisdn: { $regex: searchTerm, $options: 'i' } },
-      { transactionId: { $regex: searchTerm, $options: 'i' } },
+      { msisdn: { $regex: searchTerm, 'options': 'i' } },
+      { transactionId: { $regex: searchTerm, 'options': 'i' } },
     ];
   }
 
@@ -67,12 +67,32 @@ const getTransactions = asyncHandler(async (req, res) => {
     };
   }
 
+  const totalCount = await Transaction.countDocuments(query);
+  const totalPages = Math.ceil(totalCount / parseInt(limit));
+
   const transactions = await Transaction.find(query)
     .sort({ transactionDate: -1 })
-    .skip((page - 1) * limit)
+    .skip((parseInt(page) - 1) * parseInt(limit))
     .limit(parseInt(limit));
 
-  res.status(200).json(transactions);
+  const totalVolumeResult = await Transaction.aggregate([
+    { $match: query },
+    { $group: { _id: null, totalVolume: { $sum: '$amount' } } },
+  ]);
+
+  const totalVolume = totalVolumeResult.length > 0 ? totalVolumeResult[0].totalVolume : 0;
+  const transactionCount = totalCount;
+  const averageTransaction = transactionCount > 0 ? totalVolume / transactionCount : 0;
+
+  res.status(200).json({
+    transactions,
+    pages: totalPages,
+    stats: {
+      totalVolume,
+      transactionCount,
+      averageTransaction,
+    },
+  });
 });
 
 const createCashPayment = asyncHandler(async (req, res) => {
