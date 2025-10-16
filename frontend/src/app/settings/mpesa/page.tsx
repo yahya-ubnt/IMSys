@@ -23,6 +23,7 @@ const mpesaConfigSchema = z.object({
     paybillNumber: z.string().optional(),
     tillStoreNumber: z.string().optional(),
     tillNumber: z.string().optional(),
+    callbackURL: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 const formSchema = z.object({
@@ -110,8 +111,8 @@ export default function MpesaSettingsPage() {
       resolver: zodResolver(formSchema),
       defaultValues: {
         configType: "paybill",
-        paybill: { environment: "sandbox", consumerKey: "", consumerSecret: "", passkey: "", paybillNumber: "" },
-        till: { environment: "sandbox", consumerKey: "", consumerSecret: "", passkey: "", tillStoreNumber: "", tillNumber: "" },
+        paybill: { environment: "sandbox", consumerKey: "", consumerSecret: "", passkey: "", paybillNumber: "", callbackURL: "" },
+        till: { environment: "sandbox", consumerKey: "", consumerSecret: "", passkey: "", tillStoreNumber: "", tillNumber: "", callbackURL: "" },
       },
   });
 
@@ -139,6 +140,7 @@ export default function MpesaSettingsPage() {
               consumerSecret: paybillData.consumerSecret || "",
               passkey: paybillData.passkey || "",
               paybillNumber: paybillData.paybillNumber || "",
+              callbackURL: paybillData.callbackURL || "",
             },
             till: {
               environment: tillData.environment || "sandbox",
@@ -147,6 +149,7 @@ export default function MpesaSettingsPage() {
               passkey: tillData.passkey || "",
               tillStoreNumber: tillData.tillStoreNumber || "",
               tillNumber: tillData.tillNumber || "",
+              callbackURL: tillData.callbackURL || "",
             },
           });
         } catch (error) {
@@ -226,6 +229,7 @@ export default function MpesaSettingsPage() {
                                                 <FormField control={form.control} name="paybill.consumerKey" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Key</FormLabel><FormControl><Input placeholder="Your Consumer Key" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="paybill.consumerSecret" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Secret</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="paybill.passkey" render={({ field }) => (<FormItem><FormLabel className="text-xs">Passkey</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
+                                                <FormField control={form.control} name="paybill.callbackURL" render={({ field }) => (<FormItem><FormLabel className="text-xs">Callback URL</FormLabel><FormControl><Input placeholder="https://your-domain.com/api/callback" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                             </>
                                         ) : (
                                             <>
@@ -235,6 +239,7 @@ export default function MpesaSettingsPage() {
                                                 <FormField control={form.control} name="till.consumerKey" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Key</FormLabel><FormControl><Input placeholder="Your Consumer Key" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="till.consumerSecret" render={({ field }) => (<FormItem><FormLabel className="text-xs">Consumer Secret</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                                 <FormField control={form.control} name="till.passkey" render={({ field }) => (<FormItem><FormLabel className="text-xs">Passkey</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
+                                                <FormField control={form.control} name="till.callbackURL" render={({ field }) => (<FormItem><FormLabel className="text-xs">Callback URL</FormLabel><FormControl><Input placeholder="https://your-domain.com/api/callback" {...field} className="h-9 bg-zinc-800 border-zinc-700 text-sm" autoComplete="new-password" /></FormControl><FormMessage /></FormItem>)} />
                                             </>
                                         )}
                                     </motion.div>

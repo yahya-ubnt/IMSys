@@ -72,7 +72,8 @@ const ApplicationSettingsSchema = mongoose.Schema(
       consumerKey: { type: String, trim: true },
       consumerSecret: { type: String, trim: true },
       passkey: { type: String, trim: true },
-      activated: { type: Boolean, default: false }
+      activated: { type: Boolean, default: false },
+      callbackURL: { type: String, trim: true }
     },
     mpesaTill: {
       environment: { type: String, default: 'sandbox' },

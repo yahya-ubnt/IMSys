@@ -135,6 +135,9 @@ const updateMpesaSettings = asyncHandler(async (req, res) => {
   }
 
   const updatedSettings = await settings.save();
+
+  console.log(`[${new Date().toISOString()}] M-Pesa settings updated successfully for user ${req.user._id}`);
+
   res.json(updatedSettings);
 });
 

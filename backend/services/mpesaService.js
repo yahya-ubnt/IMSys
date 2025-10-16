@@ -57,7 +57,7 @@ const initiateStkPushService = async (userId, amount, phoneNumber, accountRefere
     PartyA: formattedPhoneNumber,
     PartyB: credentials.paybillNumber,
     PhoneNumber: formattedPhoneNumber,
-    CallBackURL: DARAJA_CALLBACK_URL,
+    CallBackURL: credentials.callbackURL || DARAJA_CALLBACK_URL,
     AccountReference: accountReference,
     TransactionDesc: 'Subscription Payment'
   };
@@ -77,14 +77,13 @@ const registerCallbackURL = async (userId) => {
   const credentials = await getTenantMpesaCredentials(userId);
   const darajaAxios = await getDarajaAxiosInstance(userId);
 
-  const confirmationURL = DARAJA_CALLBACK_URL;
-  const validationURL = DARAJA_CALLBACK_URL;
+  const callbackUrl = credentials.callbackURL || DARAJA_CALLBACK_URL;
 
   const response = await darajaAxios.post('/mpesa/c2b/v1/registerurl', {
     ShortCode: credentials.paybillNumber,
     ResponseType: 'Completed',
-    ConfirmationURL: confirmationURL,
-    ValidationURL: validationURL
+    ConfirmationURL: callbackUrl,
+    ValidationURL: callbackUrl
   });
 
   return response.data;
