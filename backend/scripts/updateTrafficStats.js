@@ -27,6 +27,11 @@ const updateTrafficStats = async () => {
         port: router.apiPort,
         timeout: 10000,
       });
+
+      client.on('error', (err) => {
+        console.error(`RouterOSAPI error for ${router.ipAddress}:`, err);
+      });
+
       await client.connect();
 
       let currentUpload = 0;
