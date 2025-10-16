@@ -76,19 +76,19 @@ export default function MikrotikUserDetailsPage() {
     }, [id, token, toast]);
 
     useEffect(() => {
-        if (!token || !userData?.mobileNumber) return;
+        if (!token || !id) return;
         const fetchMpesaTransactions = async () => {
             try {
-                const response = await fetch(`/api/payments/transactions`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`/api/payments/transactions?userId=${id}`, { headers: { Authorization: `Bearer ${token}` } });
                 if (!response.ok) throw new Error("Failed to fetch Mpesa transactions");
-                const data: MpesaTransaction[] = await response.json();
-                setMpesaTransactions(data.filter(tx => tx.msisdn === userData.mobileNumber));
+                const data = await response.json();
+                setMpesaTransactions(data.transactions);
             } catch (err) {
                 toast({ title: "Error", description: "Failed to load Mpesa transactions.", variant: "destructive" });
             }
         };
         fetchMpesaTransactions();
-    }, [token, userData, toast]);
+    }, [token, id, toast]);
 
     useEffect(() => {
         if (!id || !token) return;

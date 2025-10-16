@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
+const MikrotikUser = require('../models/MikrotikUser');
 const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 const { initiateStkPushService, processStkCallback, processC2bCallback } = require('../services/mpesaService');
 
@@ -47,9 +48,24 @@ const handleDarajaCallback = asyncHandler(async (req, res) => {
 });
 
 const getTransactions = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 15, searchTerm, startDate, endDate } = req.query;
+  const { page = 1, limit = 15, searchTerm, startDate, endDate, userId } = req.query;
 
-  const query = {};
+  let query = {};
+
+  if (userId) {
+    try {
+      const mikrotikUser = await MikrotikUser.findById(userId);
+      if (mikrotikUser) {
+        query.user = mikrotikUser.user; // Use the main user ID
+      } else {
+        // If no Mikrotik user is found, return empty results
+        return res.status(200).json({ transactions: [], pages: 0, stats: { totalVolume: 0, transactionCount: 0, averageTransaction: 0 } });
+      }
+    } catch (error) {
+      console.error('Error fetching Mikrotik user:', error);
+      return res.status(500).json({ message: 'Error fetching user data.' });
+    }
+  }
 
   if (searchTerm) {
     query.$or = [
@@ -71,6 +87,7 @@ const getTransactions = asyncHandler(async (req, res) => {
   const totalPages = Math.ceil(totalCount / parseInt(limit));
 
   const transactions = await Transaction.find(query)
+    .populate('user', 'fullName email')
     .sort({ transactionDate: -1 })
     .skip((parseInt(page) - 1) * parseInt(limit))
     .limit(parseInt(limit));
