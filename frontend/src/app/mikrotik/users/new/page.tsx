@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Wifi, Lock, User, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Topbar } from "@/components/topbar";
@@ -21,7 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id: string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
 interface Device { _id: string; deviceName: string; ipAddress: string; }
-interface NewMikrotikUserData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; }
+interface NewMikrotikUserData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -74,6 +75,7 @@ export default function NewMikrotikUserPage() {
     const [mobileNumber, setMobileNumber] = useState("");
     const [installationFee, setInstallationFee] = useState("");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(new Date());
+    const [sendWelcomeSms, setSendWelcomeSms] = useState(true);
 
     // Data & UI State
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
@@ -181,6 +183,7 @@ export default function NewMikrotikUserPage() {
             mobileNumber,
             expiryDate,
             station: stationId,
+            sendWelcomeSms,
         };
 
         if (serviceType === 'pppoe') {
@@ -264,6 +267,10 @@ export default function NewMikrotikUserPage() {
                                                             <div className="space-y-1"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Billing Cycle</Label><Select onValueChange={setBillingCycle} value={billingCycle} required><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select cycle" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="monthly" className="text-sm">Monthly</SelectItem><SelectItem value="quarterly" className="text-sm">Quarterly</SelectItem><SelectItem value="annually" className="text-sm">Annually</SelectItem></SelectContent></Select></div>
                                                             <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
+                                                        </div>
+                                                        <div className="items-center flex space-x-2 pt-2">
+                                                            <Checkbox id="sendWelcomeSms" checked={sendWelcomeSms} onCheckedChange={(checked: boolean) => setSendWelcomeSms(checked)} />
+                                                            <label htmlFor="sendWelcomeSms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Send Welcome SMS to User</label>
                                                         </div>
                                                     </div>
                                                 </motion.div>
