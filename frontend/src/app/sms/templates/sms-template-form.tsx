@@ -64,7 +64,7 @@ export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateF
       <div className="space-y-2">
         <Label className="text-zinc-300">Insert Variables</Label>
         <div className="flex flex-wrap gap-2">
-          {["customer_name", "reference_number", "customer_phone", "company_name", "user_portal_url"].map(v => (
+          {["officialName", "username", "mPesaRefNo", "mobileNumber", "expiryDate", "walletBalance"].map(v => (
             <Button key={v} type="button" variant="outline" size="sm" onClick={() => handleInsertVariable(v)} className="bg-zinc-700 border-zinc-600 hover:bg-zinc-600">
               {v.replace(/_/g, ' ')}
             </Button>
