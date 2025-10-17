@@ -10,17 +10,23 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SmsAcknowledgement } from "./page"
+import { SmsAcknowledgement, TriggerType } from "./page"
 
 interface ColumnsProps {
   handleEdit: (acknowledgement: SmsAcknowledgement) => void;
   handleDelete: (acknowledgement: SmsAcknowledgement) => void;
+  triggerTypes: TriggerType[];
 }
 
-export const columns = ({ handleEdit, handleDelete }: ColumnsProps): ColumnDef<SmsAcknowledgement>[] => [
+export const columns = ({ handleEdit, handleDelete, triggerTypes }: ColumnsProps): ColumnDef<SmsAcknowledgement>[] => [
   {
     accessorKey: "triggerType",
     header: "Trigger Type",
+    cell: ({ row }) => {
+      const triggerId = row.original.triggerType;
+      const trigger = triggerTypes.find(t => t.id === triggerId);
+      return trigger ? trigger.name : triggerId;
+    },
   },
   {
     accessorKey: "description",

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 
 // Assuming SmsTemplate type is available or defined elsewhere
 type SmsTemplate = {
@@ -11,8 +12,14 @@ type SmsTemplate = {
   name: string;
 };
 
+interface TriggerType {
+  id: string;
+  name: string;
+}
+
 export type SmsAcknowledgementFormData = {
   triggerType: string
+  description?: string
   smsTemplate: string
   status: "Active" | "Inactive"
 }
@@ -20,26 +27,19 @@ export type SmsAcknowledgementFormData = {
 interface SmsAcknowledgementFormProps {
   onClose: () => void
   onSubmit: (data: SmsAcknowledgementFormData) => void
-  initialData: { triggerType: string; smsTemplate: string; status: "Active" | "Inactive" } | null
+  initialData: { triggerType: string; description?: string; smsTemplate: string; status: "Active" | "Inactive" } | null
 }
 
-const triggerTypes = [
-  "New User Registration",
-  "Payment Received",
-  "Renewal Confirmation",
-  "Installation Scheduled",
-  "Installation Completed",
-]
-
 export function SmsAcknowledgementForm({ onClose, onSubmit, initialData }: SmsAcknowledgementFormProps) {
-  const [formData, setFormData] = useState<SmsAcknowledgementFormData>({ triggerType: "", smsTemplate: "", status: "Active" })
+  const [formData, setFormData] = useState<SmsAcknowledgementFormData>({ triggerType: "", description: "", smsTemplate: "", status: "Active" })
   const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([])
+  const [triggerTypes, setTriggerTypes] = useState<TriggerType[]>([])
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData)
     } else {
-      setFormData({ triggerType: "", smsTemplate: "", status: "Active" })
+      setFormData({ triggerType: "", description: "", smsTemplate: "", status: "Active" })
     }
   }, [initialData])
 
@@ -60,6 +60,23 @@ export function SmsAcknowledgementForm({ onClose, onSubmit, initialData }: SmsAc
     fetchTemplates()
   }, [])
 
+  useEffect(() => {
+    const fetchTriggerTypes = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+        const response = await fetch("/api/sms/triggers", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error("Failed to fetch trigger types");
+        setTriggerTypes(await response.json());
+      } catch (error) {
+        console.error("Error fetching trigger types:", error);
+      }
+    };
+    fetchTriggerTypes();
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
@@ -78,10 +95,21 @@ export function SmsAcknowledgementForm({ onClose, onSubmit, initialData }: SmsAc
           </SelectTrigger>
           <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
             {triggerTypes.map((type) => (
-              <SelectItem key={type} value={type} className="focus:bg-zinc-800">{type}</SelectItem>
+              <SelectItem key={type.id} value={type.id} className="focus:bg-zinc-800">{type.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="description" className="text-zinc-300">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={3}
+          placeholder="A brief description of what this acknowledgement does..."
+          className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="smsTemplate" className="text-zinc-300">SMS Template</Label>

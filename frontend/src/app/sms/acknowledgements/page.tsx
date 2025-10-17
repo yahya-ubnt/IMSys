@@ -23,6 +23,11 @@ export type SmsAcknowledgement = {
   createdAt: string;
 };
 
+export interface TriggerType {
+  id: string;
+  name: string;
+}
+
 // --- MAIN COMPONENT ---
 export default function SmsAcknowledgementsPage() {
   const { toast } = useToast()
@@ -30,6 +35,7 @@ export default function SmsAcknowledgementsPage() {
 
   // Data states
   const [acknowledgements, setAcknowledgements] = useState<SmsAcknowledgement[]>([])
+  const [triggerTypes, setTriggerTypes] = useState<TriggerType[]>([])
   
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -50,8 +56,22 @@ export default function SmsAcknowledgementsPage() {
   }, [token, toast])
 
   useEffect(() => {
-    fetchAcknowledgements()
-  }, [fetchAcknowledgements])
+    const fetchTriggerTypes = async () => {
+      if (!token) return;
+      try {
+        const response = await fetch("/api/sms/triggers", { 
+          headers: { "Authorization": `Bearer ${token}` } 
+        });
+        if (!response.ok) throw new Error("Failed to fetch trigger types");
+        setTriggerTypes(await response.json());
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load trigger types.", variant: "destructive" });
+      }
+    };
+
+    fetchAcknowledgements();
+    fetchTriggerTypes();
+  }, [fetchAcknowledgements, token, toast]);
 
   // --- EVENT HANDLERS ---
   const handleNewAcknowledgement = () => {
@@ -129,7 +149,7 @@ export default function SmsAcknowledgementsPage() {
             </CardHeader>
             <CardContent className="p-4">
               <div className="overflow-x-auto">
-                <DataTable columns={columns({ handleEdit, handleDelete })} data={acknowledgements} filterColumn="triggerType" />
+                <DataTable columns={columns({ handleEdit, handleDelete, triggerTypes })} data={acknowledgements} filterColumn="triggerType" />
               </div>
             </CardContent>
           </Card>

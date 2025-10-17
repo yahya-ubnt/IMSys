@@ -4,6 +4,17 @@ const User = require('../models/User'); // Assuming User model has phoneNumber
 const MikrotikUser = require('../models/MikrotikUser'); // Assuming MikrotikUser model
 const { sendSMS } = require('../services/smsService');
 
+// @desc    Get available SMS trigger types
+// @route   GET /api/sms/triggers
+// @access  Private
+const getSmsTriggers = asyncHandler(async (req, res) => {
+  const triggers = [
+    { id: 'mikrotik_user_created', name: 'New User Registration' },
+    // { id: 'payment_received', name: 'Payment Received' }, // Example for future use
+  ];
+  res.json(triggers);
+});
+
 // @desc    Compose and send a new SMS
 // @route   POST /api/sms/compose
 // @access  Private
@@ -195,6 +206,7 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getSmsTriggers,
   composeAndSendSms,
   getSentSmsLog,
   exportSmsLogs,

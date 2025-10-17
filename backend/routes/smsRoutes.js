@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const {
+  getSmsTriggers,
   composeAndSendSms,
   getSentSmsLog,
   exportSmsLogs,
@@ -11,6 +12,7 @@ const { protect } = require('../middlewares/protect');
 // All routes in this file are protected
 router.use(protect);
 
+router.route('/triggers').get(getSmsTriggers);
 router.route('/compose').post(
   protect,
   [
