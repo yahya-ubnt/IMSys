@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const SmsAcknowledgement = require('../models/SmsAcknowledgement');
+const SmsTemplate = require('../models/SmsTemplate');
 const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Get all SMS acknowledgement mappings

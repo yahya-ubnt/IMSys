@@ -8,6 +8,7 @@ const { decrypt } = require('../utils/crypto'); // Import decrypt function
 const UserDowntimeLog = require('../models/UserDowntimeLog');
 const WalletTransaction = require('../models/WalletTransaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
+const { sendAcknowledgementSms } = require('../services/smsService');
 // Mikrotik API client will be integrated here later
 // const MikrotikAPI = require('mikrotik'); // Example
 
@@ -66,6 +67,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     mobileNumber,
     expiryDate,
     station,
+    sendWelcomeSms,
   } = req.body;
 
   // Verify ownership of router
@@ -206,6 +208,23 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     } finally {
       if (client) {
         client.close();
+      }
+    }
+    // Trigger SMS Acknowledgement for new user creation
+    if (sendWelcomeSms) {
+      try {
+          await sendAcknowledgementSms(
+              'mikrotik_user_created',
+              mikrotikUser.mobileNumber,
+              {
+                  officialName: mikrotikUser.officialName,
+                  mPesaRefNo: mikrotikUser.mPesaRefNo,
+                  userId: req.user._id // Pass the tenant's user ID
+              }
+          );
+      } catch (error) {
+          console.error(`Failed to send acknowledgement SMS for new user ${mikrotikUser.username}:`, error);
+          // Do not block the response for this error
       }
     }
 

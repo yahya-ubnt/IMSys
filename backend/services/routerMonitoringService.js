@@ -36,6 +36,11 @@ async function checkRouter(router) {
                 timeout: 2000,
             });
 
+            // Handle any asynchronous errors that aren't caught by the connect() promise
+            client.on('error', (err) => {
+                console.warn(`[${new Date().toISOString()}] Asynchronous error for router ${router.name} (${router.ipAddress}): ${err.message}`);
+            });
+
             await client.connect();
             isOnline = true;
             console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is ONLINE.`);
