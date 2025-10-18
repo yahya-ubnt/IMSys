@@ -2,6 +2,8 @@ const moment = require('moment');
 const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
 const { reconnectMikrotikUser } = require('./mikrotikUtils');
+const { sendAcknowledgementSms } = require('../services/smsService');
+const smsTriggers = require('../constants/smsTriggers');
 
 /**
  * Processes a subscription payment with a priority-based logic.
@@ -100,6 +102,21 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
 
   if (monthsExtended > 0) {
     await reconnectMikrotikUser(user._id);
+  }
+
+  try {
+    await sendAcknowledgementSms(
+      smsTriggers.PAYMENT_RECEIVED,
+      user.mobileNumber,
+      {
+        officialName: user.officialName,
+        amountPaid: amountPaid,
+        walletBalance: user.walletBalance.toFixed(2),
+        userId: user.user,
+      }
+    );
+  } catch (error) {
+    console.error(`Failed to send payment acknowledgement SMS for user ${user.username}:`, error);
   }
 
   console.log(`Payment processing complete for ${user.username}. Service extended by ${monthsExtended} month(s). New balance: ${user.walletBalance.toFixed(2)}`);
