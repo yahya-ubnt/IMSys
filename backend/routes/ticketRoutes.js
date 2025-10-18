@@ -9,28 +9,28 @@ const {
   getTicketStats, // Import new function
   getMonthlyTicketTotals, // Import new function
 } = require('../controllers/ticketController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
 // Routes for /api/tickets
 router.route('/')
-  .post(protect, createTicket)
-  .get(protect, getTickets);
+  .post(protect, isAdminTenant, createTicket)
+  .get(protect, isAdminTenant, getTickets);
 
 // Routes for /api/tickets/stats
 router.route('/stats')
-  .get(protect, getTicketStats);
+  .get(protect, isAdminTenant, getTicketStats);
 
 // Routes for /api/tickets/monthly-totals
 router.route('/monthly-totals')
-  .get(protect, getMonthlyTicketTotals);
+  .get(protect, isAdminTenant, getMonthlyTicketTotals);
 
 // Routes for /api/tickets/:id
 router.route('/:id')
-  .get(protect, getTicketById)
-  .put(protect, updateTicket);
+  .get(protect, isAdminTenant, getTicketById)
+  .put(protect, isAdminTenant, updateTicket);
 
 // Route for /api/tickets/:id/notes
 router.route('/:id/notes')
-  .post(protect, addNoteToTicket);
+  .post(protect, isAdminTenant, addNoteToTicket);
 
 module.exports = router;

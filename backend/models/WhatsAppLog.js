@@ -18,9 +18,10 @@ const whatsAppLogSchema = new mongoose.Schema({
   providerResponse: {
     type: mongoose.Schema.Types.Mixed,
   },
-  user: {
+  tenantOwner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true,
   },
   // To store the actual values used to populate the template
   variablesUsed: {

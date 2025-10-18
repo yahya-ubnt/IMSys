@@ -16,7 +16,7 @@ const expenseTypeSchema = mongoose.Schema(
       enum: ['Active', 'Inactive'],
       default: 'Active',
     },
-    addedBy: {
+    tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: 'User',

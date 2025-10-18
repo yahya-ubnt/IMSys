@@ -16,9 +16,10 @@ const notificationSchema = new mongoose.Schema({
     enum: ['read', 'unread'],
     default: 'unread',
   },
-  user: {
+  tenantOwner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true,
   },
 }, {
   timestamps: true,

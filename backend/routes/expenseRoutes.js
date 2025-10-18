@@ -11,13 +11,13 @@ const {
   getYearlyMonthlyExpenseTotals,
   getDailyExpenseTotals,
 } = require('../controllers/expenseController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-router.route('/monthly-total').get(protect, getMonthlyExpenseTotal);
-router.route('/yearly-monthly-totals').get(protect, getYearlyMonthlyExpenseTotals);
-router.route('/daily-expense-totals').get(protect, getDailyExpenseTotals);
+router.route('/monthly-total').get(protect, isAdminTenant, getMonthlyExpenseTotal);
+router.route('/yearly-monthly-totals').get(protect, isAdminTenant, getYearlyMonthlyExpenseTotals);
+router.route('/daily-expense-totals').get(protect, isAdminTenant, getDailyExpenseTotals);
 router.route('/').post(
-  protect,
+  [protect, isAdminTenant],
   [
     body('title', 'Title is required').not().isEmpty(),
     body('amount', 'Amount must be a number').isNumeric(),
@@ -26,11 +26,11 @@ router.route('/').post(
     body('status', 'Invalid status').optional().isIn(['Due', 'Paid']),
   ],
   createExpense
-).get(protect, getExpenses);
+).get(protect, isAdminTenant, getExpenses);
 router
   .route('/:id')
-  .get(protect, getExpenseById)
-  .put(protect, updateExpense)
-  .delete(protect, deleteExpense);
+  .get(protect, isAdminTenant, getExpenseById)
+  .put(protect, isAdminTenant, updateExpense)
+  .delete(protect, isAdminTenant, deleteExpense);
 
 module.exports = router;

@@ -8,13 +8,10 @@ const {
   updateAcknowledgement,
   deleteAcknowledgement,
 } = require('../controllers/smsAcknowledgementController');
-const { protect } = require('../middlewares/protect');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-// All routes in this file are protected
-router.use(protect);
-
-router.route('/').get(getAcknowledgements).post(
-  protect,
+router.route('/').get(protect, isAdminTenant, getAcknowledgements).post(
+  [protect, isAdminTenant],
   [
     body('triggerType', 'Trigger type is required').not().isEmpty(),
     body('description', 'Description must be a string').optional().isString(),
@@ -25,8 +22,8 @@ router.route('/').get(getAcknowledgements).post(
 );
 router
   .route('/:id')
-  .get(getAcknowledgementById)
-  .put(updateAcknowledgement)
-  .delete(deleteAcknowledgement);
+  .get(protect, isAdminTenant, getAcknowledgementById)
+  .put(protect, isAdminTenant, updateAcknowledgement)
+  .delete(protect, isAdminTenant, deleteAcknowledgement);
 
 module.exports = router;

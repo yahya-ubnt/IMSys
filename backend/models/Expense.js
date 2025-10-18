@@ -15,7 +15,7 @@ const expenseSchema = mongoose.Schema(
       required: true,
       ref: 'ExpenseType',
     },
-    expenseBy: {
+    tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: 'User',

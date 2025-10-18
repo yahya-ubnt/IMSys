@@ -24,7 +24,7 @@ const createLead = asyncHandler(async (req, res) => {
       serviceOfInterest,
       leadSource,
       notes: sanitizeString(notes), // Sanitize notes field
-      user: req.user._id, // Associate with the logged-in user
+      tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
     });
 
     res.status(201).json(lead);
@@ -39,7 +39,7 @@ const createLead = asyncHandler(async (req, res) => {
 // @access  Private
 const getAllLeads = asyncHandler(async (req, res) => {
   const { status, leadSource, broughtInBy, search } = req.query;
-  const query = { user: req.user._id }; // Filter by user
+  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
 
   if (status) {
     query.status = status;
@@ -60,27 +60,27 @@ const getAllLeads = asyncHandler(async (req, res) => {
   const leads = await Lead.find(query).populate('desiredPackage');
 
   // Dashboard Stats
-  const totalLeads = await Lead.countDocuments({ user: req.user._id });
-  const totalConvertedLeads = await Lead.countDocuments({ user: req.user._id, status: 'Converted' });
+  const totalLeads = await Lead.countDocuments({ tenantOwner: req.user.tenantOwner });
+  const totalConvertedLeads = await Lead.countDocuments({ tenantOwner: req.user.tenantOwner, status: 'Converted' });
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const newLeadsThisMonth = await Lead.countDocuments({
-    user: req.user._id,
+    tenantOwner: req.user.tenantOwner,
     createdAt: { $gte: startOfMonth, $lte: endOfMonth },
   });
 
   const convertedLeadsThisMonth = await Lead.countDocuments({
-    user: req.user._id,
+    tenantOwner: req.user.tenantOwner,
     status: 'Converted',
     updatedAt: { $gte: startOfMonth, $lte: endOfMonth },
   });
 
   // Chart Data
   const leadsByMonth = await Lead.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $group: {
         _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
@@ -125,13 +125,8 @@ const getAllLeads = asyncHandler(async (req, res) => {
 // @route   GET /api/leads/:id
 // @access  Public
 const getLeadById = asyncHandler(async (req, res) => {
-  const lead = await Lead.findById(req.params.id).populate('desiredPackage');
+  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('desiredPackage');
   if (lead) {
-    // Check for ownership
-    if (lead.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this lead');
-    }
     res.json(lead);
   } else {
     res.status(404);
@@ -143,15 +138,9 @@ const getLeadById = asyncHandler(async (req, res) => {
 // @route   PUT /api/leads/:id
 // @access  Private/Admin
 const updateLead = asyncHandler(async (req, res) => {
-  const lead = await Lead.findById(req.params.id);
+  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (lead) {
-    // Check for ownership
-    if (lead.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this lead');
-    }
-
     lead.name = req.body.name || lead.name;
     lead.phoneNumber = req.body.phoneNumber || lead.phoneNumber;
     lead.leadSource = req.body.leadSource || lead.leadSource;
@@ -185,15 +174,9 @@ const updateLead = asyncHandler(async (req, res) => {
 // @route   DELETE /api/leads/:id
 // @access  Private/Admin
 const deleteLead = asyncHandler(async (req, res) => {
-  const lead = await Lead.findById(req.params.id);
+  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (lead) {
-    // Check for ownership
-    if (lead.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this lead');
-    }
-
     await lead.deleteOne();
     res.json({ message: 'Lead removed' });
   }
@@ -208,15 +191,9 @@ const deleteLead = asyncHandler(async (req, res) => {
 // @access  Private
 const updateLeadStatus = asyncHandler(async (req, res) => {
   const { status, createMikrotikUser, mikrotikUsername, mikrotikPassword, mikrotikService, mikrotikRouter } = req.body;
-  const lead = await Lead.findById(req.params.id);
+  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (lead) {
-    // Check for ownership
-    if (lead.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this lead');
-    }
-
     lead.status = status;
     lead.statusHistory.push({ status, changedBy: req.user ? req.user._id : null });
 
@@ -228,6 +205,7 @@ const updateLeadStatus = asyncHandler(async (req, res) => {
         service: mikrotikService,
         router: mikrotikRouter,
         comment: `Converted from lead ${lead.name}`,
+        tenantOwner: req.user.tenantOwner,
       });
 
       const createdMikrotikUser = await mikrotikUser.save();

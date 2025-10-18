@@ -9,16 +9,16 @@ const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
 const { formatPhoneNumber } = require('../utils/formatters');
 
-const getTenantMpesaCredentials = async (userId) => {
-  const settings = await ApplicationSettings.findOne({ user: userId });
+const getTenantMpesaCredentials = async (tenantOwner) => {
+  const settings = await ApplicationSettings.findOne({ tenantOwner });
   if (!settings || !settings.mpesaPaybill || !settings.mpesaPaybill.consumerKey) {
-    throw new Error(`M-Pesa settings not configured for user ${userId}`);
+    throw new Error(`M-Pesa settings not configured for tenant ${tenantOwner}`);
   }
   return settings.mpesaPaybill;
 };
 
-const getDarajaAxiosInstance = async (userId) => {
-  const credentials = await getTenantMpesaCredentials(userId);
+const getDarajaAxiosInstance = async (tenantOwner) => {
+  const credentials = await getTenantMpesaCredentials(tenantOwner);
   const auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
   const url = (credentials.environment || 'sandbox') === 'production' 
     ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -40,9 +40,9 @@ const getDarajaAxiosInstance = async (userId) => {
   });
 };
 
-const initiateStkPushService = async (userId, amount, phoneNumber, accountReference) => {
-  const credentials = await getTenantMpesaCredentials(userId);
-  const darajaAxios = await getDarajaAxiosInstance(userId);
+const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountReference) => {
+  const credentials = await getTenantMpesaCredentials(tenantOwner);
+  const darajaAxios = await getDarajaAxiosInstance(tenantOwner);
   
   const timestamp = moment().format('YYYYMMDDHHmmss');
   const password = Buffer.from(`${credentials.paybillNumber}${credentials.passkey}${timestamp}`).toString('base64');
@@ -65,7 +65,7 @@ const initiateStkPushService = async (userId, amount, phoneNumber, accountRefere
   const response = await darajaAxios.post('/mpesa/stkpush/v1/processrequest', stkPushPayload);
 
   await StkRequest.create({
-    userId,
+    tenantOwner,
     checkoutRequestId: response.data.CheckoutRequestID,
     accountReference,
   });
@@ -73,9 +73,9 @@ const initiateStkPushService = async (userId, amount, phoneNumber, accountRefere
   return response.data;
 };
 
-const registerCallbackURL = async (userId) => {
-  const credentials = await getTenantMpesaCredentials(userId);
-  const darajaAxios = await getDarajaAxiosInstance(userId);
+const registerCallbackURL = async (tenantOwner) => {
+  const credentials = await getTenantMpesaCredentials(tenantOwner);
+  const darajaAxios = await getDarajaAxiosInstance(tenantOwner);
 
   const callbackUrl = credentials.callbackURL || DARAJA_CALLBACK_URL;
 
@@ -117,11 +117,11 @@ const processStkCallback = async (callbackData) => {
 
   const transAmount = metadata.Amount;
   const msisdn = metadata.PhoneNumber.toString();
-  const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference });
+  const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenantOwner: stkRequest.tenantOwner });
 
   if (!user) {
     const alertMessage = `STK payment of KES ${transAmount} received for account '${stkRequest.accountReference}', but no user was found.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: stkRequest.accountReference });
+    await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: stkRequest.accountReference, tenantOwner: stkRequest.tenantOwner });
     return;
   }
 
@@ -135,7 +135,7 @@ const processStkCallback = async (callbackData) => {
     msisdn: msisdn,
     transactionDate: new Date(),
     paymentMethod: 'M-Pesa',
-    user: user.user,
+    tenantOwner: user.tenantOwner,
   });
 
   await StkRequest.deleteOne({ _id: stkRequest._id });
@@ -152,8 +152,9 @@ const processC2bCallback = async (callbackData) => {
   const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber });
 
   if (!user) {
-    const alertMessage = `C2B payment of KES ${TransAmount} for '${BillRefNumber}' received, but no user was found.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber });
+    // This is a potential issue with multi-tenancy, as we can't be sure which tenant this payment belongs to.
+    // For now, we will not create an alert if the user is not found.
+    console.error(`C2B payment of KES ${TransAmount} for '${BillRefNumber}' received, but no user was found.`);
     return;
   }
 
@@ -168,7 +169,7 @@ const processC2bCallback = async (callbackData) => {
     balance: OrgAccountBalance,
     transactionDate: new Date(),
     paymentMethod: 'M-Pesa',
-    user: user.user,
+    tenantOwner: user.tenantOwner,
   });
 };
 

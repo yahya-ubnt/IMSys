@@ -14,13 +14,13 @@ const createBill = asyncHandler(async (req, res) => {
     throw new Error('Please add all required fields: name, amount, dueDate, category');
   }
 
-  const user = req.user._id;
+  const tenantOwner = req.user.tenantOwner;
   const currentMonth = new Date().getMonth() + 1; // getMonth() is 0-indexed
   const currentYear = new Date().getFullYear();
 
   // Check if a bill with the same name and category already exists for the current month and user
   const existingBill = await Bill.findOne({
-    user,
+    tenantOwner,
     name,
     category,
     month: currentMonth,
@@ -38,7 +38,7 @@ const createBill = asyncHandler(async (req, res) => {
     dueDate,
     category,
     description: sanitizeString(description), // Sanitize description
-    user,
+    tenantOwner,
     month: currentMonth,
     year: currentYear,
     status: 'Not Paid', // Default status
@@ -51,11 +51,11 @@ const createBill = asyncHandler(async (req, res) => {
 // @route   GET /api/bills
 // @access  Private
 const getBills = asyncHandler(async (req, res) => {
-  const user = req.user._id;
+  const tenantOwner = req.user.tenantOwner;
   const queryMonth = req.query.month ? parseInt(req.query.month) : new Date().getMonth() + 1;
   const queryYear = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
 
-  const bills = await Bill.find({ user, month: queryMonth, year: queryYear }).sort({ dueDate: 1 });
+  const bills = await Bill.find({ tenantOwner, month: queryMonth, year: queryYear }).sort({ dueDate: 1 });
 
   res.status(200).json(bills);
 });
@@ -64,17 +64,11 @@ const getBills = asyncHandler(async (req, res) => {
 // @route   GET /api/bills/:id
 // @access  Private
 const getBillById = asyncHandler(async (req, res) => {
-  const bill = await Bill.findById(req.params.id).lean();
+  const bill = await Bill.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).lean();
 
   if (!bill) {
     res.status(404);
     throw new Error('Bill not found');
-  }
-
-  // Make sure the logged in user owns the bill
-  if (bill.user.toString() !== req.user.id) {
-    res.status(401);
-    throw new Error('Not authorized to view this bill');
   }
 
   res.status(200).json(bill);
@@ -91,17 +85,11 @@ const updateBill = asyncHandler(async (req, res) => {
 
   const { name, amount, dueDate, status, paymentDate, method, transactionMessage, description } = req.body;
 
-  let bill = await Bill.findById(req.params.id);
+  let bill = await Bill.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!bill) {
     res.status(404);
     throw new Error('Bill not found');
-  }
-
-  // Make sure the logged in user owns the bill
-  if (bill.user.toString() !== req.user.id) {
-    res.status(401);
-    throw new Error('Not authorized to update this bill');
   }
 
   // Update fields
@@ -136,17 +124,11 @@ const updateBill = asyncHandler(async (req, res) => {
 // @route   DELETE /api/bills/:id
 // @access  Private
 const deleteBill = asyncHandler(async (req, res) => {
-  const bill = await Bill.findById(req.params.id);
+  const bill = await Bill.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!bill) {
     res.status(404);
     throw new Error('Bill not found');
-  }
-
-  // Make sure the logged in user owns the bill
-  if (bill.user.toString() !== req.user.id) {
-    res.status(401);
-    throw new Error('Not authorized to delete this bill');
   }
 
   await bill.deleteOne();

@@ -6,7 +6,7 @@ const WhatsAppProvider = require('../models/WhatsAppProvider');
 // @route   GET /api/settings/whatsapp-providers
 // @access  Private (Admin)
 const getWhatsAppProviders = asyncHandler(async (req, res) => {
-  const providers = await WhatsAppProvider.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const providers = await WhatsAppProvider.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
   const sanitizedProviders = providers.map(p => {
     const provider = p.toObject({ getters: false });
     delete provider.credentials;
@@ -31,7 +31,7 @@ const createWhatsAppProvider = asyncHandler(async (req, res) => {
     providerType,
     credentials,
     isActive,
-    user: req.user._id,
+    tenantOwner: req.user.tenantOwner,
   });
 
   const createdProvider = await provider.save();
@@ -46,15 +46,9 @@ const createWhatsAppProvider = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const updateWhatsAppProvider = asyncHandler(async (req, res) => {
   const { name, providerType, credentials, isActive } = req.body;
-  const provider = await WhatsAppProvider.findById(req.params.id);
+  const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (provider) {
-    // Check for ownership
-    if (provider.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this provider');
-    }
-
     provider.name = name || provider.name;
     provider.providerType = providerType || provider.providerType;
     if (credentials && Object.keys(credentials).length > 0) {
@@ -78,15 +72,10 @@ const updateWhatsAppProvider = asyncHandler(async (req, res) => {
 // @route   DELETE /api/settings/whatsapp-providers/:id
 // @access  Private (Admin)
 const deleteWhatsAppProvider = asyncHandler(async (req, res) => {
-  const provider = await WhatsAppProvider.findById(req.params.id);
+  const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (provider) {
-    // Check for ownership
-    if (provider.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this provider');
-    }
-    await provider.remove();
+    await provider.deleteOne();
     res.json({ message: 'WhatsApp provider removed' });
   } else {
     res.status(404);
@@ -98,14 +87,9 @@ const deleteWhatsAppProvider = asyncHandler(async (req, res) => {
 // @route   POST /api/settings/whatsapp-providers/:id/set-active
 // @access  Private (Admin)
 const setActiveWhatsAppProvider = asyncHandler(async (req, res) => {
-    const provider = await WhatsAppProvider.findById(req.params.id);
+    const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
     if (provider) {
-      // Check for ownership
-      if (provider.user.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('Not authorized to set this provider as active');
-      }
         provider.isActive = true;
         await provider.save();
         res.json({ message: `${provider.name} has been set as the active WhatsApp provider.` });

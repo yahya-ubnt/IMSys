@@ -23,9 +23,10 @@ const smsLogSchema = mongoose.Schema(
     providerResponse: {
       type: Object,
     },
-    user: {
+    tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      required: true,
     },
   },
   {

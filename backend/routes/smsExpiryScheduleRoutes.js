@@ -8,13 +8,10 @@ const {
   updateSchedule,
   deleteSchedule,
 } = require('../controllers/smsExpiryScheduleController');
-const { protect } = require('../middlewares/protect');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-// All routes in this file are protected
-router.use(protect);
-
-router.route('/').get(getSchedules).post(
-  protect,
+router.route('/').get(protect, isAdminTenant, getSchedules).post(
+  [protect, isAdminTenant],
   [
     body('name', 'Name is required').not().isEmpty(),
     body('days', 'Days must be a number').isNumeric(),
@@ -27,8 +24,8 @@ router.route('/').get(getSchedules).post(
 );
 router
   .route('/:id')
-  .get(getScheduleById)
-  .put(updateSchedule)
-  .delete(deleteSchedule);
+  .get(protect, isAdminTenant, getScheduleById)
+  .put(protect, isAdminTenant, updateSchedule)
+  .delete(protect, isAdminTenant, deleteSchedule);
 
 module.exports = router;

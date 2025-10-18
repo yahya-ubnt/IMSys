@@ -8,7 +8,7 @@ const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeS
 // @route   GET /api/smsacknowledgements
 // @access  Private
 const getAcknowledgements = asyncHandler(async (req, res) => {
-  const acknowledgements = await SmsAcknowledgement.find({ user: req.user._id }).populate('smsTemplate', 'name messageBody');
+  const acknowledgements = await SmsAcknowledgement.find({ tenantOwner: req.user.tenantOwner }).populate('smsTemplate', 'name messageBody');
   res.json(acknowledgements);
 });
 
@@ -16,14 +16,9 @@ const getAcknowledgements = asyncHandler(async (req, res) => {
 // @route   GET /api/smsacknowledgements/:id
 // @access  Private
 const getAcknowledgementById = asyncHandler(async (req, res) => {
-  const acknowledgement = await SmsAcknowledgement.findById(req.params.id).populate('smsTemplate', 'name messageBody');
+  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('smsTemplate', 'name messageBody');
 
   if (acknowledgement) {
-    // Check for ownership
-    if (acknowledgement.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this acknowledgement mapping');
-    }
     res.json(acknowledgement);
   } else {
     res.status(404);
@@ -43,13 +38,13 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
   const { triggerType, description, smsTemplate, status } = req.body;
 
   // Verify ownership of smsTemplate
-  const template = await SmsTemplate.findById(smsTemplate);
-  if (!template || template.user.toString() !== req.user._id.toString()) {
+  const template = await SmsTemplate.findOne({ _id: smsTemplate, tenantOwner: req.user.tenantOwner });
+  if (!template) {
     res.status(401);
     throw new Error('Not authorized to use this SMS template');
   }
 
-  const mappingExists = await SmsAcknowledgement.findOne({ triggerType, user: req.user._id });
+  const mappingExists = await SmsAcknowledgement.findOne({ triggerType, tenantOwner: req.user.tenantOwner });
 
   if (mappingExists) {
     res.status(400);
@@ -61,7 +56,7 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
     description: sanitizeString(description), // Sanitize description
     smsTemplate,
     status,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   if (acknowledgement) {
@@ -78,15 +73,9 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
 const updateAcknowledgement = asyncHandler(async (req, res) => {
   const { triggerType, description, smsTemplate, status } = req.body;
 
-  const acknowledgement = await SmsAcknowledgement.findById(req.params.id);
+  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (acknowledgement) {
-    // Check for ownership
-    if (acknowledgement.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this acknowledgement mapping');
-    }
-
     acknowledgement.triggerType = triggerType || acknowledgement.triggerType;
     acknowledgement.description = description ? sanitizeString(description) : acknowledgement.description;
     acknowledgement.smsTemplate = smsTemplate || acknowledgement.smsTemplate;
@@ -104,15 +93,10 @@ const updateAcknowledgement = asyncHandler(async (req, res) => {
 // @route   DELETE /api/smsacknowledgements/:id
 // @access  Private
 const deleteAcknowledgement = asyncHandler(async (req, res) => {
-  const acknowledgement = await SmsAcknowledgement.findById(req.params.id);
+  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (acknowledgement) {
-    // Check for ownership
-    if (acknowledgement.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this acknowledgement mapping');
-    }
-    await acknowledgement.remove();
+    await acknowledgement.deleteOne();
     res.json({ message: 'SMS Acknowledgement mapping removed' });
   } else {
     res.status(404);

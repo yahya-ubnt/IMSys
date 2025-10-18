@@ -7,7 +7,7 @@ moment.tz.setDefault('Africa/Nairobi');
 // @route   GET /api/collections
 // @access  Private
 const getCollections = asyncHandler(async (req, res) => {
-  const collections = await Transaction.find({ user: req.user._id }).sort({ transactionDate: -1 });
+  const collections = await Transaction.find({ tenantOwner: req.user.tenantOwner }).sort({ transactionDate: -1 });
   res.json(collections);
 });
 
@@ -20,14 +20,8 @@ const getCollectionStats = asyncHandler(async (req, res) => {
   const startOfMonth = moment().startOf('month');
   const startOfYear = moment().startOf('year');
 
-  console.log('Collection Stats - Date Ranges:');
-  console.log('Today (start): ', today.toDate());
-  console.log('This Week (start): ', startOfWeek.toDate());
-  console.log('This Month (start): ', startOfMonth.toDate());
-  console.log('This Year (start): ', startOfYear.toDate());
-
   const stats = await Transaction.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $facet: {
         today: [
@@ -50,8 +44,6 @@ const getCollectionStats = asyncHandler(async (req, res) => {
     }
   ]);
 
-  console.log('Collection Stats - Raw Aggregation Result:', JSON.stringify(stats, null, 2));
-
   const responseJson = {
     today: stats[0].today[0]?.total || 0,
     thisWeek: stats[0].thisWeek[0]?.total || 0,
@@ -59,7 +51,6 @@ const getCollectionStats = asyncHandler(async (req, res) => {
     thisYear: stats[0].thisYear[0]?.total || 0,
   };
 
-  console.log('Collection Stats - Sending Response:', responseJson);
   res.json(responseJson);
 });
 
@@ -75,7 +66,7 @@ const getMonthlyCollectionTotals = asyncHandler(async (req, res) => {
   }
 
   const monthlyTotals = await Transaction.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $match: {
         transactionDate: {
@@ -126,7 +117,7 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const daysInMonth = endDate.date();
 
   const dailyTotals = await Transaction.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $match: {
         transactionDate: {

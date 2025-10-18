@@ -15,6 +15,12 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 async function disconnectExpiredClients() {
     console.log(`[${new Date().toISOString()}] Starting disconnectExpiredClients script...`);
 
+    const tenantId = process.argv[2];
+    if (!tenantId) {
+        console.error('Please provide a tenant ID as a command-line argument.');
+        process.exit(1);
+    }
+
     let connection;
     try {
         await connectDB(); // Connect to MongoDB
@@ -25,16 +31,17 @@ async function disconnectExpiredClients() {
 
         // 1. Identify Expired Clients from MongoDB
         const expiredUsers = await MikrotikUser.find({
+            tenantOwner: tenantId,
             expiryDate: { $lte: currentDate },
             isSuspended: false,
         }).populate('mikrotikRouter'); // Populate router details to get connection info
 
         if (expiredUsers.length === 0) {
-            console.log(`[${new Date().toISOString()}] No expired and unsuspended clients found in the database.`);
+            console.log(`[${new Date().toISOString()}] No expired and unsuspended clients found in the database for this tenant.`);
             return;
         }
 
-        console.log(`[${new Date().toISOString()}] Found ${expiredUsers.length} expired and unsuspended clients in the database.`);
+        console.log(`[${new Date().toISOString()}] Found ${expiredUsers.length} expired and unsuspended clients in the database for this tenant.`);
 
         for (const user of expiredUsers) {
             console.log(`[${new Date().toISOString()}] Processing user: ${user.username} (ID: ${user._id})`);

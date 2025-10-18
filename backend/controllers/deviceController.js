@@ -29,17 +29,13 @@ const createDevice = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Verify ownership of the router
-  const parentRouter = await MikrotikRouter.findById(router);
+  const parentRouter = await MikrotikRouter.findOne({ _id: router, tenantOwner: req.user.tenantOwner });
   if (!parentRouter) {
     res.status(404);
     throw new Error('Router not found');
   }
-  if (parentRouter.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to use this router');
-  }
 
-  const deviceExists = await Device.findOne({ macAddress });
+  const deviceExists = await Device.findOne({ macAddress, tenantOwner: req.user.tenantOwner });
 
   if (deviceExists) {
     res.status(400);
@@ -58,7 +54,7 @@ const createDevice = asyncHandler(async (req, res) => {
     loginPassword, // Will be encrypted by pre-save hook
     ssid: sanitizeString(ssid),
     wirelessPassword, // Will be encrypted by pre-save hook
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   const createdDevice = await device.save();
@@ -70,7 +66,7 @@ const createDevice = asyncHandler(async (req, res) => {
 // @access  Admin
 const getDevices = asyncHandler(async (req, res) => {
   const { deviceType } = req.query;
-  let query = { user: req.user._id }; // Filter by user
+  let query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
 
   if (deviceType) {
     query.deviceType = deviceType;
@@ -86,22 +82,16 @@ const getDevices = asyncHandler(async (req, res) => {
 // @route   GET /api/devices/:id
 // @access  Admin
 const getDeviceById = asyncHandler(async (req, res) => {
-  const device = await Device.findById(req.params.id).populate('router', 'name ipAddress');
+  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('router', 'name ipAddress');
 
   if (device) {
-    // Check for ownership
-    if (device.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this device');
-    }
-
     let responseDevice = device.toObject(); // Convert to plain object to add properties
 
     if (responseDevice.deviceType === 'Access' && responseDevice.ssid) {
-      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid });
+      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid, tenantOwner: req.user.tenantOwner });
       responseDevice.connectedStations = connectedStations;
     } else if (responseDevice.deviceType === 'Station' && responseDevice.ssid) {
-      const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid });
+      const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid, tenantOwner: req.user.tenantOwner });
       responseDevice.connectedAccessPoint = connectedAccessPoint;
     }
 
@@ -116,17 +106,11 @@ const getDeviceById = asyncHandler(async (req, res) => {
 // @route   PUT /api/devices/:id
 // @access  Admin
 const updateDevice = asyncHandler(async (req, res) => {
-  const device = await Device.findById(req.params.id);
+  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!device) {
     res.status(404);
     throw new Error('Device not found');
-  }
-
-  // Check for ownership
-  if (device.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to update this device');
   }
 
   // Update fields
@@ -156,19 +140,13 @@ const updateDevice = asyncHandler(async (req, res) => {
 // @route   DELETE /api/devices/:id
 // @access  Admin
 const deleteDevice = asyncHandler(async (req, res) => {
-  const device = await Device.findById(req.params.id);
+  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (device) {
-    // Check for ownership
-    if (device.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this device');
-    }
-
     // First, delete all associated downtime logs
     await DowntimeLog.deleteMany({ device: device._id });
     // Then, remove the device itself
-    await Device.deleteOne({ _id: device._id });
+    await device.deleteOne();
     res.json({ message: 'Device and associated downtime logs removed' });
   } else {
     res.status(404);
@@ -180,17 +158,11 @@ const deleteDevice = asyncHandler(async (req, res) => {
 // @route   GET /api/devices/:id/downtime
 // @access  Admin
 const getDeviceDowntimeLogs = asyncHandler(async (req, res) => {
-  const device = await Device.findById(req.params.id);
+  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!device) {
     res.status(404);
     throw new Error('Device not found');
-  }
-
-  // Check for ownership
-  if (device.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to view downtime logs for this device');
   }
 
   const logs = await DowntimeLog.find({ device: device._id }).sort({ downStartTime: -1 });

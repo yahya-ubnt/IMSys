@@ -1,13 +1,15 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const SmsExpirySchedule = require('../models/SmsExpirySchedule');
+const SmsTemplate = require('../models/SmsTemplate');
+const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Get all SMS expiry schedules
 // @route   GET /api/smsexpiryschedules
 // @access  Private
 const getSchedules = asyncHandler(async (req, res) => {
-  const schedules = await SmsExpirySchedule.find({ user: req.user._id }).sort({ createdAt: 'desc' });
+  const schedules = await SmsExpirySchedule.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: 'desc' });
   res.json(schedules);
 });
 
@@ -15,14 +17,9 @@ const getSchedules = asyncHandler(async (req, res) => {
 // @route   GET /api/smsexpiryschedules/:id
 // @access  Private
 const getScheduleById = asyncHandler(async (req, res) => {
-  const schedule = await SmsExpirySchedule.findById(req.params.id);
+  const schedule = await SmsExpirySchedule.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (schedule) {
-    // Check for ownership
-    if (schedule.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this schedule');
-    }
     res.json(schedule);
   } else {
     res.status(404);
@@ -42,22 +39,22 @@ const createSchedule = asyncHandler(async (req, res) => {
   const { name, days, timing, smsTemplate, whatsAppTemplate, status } = req.body;
 
   // Verify ownership of smsTemplate
-  const smsTpl = await SmsTemplate.findById(smsTemplate);
-  if (!smsTpl || smsTpl.user.toString() !== req.user._id.toString()) {
+  const smsTpl = await SmsTemplate.findOne({ _id: smsTemplate, tenantOwner: req.user.tenantOwner });
+  if (!smsTpl) {
     res.status(401);
     throw new Error('Not authorized to use this SMS template');
   }
 
   // Verify ownership of whatsAppTemplate if provided
   if (whatsAppTemplate) {
-    const waTpl = await WhatsAppTemplate.findById(whatsAppTemplate);
-    if (!waTpl || waTpl.user.toString() !== req.user._id.toString()) {
+    const waTpl = await WhatsAppTemplate.findOne({ _id: whatsAppTemplate, tenantOwner: req.user.tenantOwner });
+    if (!waTpl) {
       res.status(401);
       throw new Error('Not authorized to use this WhatsApp template');
     }
   }
 
-  const scheduleExists = await SmsExpirySchedule.findOne({ name, user: req.user._id });
+  const scheduleExists = await SmsExpirySchedule.findOne({ name, tenantOwner: req.user.tenantOwner });
 
   if (scheduleExists) {
     res.status(400);
@@ -71,8 +68,7 @@ const createSchedule = asyncHandler(async (req, res) => {
     smsTemplate,
     whatsAppTemplate,
     status,
-    messageBody: sanitizeString(messageBody), // Sanitize messageBody
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   if (schedule) {
@@ -87,21 +83,16 @@ const createSchedule = asyncHandler(async (req, res) => {
 // @route   PUT /api/smsexpiryschedules/:id
 // @access  Private
 const updateSchedule = asyncHandler(async (req, res) => {
-  const { name, days, timing, messageBody, status } = req.body;
+  const { name, days, timing, smsTemplate, whatsAppTemplate, status } = req.body;
 
-  const schedule = await SmsExpirySchedule.findById(req.params.id);
+  const schedule = await SmsExpirySchedule.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (schedule) {
-    // Check for ownership
-    if (schedule.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this schedule');
-    }
-
     schedule.name = name || schedule.name;
     schedule.days = days || schedule.days;
     schedule.timing = timing || schedule.timing;
-    schedule.messageBody = messageBody ? sanitizeString(messageBody) : schedule.messageBody;
+    schedule.smsTemplate = smsTemplate || schedule.smsTemplate;
+    schedule.whatsAppTemplate = whatsAppTemplate || schedule.whatsAppTemplate;
     schedule.status = status || schedule.status;
 
     const updatedSchedule = await schedule.save();
@@ -116,19 +107,14 @@ const updateSchedule = asyncHandler(async (req, res) => {
 // @route   DELETE /api/smsexpiryschedules/:id
 // @access  Private
 const deleteSchedule = asyncHandler(async (req, res) => {
-  const schedule = await SmsExpirySchedule.findById(req.params.id);
+  const schedule = await SmsExpirySchedule.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!schedule) {
     res.status(404);
     throw new Error('Schedule not found');
   }
 
-  // Check for ownership
-  if (schedule.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to delete this schedule');
-  }
-  await schedule.remove();
+  await schedule.deleteOne();
   res.json({ message: 'SMS Expiry Schedule removed' });
 });
 

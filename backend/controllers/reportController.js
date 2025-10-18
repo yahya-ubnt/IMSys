@@ -17,6 +17,7 @@ const getLocationReport = asyncHandler(async (req, res) => {
   }
 
   const mikrotikUsers = await MikrotikUser.find({
+    tenantOwner: req.user.tenantOwner,
     apartment_house_number: apartment_house_number,
     createdAt: {
       $gte: new Date(startDate),
@@ -53,7 +54,7 @@ const getLocationReport = asyncHandler(async (req, res) => {
 // @route   GET /api/reports/mpesa-alerts
 // @access  Private
 const getMpesaAlerts = asyncHandler(async (req, res) => {
-  const alerts = await MpesaAlert.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const alerts = await MpesaAlert.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
   res.status(200).json(alerts);
 });
 
@@ -61,15 +62,10 @@ const getMpesaAlerts = asyncHandler(async (req, res) => {
 // @route   DELETE /api/reports/mpesa-alerts/:id
 // @access  Private
 const deleteMpesaAlert = asyncHandler(async (req, res) => {
-  const alert = await MpesaAlert.findById(req.params.id);
+  const alert = await MpesaAlert.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (alert) {
-    // Check for ownership
-    if (alert.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this alert');
-    }
-    await alert.remove();
+    await alert.deleteOne();
     res.json({ message: 'Alert removed' });
   } else {
     res.status(404);
@@ -89,7 +85,7 @@ const getMpesaReport = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.body;
 
   const transactions = await Transaction.find({
-    user: req.user._id, // Filter by user
+    tenantOwner: req.user.tenantOwner, // Filter by tenant
     transactionDate: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),

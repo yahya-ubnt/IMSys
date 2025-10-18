@@ -7,14 +7,11 @@ const {
   getSentSmsLog,
   exportSmsLogs,
 } = require('../controllers/smsController');
-const { protect } = require('../middlewares/protect');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-// All routes in this file are protected
-router.use(protect);
-
-router.route('/triggers').get(getSmsTriggers);
+router.route('/triggers').get(protect, isAdminTenant, getSmsTriggers);
 router.route('/compose').post(
-  protect,
+  [protect, isAdminTenant],
   [
     body('message', 'Message body is required').not().isEmpty(),
     body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotikGroup', 'location', 'unregistered']),
@@ -25,7 +22,7 @@ router.route('/compose').post(
   ],
   composeAndSendSms
 );
-router.route('/log').get(getSentSmsLog);
-router.route('/log/export').get(exportSmsLogs);
+router.route('/log').get(protect, isAdminTenant, getSentSmsLog);
+router.route('/log/export').get(protect, isAdminTenant, exportSmsLogs);
 
 module.exports = router;

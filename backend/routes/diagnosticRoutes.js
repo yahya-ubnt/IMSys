@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { param } = require('express-validator');
 const { runDiagnostic, getDiagnosticHistory, getDiagnosticLogById } = require('../controllers/diagnosticController.js');
-const { protect } = require('../middlewares/protect.js');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware.js');
 
 const userIdValidation = [param('userId', 'User ID is required and must be a valid Mongo ID').isMongoId()];
 const logIdValidation = [param('logId', 'Log ID is required and must be a valid Mongo ID').isMongoId()];
 
 router.route('/')
-  .post(protect, userIdValidation, runDiagnostic)
-  .get(protect, userIdValidation, getDiagnosticHistory);
+  .post([protect, isAdminTenant], userIdValidation, runDiagnostic)
+  .get([protect, isAdminTenant], userIdValidation, getDiagnosticHistory);
 
 router.route('/:logId')
-    .get(protect, userIdValidation, logIdValidation, getDiagnosticLogById);
+    .get([protect, isAdminTenant], userIdValidation, logIdValidation, getDiagnosticLogById);
 
 module.exports = router;

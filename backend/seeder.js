@@ -16,31 +16,39 @@ connectDB();
 
 const importData = async () => {
   try {
-    console.log('Wiping existing user and router data...');
+    console.log('Wiping existing data...');
     await User.deleteMany();
     await MikrotikRouter.deleteMany();
     await Package.deleteMany();
     await MikrotikUser.deleteMany();
     console.log('Data wiped.');
 
-    console.log('Creating admin user...');
-    const users = [
-      {
-        fullName: 'Admin User',
-        email: 'admin@example.com',
-        phone: '+254700000000',
-        password: 'Abuhureira12',
-        isAdmin: true,
-      },
-    ];
-    const createdUsers = await User.create(users);
-    console.log('Admin user created.');
+    console.log('Creating SUPER_ADMIN user...');
+    await User.create({
+      fullName: 'Super Admin',
+      email: 'superadmin@example.com',
+      phone: '+254700000001',
+      password: 'superadminpassword',
+      roles: ['SUPER_ADMIN'],
+    });
+    console.log('SUPER_ADMIN user created.');
 
-    const adminUser = createdUsers[0];
+    console.log('Creating ADMIN_TENANT user...');
+    const adminTenant = await User.create({
+      fullName: 'Admin Tenant',
+      email: 'admin@example.com',
+      phone: '+254700000000',
+      password: 'Abuhureira12',
+      roles: ['ADMIN_TENANT'],
+    });
+    adminTenant.tenantOwner = adminTenant._id;
+    await adminTenant.save();
+    console.log('ADMIN_TENANT user created.');
 
     console.log('Creating production router...');
     const router = await MikrotikRouter.create({
-      user: adminUser._id,
+      user: adminTenant._id, // Associated with the ADMIN_TENANT
+      tenantOwner: adminTenant._id,
       name: 'AMANI ESTATE MIK',
       ipAddress: '10.10.10.1',
       apiUsername: 'admin',
@@ -51,7 +59,8 @@ const importData = async () => {
 
     console.log('Creating test package...');
     const testPackage = await Package.create({
-      user: adminUser._id,
+      user: adminTenant._id, // Associated with the ADMIN_TENANT
+      tenantOwner: adminTenant._id,
       mikrotikRouter: router._id,
       serviceType: 'pppoe',
       name: 'Test Package',
@@ -62,7 +71,8 @@ const importData = async () => {
 
     console.log('Creating test Mikrotik user...');
     const mikrotikUser = await MikrotikUser.create({
-        user: adminUser._id,
+        user: adminTenant._id, // Associated with the ADMIN_TENANT
+        tenantOwner: adminTenant._id,
         mikrotikRouter: router._id,
         serviceType: 'pppoe',
         package: testPackage._id,

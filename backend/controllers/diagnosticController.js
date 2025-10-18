@@ -33,9 +33,8 @@ const runDiagnostic = asyncHandler(async (req, res) => {
     const run = async () => {
       sendEvent('start', { message: 'Diagnostic process initiated...' });
       const { userId } = req.params;
-      const mikrotikUser = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
+      const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter').populate('station');
       if (!mikrotikUser) throw new Error('Mikrotik User not found');
-      if (mikrotikUser.user.toString() !== req.user._id.toString()) throw new Error('Not authorized to run diagnostics for this Mikrotik user');
 
       const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
       addStep('Billing Check', isExpired ? 'Failure' : 'Success', isExpired ? `Client account expired on ${new Date(mikrotikUser.expiryDate).toLocaleDateString()}.` : 'Client account is active.');
@@ -54,7 +53,7 @@ const runDiagnostic = asyncHandler(async (req, res) => {
           if (mikrotikUser.apartment_house_number) await runApartmentDiagnosticPath(addStep, mikrotikUser);
         }
       }
-      const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, steps });
+      const log = await DiagnosticLog.create({ tenantOwner: req.user.tenantOwner, mikrotikUser: userId, steps });
       sendEvent('done', log);
     };
 
@@ -70,9 +69,8 @@ const runDiagnostic = asyncHandler(async (req, res) => {
       const addStep = (stepName, status, summary, details = {}) => steps.push({ stepName, status, summary, details });
 
       const { userId } = req.params;
-      const mikrotikUser = await MikrotikUser.findById(userId).populate('mikrotikRouter').populate('station');
+      const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter').populate('station');
       if (!mikrotikUser) return res.status(404).json({ message: 'Mikrotik User not found' });
-      if (mikrotikUser.user.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not authorized to run diagnostics for this Mikrotik user' });
 
       const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
       addStep('Billing Check', isExpired ? 'Failure' : 'Success', isExpired ? `Client account expired on ${new Date(mikrotikUser.expiryDate).toLocaleDateString()}.` : 'Client account is active.');
@@ -92,7 +90,7 @@ const runDiagnostic = asyncHandler(async (req, res) => {
         }
       }
 
-      const log = await DiagnosticLog.create({ user: req.user._id, mikrotikUser: userId, steps });
+      const log = await DiagnosticLog.create({ tenantOwner: req.user.tenantOwner, mikrotikUser: userId, steps });
       res.status(200).json(log);
     } catch (error) {
       console.error('Diagnostic Error:', error);
@@ -131,14 +129,14 @@ const runCpeDiagnosticPath = async (addStep, mikrotikUser) => {
   }
 
   // 3. Station-Based Neighbor Analysis
-  const stationNeighbors = await MikrotikUser.find({ station: cpe._id });
+  const stationNeighbors = await MikrotikUser.find({ station: cpe._id, tenantOwner: mikrotikUser.tenantOwner });
   await performNeighborAnalysis(addStep, stationNeighbors, router, 'Station-Based', mikrotikUser._id);
 };
 
 const runApartmentDiagnosticPath = async (addStep, mikrotikUser) => {
   const apartmentNeighbors = await MikrotikUser.find({ 
     apartment_house_number: mikrotikUser.apartment_house_number,
-    user: mikrotikUser.user 
+    tenantOwner: mikrotikUser.tenantOwner 
   });
   await performNeighborAnalysis(addStep, apartmentNeighbors, mikrotikUser.mikrotikRouter, 'Apartment-Based', mikrotikUser._id);
 };
@@ -185,7 +183,7 @@ const getDiagnosticHistory = asyncHandler(async (req, res) => {
     }
 
     const { userId } = req.params;
-    const logs = await DiagnosticLog.find({ user: req.user._id, mikrotikUser: userId }).sort({ createdAt: -1 });
+    const logs = await DiagnosticLog.find({ tenantOwner: req.user.tenantOwner, mikrotikUser: userId }).sort({ createdAt: -1 });
     res.status(200).json(logs);
 });
 
@@ -199,16 +197,11 @@ const getDiagnosticLogById = asyncHandler(async (req, res) => {
     }
 
     const { userId, logId } = req.params;
-    const log = await DiagnosticLog.findById(logId);
+    const log = await DiagnosticLog.findOne({ _id: logId, tenantOwner: req.user.tenantOwner, mikrotikUser: userId });
 
     if (!log) {
         res.status(404);
         throw new Error('Diagnostic log not found');
-    }
-
-    if (log.user.toString() !== req.user._id.toString() || log.mikrotikUser.toString() !== userId) {
-        res.status(403);
-        throw new Error('Not authorized to view this diagnostic log');
     }
 
     res.status(200).json(log);

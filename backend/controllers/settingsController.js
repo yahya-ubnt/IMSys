@@ -9,11 +9,11 @@ const { encrypt } = require('../utils/crypto'); // Import encrypt
 // @route   GET /api/settings/general
 // @access  Private
 const getGeneralSettings = asyncHandler(async (req, res) => {
-  let settings = await ApplicationSettings.findOne({ user: req.user._id }).select('-smtpSettings.pass'); // Exclude encrypted pass
+  let settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner }).select('-smtpSettings.pass'); // Exclude encrypted pass
 
   if (!settings) {
     // If no settings exist for this user, create default ones
-    settings = await ApplicationSettings.create({ user: req.user._id });
+    settings = await ApplicationSettings.create({ tenantOwner: req.user.tenantOwner });
   }
   res.json(settings);
 });
@@ -27,9 +27,9 @@ const updateGeneralSettings = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  let settings = await ApplicationSettings.findOne({ user: req.user._id });
+  let settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner });
   if (!settings) {
-    settings = await ApplicationSettings.create({ user: req.user._id });
+    settings = await ApplicationSettings.create({ tenantOwner: req.user.tenantOwner });
   }
 
   // List of fields that can be updated
@@ -93,7 +93,7 @@ const updateGeneralSettings = asyncHandler(async (req, res) => {
 // @route   GET /api/settings/mpesa
 // @access  Private/Admin
 const getMpesaSettings = asyncHandler(async (req, res) => {
-  const settings = await ApplicationSettings.findOne({ user: req.user._id }).select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
+  const settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner }).select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
   
   if (settings) {
     res.json({
@@ -120,9 +120,9 @@ const updateMpesaSettings = asyncHandler(async (req, res) => {
 
   const { type, data } = req.body; // type can be 'paybill' or 'till'
 
-  let settings = await ApplicationSettings.findOne({ user: req.user._id });
+  let settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner });
   if (!settings) {
-    settings = await ApplicationSettings.create({ user: req.user._id });
+    settings = await ApplicationSettings.create({ tenantOwner: req.user.tenantOwner });
   }
 
   if (type === 'paybill') {
@@ -136,7 +136,7 @@ const updateMpesaSettings = asyncHandler(async (req, res) => {
 
   const updatedSettings = await settings.save();
 
-  console.log(`[${new Date().toISOString()}] M-Pesa settings updated successfully for user ${req.user._id}`);
+  console.log(`[${new Date().toISOString()}] M-Pesa settings updated successfully for user ${req.user.tenantOwner}`);
 
   res.json(updatedSettings);
 });
@@ -151,7 +151,7 @@ const activateMpesa = asyncHandler(async (req, res) => {
   }
 
   try {
-    const response = await registerCallbackURL(req.user._id); // Pass only userId
+    const response = await registerCallbackURL(req.user.tenantOwner); // Pass only tenantOwner ID
     res.json({ message: 'M-Pesa callback URL registered successfully.', response });
   } catch (error) {
     res.status(500);

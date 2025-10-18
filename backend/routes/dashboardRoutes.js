@@ -9,22 +9,22 @@ const {
   getActiveUsersCount,
   getExpiredUsersCount,
 } = require('../controllers/dashboardController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.route('/collections/summary').get(protect, getCollectionsSummary);
+router.route('/collections/summary').get(protect, isAdminTenant, getCollectionsSummary);
 router.route('/collections-and-expenses/monthly').get(
-  protect,
+  [protect, isAdminTenant],
   [
     query('year', 'Year is required and must be a number').isNumeric(),
   ],
   getMonthlyCollectionsAndExpenses
 );
-router.route('/expenses/monthly-summary').get(protect, getMonthlyExpenseSummary);
-router.route('/subscriptions/new').get(protect, getNewSubscriptionsCount);
-router.route('/users/total').get(protect, getTotalUsersCount);
-router.route('/users/active').get(protect, getActiveUsersCount);
-router.route('/users/expired').get(protect, getExpiredUsersCount);
+router.route('/expenses/monthly-summary').get(protect, isAdminTenant, getMonthlyExpenseSummary);
+router.route('/subscriptions/new').get(protect, isAdminTenant, getNewSubscriptionsCount);
+router.route('/users/total').get(protect, isAdminTenant, getTotalUsersCount);
+router.route('/users/active').get(protect, isAdminTenant, getActiveUsersCount);
+router.route('/users/expired').get(protect, isAdminTenant, getExpiredUsersCount);
 
 module.exports = router;

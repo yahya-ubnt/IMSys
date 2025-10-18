@@ -22,11 +22,15 @@ const UserSchema = mongoose.Schema(
       unique: true,
       match: [/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/, 'Please add a valid phone number'],
     },
-    isAdmin: {
-      type: Boolean,
+    roles: [{
+      type: String,
+      enum: ['SUPER_ADMIN', 'ADMIN_TENANT', 'STANDARD_USER'],
       required: true,
-      default: false,
-    },
+    }],
+    tenantOwner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    }
   },
   {
     timestamps: true,

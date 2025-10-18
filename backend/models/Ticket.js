@@ -48,7 +48,7 @@ const ticketSchema = mongoose.Schema(
       ref: 'User',
       required: false,
     },
-    createdBy: {
+    tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,

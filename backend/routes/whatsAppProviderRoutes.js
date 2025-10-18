@@ -8,13 +8,12 @@ const {
   deleteWhatsAppProvider,
   setActiveWhatsAppProvider,
 } = require('../controllers/whatsAppProviderController');
-const { protect, admin } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
 router.route('/')
-  .get(protect, admin, getWhatsAppProviders)
+  .get(protect, isAdminTenant, getWhatsAppProviders)
   .post(
-    protect,
-    admin,
+    [protect, isAdminTenant],
     [
       body('name', 'Provider name is required').not().isEmpty(),
       body('providerType', 'Invalid provider type').isIn(['twilio']),
@@ -24,10 +23,10 @@ router.route('/')
   );
 
 router.route('/:id')
-  .put(protect, admin, updateWhatsAppProvider)
-  .delete(protect, admin, deleteWhatsAppProvider);
+  .put(protect, isAdminTenant, updateWhatsAppProvider)
+  .delete(protect, isAdminTenant, deleteWhatsAppProvider);
 
 router.route('/:id/set-active')
-    .post(protect, admin, setActiveWhatsAppProvider);
+    .post(protect, isAdminTenant, setActiveWhatsAppProvider);
 
 module.exports = router;

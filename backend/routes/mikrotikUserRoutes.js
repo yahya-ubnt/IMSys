@@ -17,21 +17,19 @@ const {
   getDelayedPayments,
   getUserPaymentStats,
 } = require('../controllers/mikrotikUserController');
-const protect = require('../middlewares/protect').protect;
-const admin = require('../middlewares/protect').admin;
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 const diagnosticRoutes = require('./diagnosticRoutes');
 
 // More specific routes should come before more general ones
-router.route('/clients-for-sms').get(protect, getMikrotikClientsForSms);
-router.route('/delayed-payments').get(protect, admin, getDelayedPayments);
+router.route('/clients-for-sms').get(protect, isAdminTenant, getMikrotikClientsForSms);
+router.route('/delayed-payments').get(protect, isAdminTenant, getDelayedPayments);
 
-router.route('/stats/monthly-new-subscribers').get(protect, admin, getMonthlyNewSubscribers);
-router.route('/stats/monthly-paid-subscribers').get(protect, admin, getMonthlyPaidSubscribers);
-router.route('/stats/monthly-total-subscribers/:year').get(protect, admin, getMonthlyTotalSubscribers);
+router.route('/stats/monthly-new-subscribers').get(protect, isAdminTenant, getMonthlyNewSubscribers);
+router.route('/stats/monthly-paid-subscribers').get(protect, isAdminTenant, getMonthlyPaidSubscribers);
+router.route('/stats/monthly-total-subscribers/:year').get(protect, isAdminTenant, getMonthlyTotalSubscribers);
 
-router.route('/').get(protect, admin, getMikrotikUsers).post(
-  protect,
-  admin,
+router.route('/').get(protect, isAdminTenant, getMikrotikUsers).post(
+  [protect, isAdminTenant],
   [
     body('mikrotikRouter', 'Mikrotik Router ID is required').isMongoId(),
     body('serviceType', 'Service type is required').isIn(['pppoe', 'static']),
@@ -47,18 +45,18 @@ router.route('/').get(protect, admin, getMikrotikUsers).post(
 );
 
 // Mount diagnostic routes before all other /:id routes to ensure it's matched first.
-router.use('/:userId/diagnostics', protect, admin, diagnosticRoutes);
+router.use('/:userId/diagnostics', protect, isAdminTenant, diagnosticRoutes);
 
-router.route('/:id/status').get(protect, admin, getMikrotikUserStatus);
-router.route('/:id/traffic').get(protect, admin, getMikrotikUserTraffic);
-router.route('/:id/payment-stats').get(protect, admin, getUserPaymentStats);
-router.route('/:userId/downtime-logs').get(protect, admin, getDowntimeLogs);
+router.route('/:id/status').get(protect, isAdminTenant, getMikrotikUserStatus);
+router.route('/:id/traffic').get(protect, isAdminTenant, getMikrotikUserTraffic);
+router.route('/:id/payment-stats').get(protect, isAdminTenant, getUserPaymentStats);
+router.route('/:userId/downtime-logs').get(protect, isAdminTenant, getDowntimeLogs);
 
 router
   .route('/:id')
-  .get(protect, admin, getMikrotikUserById)
-  .put(protect, admin, updateMikrotikUser)
-  .delete(protect, admin, deleteMikrotikUser);
+  .get(protect, isAdminTenant, getMikrotikUserById)
+  .put(protect, isAdminTenant, updateMikrotikUser)
+  .delete(protect, isAdminTenant, deleteMikrotikUser);
 
 
 module.exports = router;

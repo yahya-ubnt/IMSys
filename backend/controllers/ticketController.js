@@ -36,6 +36,7 @@ const createTicket = asyncHandler(async (req, res) => {
     description,
     priority: priority || 'Medium', // Default to Medium if not provided
     createdBy: req.user.id, // Assuming req.user.id is set by protect middleware
+    tenantOwner: req.user.tenantOwner,
     statusHistory: [{ status: 'New', updatedBy: req.user.id }],
   });
 
@@ -62,7 +63,7 @@ const createTicket = asyncHandler(async (req, res) => {
 // @access  Admin
 const getTickets = asyncHandler(async (req, res) => {
   // Build query based on filters (status, issueType, assignedTo, etc.)
-  const query = {};
+  const query = { tenantOwner: req.user.tenantOwner };
   if (req.query.status) {
     query.status = req.query.status;
   }
@@ -71,11 +72,6 @@ const getTickets = asyncHandler(async (req, res) => {
   }
   if (req.query.assignedTo) {
     query.assignedTo = req.query.assignedTo;
-  }
-
-  // If user is not an admin, only show their tickets
-  if (!req.user.isAdmin) {
-    query.createdBy = req.user._id;
   }
 
   const tickets = await Ticket.find(query)
@@ -90,18 +86,13 @@ const getTickets = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/:id
 // @access  Admin
 const getTicketById = asyncHandler(async (req, res) => {
-  const ticket = await Ticket.findById(req.params.id)
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
     .populate('createdBy', 'fullName email')
     .populate('assignedTo', 'fullName email')
     .populate('statusHistory.updatedBy', 'fullName email')
     .populate('notes.addedBy', 'fullName email');
 
   if (ticket) {
-    // Check for ownership if user is not an admin
-    if (!req.user.isAdmin && ticket.createdBy._id.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this ticket');
-    }
     res.status(200).json(ticket);
   } else {
     res.status(404);
@@ -113,15 +104,9 @@ const getTicketById = asyncHandler(async (req, res) => {
 // @route   PUT /api/tickets/:id
 // @access  Admin
 const updateTicket = asyncHandler(async (req, res) => {
-  // Ensure only admins can update tickets
-  if (!req.user.isAdmin) {
-    res.status(401);
-    throw new Error('Not authorized to update tickets');
-  }
-
   const { status, assignedTo, notes, ...otherUpdates } = req.body;
 
-  const ticket = await Ticket.findById(req.params.id);
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!ticket) {
     res.status(404);
@@ -171,17 +156,11 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
     throw new Error('Note content is required');
   }
 
-  const ticket = await Ticket.findById(req.params.id);
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!ticket) {
     res.status(404);
     throw new Error('Ticket not found');
-  }
-
-  // Check for ownership if user is not an admin
-  if (!req.user.isAdmin && ticket.createdBy.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to add a note to this ticket');
   }
 
   ticket.notes.push({ content, addedBy: req.user.id });
@@ -195,13 +174,8 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/stats
 // @access  Admin
 const getTicketStats = asyncHandler(async (req, res) => {
-  // Ensure only admins can access stats
-  if (!req.user.isAdmin) {
-    res.status(401);
-    throw new Error('Not authorized to access ticket statistics');
-  }
-
   const stats = await Ticket.aggregate([
+    { $match: { tenantOwner: req.user.tenantOwner } },
     {
       $group: {
         _id: '$status',
@@ -226,12 +200,6 @@ const getTicketStats = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/monthly-totals
 // @access  Admin
 const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
-  // Ensure only admins can access stats
-  if (!req.user.isAdmin) {
-    res.status(401);
-    throw new Error('Not authorized to access ticket statistics');
-  }
-
   const year = parseInt(req.query.year);
 
   if (isNaN(year)) {
@@ -242,6 +210,7 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
   const monthlyTotals = await Ticket.aggregate([
     {
       $match: {
+        tenantOwner: req.user.tenantOwner,
         createdAt: {
           $gte: new Date(year, 0, 1),
           $lt: new Date(year + 1, 0, 1),

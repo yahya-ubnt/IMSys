@@ -10,8 +10,6 @@ const WalletTransaction = require('../models/WalletTransaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
-// Mikrotik API client will be integrated here later
-// const MikrotikAPI = require('mikrotik'); // Example
 
 // Helper function to generate a unique 6-digit number
 const generateUnique6DigitNumber = async () => {
@@ -72,15 +70,15 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Verify ownership of router
-  const router = await MikrotikRouter.findById(mikrotikRouter);
-  if (!router || router.user.toString() !== req.user._id.toString()) {
+  const router = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenantOwner: req.user.tenantOwner });
+  if (!router) {
     res.status(401);
     throw new Error('Not authorized to use this router');
   }
 
   // Verify ownership of package
-  const selectedPackage = await Package.findById(packageId);
-  if (!selectedPackage || selectedPackage.user.toString() !== req.user._id.toString()) {
+  const selectedPackage = await Package.findOne({ _id: packageId, tenantOwner: req.user.tenantOwner });
+  if (!selectedPackage) {
     res.status(401);
     throw new Error('Not authorized to use this package');
   }
@@ -116,13 +114,13 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     finalMPesaRefNo = generateRandom6LetterString();
   }
 
-  const userExists = await MikrotikUser.findOne({ username, user: req.user._id });
+  const userExists = await MikrotikUser.findOne({ username, tenantOwner: req.user.tenantOwner });
   if (userExists) {
     res.status(400);
     throw new Error('A user with this username already exists');
   }
 
-  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo, user: req.user._id });
+  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo, tenantOwner: req.user.tenantOwner });
   if (mPesaRefNoExists) {
     res.status(400);
     throw new Error('M-Pesa Reference Number must be unique');
@@ -146,7 +144,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     mobileNumber,
     expiryDate,
     station,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   // If there is an installation fee, create an initial debit for it.
@@ -155,7 +153,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     mikrotikUser.walletBalance -= fee;
 
     await WalletTransaction.create({
-      user: req.user._id,
+      tenantOwner: req.user.tenantOwner,
       mikrotikUser: mikrotikUser._id,
       transactionId: `DEBIT-INSTALL-${Date.now()}-${mikrotikUser.username}`,
       type: 'Debit',
@@ -192,8 +190,6 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
         }
         await client.write('/ppp/secret/add', pppSecretArgs);
       } else if (serviceType === 'static') {
-        // Assuming mikrotikUser.ipAddress is available for static users
-        // You might need to ensure this IP is set before this point or derive it.
         await client.write('/queue/simple/add', [
           `=name=${username}`,
           `=target=${ipAddress}`,
@@ -202,8 +198,6 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
       }
     } catch (error) {
       console.error(`Mikrotik API Provisioning Error: ${error.message}`);
-      // If Mikrotik provisioning fails, consider rolling back the user creation in your DB
-      // For now, we'll just send an error response.
       res.status(500);
       throw new Error(`Failed to provision user on Mikrotik: ${error.message}`);
     } finally {
@@ -211,7 +205,6 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
         client.close();
       }
     }
-    // Trigger SMS Acknowledgement for new user creation
     if (sendWelcomeSms) {
       try {
           await sendAcknowledgementSms(
@@ -220,12 +213,11 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
               {
                   officialName: mikrotikUser.officialName,
                   mPesaRefNo: mikrotikUser.mPesaRefNo,
-                  userId: req.user._id // Pass the tenant's user ID
+                  userId: req.user.tenantOwner // Pass the tenant's user ID
               }
           );
       } catch (error) {
           console.error(`Failed to send acknowledgement SMS for new user ${mikrotikUser.username}:`, error);
-          // Do not block the response for this error
       }
     }
 
@@ -240,7 +232,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users
 // @access  Private
 const getMikrotikUsers = asyncHandler(async (req, res) => {
-  const users = await MikrotikUser.find({ user: req.user._id })
+  const users = await MikrotikUser.find({ tenantOwner: req.user.tenantOwner })
     .populate('mikrotikRouter')
     .populate('package')
     .populate('station');
@@ -251,17 +243,12 @@ const getMikrotikUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id
 // @access  Private
 const getMikrotikUserById = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findById(req.params.id)
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
     .populate('mikrotikRouter')
     .populate('package')
     .populate('station');
 
   if (user) {
-    // Check for ownership
-    if (user.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this Mikrotik user');
-    }
     res.status(200).json(user);
   } else {
     res.status(404);
@@ -273,7 +260,7 @@ const getMikrotikUserById = asyncHandler(async (req, res) => {
 // @route   PUT /api/mikrotik/users/:id
 // @access  Private
 const updateMikrotikUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findById(req.params.id);
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!user) {
     res.status(404);
@@ -301,38 +288,33 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
     station,
   } = req.body;
 
-  const originalUsername = user.username; // Store original username
-  const wasSuspended = user.isSuspended; // Capture current suspended status
+  const originalUsername = user.username;
 
-  // Update fields
   user.mikrotikRouter = mikrotikRouter || user.mikrotikRouter;
   user.serviceType = serviceType || user.serviceType;
   user.package = packageId || user.package;
   user.username = username || user.username;
-  user.pppoePassword = pppoePassword || user.pppoePassword; // Handle password update
+  user.pppoePassword = pppoePassword || user.pppoePassword;
   user.remoteAddress = remoteAddress || user.remoteAddress;
   user.ipAddress = ipAddress || user.ipAddress;
   user.officialName = officialName || user.officialName;
   user.emailAddress = emailAddress || user.emailAddress;
   user.apartment_house_number = apartment_house_number || user.apartment_house_number;
   user.door_number_unit_label = door_number_unit_label || user.door_number_unit_label;
-  user.mPesaRefNo = mPesaRefNo || user.mPesaRefNo; // Handle mPesaRefNo update
+  user.mPesaRefNo = mPesaRefNo || user.mPesaRefNo;
   user.installationFee = installationFee || user.installationFee;
   user.billingCycle = billingCycle || user.billingCycle;
   user.mobileNumber = mobileNumber || user.mobileNumber;
   user.expiryDate = expiryDate || user.expiryDate;
   user.station = station || user.station;
 
-  // Automatically re-activate if the user is front-dated
   if (expiryDate && new Date(expiryDate) > new Date()) {
     user.isSuspended = false;
   }
 
   const updatedUser = await user.save();
-  console.log('updatedUser.mikrotikRouter ID:', updatedUser.mikrotikRouter); // Add this line
 
   const router = await MikrotikRouter.findById(updatedUser.mikrotikRouter);
-  console.log('Fetched MikroTik Router:', router); // Add this line
   if (!router) {
     console.warn(`Associated Mikrotik Router not found for user ${updatedUser.username}. Mikrotik update skipped.`);
   } else {
@@ -353,63 +335,28 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
           const secretId = pppSecrets[0]['.id'];
           const selectedPackage = await Package.findById(updatedUser.package);
 
-          // --- START: Re-activation Logic ---
-          let disabledStatus = 'yes'; // Default to disabled
-          let profileToSet = 'Disconnect'; // Default to Disconnect profile
+          let disabledStatus = updatedUser.isSuspended ? 'yes' : 'no';
+          let profileToSet = updatedUser.isSuspended ? 'Disconnect' : selectedPackage.profile;
 
-          // If user was suspended and is now active (expiryDate in future, isSuspended=false)
-          // Or if user is explicitly being re-activated
-          if (updatedUser.expiryDate > new Date() && updatedUser.isSuspended === false) {
-            disabledStatus = 'no'; // Enable the user
-            profileToSet = selectedPackage.profile; // Set to their actual package profile
-            console.log(`Re-activating user ${updatedUser.username}: Setting disabled=${disabledStatus}, profile=${profileToSet}`);
-          } else if (wasSuspended && updatedUser.isSuspended === false) {
-            // Case where isSuspended is explicitly set to false, even if expiryDate is not in future
-            disabledStatus = 'no';
-            profileToSet = selectedPackage.profile;
-            console.log(`Explicitly re-activating user ${updatedUser.username}: Setting disabled=${disabledStatus}, profile=${profileToSet}`);
-          }
-          // --- END: Re-activation Logic ---
-
-          console.log(`Final disabledStatus for ${updatedUser.username}: ${disabledStatus}`);
-          console.log(`Final profileToSet for ${updatedUser.username}: ${profileToSet}`);
-
-          // Terminate Active Session if user is being disabled
           if (disabledStatus === 'yes') {
               const allActiveSessions = await client.write('/ppp/active/print');
               const activeSessions = allActiveSessions.filter(session => session.name === updatedUser.username);
-              if (activeSessions.length > 0) {
-                  for (const session of activeSessions) {
-                      console.log(`[${new Date().toISOString()}] Attempting to remove active session with ID: ${session['.id']} for user ${updatedUser.username}.`);
-                      await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
-                      console.log(`[${new Date().toISOString()}] Terminated active session for ${updatedUser.username} (ID: ${session['.id']}).`);
-                  }
-              } else {
-                  console.log(`[${new Date().toISOString()}] No active session found for ${updatedUser.username}.`);
+              for (const session of activeSessions) {
+                  await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
               }
           }
 
           const updateArgs = {
             name: updatedUser.username,
             password: updatedUser.pppoePassword,
-            profile: profileToSet, // Use the determined profile
+            profile: profileToSet,
             service: selectedPackage.serviceType,
-            disabled: disabledStatus, // Use the determined disabled status
+            disabled: disabledStatus,
           };
           if (updatedUser.remoteAddress) {
             updateArgs['remote-address'] = updatedUser.remoteAddress;
           }
-          console.log('Mikrotik Update Args:', updateArgs); // Add this line
-          try {
-            const response = await client.write('/ppp/secret/set', [`=.id=${secretId}`, ...formatUpdateArgs(updateArgs)]);
-            console.log('Mikrotik PPP Secret Set Response:', response);
-          } catch (setError) {
-            if (setError.errno === 'UNKNOWNREPLY') {
-              console.warn(`Mikrotik PPP secret update for user ${updatedUser.username} returned UNKNOWNREPLY, treating as success.`);
-            } else {
-              throw setError; // Re-throw other errors
-            }
-          }
+          await client.write('/ppp/secret/set', [`=.id=${secretId}`, ...formatUpdateArgs(updateArgs)]);
         } else {
           console.warn(`PPP Secret for user ${updatedUser.username} not found on Mikrotik. Cannot update.`);
         }
@@ -419,43 +366,22 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
           const queueId = simpleQueues[0]['.id'];
           const selectedPackage = await Package.findById(updatedUser.package);
 
-          let disabledStatus;
-          let maxLimitToSet;
-
-          if (updatedUser.expiryDate > new Date() && updatedUser.isSuspended === false) {
-            disabledStatus = 'no';
-            maxLimitToSet = selectedPackage.rateLimit;
-            console.log(`Re-activating static user ${updatedUser.username}: Setting disabled=${disabledStatus}, max-limit=${maxLimitToSet}`);
-          } else {
-            // User is either expired or suspended
-            disabledStatus = 'yes';
-            maxLimitToSet = '1k/1k'; // Set to 1k/1k when disabled
-            console.log(`De-activating static user ${updatedUser.username}: Setting disabled=${disabledStatus}, max-limit=${maxLimitToSet}`);
-          }
+          let disabledStatus = updatedUser.isSuspended ? 'yes' : 'no';
+          let maxLimitToSet = updatedUser.isSuspended ? '1k/1k' : selectedPackage.rateLimit;
 
           const updateArgs = {
             name: updatedUser.username,
-            target: updatedUser.ipAddress, // Add this line to update the IP address
+            target: updatedUser.ipAddress,
             'max-limit': maxLimitToSet,
+            disabled: disabledStatus,
           };
-          try {
-            const response = await client.write('/queue/simple/set', [`=.id=${queueId}`, ...formatUpdateArgs(updateArgs)]);
-            console.log('Mikrotik Simple Queue Set Response:', response);
-          } catch (setError) {
-            if (setError.errno === 'UNKNOWNREPLY') {
-              console.warn(`Mikrotik Simple Queue update for user ${updatedUser.username} returned UNKNOWNREPLY, treating as success.`);
-            } else {
-              throw setError; // Re-throw other errors
-            }
-          }
+          await client.write('/queue/simple/set', [`=.id=${queueId}`, ...formatUpdateArgs(updateArgs)]);
         } else {
           console.warn(`Simple Queue for static user ${updatedUser.username} not found on Mikrotik. Cannot update.`);
         }
       }
     } catch (error) {
       console.error(`Mikrotik API Update Error: ${error.message}`);
-      // Do not throw error here, as the user has already been updated in the DB.
-      // Log the error and proceed.
     } finally {
       if (client) {
         client.close();
@@ -466,29 +392,19 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
   res.status(200).json(updatedUser);
 });
 
-
-
 // @desc    Delete a Mikrotik User
 // @route   DELETE /api/mikrotik/users/:id
 // @access  Private
 const deleteMikrotikUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findById(req.params.id);
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!user) {
     res.status(404);
     throw new Error('Mikrotik User not found');
   }
 
-  // Check for ownership
-  if (user.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to delete this Mikrotik user');
-  }
-
   const router = await MikrotikRouter.findById(user.mikrotikRouter);
-  if (!router) {
-    console.warn(`Associated Mikrotik Router not found for user ${user.username}. Mikrotik de-provisioning skipped.`);
-  } else {
+  if (router) {
     let client;
     try {
       client = new RouterOSAPI({
@@ -501,45 +417,20 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
       await client.connect();
 
       if (user.serviceType === 'pppoe') {
-        let pppSecrets;
-        try {
-          pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-        } catch (e) {
-          if (e.errno === 'UNKNOWNREPLY') {
-            pppSecrets = [];
-          } else {
-            throw e;
-          }
-        }
+        const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
         if (pppSecrets.length > 0) {
           const secretId = pppSecrets[0]['.id'];
-          try {
-            await client.write('/ppp/secret/remove', [`=.id=${secretId}`]);
-            console.log(`Mikrotik PPP secret for user ${user.username} removed.`);
-          } catch (removeError) {
-            if (removeError.errno === 'UNKNOWNREPLY') {
-              console.warn(`Mikrotik PPP secret removal for user ${user.username} returned UNKNOWNREPLY, treating as success.`);
-            } else {
-              throw removeError; // Re-throw other errors
-            }
-          }
-        } else {
-          console.warn(`PPP Secret for user ${user.username} not found on Mikrotik. Cannot remove.`);
+          await client.write('/ppp/secret/remove', [`=.id=${secretId}`]);
         }
       } else if (user.serviceType === 'static') {
         const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
         if (simpleQueues.length > 0) {
           const queueId = simpleQueues[0]['.id'];
-          // await client.write('/queue/simple/remove', [`=.id=${queueId}`]); // Exceptional: Do not remove simple queue
-        console.log(`Mikrotik Simple Queue for user ${user.username} not removed due to exception.`);
-        } else {
-          console.warn(`Simple Queue for user ${user.username} not found on Mikrotik. Cannot remove.`);
+          await client.write('/queue/simple/remove', [`=.id=${queueId}`]);
         }
       }
     } catch (error) {
       console.error(`Mikrotik API De-provisioning Error: ${error.message}`);
-      // Do not throw error here, as the user should still be removed from the DB.
-      // Log the error and proceed.
     } finally {
       if (client) {
         client.close();
@@ -547,46 +438,16 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
     }
   }
 
-  await MikrotikUser.deleteOne({ _id: user._id });
+  await user.deleteOne();
 
   res.status(200).json({ message: 'Mikrotik User removed' });
-});
-
-// @desc    Get PPP Profiles from a Mikrotik Router
-// @route   GET /api/mikrotik/routers/:id/ppp-profiles
-// @access  Private
-
-
-// @desc    Get PPP Services from a Mikrotik Router
-// @route   GET /api/mikrotik/routers/:id/ppp-services
-// @access  Private
-const getMikrotikPppServices = asyncHandler(async (req, res) => {
-  const router = await MikrotikRouter.findById(req.params.id);
-
-  if (!router) {
-    res.status(404);
-    throw new Error('Mikrotik Router not found');
-  }
-
-  // --- Mikrotik API Integration (Placeholder) ---
-  // In a real scenario, you would connect to the router and fetch PPP services.
-  // Note: PPP services are usually a fixed list in RouterOS, but we agreed to fetch them.
-  // Example:
-  // const conn = new MikrotikAPI({ host: router.ipAddress, user: router.apiUsername, password: router.apiPassword, port: router.apiPort });
-  // await conn.connect();
-  // const services = await conn.write('/ppp/service/print'); // This command might not exist, usually fixed list
-  // await conn.close();
-  // res.status(200).json(services.map(s => s.name));
-  // ------------------------------------------------
-
-  res.status(200).json(['any', 'async', 'l2tp', 'ovpn', 'pppoe', 'pptp', 'sstp']); // Mock data
 });
 
 // @desc    Get Mikrotik Clients (for SMS dropdowns)
 // @route   GET /api/mikrotik/users/clients-for-sms
 // @access  Private
 const getMikrotikClientsForSms = asyncHandler(async (req, res) => {
-  const clients = await MikrotikUser.find({}).select('_id officialName mobileNumber');
+  const clients = await MikrotikUser.find({ tenantOwner: req.user.tenantOwner }).select('_id officialName mobileNumber');
   res.status(200).json(clients);
 });
 
@@ -602,6 +463,7 @@ const getMonthlyNewSubscribers = asyncHandler(async (req, res) => {
   endOfMonth.setHours(23, 59, 59, 999);
 
   const count = await MikrotikUser.countDocuments({
+    tenantOwner: req.user.tenantOwner,
     createdAt: { $gte: startOfMonth, $lte: endOfMonth },
   });
 
@@ -620,6 +482,7 @@ const getMonthlyPaidSubscribers = asyncHandler(async (req, res) => {
   endOfMonth.setHours(23, 59, 59, 999);
 
   const count = await MikrotikUser.countDocuments({
+    tenantOwner: req.user.tenantOwner,
     expiryDate: { $gte: new Date() }, // Expiry date is in the future
     createdAt: { $gte: startOfMonth, $lte: endOfMonth }, // Created in the current month
   });
@@ -640,6 +503,7 @@ const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
     const endOfMonth = new Date(year, i + 1, 0); // Last day of the month
 
     const count = await MikrotikUser.countDocuments({
+      tenantOwner: req.user.tenantOwner,
       createdAt: { $gte: startOfMonth, $lte: endOfMonth },
     });
 
@@ -656,24 +520,19 @@ const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id/status
 // @access  Private
 const getMikrotikUserStatus = asyncHandler(async (req, res) => {
-  console.log(`Checking status for user ID: ${req.params.id}`);
-  const user = await MikrotikUser.findById(req.params.id).populate('mikrotikRouter').populate('package');
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter').populate('package');
 
   if (!user) {
-    console.log(`User with ID: ${req.params.id} not found.`);
     res.status(404);
     throw new Error('Mikrotik User not found');
   }
-  console.log(`Found user: ${user.username}, serviceType: ${user.serviceType}`);
 
   const router = user.mikrotikRouter;
 
   if (!router) {
-    console.log(`Associated Mikrotik Router not found for user ${user.username}.`);
     res.status(404);
     throw new Error('Associated Mikrotik Router not found');
   }
-  console.log(`Found router: ${router.name}, IP: ${router.ipAddress}`);
 
   let client;
   try {
@@ -686,32 +545,24 @@ const getMikrotikUserStatus = asyncHandler(async (req, res) => {
     });
 
     await client.connect();
-    console.log(`Connected to router ${router.name}.`);
 
     let status = 'offline';
 
     if (user.serviceType === 'pppoe') {
-      console.log(`Checking PPPoE active for user: ${user.username}`);
       const pppActive = await client.write('/ppp/active/print');
       if (pppActive.some(session => session.name === user.username)) {
         status = 'online';
       }
     } else if (user.serviceType === 'static') {
-      console.log(`Pinging static user IP: ${user.ipAddress}`);
-      const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']); // Send 2 pings for reliability
-      
-      // Check if any of the replies indicate a successful ping (e.g., has a 'time' field)
+      const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
       if (pingReplies.some(reply => reply.time)) {
         status = 'online';
       }
     }
 
     await client.close();
-    console.log(`Connection closed. Status: ${status}`);
     res.status(200).json({ status });
   } catch (error) {
-    console.error(`Mikrotik API Error (User Status): ${error.message}`);
-    try { if (client) client.close(); } catch (e) { /* ignore */ }
     res.status(200).json({ status: 'offline' }); // Return offline on any API error
   }
 });
@@ -720,24 +571,19 @@ const getMikrotikUserStatus = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id/traffic
 // @access  Private
 const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
-  console.log(`Fetching traffic for user ID: ${req.params.id}`);
-  const user = await MikrotikUser.findById(req.params.id).populate('mikrotikRouter');
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter');
 
   if (!user) {
-    console.log(`User with ID: ${req.params.id} not found.`);
     res.status(404);
     throw new Error('Mikrotik User not found');
   }
-  console.log(`Found user: ${user.username}, serviceType: ${user.serviceType}`);
 
   const router = user.mikrotikRouter;
 
   if (!router) {
-    console.log(`Associated Mikrotik Router not found for user ${user.username}.`);
     res.status(404);
     throw new Error('Associated Mikrotik Router not found');
   }
-  console.log(`Found router: ${router.name}, IP: ${router.ipAddress}`);
 
   let client;
   try {
@@ -750,99 +596,29 @@ const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
     });
 
     await client.connect();
-    console.log(`Connected to router ${router.name}.`);
 
-    let trafficData = {
-      rxRate: 0, // receive rate (download)
-      txRate: 0, // transmit rate (upload)
-      rxBytes: 0, // received bytes (total download)
-      txBytes: 0, // transmitted bytes (total upload)
-    };
+    let trafficData = { rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0 };
 
     if (user.serviceType === 'pppoe') {
-      console.log(`Checking for active PPPoE session for user: ${user.username}`);
-      const allPppActiveSessions = await client.write('/ppp/active/print');
-      const pppActiveSessions = allPppActiveSessions.filter(session => session.name === user.username);
-      console.log(`Raw PPPoE active sessions for ${user.username}:`, pppActiveSessions);
-
-      if (pppActiveSessions.length > 0) {
-        const activeSession = pppActiveSessions[0];
-        const userIpAddress = activeSession.address;
-        console.log(`Active PPPoE session found. User IP: ${userIpAddress}. Now trying to find corresponding interface by fetching all IP addresses.`);
-
-        if (userIpAddress) {
-          const allIpAddresses = await client.write('/ip/address/print'); // Fetch all IP addresses
-          console.log(`Raw all IP addresses from Mikrotik:`, allIpAddresses);
-
-          const ipAddressEntry = allIpAddresses.find(ip => {
-            const networkAddress = ip.network ? ip.network.split('/')[0] : null;
-            return networkAddress === userIpAddress;
-          }); // Find matching IP by network property, stripping CIDR
-          
-          if (ipAddressEntry) {
-            const interfaceName = ipAddressEntry.interface;
-            console.log(`Found interface for IP ${userIpAddress}: ${interfaceName}`);
-
-            if (interfaceName) {
-              console.log(`Monitoring traffic on interface: ${interfaceName}`);
-              const trafficMonitor = await client.write('/interface/monitor-traffic', [`=interface=${interfaceName}`, '=once']);
-              console.log(`Raw traffic monitor data for interface ${interfaceName}:`, trafficMonitor);
-
-              if (trafficMonitor.length > 0) {
-                const trafficDataEntry = trafficMonitor[0];
-                trafficData.rxRate = parseInt(trafficDataEntry['rx-bits-per-second'] || '0', 10) / 8; // Convert bits/s to bytes/s
-                trafficData.txRate = parseInt(trafficDataEntry['tx-bits-per-second'] || '0', 10) / 8; // Convert bits/s to bytes/s
-                trafficData.rxBytes = parseInt(trafficDataEntry['rx-bytes'] || '0', 10);
-                trafficData.txBytes = parseInt(trafficDataEntry['tx-bytes'] || '0', 10);
-              }
-            } else {
-              console.warn(`No interface found for IP address entry ${userIpAddress}.`);
-            }
-          } else {
-            console.warn(`No matching IP address entry found for ${userIpAddress} in /ip/address/print.`);
-          }
-        } else {
-          console.warn(`User ${user.username} has no IP address in active session.`);
-        }
-      } else {
-        console.log(`No active PPPoE session found for user ${user.username}.`);
+      const pppActive = await client.write('/ppp/active/print', [`?name=${user.username}`]);
+      if (pppActive.length > 0) {
+        const [rxBytes, txBytes] = pppActive[0].bytes.split('/');
+        trafficData.rxBytes = parseInt(rxBytes, 10);
+        trafficData.txBytes = parseInt(txBytes, 10);
       }
     } else if (user.serviceType === 'static') {
-      console.log(`Fetching simple queue for user: ${user.username}`);
-      const simpleQueue = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-      console.log(`Raw simple queue for user ${user.username} from Mikrotik:`, simpleQueue); // Added logging
-      if (simpleQueue.length > 0) {
-        const queue = simpleQueue[0];
-        console.log(`Found simple queue for user ${user.username}:`, queue);
-
-        if (queue.bytes) {
-          const [txBytes, rxBytes] = queue.bytes.split('/');
-          trafficData.rxBytes = parseInt(txBytes, 10);
-          trafficData.txBytes = parseInt(rxBytes, 10);
-        }
-
-        if (queue.rate) {
-          const [txRate, rxRate] = queue.rate.split('/');
-          trafficData.rxRate = parseInt(txRate, 10) / 8; // Convert bps to Bps
-          trafficData.txRate = parseInt(rxRate, 10) / 8; // Convert bps to Bps
-        }
+      const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+      if (simpleQueues.length > 0) {
+        const [rxBytes, txBytes] = simpleQueues[0].bytes.split('/');
+        trafficData.rxBytes = parseInt(rxBytes, 10);
+        trafficData.txBytes = parseInt(txBytes, 10);
       }
     }
 
     await client.close();
-    console.log(`Connection closed. Traffic data:`, trafficData);
     res.status(200).json(trafficData);
   } catch (error) {
-    console.error(`Mikrotik API Error (User Traffic): ${error.message}`);
-    try { if (client) client.close(); } catch (e) { /* ignore */ }
-    // If there's an error (e.g., user not found, router unreachable), return zero traffic
-    res.status(200).json({
-      rxRate: 0,
-      txRate: 0,
-      rxBytes: 0,
-      txBytes: 0,
-      error: `Could not fetch traffic: ${error.message}`
-    });
+    res.status(200).json({ rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0, error: `Could not fetch traffic: ${error.message}` });
   }
 });
 
@@ -851,7 +627,7 @@ const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
 // @access  Private
 const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
   const { stationId } = req.params;
-  const users = await MikrotikUser.find({ station: stationId })
+  const users = await MikrotikUser.find({ station: stationId, tenantOwner: req.user.tenantOwner })
     .populate('package')
     .populate('mikrotikRouter', 'name');
   res.status(200).json(users);
@@ -861,9 +637,8 @@ const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:userId/downtime-logs
 // @access  Private/Admin
 const getDowntimeLogs = asyncHandler(async (req, res) => {
-  // First, ensure the MikrotikUser exists and belongs to the requesting user.
-  const mikrotikUser = await MikrotikUser.findById(req.params.userId);
-  if (!mikrotikUser || mikrotikUser.user.toString() !== req.user._id.toString()) {
+  const mikrotikUser = await MikrotikUser.findOne({ _id: req.params.userId, tenantOwner: req.user.tenantOwner });
+  if (!mikrotikUser) {
     res.status(404);
     throw new Error('Mikrotik user not found or not authorized');
   }
@@ -893,6 +668,7 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
   today.setHours(0, 0, 0, 0);
 
   const filter = {
+    tenantOwner: req.user.tenantOwner,
     expiryDate: { $lt: today },
   };
 
@@ -928,23 +704,17 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
 const getUserPaymentStats = asyncHandler(async (req, res) => {
     try {
         const userId = req.params.id;
-        const user = await MikrotikUser.findById(userId);
+        const user = await MikrotikUser.findOne({ _id: userId, tenantOwner: req.user.tenantOwner });
 
         if (!user) {
             res.status(404);
             throw new Error('User not found');
         }
-        // Check for ownership
-        if (user.user.toString() !== req.user._id.toString()) {
-            res.status(401);
-            throw new Error('Not authorized to view payment stats for this Mikrotik user');
-        }
 
-        // Fetch application settings to get the grace period
-        const settings = await ApplicationSettings.findOne({ user: req.user._id });
-        const gracePeriodDays = settings ? settings.paymentGracePeriodDays : 3; // Default to 3 if not set
+        const settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner });
+        const gracePeriodDays = settings ? settings.paymentGracePeriodDays : 3;
 
-        const transactions = await WalletTransaction.find({ user: req.user._id, mikrotikUser: userId }).sort({ createdAt: 'asc' });
+        const transactions = await WalletTransaction.find({ tenantOwner: req.user.tenantOwner, mikrotikUser: userId }).sort({ createdAt: 'asc' });
 
         const debitTransactions = transactions.filter(t => t.type === 'Debit');
         const creditTransactions = transactions.filter(t => t.type === 'Credit');
@@ -990,13 +760,12 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
                     });
                 }
             } else {
-                // Handle cases where a debit exists but has not been paid yet
                 const today = new Date();
                 const daysDelayed = (today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24);
                 paymentHistory.push({
                     billId: debit._id,
                     dueDate: debit.createdAt,
-                    paidDate: null, // No payment date
+                    paidDate: null,
                     amount: debit.amount,
                     status: 'Pending',
                     daysDelayed: Math.round(Math.max(0, daysDelayed)),
@@ -1024,7 +793,6 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
     }
 });
 
-
 module.exports = {
   createMikrotikUser,
   getMikrotikUsers,
@@ -1037,8 +805,8 @@ module.exports = {
   getMonthlyTotalSubscribers,
   getMikrotikUserStatus,
   getMikrotikUserTraffic,
-  getMikrotikUsersByStation,
   getDowntimeLogs,
   getDelayedPayments,
   getUserPaymentStats,
+  getMikrotikUsersByStation,
 };

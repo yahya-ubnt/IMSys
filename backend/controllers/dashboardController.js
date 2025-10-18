@@ -39,7 +39,7 @@ const getCollectionsSummary = asyncHandler(async (req, res) => {
     const result = await Transaction.aggregate([
       {
         $match: {
-          user: req.user._id, // Filter by user
+          tenantOwner: req.user.tenantOwner, // Filter by tenant
           transactionDate: {
             $gte: startDate,
             $lte: endDate,
@@ -81,7 +81,7 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
   // Fetch monthly collections
   const monthlyCollections = await Transaction.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $match: {
         $expr: { $eq: [{ $year: '$transactionDate' }, parsedYear] }
@@ -104,7 +104,7 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
   // Fetch monthly expenses
   const monthlyExpenses = await Expense.aggregate([
-    { $match: { expenseBy: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $match: {
         $expr: { $eq: [{ $year: '$expenseDate' }, parsedYear] } // Assuming 'expenseDate' field for expenses
@@ -159,7 +159,7 @@ const getMonthlyExpenseSummary = asyncHandler(async (req, res) => {
   const result = await Expense.aggregate([
     {
       $match: {
-        expenseBy: req.user._id, // Filter by user
+        tenantOwner: req.user.tenantOwner, // Filter by tenant
         expenseDate: {
           $gte: startOfMonth,
           $lte: endOfMonth,
@@ -188,7 +188,7 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const count = await MikrotikUser.countDocuments({
-    user: req.user._id, // Filter by user
+    tenantOwner: req.user.tenantOwner, // Filter by tenant
     createdAt: {
       $gte: startOfMonth,
       $lte: today,
@@ -202,7 +202,7 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
 // @route   GET /api/dashboard/users/total
 // @access  Public
 const getTotalUsersCount = asyncHandler(async (req, res) => {
-  const count = await MikrotikUser.countDocuments({ user: req.user._id }); // Filter by user
+  const count = await MikrotikUser.countDocuments({ tenantOwner: req.user.tenantOwner }); // Filter by tenant
   res.json({ totalUsers: count });
 });
 
@@ -212,7 +212,7 @@ const getTotalUsersCount = asyncHandler(async (req, res) => {
 const getActiveUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
   const count = await MikrotikUser.countDocuments({
-    user: req.user._id, // Filter by user
+    tenantOwner: req.user.tenantOwner, // Filter by tenant
     expiryDate: { $gte: today },
     isSuspended: false,
   });
@@ -225,7 +225,7 @@ const getActiveUsersCount = asyncHandler(async (req, res) => {
 const getExpiredUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
   const count = await MikrotikUser.countDocuments({
-    user: req.user._id, // Filter by user
+    tenantOwner: req.user.tenantOwner, // Filter by tenant
     $or: [
       { expiryDate: { $lt: today } },
       { isSuspended: true },

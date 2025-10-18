@@ -8,13 +8,12 @@ const {
   deleteScheduledTask,
   runScheduledTask,
 } = require('../controllers/scheduledTaskController');
-const { protect, admin } = require('../middlewares/protect');
+const { protect, isSuperAdmin } = require('../middlewares/authMiddleware');
 
 router.route('/')
-  .get(protect, admin, getScheduledTasks)
+  .get(protect, isSuperAdmin, getScheduledTasks)
   .post(
-    protect,
-    admin,
+    [protect, isSuperAdmin],
     [
       body('name', 'Name is required').not().isEmpty(),
       body('scriptPath', 'Script path is required').not().isEmpty(),
@@ -24,10 +23,10 @@ router.route('/')
   );
 
 router.route('/:id')
-  .put(protect, admin, updateScheduledTask)
-  .delete(protect, admin, deleteScheduledTask);
+  .put(protect, isSuperAdmin, updateScheduledTask)
+  .delete(protect, isSuperAdmin, deleteScheduledTask);
 
 router.route('/:id/run')
-  .post(protect, admin, runScheduledTask);
+  .post(protect, isSuperAdmin, runScheduledTask);
 
 module.exports = router;

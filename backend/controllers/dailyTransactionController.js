@@ -31,7 +31,7 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
     newBalance,
     transactionCost,
     category,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   const createdDailyTransaction = await dailyTransaction.save();
@@ -45,7 +45,7 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
 const getDailyTransactions = asyncHandler(async (req, res) => {
   const { startDate, endDate, method, label, search, category } = req.query;
 
-  const query = { user: req.user._id }; // Filter by user
+  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
 
   if (startDate) {
     query.date = { ...query.date, $gte: new Date(startDate) };
@@ -84,14 +84,9 @@ const getDailyTransactions = asyncHandler(async (req, res) => {
 // @route   GET /api/daily-transactions/:id
 // @access  Private
 const getDailyTransactionById = asyncHandler(async (req, res) => {
-  const dailyTransaction = await DailyTransaction.findById(req.params.id);
+  const dailyTransaction = await DailyTransaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (dailyTransaction) {
-    // Check for ownership
-    if (dailyTransaction.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this transaction');
-    }
     res.json(dailyTransaction);
   } else {
     res.status(404);
@@ -105,15 +100,9 @@ const getDailyTransactionById = asyncHandler(async (req, res) => {
 const updateDailyTransaction = asyncHandler(async (req, res) => {
   const { date, amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost, category } = req.body;
 
-  const dailyTransaction = await DailyTransaction.findById(req.params.id);
+  const dailyTransaction = await DailyTransaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (dailyTransaction) {
-    // Check for ownership
-    if (dailyTransaction.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this transaction');
-    }
-
     dailyTransaction.date = date || dailyTransaction.date;
     dailyTransaction.amount = amount || dailyTransaction.amount;
     dailyTransaction.method = method || dailyTransaction.method;
@@ -141,14 +130,9 @@ const updateDailyTransaction = asyncHandler(async (req, res) => {
 // @route   DELETE /api/daily-transactions/:id
 // @access  Private
 const deleteDailyTransaction = asyncHandler(async (req, res) => {
-  const dailyTransaction = await DailyTransaction.findById(req.params.id);
+  const dailyTransaction = await DailyTransaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (dailyTransaction) {
-    // Check for ownership
-    if (dailyTransaction.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this transaction');
-    }
     await dailyTransaction.deleteOne();
     res.json({ message: 'Daily transaction removed' });
   } else {
@@ -167,7 +151,7 @@ const getDailyTransactionStats = asyncHandler(async (req, res) => {
   const startOfYear = moment().startOf('year');
 
   const stats = await DailyTransaction.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $facet: {
         today: [
@@ -216,7 +200,7 @@ const getMonthlyTransactionTotals = asyncHandler(async (req, res) => {
   }
 
   const matchQuery = {
-    user: req.user._id, // Filter by user
+    tenantOwner: req.user.tenantOwner, // Filter by tenant
     date: {
       $gte: new Date(parseInt(year), 0, 1),
       $lt: new Date(parseInt(year) + 1, 0, 1),
@@ -274,7 +258,7 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const daysInMonth = endDate.date();
 
   const dailyTotals = await DailyTransaction.aggregate([
-    { $match: { user: req.user._id } }, // Filter by user
+    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
       $match: {
         date: {

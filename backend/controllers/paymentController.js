@@ -16,7 +16,7 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 
   try {
     // Pass the logged-in user's ID to the service
-    const response = await initiateStkPushService(req.user._id, amount, phoneNumber, accountReference);
+    const response = await initiateStkPushService(req.user.tenantOwner, amount, phoneNumber, accountReference);
     res.status(200).json(response);
   } catch (error) {
     console.error('Error initiating STK push:', error);
@@ -50,15 +50,14 @@ const handleDarajaCallback = asyncHandler(async (req, res) => {
 const getTransactions = asyncHandler(async (req, res) => {
   const { page = 1, limit = 15, searchTerm, startDate, endDate, userId } = req.query;
 
-  let query = {};
+  let query = { tenantOwner: req.user.tenantOwner };
 
   if (userId) {
     try {
       const mikrotikUser = await MikrotikUser.findById(userId);
       if (mikrotikUser) {
-        query.user = mikrotikUser.user; // Use the main user ID
+        query.mikrotikUser = mikrotikUser._id;
       } else {
-        // If no Mikrotik user is found, return empty results
         return res.status(200).json({ transactions: [], pages: 0, stats: { totalVolume: 0, transactionCount: 0, averageTransaction: 0 } });
       }
     } catch (error) {
@@ -87,7 +86,7 @@ const getTransactions = asyncHandler(async (req, res) => {
   const totalPages = Math.ceil(totalCount / parseInt(limit));
 
   const transactions = await Transaction.find(query)
-    .populate('user', 'fullName email')
+    .populate('tenantOwner', 'fullName email')
     .sort({ transactionDate: -1 })
     .skip((parseInt(page) - 1) * parseInt(limit))
     .limit(parseInt(limit));
@@ -121,7 +120,7 @@ const createCashPayment = asyncHandler(async (req, res) => {
   const { userId, amount, transactionId, comment } = req.body;
   const amountPaid = parseFloat(amount);
 
-  const user = await MikrotikUser.findById(userId);
+  const user = await MikrotikUser.findOne({ _id: userId, tenantOwner: req.user.tenantOwner });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -138,27 +137,25 @@ const createCashPayment = asyncHandler(async (req, res) => {
     transactionDate: new Date(),
     paymentMethod: 'Cash',
     comment,
-    user: req.user._id,
+    tenantOwner: req.user.tenantOwner,
   });
 
   res.status(201).json(transaction);
 });
 
 const getWalletTransactions = asyncHandler(async (req, res) => {
-  let query = {};
+  let query = { tenantOwner: req.user.tenantOwner };
   if (req.params.id) {
-    query = { mikrotikUser: req.params.id };
-  } else {
-    query = { user: req.user._id };
+    query.mikrotikUser = req.params.id;
   }
   const transactions = await WalletTransaction.find(query).sort({ createdAt: -1 });
   res.status(200).json(transactions);
 });
 
 const getWalletTransactionById = asyncHandler(async (req, res) => {
-  const transaction = await WalletTransaction.findById(req.params.id);
+  const transaction = await WalletTransaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
-  if (transaction && transaction.user.toString() === req.user._id.toString()) {
+  if (transaction) {
     res.status(200).json(transaction);
   } else {
     res.status(404);
@@ -175,7 +172,8 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
   const { userId, type, amount, source, comment, transactionId } = req.body;
 
   const transaction = await WalletTransaction.create({
-    user: userId,
+    tenantOwner: req.user.tenantOwner,
+    mikrotikUser: userId,
     type,
     amount,
     source,

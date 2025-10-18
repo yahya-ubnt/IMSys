@@ -17,7 +17,7 @@ const RETENTION_PERIODS = {
 };
 
 // A helper function to perform the cleanup for a specific model
-const cleanupModel = async (model, modelName, daysToKeep) => {
+const cleanupModel = async (model, modelName, daysToKeep, tenantOwner) => {
   try {
     if (!daysToKeep || daysToKeep <= 0) {
       console.log(`[${new Date().toISOString()}] Skipping cleanup for ${modelName} - invalid retention period.`);
@@ -27,30 +27,38 @@ const cleanupModel = async (model, modelName, daysToKeep) => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-    console.log(`[${new Date().toISOString()}] Deleting ${modelName} records older than ${cutoffDate.toLocaleDateString()}...`);
+    console.log(`[${new Date().toISOString()}] Deleting ${modelName} records for tenant ${tenantOwner} older than ${cutoffDate.toLocaleDateString()}...`);
 
     const result = await model.deleteMany({
+      tenantOwner,
       createdAt: { $lt: cutoffDate },
     });
 
-    console.log(`[${new Date().toISOString()}] Success! Deleted ${result.deletedCount} records from ${modelName}.`);
+    console.log(`[${new Date().toISOString()}] Success! Deleted ${result.deletedCount} records from ${modelName} for tenant ${tenantOwner}.`);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error cleaning up ${modelName}:`, error);
+    console.error(`[${new Date().toISOString()}] Error cleaning up ${modelName} for tenant ${tenantOwner}:`, error);
   }
 };
 
 const cleanupOldLogs = async () => {
   console.log(`[${new Date().toISOString()}] --- Starting Database Log Cleanup Script ---`);
 
+  const tenantId = process.argv[2];
+  if (!tenantId) {
+    console.error('Please provide a tenant ID as a command-line argument.');
+    process.exit(1);
+  }
+
   try {
     await connectDB();
     console.log(`[${new Date().toISOString()}] Connected to MongoDB.`);
 
     // Sequentially clean up each log collection
-    await cleanupModel(SmsLog, 'SmsLog', RETENTION_PERIODS.SmsLog);
-    await cleanupModel(DiagnosticLog, 'DiagnosticLog', RETENTION_PERIODS.DiagnosticLog);
-    await cleanupModel(TrafficLog, 'TrafficLog', RETENTION_PERIODS.TrafficLog);
-    await cleanupModel(UserDowntimeLog, 'UserDowntimeLog', RETENTION_PERIODS.UserDowntimeLog);
+    await cleanupModel(SmsLog, 'SmsLog', RETENTION_PERIODS.SmsLog, tenantId);
+    await cleanupModel(DiagnosticLog, 'DiagnosticLog', RETENTION_PERIODS.DiagnosticLog, tenantId);
+    // TrafficLog does not have tenantOwner, so it is skipped
+    // await cleanupModel(TrafficLog, 'TrafficLog', RETENTION_PERIODS.TrafficLog, tenantId);
+    await cleanupModel(UserDowntimeLog, 'UserDowntimeLog', RETENTION_PERIODS.UserDowntimeLog, tenantId);
 
     console.log(`[${new Date().toISOString()}] --- Database Log Cleanup Script Finished ---`);
 

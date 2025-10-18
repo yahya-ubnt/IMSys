@@ -46,7 +46,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('User IDs are required for sending to users');
       }
-      const users = await User.find({ _id: { $in: userIds }, user: req.user._id }).select('phoneNumber');
+      const users = await User.find({ _id: { $in: userIds }, tenantOwner: req.user.tenantOwner }).select('phoneNumber');
       recipientPhoneNumbers = users.map(user => user.phoneNumber).filter(Boolean);
       break;
 
@@ -56,7 +56,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         throw new Error('Mikrotik Router ID is required for sending to Mikrotik group');
       }
       // Assuming MikrotikUser model has a reference to MikrotikRouter and a phoneNumber
-      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, user: req.user._id }).select('phoneNumber');
+      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, tenantOwner: req.user.tenantOwner }).select('phoneNumber');
       recipientPhoneNumbers = mikrotikUsers.map(user => user.phoneNumber).filter(Boolean);
       break;
 
@@ -65,7 +65,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Apartment/House Number is required for sending to location');
       }
-      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, user: req.user._id }).select('mobileNumber');
+      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
       recipientPhoneNumbers = usersInLocation.map(user => user.mobileNumber).filter(Boolean);
       break;
 
@@ -95,11 +95,11 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
       message: message,
       messageType: messageType,
       smsStatus: 'Pending',
-      user: req.user._id, // Associate with the logged-in user
+      tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
     });
 
     try {
-      const gatewayResponse = await sendSMS(req.user._id, phoneNumber, message);
+      const gatewayResponse = await sendSMS(req.user.tenantOwner, phoneNumber, message);
 
       // Update the log with the gateway's response
       log.smsStatus = gatewayResponse.success ? 'Success' : 'Failed';
@@ -127,7 +127,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
   const pageSize = Number(req.query.limit) || 25;
   const page = Number(req.query.page) || 1;
 
-  const query = { user: req.user._id }; // Filter by user
+  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
 
   if (req.query.mobileNumber) {
     query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };
@@ -150,7 +150,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
 
   const count = await SmsLog.countDocuments(query);
   const logs = await SmsLog.find(query)
-    .populate('user', 'fullName email')
+    .populate('tenantOwner', 'fullName email')
     .limit(pageSize)
     .skip(pageSize * (page - 1))
     .sort({ createdAt: -1 });
@@ -169,7 +169,7 @@ const { json2csv } = require('json-2-csv');
 // @route   GET /api/sms/log/export
 // @access  Private
 const exportSmsLogs = asyncHandler(async (req, res) => {
-  const query = { user: req.user._id }; // Filter by user
+  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
 
   if (req.query.mobileNumber) {
     query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };
@@ -190,7 +190,7 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     };
   }
 
-  const logs = await SmsLog.find(query).populate('user', 'fullName email').sort({ createdAt: -1 });
+  const logs = await SmsLog.find(query).populate('tenantOwner', 'fullName email').sort({ createdAt: -1 });
 
   const fields = [
     { label: 'ID', value: '_id' },
@@ -198,7 +198,7 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     { label: 'Message', value: 'message' },
     { label: 'Message Type', value: 'messageType' },
     { label: 'SMS Status', value: 'smsStatus' },
-    { label: 'Sent By', value: 'user.fullName' }, // Assuming user.fullName exists
+    { label: 'Sent By', value: 'tenantOwner.fullName' }, // Assuming tenantOwner.fullName exists
     { label: 'Date & Time', value: 'createdAt' },
   ];
 

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const ScheduledTask = require('../models/ScheduledTask');
+const User = require('../models/User');
 
 const tasks = [
   {
@@ -38,11 +39,17 @@ const seedTasks = async () => {
     await connectDB();
     console.log('Connected to MongoDB.');
 
+    const superAdmin = await User.findOne({ roles: 'SUPER_ADMIN' });
+    if (!superAdmin) {
+      console.error('SUPER_ADMIN not found. Please run the seeder first.');
+      process.exit(1);
+    }
+
     for (const taskData of tasks) {
       // Use findOneAndUpdate with upsert to avoid creating duplicates
       await ScheduledTask.findOneAndUpdate(
-        { name: taskData.name },
-        taskData,
+        { name: taskData.name, tenantOwner: superAdmin._id },
+        { ...taskData, tenantOwner: superAdmin._id },
         { new: true, upsert: true, runValidators: true }
       );
       console.log(`Successfully created/updated task: "${taskData.name}"`);

@@ -23,8 +23,14 @@ connectDB();
 const generateMonthlyDebits = async () => {
   console.log('Starting monthly debit generation process...');
 
+  const tenantId = process.argv[2];
+  if (!tenantId) {
+    console.error('Please provide a tenant ID as a command-line argument.');
+    process.exit(1);
+  }
+
   try {
-    const users = await MikrotikUser.find({}).populate('package');
+    const users = await MikrotikUser.find({ tenantOwner: tenantId }).populate('package');
     const today = new Date();
 
     for (const user of users) {
@@ -66,7 +72,7 @@ const generateMonthlyDebits = async () => {
         // Create the debit transaction
         await WalletTransaction.create({
           mikrotikUser: user._id,
-          user: user.user, // Associate with the main SaaS user
+          tenantOwner: user.tenantOwner, // Associate with the tenant
           transactionId: `DEBIT-${Date.now()}-${user.username}`,
           type: 'Debit',
           amount: debitAmount,

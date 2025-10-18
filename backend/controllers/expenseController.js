@@ -24,7 +24,7 @@ const createExpense = asyncHandler(async (req, res) => {
     description: sanitizeString(description), // Sanitize description
     expenseDate,
     status,
-    expenseBy: req.user._id,
+    tenantOwner: req.user.tenantOwner,
   });
 
   res.status(201).json(expense);
@@ -34,9 +34,9 @@ const createExpense = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses
 // @access  Private
 const getExpenses = asyncHandler(async (req, res) => {
-  const expenses = await Expense.find({ expenseBy: req.user._id })
+  const expenses = await Expense.find({ tenantOwner: req.user.tenantOwner })
     .populate('expenseType', 'name')
-    .populate('expenseBy', 'name email');
+    .populate('tenantOwner', 'name email');
   res.status(200).json(expenses);
 });
 
@@ -44,19 +44,13 @@ const getExpenses = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/:id
 // @access  Private
 const getExpenseById = asyncHandler(async (req, res) => {
-  const expense = await Expense.findById(req.params.id)
+  const expense = await Expense.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
     .populate('expenseType', 'name')
-    .populate('expenseBy', 'name email');
+    .populate('tenantOwner', 'name email');
 
   if (!expense) {
     res.status(404);
     throw new Error('Expense not found');
-  }
-
-  // Check for ownership
-  if (expense.expenseBy.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to view this expense');
   }
 
   res.status(200).json(expense);
@@ -68,17 +62,11 @@ const getExpenseById = asyncHandler(async (req, res) => {
 const updateExpense = asyncHandler(async (req, res) => {
   const { title, amount, expenseType, description, expenseDate, status } = req.body;
 
-  let expense = await Expense.findById(req.params.id);
+  let expense = await Expense.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!expense) {
     res.status(404);
     throw new Error('Expense not found');
-  }
-
-  // Check for ownership
-  if (expense.expenseBy.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to update this expense');
   }
 
   expense.title = title || expense.title;
@@ -97,17 +85,11 @@ const updateExpense = asyncHandler(async (req, res) => {
 // @route   DELETE /api/expenses/:id
 // @access  Private
 const deleteExpense = asyncHandler(async (req, res) => {
-  const expense = await Expense.findById(req.params.id);
+  const expense = await Expense.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!expense) {
     res.status(404);
     throw new Error('Expense not found');
-  }
-
-  // Check for ownership
-  if (expense.expenseBy.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to delete this expense');
   }
 
   await expense.deleteOne();
@@ -119,16 +101,13 @@ const deleteExpense = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/monthly-total
 // @access  Private
 const getMonthlyExpenseTotal = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user._id) {
+  if (!req.user || !req.user.tenantOwner) {
     res.status(401);
-    throw new Error('Not authorized, user ID not found');
+    throw new Error('Not authorized, tenant owner not found');
   }
 
   const startOfMonth = moment().startOf('month');
   const endOfMonth = moment().endOf('month');
-
-  console.log('Fetching monthly expenses for user:', req.user._id);
-  console.log('Date range:', startOfMonth.toDate(), 'to', endOfMonth.toDate());
 
   const totalExpenses = await Expense.aggregate([
     {
@@ -137,7 +116,7 @@ const getMonthlyExpenseTotal = asyncHandler(async (req, res) => {
           $gte: startOfMonth.toDate(),
           $lte: endOfMonth.toDate(),
         },
-        expenseBy: new mongoose.Types.ObjectId(req.user._id), // Convert to ObjectId
+        tenantOwner: new mongoose.Types.ObjectId(req.user.tenantOwner), // Convert to ObjectId
       },
     },
     {
@@ -157,9 +136,9 @@ const getMonthlyExpenseTotal = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/yearly-monthly-totals
 // @access  Private
 const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user._id) {
+  if (!req.user || !req.user.tenantOwner) {
     res.status(401);
-    throw new Error('Not authorized, user ID not found');
+    throw new Error('Not authorized, tenant owner not found');
   }
 
   const { year } = req.query;
@@ -179,7 +158,7 @@ const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
           $gte: startOfYear.toDate(),
           $lte: endOfYear.toDate(),
         },
-        expenseBy: new mongoose.Types.ObjectId(req.user._id),
+        tenantOwner: new mongoose.Types.ObjectId(req.user.tenantOwner),
       },
     },
     {
@@ -213,9 +192,9 @@ const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/daily-expense-totals
 // @access  Private
 const getDailyExpenseTotals = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user._id) {
+  if (!req.user || !req.user.tenantOwner) {
     res.status(401);
-    throw new Error('Not authorized, user ID not found');
+    throw new Error('Not authorized, tenant owner not found');
   }
 
   const { year, month } = req.query;
@@ -236,7 +215,7 @@ const getDailyExpenseTotals = asyncHandler(async (req, res) => {
           $gte: startDate.toDate(),
           $lte: endDate.toDate(),
         },
-        expenseBy: new mongoose.Types.ObjectId(req.user._id),
+        tenantOwner: new mongoose.Types.ObjectId(req.user.tenantOwner),
       },
     },
     {

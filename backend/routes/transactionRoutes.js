@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { createTransaction, getTransactions, getTransactionById, updateTransaction, deleteTransaction, getTransactionStats, getMonthlyTransactionTotals, } = require('../controllers/transactionController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-router.route('/stats').get(protect, getTransactionStats);
-router.route('/monthly-totals').get(protect, getMonthlyTransactionTotals);
-router.route('/').post(protect, createTransaction).get(protect, getTransactions);
+router.route('/stats').get(protect, isAdminTenant, getTransactionStats);
+router.route('/monthly-totals').get(protect, isAdminTenant, getMonthlyTransactionTotals);
+router.route('/').post(protect, isAdminTenant, createTransaction).get(protect, isAdminTenant, getTransactions);
 router
   .route('/:id')
-  .get(protect, getTransactionById)
+  .get(protect, isAdminTenant, getTransactionById)
   .put(
-    protect,
+    [protect, isAdminTenant],
     [
       body('date', 'Date must be a valid date').optional().isISO8601().toDate(),
       body('amount', 'Amount must be a number').optional().isNumeric(),
@@ -29,7 +29,6 @@ router
     ],
     updateTransaction
   )
-  .delete(protect, deleteTransaction);
-  .delete(protect, deleteTransaction);
+  .delete(protect, isAdminTenant, deleteTransaction);
 
 module.exports = router;

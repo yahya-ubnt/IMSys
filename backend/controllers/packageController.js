@@ -6,7 +6,6 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 // @route   POST /api/mikrotik/packages
 // @access  Private
 const createPackage = asyncHandler(async (req, res) => {
-  console.log('Received package creation request body:', req.body); // ADDED LOG
   const { mikrotikRouter, serviceType, name, price, status, profile, rateLimit } = req.body;
 
   if (!mikrotikRouter || !serviceType || !name || !price || !status) {
@@ -15,14 +14,10 @@ const createPackage = asyncHandler(async (req, res) => {
   }
 
   // Check if Mikrotik Router exists and belongs to the user
-  const routerExists = await MikrotikRouter.findById(mikrotikRouter);
+  const routerExists = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenantOwner: req.user.tenantOwner });
   if (!routerExists) {
     res.status(404);
     throw new Error('Mikrotik Router not found');
-  }
-  if (routerExists.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to use this router');
   }
 
   if (serviceType === 'pppoe') {
@@ -45,7 +40,7 @@ const createPackage = asyncHandler(async (req, res) => {
     }
   }
 
-  const packageExists = await Package.findOne({ mikrotikRouter, serviceType, name });
+  const packageExists = await Package.findOne({ mikrotikRouter, serviceType, name, tenantOwner: req.user.tenantOwner });
 
   if (packageExists) {
     res.status(400);
@@ -60,7 +55,7 @@ const createPackage = asyncHandler(async (req, res) => {
     status,
     profile,
     rateLimit,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   if (newPackage) {
@@ -75,7 +70,7 @@ const createPackage = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages
 // @access  Private
 const getPackages = asyncHandler(async (req, res) => {
-  const packages = await Package.find({ user: req.user._id }).populate('mikrotikRouter');
+  const packages = await Package.find({ tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter');
   res.status(200).json(packages);
 });
 
@@ -83,14 +78,9 @@ const getPackages = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages/:id
 // @access  Private
 const getPackageById = asyncHandler(async (req, res) => {
-  const singlePackage = await Package.findById(req.params.id).populate('mikrotikRouter');
+  const singlePackage = await Package.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter');
 
   if (singlePackage) {
-    // Check for ownership
-    if (singlePackage.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this package');
-    }
     res.status(200).json(singlePackage);
   } else {
     res.status(404);
@@ -104,29 +94,19 @@ const getPackageById = asyncHandler(async (req, res) => {
 const updatePackage = asyncHandler(async (req, res) => {
   const { mikrotikRouter, serviceType, name, price, status, profile, rateLimit } = req.body;
 
-  const packageToUpdate = await Package.findById(req.params.id);
+  const packageToUpdate = await Package.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!packageToUpdate) {
     res.status(404);
     throw new Error('Package not found');
   }
 
-  // Check for ownership
-  if (packageToUpdate.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to update this package');
-  }
-
   // If router is being updated, check ownership of new router
   if (mikrotikRouter && mikrotikRouter.toString() !== packageToUpdate.mikrotikRouter.toString()) {
-    const routerExists = await MikrotikRouter.findById(mikrotikRouter);
+    const routerExists = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenantOwner: req.user.tenantOwner });
     if (!routerExists) {
       res.status(404);
       throw new Error('Mikrotik Router not found');
-    }
-    if (routerExists.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to use this router');
     }
   }
 
@@ -177,20 +157,14 @@ const updatePackage = asyncHandler(async (req, res) => {
 // @route   DELETE /api/mikrotik/packages/:id
 // @access  Private
 const deletePackage = asyncHandler(async (req, res) => {
-  const singlePackage = await Package.findById(req.params.id);
+  const singlePackage = await Package.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!singlePackage) {
     res.status(404);
     throw new Error('Package not found');
   }
 
-  // Check for ownership
-  if (singlePackage.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to delete this package');
-  }
-
-  await Package.findByIdAndDelete(req.params.id);
+  await singlePackage.deleteOne();
 
   res.status(200).json({ message: 'Package removed' });
 });

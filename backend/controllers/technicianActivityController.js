@@ -51,7 +51,7 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
     configurationChanges: configurationChanges || undefined,
     unit: unit || undefined,
     building: building || undefined,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   res.status(201).json(activity);
@@ -63,7 +63,7 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
 const getTechnicianActivities = asyncHandler(async (req, res) => {
   const { technicianId, activityType, startDate, endDate, clientName, clientPhone } = req.query;
 
-  let query = { user: req.user._id }; // Filter by user
+  let query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
 
   if (technicianId) {
     query.technician = technicianId;
@@ -99,19 +99,13 @@ const getTechnicianActivities = asyncHandler(async (req, res) => {
 // @route   GET /api/technician-activities/:id
 // @access  Private (Admin/Technician)
 const getTechnicianActivityById = asyncHandler(async (req, res) => {
-  const activity = await TechnicianActivity.findById(req.params.id)
+  const activity = await TechnicianActivity.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
     .populate('unit', 'label')
     .populate('building', 'name');
 
   if (!activity) {
     res.status(404);
     throw new Error('Technician activity not found');
-  }
-
-  // Check for ownership
-  if (activity.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to view this activity');
   }
 
   res.status(200).json(activity);
@@ -123,17 +117,11 @@ const getTechnicianActivityById = asyncHandler(async (req, res) => {
 const updateTechnicianActivity = asyncHandler(async (req, res) => {
   const { technician, activityType, clientName, clientPhone, activityDate, description, installedEquipment, installationNotes, issueDescription, solutionProvided, partsReplaced, configurationChanges, unit, building, supportCategory } = req.body;
 
-  let activity = await TechnicianActivity.findById(req.params.id);
+  let activity = await TechnicianActivity.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!activity) {
     res.status(404);
     throw new Error('Technician activity not found');
-  }
-
-  // Check for ownership
-  if (activity.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to update this activity');
   }
 
   // Update fields
@@ -199,17 +187,11 @@ const updateTechnicianActivity = asyncHandler(async (req, res) => {
 // @route   DELETE /api/technician-activities/:id
 // @access  Private (Admin/Technician)
 const deleteTechnicianActivity = asyncHandler(async (req, res) => {
-  const activity = await TechnicianActivity.findById(req.params.id);
+  const activity = await TechnicianActivity.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (!activity) {
     res.status(404);
     throw new Error('Technician activity not found');
-  }
-
-  // Check for ownership
-  if (activity.user.toString() !== req.user._id.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to delete this activity');
   }
 
   await activity.deleteOne();

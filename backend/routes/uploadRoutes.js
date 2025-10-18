@@ -1,10 +1,9 @@
-
 const express = require('express');
 const { uploadImage } = require('../controllers/uploadController');
-const { protect } = require('../middlewares/protect');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-router.route('/').post(protect, uploadImage);
+router.route('/').post(protect, isAdminTenant, uploadImage);
 
 module.exports = router;

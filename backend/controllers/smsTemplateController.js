@@ -6,7 +6,7 @@ const SmsTemplate = require('../models/SmsTemplate');
 // @route   GET /api/smstemplates
 // @access  Private
 const getTemplates = asyncHandler(async (req, res) => {
-  const templates = await SmsTemplate.find({ user: req.user._id });
+  const templates = await SmsTemplate.find({ tenantOwner: req.user.tenantOwner });
   res.json(templates);
 });
 
@@ -14,14 +14,9 @@ const getTemplates = asyncHandler(async (req, res) => {
 // @route   GET /api/smstemplates/:id
 // @access  Private
 const getTemplateById = asyncHandler(async (req, res) => {
-  const template = await SmsTemplate.findById(req.params.id);
+  const template = await SmsTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (template) {
-    // Check for ownership
-    if (template.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to view this template');
-    }
     res.json(template);
   } else {
     res.status(404);
@@ -40,7 +35,7 @@ const createTemplate = asyncHandler(async (req, res) => {
 
   const { name, messageBody } = req.body;
 
-  const templateExists = await SmsTemplate.findOne({ name, user: req.user._id });
+  const templateExists = await SmsTemplate.findOne({ name, tenantOwner: req.user.tenantOwner });
 
   if (templateExists) {
     res.status(400);
@@ -50,7 +45,7 @@ const createTemplate = asyncHandler(async (req, res) => {
   const template = await SmsTemplate.create({
     name,
     messageBody,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   if (template) {
@@ -67,15 +62,9 @@ const createTemplate = asyncHandler(async (req, res) => {
 const updateTemplate = asyncHandler(async (req, res) => {
   const { name, messageBody } = req.body;
 
-  const template = await SmsTemplate.findById(req.params.id);
+  const template = await SmsTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (template) {
-    // Check for ownership
-    if (template.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this template');
-    }
-
     template.name = name || template.name;
     template.messageBody = messageBody || template.messageBody;
 
@@ -91,16 +80,10 @@ const updateTemplate = asyncHandler(async (req, res) => {
 // @route   DELETE /api/smstemplates/:id
 // @access  Private
 const deleteTemplate = asyncHandler(async (req, res) => {
-  const template = await SmsTemplate.findById(req.params.id);
+  const template = await SmsTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (template) {
-    // Check for ownership
-    if (template.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this template');
-    }
-
-    await template.remove();
+    await template.deleteOne();
     res.json({ message: 'SMS Template removed' });
   } else {
     res.status(404);

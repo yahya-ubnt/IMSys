@@ -24,7 +24,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
     throw new Error('Template ID and Send To Type are required');
   }
 
-  const template = await WhatsAppTemplate.findById(templateId);
+  const template = await WhatsAppTemplate.findOne({ _id: templateId, tenantOwner: req.user.tenantOwner });
   if (!template) {
     res.status(404);
     throw new Error('WhatsApp template not found');
@@ -39,7 +39,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
         res.status(400).json({ message: 'User IDs are required' });
         return;
       }
-      const users = await User.find({ _id: { $in: userIds } }).select('phoneNumber');
+      const users = await User.find({ _id: { $in: userIds }, tenantOwner: req.user.tenantOwner }).select('phoneNumber');
       recipientPhoneNumbers = users.map(user => user.phoneNumber).filter(Boolean);
       break;
     case 'mikrotikGroup':
@@ -47,7 +47,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
         res.status(400).json({ message: 'Mikrotik Router ID is required' });
         return;
       }
-      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId }).select('phoneNumber');
+      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, tenantOwner: req.user.tenantOwner }).select('phoneNumber');
       recipientPhoneNumbers = mikrotikUsers.map(user => user.phoneNumber).filter(Boolean);
       break;
     case 'location':
@@ -55,7 +55,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
         res.status(400).json({ message: 'Apartment/House Number is required for sending to location' });
         return;
       }
-      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, user: req.user._id }).select('mobileNumber');
+      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
       recipientPhoneNumbers = usersInLocation.map(user => user.mobileNumber).filter(Boolean);
       break;
     case 'unregistered':
@@ -82,7 +82,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
       templateUsed: templateId,
       status: 'Pending',
       variablesUsed: variables,
-      user: req.user._id,
+      tenantOwner: req.user.tenantOwner,
     });
 
     try {

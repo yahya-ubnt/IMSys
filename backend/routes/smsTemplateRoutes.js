@@ -8,19 +8,16 @@ const {
   updateTemplate,
   deleteTemplate,
 } = require('../controllers/smsTemplateController');
-const { protect } = require('../middlewares/protect');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-// All routes in this file are protected
-router.use(protect);
-
-router.route('/').get(getTemplates).post([
+router.route('/').get(protect, isAdminTenant, getTemplates).post([protect, isAdminTenant], [
   body('name', 'Template name is required').not().isEmpty(),
   body('messageBody', 'Message body is required').not().isEmpty(),
 ], createTemplate);
 router
   .route('/:id')
-  .get(getTemplateById)
-  .put(updateTemplate)
-  .delete(deleteTemplate);
+  .get(protect, isAdminTenant, getTemplateById)
+  .put(protect, isAdminTenant, updateTemplate)
+  .delete(protect, isAdminTenant, deleteTemplate);
 
 module.exports = router;

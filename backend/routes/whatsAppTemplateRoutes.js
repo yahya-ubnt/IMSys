@@ -8,13 +8,12 @@ const {
   updateWhatsAppTemplate,
   deleteWhatsAppTemplate,
 } = require('../controllers/whatsAppTemplateController');
-const { protect, admin } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
 router.route('/')
-  .get(protect, admin, getWhatsAppTemplates)
+  .get(protect, isAdminTenant, getWhatsAppTemplates)
   .post(
-    protect,
-    admin,
+    [protect, isAdminTenant],
     [
       body('templateName', 'Template name is required').not().isEmpty(),
       body('providerTemplateId', 'Provider Template ID is required').not().isEmpty(),
@@ -25,8 +24,8 @@ router.route('/')
   );
 
 router.route('/:id')
-  .get(protect, admin, getWhatsAppTemplateById)
-  .put(protect, admin, updateWhatsAppTemplate)
-  .delete(protect, admin, deleteWhatsAppTemplate);
+  .get(protect, isAdminTenant, getWhatsAppTemplateById)
+  .put(protect, isAdminTenant, updateWhatsAppTemplate)
+  .delete(protect, isAdminTenant, deleteWhatsAppTemplate);
 
 module.exports = router;

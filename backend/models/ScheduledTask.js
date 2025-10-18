@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const ScheduledTaskSchema = new mongoose.Schema(
   {
-    user: {
+    tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: 'User',

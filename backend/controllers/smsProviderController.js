@@ -6,7 +6,7 @@ const SmsProvider = require('../models/SmsProvider');
 // @route   GET /api/settings/sms-providers
 // @access  Private (Admin)
 const getSmsProviders = asyncHandler(async (req, res) => {
-  const providers = await SmsProvider.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const providers = await SmsProvider.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
   // We don't send credentials back to the client
   const sanitizedProviders = providers.map(p => {
     const provider = p.toObject({ getters: false }); // get plain object without getters
@@ -20,14 +20,9 @@ const getSmsProviders = asyncHandler(async (req, res) => {
 // @route   GET /api/settings/sms-providers/:id
 // @access  Private (Admin)
 const getSmsProviderById = asyncHandler(async (req, res) => {
-    const provider = await SmsProvider.findById(req.params.id);
+    const provider = await SmsProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
     if (provider) {
-        // Check for ownership
-        if (provider.user.toString() !== req.user._id.toString()) {
-            res.status(401);
-            throw new Error('Not authorized to view this provider');
-        }
         const sanitizedProvider = provider.toObject({ getters: false });
         delete sanitizedProvider.credentials;
         res.json(sanitizedProvider);
@@ -54,7 +49,7 @@ const createSmsProvider = asyncHandler(async (req, res) => {
     providerType,
     credentials, // The setter in the model will encrypt this
     isActive,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   const createdProvider = await provider.save();
@@ -69,15 +64,9 @@ const createSmsProvider = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const updateSmsProvider = asyncHandler(async (req, res) => {
   const { name, providerType, credentials, isActive } = req.body;
-  const provider = await SmsProvider.findById(req.params.id);
+  const provider = await SmsProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (provider) {
-    // Check for ownership
-    if (provider.user.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('Not authorized to update this provider');
-    }
-
     provider.name = name || provider.name;
     provider.providerType = providerType || provider.providerType;
     if (credentials && Object.keys(credentials).length > 0) {
@@ -103,15 +92,10 @@ const updateSmsProvider = asyncHandler(async (req, res) => {
 // @route   DELETE /api/settings/sms-providers/:id
 // @access  Private (Admin)
 const deleteSmsProvider = asyncHandler(async (req, res) => {
-  const provider = await SmsProvider.findById(req.params.id);
+  const provider = await SmsProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (provider) {
-    // Check for ownership
-    if (provider.user.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('Not authorized to delete this provider');
-    }
-    await provider.remove();
+    await provider.deleteOne();
     res.json({ message: 'SMS provider removed' });
   } else {
     res.status(404);
@@ -123,14 +107,9 @@ const deleteSmsProvider = asyncHandler(async (req, res) => {
 // @route   POST /api/settings/sms-providers/:id/set-active
 // @access  Private (Admin)
 const setActiveSmsProvider = asyncHandler(async (req, res) => {
-    const provider = await SmsProvider.findById(req.params.id);
+    const provider = await SmsProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
     if (provider) {
-        // Check for ownership
-        if (provider.user.toString() !== req.user._id.toString()) {
-            res.status(401);
-            throw new Error('Not authorized to set this provider as active');
-        }
         provider.isActive = true;
         await provider.save(); // The pre-save hook will handle deactivating others
         res.json({ message: `${provider.name} has been set as the active SMS provider.` });

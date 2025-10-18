@@ -34,7 +34,7 @@ const decrypt = (text) => {
 };
 
 const whatsAppProviderSchema = new mongoose.Schema({
-  user: {
+  tenantOwner: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'User',
@@ -69,9 +69,9 @@ const whatsAppProviderSchema = new mongoose.Schema({
 // Middleware to ensure only one provider is active at a time
 whatsAppProviderSchema.pre('save', async function (next) {
   if (this.isActive && this.isModified('isActive')) {
-    await this.constructor.updateMany({ _id: { $ne: this._id }, isActive: true }, { isActive: false });
+    await this.constructor.updateMany({ _id: { $ne: this._id }, tenantOwner: this.tenantOwner, isActive: true }, { isActive: false });
   }
-  const count = await this.constructor.countDocuments();
+  const count = await this.constructor.countDocuments({ tenantOwner: this.tenantOwner });
   if (count === 0) {
       this.isActive = true;
   }

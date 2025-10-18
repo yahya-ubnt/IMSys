@@ -6,11 +6,11 @@ const {
   getMonthlyCollectionTotals,
   getDailyCollectionTotals,
 } = require('../controllers/collectionController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
 
-router.route('/stats').get(protect, getCollectionStats);
-router.route('/monthly-totals').get(protect, getMonthlyCollectionTotals);
-router.route('/daily-totals').get(protect, getDailyCollectionTotals);
-router.route('/').get(protect, getCollections);
+router.route('/stats').get(protect, isAdminTenant, getCollectionStats);
+router.route('/monthly-totals').get(protect, isAdminTenant, getMonthlyCollectionTotals);
+router.route('/daily-totals').get(protect, isAdminTenant, getDailyCollectionTotals);
+router.route('/').get(protect, isAdminTenant, getCollections);
 
 module.exports = router;

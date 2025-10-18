@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const stkRequestSchema = new mongoose.Schema({
-  userId: {
+  tenantOwner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,

@@ -6,7 +6,7 @@ const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 // @route   GET /api/whatsapp-templates
 // @access  Private (Admin)
 const getWhatsAppTemplates = asyncHandler(async (req, res) => {
-  const templates = await WhatsAppTemplate.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const templates = await WhatsAppTemplate.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
   res.json(templates);
 });
 
@@ -26,7 +26,7 @@ const createWhatsAppTemplate = asyncHandler(async (req, res) => {
     providerTemplateId,
     body,
     variables,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   const createdTemplate = await template.save();
@@ -37,13 +37,8 @@ const createWhatsAppTemplate = asyncHandler(async (req, res) => {
 // @route   GET /api/whatsapp-templates/:id
 // @access  Private (Admin)
 const getWhatsAppTemplateById = asyncHandler(async (req, res) => {
-    const template = await WhatsAppTemplate.findById(req.params.id);
+    const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
     if (template) {
-        // Check for ownership
-        if (template.user.toString() !== req.user._id.toString()) {
-            res.status(401);
-            throw new Error('Not authorized to view this template');
-        }
         res.json(template);
     } else {
         res.status(404);
@@ -56,15 +51,9 @@ const getWhatsAppTemplateById = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const updateWhatsAppTemplate = asyncHandler(async (req, res) => {
   const { templateName, providerTemplateId, body, variables } = req.body;
-  const template = await WhatsAppTemplate.findById(req.params.id);
+  const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (template) {
-    // Check for ownership
-    if (template.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to update this template');
-    }
-
     template.templateName = templateName || template.templateName;
     template.providerTemplateId = providerTemplateId || template.providerTemplateId;
     template.body = body || template.body;
@@ -82,15 +71,10 @@ const updateWhatsAppTemplate = asyncHandler(async (req, res) => {
 // @route   DELETE /api/whatsapp-templates/:id
 // @access  Private (Admin)
 const deleteWhatsAppTemplate = asyncHandler(async (req, res) => {
-  const template = await WhatsAppTemplate.findById(req.params.id);
+  const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (template) {
-    // Check for ownership
-    if (template.user.toString() !== req.user._id.toString()) {
-      res.status(401);
-      throw new Error('Not authorized to delete this template');
-    }
-    await template.remove();
+    await template.deleteOne();
     res.json({ message: 'WhatsApp template removed' });
   } else {
     res.status(404);

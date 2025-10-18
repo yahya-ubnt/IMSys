@@ -15,14 +15,20 @@ const REMINDER_DAYS_BEFORE_EXPIRY = 3;
 const sendPaymentReminders = async () => {
   console.log(`[${new Date().toISOString()}] --- Starting Payment Reminder Script ---`);
 
+  const tenantId = process.argv[2];
+  if (!tenantId) {
+    console.error('Please provide a tenant ID as a command-line argument.');
+    process.exit(1);
+  }
+
   try {
     await connectDB();
     console.log(`[${new Date().toISOString()}] Connected to MongoDB.`);
 
     // 1. Find the SMS Template
-    const reminderTemplate = await SmsTemplate.findOne({ name: REMINDER_TEMPLATE_NAME });
+    const reminderTemplate = await SmsTemplate.findOne({ name: REMINDER_TEMPLATE_NAME, tenantOwner: tenantId });
     if (!reminderTemplate) {
-      console.error(`[${new Date().toISOString()}] Error: SMS template named '${REMINDER_TEMPLATE_NAME}' not found. Please create it in the application settings. Script will now exit.`);
+      console.error(`[${new Date().toISOString()}] Error: SMS template named '${REMINDER_TEMPLATE_NAME}' not found for this tenant. Please create it in the application settings. Script will now exit.`);
       return;
     }
     console.log(`[${new Date().toISOString()}] Found SMS template: '${REMINDER_TEMPLATE_NAME}'.`);
@@ -42,6 +48,7 @@ const sendPaymentReminders = async () => {
 
     // 3. Find all users expiring on the target date
     const usersToRemind = await MikrotikUser.find({
+      tenantOwner: tenantId,
       expiryDate: {
         $gte: startOfTargetDay,
         $lte: endOfTargetDay,
@@ -49,7 +56,7 @@ const sendPaymentReminders = async () => {
     });
 
     if (usersToRemind.length === 0) {
-      console.log(`[${new Date().toISOString()}] No users found expiring in ${REMINDER_DAYS_BEFORE_EXPIRY} days. Script finished.`);
+      console.log(`[${new Date().toISOString()}] No users found expiring in ${REMINDER_DAYS_BEFORE_EXPIRY} days for this tenant. Script finished.`);
       return;
     }
 
@@ -67,7 +74,7 @@ const sendPaymentReminders = async () => {
 
       console.log(`[${new Date().toISOString()}] Sending reminder to ${user.officialName} (${user.mobileNumber}).`);
       
-      const smsResult = await sendSMS(user.mobileNumber, messageBody);
+      const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, messageBody);
 
       // 5. Log the result
       await SmsLog.create({
@@ -76,7 +83,7 @@ const sendPaymentReminders = async () => {
         messageType: 'Expiry Alert',
         smsStatus: smsResult.success ? 'Success' : 'Failed',
         providerResponse: smsResult.message,
-        user: user._id, // Link the log to the MikrotikUser
+        tenantOwner: user.tenantOwner, // Link the log to the tenant
       });
 
       if (smsResult.success) {

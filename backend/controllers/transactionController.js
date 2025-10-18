@@ -27,7 +27,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     phoneNumber,
     newBalance,
     transactionCost,
-    user: req.user._id, // Associate with the logged-in user
+    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
 
   const createdTransaction = await dailyTransaction.save();
@@ -40,7 +40,7 @@ const createTransaction = asyncHandler(async (req, res) => {
 const getTransactions = asyncHandler(async (req, res) => {
   const { startDate, endDate, method, label, search } = req.query;
 
-  const query = {};
+  const query = { tenantOwner: req.user.tenantOwner };
 
   if (startDate) {
     query.date = { ...query.date, $gte: new Date(startDate) };
@@ -76,7 +76,7 @@ const getTransactions = asyncHandler(async (req, res) => {
 // @route   GET /api/daily-transactions/:id
 // @access  Private
 const getTransactionById = asyncHandler(async (req, res) => {
-  const dailyTransaction = await Transaction.findById(req.params.id);
+  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (dailyTransaction) {
     res.json(dailyTransaction);
@@ -92,7 +92,7 @@ const getTransactionById = asyncHandler(async (req, res) => {
 const updateTransaction = asyncHandler(async (req, res) => {
   const { date, amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost } = req.body;
 
-  const dailyTransaction = await Transaction.findById(req.params.id);
+  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (dailyTransaction) {
     dailyTransaction.date = date || dailyTransaction.date;
@@ -121,7 +121,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
 // @route   DELETE /api/daily-transactions/:id
 // @access  Private
 const deleteTransaction = asyncHandler(async (req, res) => {
-  const dailyTransaction = await Transaction.findById(req.params.id);
+  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (dailyTransaction) {
     await dailyTransaction.deleteOne();
@@ -143,22 +143,22 @@ const getTransactionStats = asyncHandler(async (req, res) => {
   const startOfYear = new Date(today.getFullYear(), 0, 1);
 
   const todayStats = await Transaction.aggregate([
-    { $match: { date: { $gte: startOfToday } } },
+    { $match: { date: { $gte: startOfToday }, tenantOwner: req.user.tenantOwner } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
 
   const weekStats = await Transaction.aggregate([
-    { $match: { date: { $gte: startOfWeek } } },
+    { $match: { date: { $gte: startOfWeek }, tenantOwner: req.user.tenantOwner } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
 
   const monthStats = await Transaction.aggregate([
-    { $match: { date: { $gte: startOfMonth } } },
+    { $match: { date: { $gte: startOfMonth }, tenantOwner: req.user.tenantOwner } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
 
   const yearStats = await Transaction.aggregate([
-    { $match: { date: { $gte: startOfYear } } },
+    { $match: { date: { $gte: startOfYear }, tenantOwner: req.user.tenantOwner } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
 
@@ -184,6 +184,7 @@ const getMonthlyTransactionTotals = asyncHandler(async (req, res) => {
   const monthlyTotals = await Transaction.aggregate([
     {
       $match: {
+        tenantOwner: req.user.tenantOwner,
         date: {
           $gte: new Date(parseInt(year), 0, 1),
           $lt: new Date(parseInt(year) + 1, 0, 1),
