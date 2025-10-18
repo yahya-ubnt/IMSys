@@ -9,6 +9,7 @@ const UserDowntimeLog = require('../models/UserDowntimeLog');
 const WalletTransaction = require('../models/WalletTransaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const { sendAcknowledgementSms } = require('../services/smsService');
+const smsTriggers = require('../constants/smsTriggers');
 // Mikrotik API client will be integrated here later
 // const MikrotikAPI = require('mikrotik'); // Example
 
@@ -214,7 +215,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     if (sendWelcomeSms) {
       try {
           await sendAcknowledgementSms(
-              'mikrotik_user_created',
+              smsTriggers.MIKROTIK_USER_CREATED,
               mikrotikUser.mobileNumber,
               {
                   officialName: mikrotikUser.officialName,
