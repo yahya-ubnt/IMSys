@@ -164,13 +164,8 @@ server.listen(PORT, () => {
 
 // Initialize WebSocket terminal service
 const terminalService = require('./services/terminalService');
-const monitoringService = require('./services/monitoringService'); // Import monitoring service
-const { startRouterMonitoring } = require('./services/routerMonitoringService'); // Import router monitoring service
-const { startUserMonitoring } = require('./services/userMonitoringService');
 terminalService.init(server);
-monitoringService.startMonitoring(); // Start the device monitoring service
-startRouterMonitoring(5000); // Start router monitoring every 5 seconds
-startUserMonitoring(60000); // Start user monitoring every 60 seconds
+require('./scripts/masterScheduler');
 
 module.exports = app; // For testing purposes
 
