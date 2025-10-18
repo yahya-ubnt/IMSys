@@ -66,7 +66,10 @@ const createDevice = asyncHandler(async (req, res) => {
 // @access  Admin
 const getDevices = asyncHandler(async (req, res) => {
   const { deviceType } = req.query;
-  let query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (deviceType) {
     query.deviceType = deviceType;
@@ -82,16 +85,21 @@ const getDevices = asyncHandler(async (req, res) => {
 // @route   GET /api/devices/:id
 // @access  Admin
 const getDeviceById = asyncHandler(async (req, res) => {
-  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('router', 'name ipAddress');
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const device = await Device.findOne(query).populate('router', 'name ipAddress');
 
   if (device) {
     let responseDevice = device.toObject(); // Convert to plain object to add properties
 
     if (responseDevice.deviceType === 'Access' && responseDevice.ssid) {
-      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid, tenantOwner: req.user.tenantOwner });
+      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid, tenantOwner: device.tenantOwner });
       responseDevice.connectedStations = connectedStations;
     } else if (responseDevice.deviceType === 'Station' && responseDevice.ssid) {
-      const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid, tenantOwner: req.user.tenantOwner });
+      const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid, tenantOwner: device.tenantOwner });
       responseDevice.connectedAccessPoint = connectedAccessPoint;
     }
 
@@ -158,7 +166,12 @@ const deleteDevice = asyncHandler(async (req, res) => {
 // @route   GET /api/devices/:id/downtime
 // @access  Admin
 const getDeviceDowntimeLogs = asyncHandler(async (req, res) => {
-  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const device = await Device.findOne(query);
 
   if (!device) {
     res.status(404);

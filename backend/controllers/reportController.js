@@ -16,14 +16,17 @@ const getLocationReport = asyncHandler(async (req, res) => {
     throw new Error('Please provide start date, end date, and an apartment/house number.');
   }
 
-  const mikrotikUsers = await MikrotikUser.find({
-    tenantOwner: req.user.tenantOwner,
-    apartment_house_number: apartment_house_number,
-    createdAt: {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
-    },
-  }).populate('package', 'price');
+  let query = { apartment_house_number: apartment_house_number };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  query.createdAt = {
+    $gte: new Date(startDate),
+    $lte: new Date(endDate),
+  };
+
+  const mikrotikUsers = await MikrotikUser.find(query).populate('package', 'price');
 
   if (!mikrotikUsers || mikrotikUsers.length === 0) {
     res.json({
@@ -54,7 +57,12 @@ const getLocationReport = asyncHandler(async (req, res) => {
 // @route   GET /api/reports/mpesa-alerts
 // @access  Private
 const getMpesaAlerts = asyncHandler(async (req, res) => {
-  const alerts = await MpesaAlert.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const alerts = await MpesaAlert.find(query).sort({ createdAt: -1 });
   res.status(200).json(alerts);
 });
 
@@ -62,7 +70,12 @@ const getMpesaAlerts = asyncHandler(async (req, res) => {
 // @route   DELETE /api/reports/mpesa-alerts/:id
 // @access  Private
 const deleteMpesaAlert = asyncHandler(async (req, res) => {
-  const alert = await MpesaAlert.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const alert = await MpesaAlert.findOne(query);
 
   if (alert) {
     await alert.deleteOne();
@@ -84,13 +97,17 @@ const getMpesaReport = asyncHandler(async (req, res) => {
 
   const { startDate, endDate } = req.body;
 
-  const transactions = await Transaction.find({
-    tenantOwner: req.user.tenantOwner, // Filter by tenant
-    transactionDate: {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
-    },
-  }).sort({ transactionDate: -1 });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  query.transactionDate = {
+    $gte: new Date(startDate),
+    $lte: new Date(endDate),
+  };
+
+  const transactions = await Transaction.find(query).sort({ transactionDate: -1 });
 
   const totalAmount = transactions.reduce((acc, curr) => acc + curr.amount, 0);
 

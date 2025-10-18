@@ -9,10 +9,10 @@ const {
   deleteLead,
   updateLeadStatus,
 } = require('../controllers/leadController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
 router.route('/').post(
-  [protect, isAdminTenant],
+  [protect, isSuperAdminOrAdminTenant],
   [
     body('phoneNumber', 'Phone number is required').not().isEmpty(),
     body('leadSource', 'Lead source is required').isIn([
@@ -27,13 +27,13 @@ router.route('/').post(
     body('email', 'Please include a valid email').optional().isEmail(),
   ],
   createLead
-).get(protect, isAdminTenant, getAllLeads);
+).get(protect, isSuperAdminOrAdminTenant, getAllLeads);
 router
   .route('/:id')
-  .get(protect, isAdminTenant, getLeadById)
-  .put(protect, isAdminTenant, updateLead)
-  .delete(protect, isAdminTenant, deleteLead);
+  .get(protect, isSuperAdminOrAdminTenant, getLeadById)
+  .put(protect, isSuperAdminOrAdminTenant, updateLead)
+  .delete(protect, isSuperAdminOrAdminTenant, deleteLead);
 
-router.route('/status/:id').put(protect, isAdminTenant, updateLeadStatus);
+router.route('/status/:id').put(protect, isSuperAdminOrAdminTenant, updateLeadStatus);
 
 module.exports = router;

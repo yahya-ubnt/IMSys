@@ -70,7 +70,12 @@ const createPackage = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages
 // @access  Private
 const getPackages = asyncHandler(async (req, res) => {
-  const packages = await Package.find({ tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter');
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const packages = await Package.find(query).populate('mikrotikRouter');
   res.status(200).json(packages);
 });
 
@@ -78,7 +83,12 @@ const getPackages = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages/:id
 // @access  Private
 const getPackageById = asyncHandler(async (req, res) => {
-  const singlePackage = await Package.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('mikrotikRouter');
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const singlePackage = await Package.findOne(query).populate('mikrotikRouter');
 
   if (singlePackage) {
     res.status(200).json(singlePackage);

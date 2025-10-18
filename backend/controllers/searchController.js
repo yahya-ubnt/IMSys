@@ -14,16 +14,18 @@ const searchEntities = asyncHandler(async (req, res) => {
 
   const searchQuery = { $regex: query, $options: 'i' };
 
+  let userQuery = { $or: [{ username: searchQuery }, { officialName: searchQuery }] };
+  let deviceQuery = { deviceName: searchQuery };
+
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    userQuery.tenantOwner = req.user.tenantOwner;
+    deviceQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   // Perform searches in parallel
   const [users, devices] = await Promise.all([
-    MikrotikUser.find({
-      tenantOwner: req.user.tenantOwner,
-      $or: [{ username: searchQuery }, { officialName: searchQuery }],
-    }).select('officialName username station').limit(10),
-    Device.find({ 
-      tenantOwner: req.user.tenantOwner,
-      deviceName: searchQuery 
-    }).select('deviceName deviceType').limit(10),
+    MikrotikUser.find(userQuery).select('officialName username station').limit(10),
+    Device.find(deviceQuery).select('deviceName deviceType').limit(10),
   ]);
 
   // Format the results with a type identifier

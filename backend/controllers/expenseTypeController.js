@@ -34,7 +34,12 @@ const createExpenseType = asyncHandler(async (req, res) => {
 // @route   GET /api/expensetypes
 // @access  Private
 const getExpenseTypes = asyncHandler(async (req, res) => {
-  const expenseTypes = await ExpenseType.find({ tenantOwner: req.user.tenantOwner }).populate('tenantOwner', 'name email');
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const expenseTypes = await ExpenseType.find(query).populate('tenantOwner', 'name email');
   res.status(200).json(expenseTypes);
 });
 
@@ -42,7 +47,12 @@ const getExpenseTypes = asyncHandler(async (req, res) => {
 // @route   GET /api/expensetypes/:id
 // @access  Private
 const getExpenseTypeById = asyncHandler(async (req, res) => {
-  const expenseType = await ExpenseType.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('tenantOwner', 'name email');
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const expenseType = await ExpenseType.findOne(query).populate('tenantOwner', 'name email');
 
   if (!expenseType) {
     res.status(404);

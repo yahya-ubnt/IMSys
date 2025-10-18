@@ -8,14 +8,14 @@ const {
   updateBill,
   deleteBill,
 } = require('../controllers/billController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
-router.route('/').post(protect, isAdminTenant, createBill).get(protect, isAdminTenant, getBills);
+router.route('/').post(protect, isSuperAdminOrAdminTenant, createBill).get(protect, isSuperAdminOrAdminTenant, getBills);
 router
   .route('/:id')
-  .get(protect, isAdminTenant, getBillById)
+  .get(protect, isSuperAdminOrAdminTenant, getBillById)
   .put(
-    [protect, isAdminTenant],
+    [protect, isSuperAdminOrAdminTenant],
     [
       body('name', 'Name is required').optional().not().isEmpty(),
       body('amount', 'Amount must be a number').optional().isNumeric(),
@@ -29,6 +29,6 @@ router
     ],
     updateBill
   )
-  .delete(protect, isAdminTenant, deleteBill);
+  .delete(protect, isSuperAdminOrAdminTenant, deleteBill);
 
 module.exports = router;

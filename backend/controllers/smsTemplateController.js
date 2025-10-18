@@ -6,7 +6,12 @@ const SmsTemplate = require('../models/SmsTemplate');
 // @route   GET /api/smstemplates
 // @access  Private
 const getTemplates = asyncHandler(async (req, res) => {
-  const templates = await SmsTemplate.find({ tenantOwner: req.user.tenantOwner });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const templates = await SmsTemplate.find(query);
   res.json(templates);
 });
 
@@ -14,7 +19,12 @@ const getTemplates = asyncHandler(async (req, res) => {
 // @route   GET /api/smstemplates/:id
 // @access  Private
 const getTemplateById = asyncHandler(async (req, res) => {
-  const template = await SmsTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const template = await SmsTemplate.findOne(query);
 
   if (template) {
     res.json(template);

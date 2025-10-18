@@ -9,9 +9,14 @@ const { encrypt } = require('../utils/crypto'); // Import encrypt
 // @route   GET /api/settings/general
 // @access  Private
 const getGeneralSettings = asyncHandler(async (req, res) => {
-  let settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner }).select('-smtpSettings.pass'); // Exclude encrypted pass
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
-  if (!settings) {
+  let settings = await ApplicationSettings.findOne(query).select('-smtpSettings.pass'); // Exclude encrypted pass
+
+  if (!settings && !req.user.roles.includes('SUPER_ADMIN')) {
     // If no settings exist for this user, create default ones
     settings = await ApplicationSettings.create({ tenantOwner: req.user.tenantOwner });
   }
@@ -93,7 +98,12 @@ const updateGeneralSettings = asyncHandler(async (req, res) => {
 // @route   GET /api/settings/mpesa
 // @access  Private/Admin
 const getMpesaSettings = asyncHandler(async (req, res) => {
-  const settings = await ApplicationSettings.findOne({ tenantOwner: req.user.tenantOwner }).select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const settings = await ApplicationSettings.findOne(query).select('+mpesaPaybill.consumerKey +mpesaPaybill.consumerSecret +mpesaPaybill.passkey +mpesaTill.consumerKey +mpesaTill.consumerSecret +mpesaTill.passkey');
   
   if (settings) {
     res.json({

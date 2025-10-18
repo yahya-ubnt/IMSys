@@ -77,6 +77,7 @@ const deviceRoutes = require('./routes/deviceRoutes'); // CPE & AP Devices
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
 // Mount routes
 app.use('/api/dashboard', dashboardRoutes);
@@ -91,6 +92,7 @@ app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/superadmin', superAdminRoutes);
 
 
 // app.use('/api/providers', require('./routes/providerRoutes')); // Add provider routes

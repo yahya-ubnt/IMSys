@@ -6,7 +6,12 @@ const WhatsAppProvider = require('../models/WhatsAppProvider');
 // @route   GET /api/settings/whatsapp-providers
 // @access  Private (Admin)
 const getWhatsAppProviders = asyncHandler(async (req, res) => {
-  const providers = await WhatsAppProvider.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const providers = await WhatsAppProvider.find(query).sort({ createdAt: -1 });
   const sanitizedProviders = providers.map(p => {
     const provider = p.toObject({ getters: false });
     delete provider.credentials;

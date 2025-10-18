@@ -39,7 +39,10 @@ const createLead = asyncHandler(async (req, res) => {
 // @access  Private
 const getAllLeads = asyncHandler(async (req, res) => {
   const { status, leadSource, broughtInBy, search } = req.query;
-  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (status) {
     query.status = status;
@@ -60,27 +63,32 @@ const getAllLeads = asyncHandler(async (req, res) => {
   const leads = await Lead.find(query).populate('desiredPackage');
 
   // Dashboard Stats
-  const totalLeads = await Lead.countDocuments({ tenantOwner: req.user.tenantOwner });
-  const totalConvertedLeads = await Lead.countDocuments({ tenantOwner: req.user.tenantOwner, status: 'Converted' });
+  let statsQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    statsQuery.tenantOwner = req.user.tenantOwner;
+  }
+
+  const totalLeads = await Lead.countDocuments(statsQuery);
+  const totalConvertedLeads = await Lead.countDocuments({ ...statsQuery, status: 'Converted' });
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const newLeadsThisMonth = await Lead.countDocuments({
-    tenantOwner: req.user.tenantOwner,
+    ...statsQuery,
     createdAt: { $gte: startOfMonth, $lte: endOfMonth },
   });
 
   const convertedLeadsThisMonth = await Lead.countDocuments({
-    tenantOwner: req.user.tenantOwner,
+    ...statsQuery,
     status: 'Converted',
     updatedAt: { $gte: startOfMonth, $lte: endOfMonth },
   });
 
   // Chart Data
   const leadsByMonth = await Lead.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: statsQuery },
     {
       $group: {
         _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
@@ -125,7 +133,12 @@ const getAllLeads = asyncHandler(async (req, res) => {
 // @route   GET /api/leads/:id
 // @access  Public
 const getLeadById = asyncHandler(async (req, res) => {
-  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('desiredPackage');
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const lead = await Lead.findOne(query).populate('desiredPackage');
   if (lead) {
     res.json(lead);
   } else {

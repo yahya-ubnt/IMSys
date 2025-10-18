@@ -44,7 +44,7 @@ const createTicket = asyncHandler(async (req, res) => {
     // Send SMS notification to client
     const smsMessage = `Dear ${clientName}, your ticket regarding '${issueType}' has been logged with reference number ${ticketRef}. A technician will be dispatched if needed.`;
     try {
-      await sendSms(clientPhone, smsMessage);
+      await sendSms(ticket.clientPhone, smsMessage);
       console.log(`SMS sent to ${clientPhone} for ticket ${ticketRef}`);
     } catch (smsError) {
       console.error(`Failed to send SMS for ticket ${ticketRef}: ${smsError.message}`);
@@ -62,8 +62,11 @@ const createTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets
 // @access  Admin
 const getTickets = asyncHandler(async (req, res) => {
-  // Build query based on filters (status, issueType, assignedTo, etc.)
-  const query = { tenantOwner: req.user.tenantOwner };
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
   if (req.query.status) {
     query.status = req.query.status;
   }
@@ -86,7 +89,12 @@ const getTickets = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/:id
 // @access  Admin
 const getTicketById = asyncHandler(async (req, res) => {
-  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const ticket = await Ticket.findOne(query)
     .populate('createdBy', 'fullName email')
     .populate('assignedTo', 'fullName email')
     .populate('statusHistory.updatedBy', 'fullName email')
@@ -174,8 +182,13 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/stats
 // @access  Admin
 const getTicketStats = asyncHandler(async (req, res) => {
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   const stats = await Ticket.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } },
+    { $match: matchQuery },
     {
       $group: {
         _id: '$status',
@@ -207,16 +220,18 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
     throw new Error('Year is required and must be a number');
   }
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
+  matchQuery.createdAt = {
+    $gte: new Date(year, 0, 1),
+    $lt: new Date(year + 1, 0, 1),
+  };
+
   const monthlyTotals = await Ticket.aggregate([
-    {
-      $match: {
-        tenantOwner: req.user.tenantOwner,
-        createdAt: {
-          $gte: new Date(year, 0, 1),
-          $lt: new Date(year + 1, 0, 1),
-        },
-      },
-    },
+    { $match: matchQuery },
     {
       $group: {
         _id: { month: { $month: '$createdAt' } },

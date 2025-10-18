@@ -63,7 +63,10 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
 const getTechnicianActivities = asyncHandler(async (req, res) => {
   const { technicianId, activityType, startDate, endDate, clientName, clientPhone } = req.query;
 
-  let query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (technicianId) {
     query.technician = technicianId;
@@ -99,7 +102,12 @@ const getTechnicianActivities = asyncHandler(async (req, res) => {
 // @route   GET /api/technician-activities/:id
 // @access  Private (Admin/Technician)
 const getTechnicianActivityById = asyncHandler(async (req, res) => {
-  const activity = await TechnicianActivity.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const activity = await TechnicianActivity.findOne(query)
     .populate('unit', 'label')
     .populate('building', 'name');
 

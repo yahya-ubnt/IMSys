@@ -7,13 +7,13 @@ const {
   deleteMpesaAlert,
   getMpesaReport,
 } = require('../controllers/reportController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
-router.post('/location', protect, isAdminTenant, getLocationReport);
-router.get('/mpesa-alerts', protect, isAdminTenant, getMpesaAlerts);
-router.delete('/mpesa-alerts/:id', protect, isAdminTenant, deleteMpesaAlert);
+router.post('/location', protect, isSuperAdminOrAdminTenant, getLocationReport);
+router.get('/mpesa-alerts', protect, isSuperAdminOrAdminTenant, getMpesaAlerts);
+router.delete('/mpesa-alerts/:id', protect, isSuperAdminOrAdminTenant, deleteMpesaAlert);
 router.post('/mpesa-report', 
-  [protect, isAdminTenant], 
+  [protect, isSuperAdminOrAdminTenant], 
   [
     body('startDate', 'Start date is required').isISO8601().toDate(),
     body('endDate', 'End date is required').isISO8601().toDate(),

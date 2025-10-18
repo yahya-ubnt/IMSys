@@ -127,7 +127,10 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
   const pageSize = Number(req.query.limit) || 25;
   const page = Number(req.query.page) || 1;
 
-  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (req.query.mobileNumber) {
     query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };
@@ -169,7 +172,10 @@ const { json2csv } = require('json-2-csv');
 // @route   GET /api/sms/log/export
 // @access  Private
 const exportSmsLogs = asyncHandler(async (req, res) => {
-  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (req.query.mobileNumber) {
     query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };

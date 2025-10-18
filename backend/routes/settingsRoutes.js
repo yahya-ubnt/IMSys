@@ -10,7 +10,7 @@ const {
   updateMpesaSettings,
   activateMpesa,
 } = require('../controllers/settingsController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
 // Multer config for file uploads
 const storage = multer.diskStorage({
@@ -41,8 +41,8 @@ const upload = multer({
   },
 });
 
-router.route('/general').get(protect, isAdminTenant, getGeneralSettings).put(
-  [protect, isAdminTenant],
+router.route('/general').get(protect, isSuperAdminOrAdminTenant, getGeneralSettings).put(
+  [protect, isSuperAdminOrAdminTenant],
   upload.fields([{ name: 'logoIcon', maxCount: 1 }, { name: 'favicon', maxCount: 1 }]),
   [
     body('paymentGracePeriodDays', 'Payment grace period must be a number').optional().isNumeric(),
@@ -51,8 +51,8 @@ router.route('/general').get(protect, isAdminTenant, getGeneralSettings).put(
   ],
   updateGeneralSettings
 );
-router.route('/mpesa').get(protect, isAdminTenant, getMpesaSettings).put(
-  [protect, isAdminTenant],
+router.route('/mpesa').get(protect, isSuperAdminOrAdminTenant, getMpesaSettings).put(
+  [protect, isSuperAdminOrAdminTenant],
   [
     body('type', 'M-Pesa type (paybill or till) is required').isIn(['paybill', 'till']),
     body('data.consumerKey', 'Consumer Key is required').not().isEmpty(),
@@ -64,7 +64,7 @@ router.route('/mpesa').get(protect, isAdminTenant, getMpesaSettings).put(
   updateMpesaSettings
 );
 router.route('/mpesa/activate').post(
-  [protect, isAdminTenant],
+  [protect, isSuperAdminOrAdminTenant],
   [
     body('type', 'M-Pesa type (paybill or till) is required').isIn(['paybill', 'till']),
   ],

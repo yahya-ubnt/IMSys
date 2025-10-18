@@ -7,7 +7,11 @@ moment.tz.setDefault('Africa/Nairobi');
 // @route   GET /api/collections
 // @access  Private
 const getCollections = asyncHandler(async (req, res) => {
-  const collections = await Transaction.find({ tenantOwner: req.user.tenantOwner }).sort({ transactionDate: -1 });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+  const collections = await Transaction.find(query).sort({ transactionDate: -1 });
   res.json(collections);
 });
 
@@ -20,8 +24,13 @@ const getCollectionStats = asyncHandler(async (req, res) => {
   const startOfMonth = moment().startOf('month');
   const startOfYear = moment().startOf('year');
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   const stats = await Transaction.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: matchQuery }, 
     {
       $facet: {
         today: [
@@ -65,8 +74,13 @@ const getMonthlyCollectionTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   const monthlyTotals = await Transaction.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: matchQuery },
     {
       $match: {
         transactionDate: {
@@ -116,8 +130,13 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const endDate = moment(startDate).endOf('month');
   const daysInMonth = endDate.date();
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   const dailyTotals = await Transaction.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: matchQuery },
     {
       $match: {
         transactionDate: {

@@ -50,7 +50,10 @@ const handleDarajaCallback = asyncHandler(async (req, res) => {
 const getTransactions = asyncHandler(async (req, res) => {
   const { page = 1, limit = 15, searchTerm, startDate, endDate, userId } = req.query;
 
-  let query = { tenantOwner: req.user.tenantOwner };
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (userId) {
     try {
@@ -144,7 +147,11 @@ const createCashPayment = asyncHandler(async (req, res) => {
 });
 
 const getWalletTransactions = asyncHandler(async (req, res) => {
-  let query = { tenantOwner: req.user.tenantOwner };
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
   if (req.params.id) {
     query.mikrotikUser = req.params.id;
   }
@@ -153,7 +160,12 @@ const getWalletTransactions = asyncHandler(async (req, res) => {
 });
 
 const getWalletTransactionById = asyncHandler(async (req, res) => {
-  const transaction = await WalletTransaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const transaction = await WalletTransaction.findOne(query);
 
   if (transaction) {
     res.status(200).json(transaction);

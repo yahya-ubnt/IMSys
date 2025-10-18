@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { createTransaction, getTransactions, getTransactionById, updateTransaction, deleteTransaction, getTransactionStats, getMonthlyTransactionTotals, } = require('../controllers/transactionController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
-router.route('/stats').get(protect, isAdminTenant, getTransactionStats);
-router.route('/monthly-totals').get(protect, isAdminTenant, getMonthlyTransactionTotals);
-router.route('/').post(protect, isAdminTenant, createTransaction).get(protect, isAdminTenant, getTransactions);
+router.route('/stats').get(protect, isSuperAdminOrAdminTenant, getTransactionStats);
+router.route('/monthly-totals').get(protect, isSuperAdminOrAdminTenant, getMonthlyTransactionTotals);
+router.route('/').post(protect, isSuperAdminOrAdminTenant, createTransaction).get(protect, isSuperAdminOrAdminTenant, getTransactions);
 router
   .route('/:id')
-  .get(protect, isAdminTenant, getTransactionById)
+  .get(protect, isSuperAdminOrAdminTenant, getTransactionById)
   .put(
-    [protect, isAdminTenant],
+    [protect, isSuperAdminOrAdminTenant],
     [
       body('date', 'Date must be a valid date').optional().isISO8601().toDate(),
       body('amount', 'Amount must be a number').optional().isNumeric(),
@@ -29,6 +29,6 @@ router
     ],
     updateTransaction
   )
-  .delete(protect, isAdminTenant, deleteTransaction);
+  .delete(protect, isSuperAdminOrAdminTenant, deleteTransaction);
 
 module.exports = router;

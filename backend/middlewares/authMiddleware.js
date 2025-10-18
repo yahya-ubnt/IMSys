@@ -51,3 +51,12 @@ exports.isAdminTenant = (req, res, next) => {
     throw new Error('Not authorized as an Admin Tenant');
   }
 };
+
+exports.isSuperAdminOrAdminTenant = (req, res, next) => {
+  if (req.user && (req.user.roles.includes('SUPER_ADMIN') || req.user.roles.includes('ADMIN_TENANT'))) {
+    next();
+  } else {
+    res.status(403);
+    throw new Error('Not authorized for this resource');
+  }
+};

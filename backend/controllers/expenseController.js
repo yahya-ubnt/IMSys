@@ -34,7 +34,12 @@ const createExpense = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses
 // @access  Private
 const getExpenses = asyncHandler(async (req, res) => {
-  const expenses = await Expense.find({ tenantOwner: req.user.tenantOwner })
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const expenses = await Expense.find(query)
     .populate('expenseType', 'name')
     .populate('tenantOwner', 'name email');
   res.status(200).json(expenses);
@@ -44,7 +49,12 @@ const getExpenses = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/:id
 // @access  Private
 const getExpenseById = asyncHandler(async (req, res) => {
-  const expense = await Expense.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner })
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const expense = await Expense.findOne(query)
     .populate('expenseType', 'name')
     .populate('tenantOwner', 'name email');
 
@@ -101,24 +111,21 @@ const deleteExpense = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/monthly-total
 // @access  Private
 const getMonthlyExpenseTotal = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user.tenantOwner) {
-    res.status(401);
-    throw new Error('Not authorized, tenant owner not found');
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
   }
 
   const startOfMonth = moment().startOf('month');
   const endOfMonth = moment().endOf('month');
 
+  matchQuery.expenseDate = {
+    $gte: startOfMonth.toDate(),
+    $lte: endOfMonth.toDate(),
+  };
+
   const totalExpenses = await Expense.aggregate([
-    {
-      $match: {
-        expenseDate: {
-          $gte: startOfMonth.toDate(),
-          $lte: endOfMonth.toDate(),
-        },
-        tenantOwner: new mongoose.Types.ObjectId(req.user.tenantOwner), // Convert to ObjectId
-      },
-    },
+    { $match: matchQuery },
     {
       $group: {
         _id: null,
@@ -136,11 +143,6 @@ const getMonthlyExpenseTotal = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/yearly-monthly-totals
 // @access  Private
 const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user.tenantOwner) {
-    res.status(401);
-    throw new Error('Not authorized, tenant owner not found');
-  }
-
   const { year } = req.query;
 
   if (!year) {
@@ -148,19 +150,21 @@ const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
+  }
+
   const startOfYear = moment().year(parseInt(year)).startOf('year');
   const endOfYear = moment().year(parseInt(year)).endOf('year');
 
+  matchQuery.expenseDate = {
+    $gte: startOfYear.toDate(),
+    $lte: endOfYear.toDate(),
+  };
+
   const monthlyTotals = await Expense.aggregate([
-    {
-      $match: {
-        expenseDate: {
-          $gte: startOfYear.toDate(),
-          $lte: endOfYear.toDate(),
-        },
-        tenantOwner: new mongoose.Types.ObjectId(req.user.tenantOwner),
-      },
-    },
+    { $match: matchQuery },
     {
       $group: {
         _id: { month: { $month: "$expenseDate" } },
@@ -192,11 +196,6 @@ const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/daily-expense-totals
 // @access  Private
 const getDailyExpenseTotals = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user.tenantOwner) {
-    res.status(401);
-    throw new Error('Not authorized, tenant owner not found');
-  }
-
   const { year, month } = req.query;
 
   if (!year || !month) {
@@ -204,20 +203,22 @@ const getDailyExpenseTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year and month.');
   }
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
+  }
+
   const startDate = moment(`${year}-${month}-01`).startOf('month');
   const endDate = moment(startDate).endOf('month');
   const daysInMonth = endDate.date();
 
+  matchQuery.expenseDate = {
+    $gte: startDate.toDate(),
+    $lte: endDate.toDate(),
+  };
+
   const dailyTotals = await Expense.aggregate([
-    {
-      $match: {
-        expenseDate: {
-          $gte: startDate.toDate(),
-          $lte: endDate.toDate(),
-        },
-        tenantOwner: new mongoose.Types.ObjectId(req.user.tenantOwner),
-      },
-    },
+    { $match: matchQuery },
     {
       $group: {
         _id: { day: { $dayOfMonth: '$expenseDate' } },

@@ -9,28 +9,28 @@ const {
   getTicketStats, // Import new function
   getMonthlyTicketTotals, // Import new function
 } = require('../controllers/ticketController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
 // Routes for /api/tickets
 router.route('/')
-  .post(protect, isAdminTenant, createTicket)
-  .get(protect, isAdminTenant, getTickets);
+  .post(protect, isSuperAdminOrAdminTenant, createTicket)
+  .get(protect, isSuperAdminOrAdminTenant, getTickets);
 
 // Routes for /api/tickets/stats
 router.route('/stats')
-  .get(protect, isAdminTenant, getTicketStats);
+  .get(protect, isSuperAdminOrAdminTenant, getTicketStats);
 
 // Routes for /api/tickets/monthly-totals
 router.route('/monthly-totals')
-  .get(protect, isAdminTenant, getMonthlyTicketTotals);
+  .get(protect, isSuperAdminOrAdminTenant, getMonthlyTicketTotals);
 
 // Routes for /api/tickets/:id
 router.route('/:id')
-  .get(protect, isAdminTenant, getTicketById)
-  .put(protect, isAdminTenant, updateTicket);
+  .get(protect, isSuperAdminOrAdminTenant, getTicketById)
+  .put(protect, isSuperAdminOrAdminTenant, updateTicket);
 
 // Route for /api/tickets/:id/notes
 router.route('/:id/notes')
-  .post(protect, isAdminTenant, addNoteToTicket);
+  .post(protect, isSuperAdminOrAdminTenant, addNoteToTicket);
 
 module.exports = router;

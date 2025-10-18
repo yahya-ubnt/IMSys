@@ -6,7 +6,12 @@ const SmsProvider = require('../models/SmsProvider');
 // @route   GET /api/settings/sms-providers
 // @access  Private (Admin)
 const getSmsProviders = asyncHandler(async (req, res) => {
-  const providers = await SmsProvider.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const providers = await SmsProvider.find(query).sort({ createdAt: -1 });
   // We don't send credentials back to the client
   const sanitizedProviders = providers.map(p => {
     const provider = p.toObject({ getters: false }); // get plain object without getters
@@ -20,7 +25,12 @@ const getSmsProviders = asyncHandler(async (req, res) => {
 // @route   GET /api/settings/sms-providers/:id
 // @access  Private (Admin)
 const getSmsProviderById = asyncHandler(async (req, res) => {
-    const provider = await SmsProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+    let query = { _id: req.params.id };
+    if (!req.user.roles.includes('SUPER_ADMIN')) {
+      query.tenantOwner = req.user.tenantOwner;
+    }
+
+    const provider = await SmsProvider.findOne(query);
 
     if (provider) {
         const sanitizedProvider = provider.toObject({ getters: false });

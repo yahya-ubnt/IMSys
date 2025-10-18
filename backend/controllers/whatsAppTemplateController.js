@@ -6,7 +6,12 @@ const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 // @route   GET /api/whatsapp-templates
 // @access  Private (Admin)
 const getWhatsAppTemplates = asyncHandler(async (req, res) => {
-  const templates = await WhatsAppTemplate.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const templates = await WhatsAppTemplate.find(query).sort({ createdAt: -1 });
   res.json(templates);
 });
 
@@ -37,7 +42,12 @@ const createWhatsAppTemplate = asyncHandler(async (req, res) => {
 // @route   GET /api/whatsapp-templates/:id
 // @access  Private (Admin)
 const getWhatsAppTemplateById = asyncHandler(async (req, res) => {
-    const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+    let query = { _id: req.params.id };
+    if (!req.user.roles.includes('SUPER_ADMIN')) {
+      query.tenantOwner = req.user.tenantOwner;
+    }
+
+    const template = await WhatsAppTemplate.findOne(query);
     if (template) {
         res.json(template);
     } else {

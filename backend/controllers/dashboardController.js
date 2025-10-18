@@ -36,16 +36,18 @@ const getCollectionsSummary = asyncHandler(async (req, res) => {
   endOfYear.setHours(23, 59, 59, 999);
 
   const getCollectionAmount = async (startDate, endDate) => {
+    let matchQuery = {};
+    if (!req.user.roles.includes('SUPER_ADMIN')) {
+      matchQuery.tenantOwner = req.user.tenantOwner;
+    }
+
+    matchQuery.transactionDate = {
+      $gte: startDate,
+      $lte: endDate,
+    };
+
     const result = await Transaction.aggregate([
-      {
-        $match: {
-          tenantOwner: req.user.tenantOwner, // Filter by tenant
-          transactionDate: {
-            $gte: startDate,
-            $lte: endDate,
-          },
-        },
-      },
+      { $match: matchQuery },
       {
         $group: {
           _id: null,
@@ -79,9 +81,14 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
   const parsedYear = parseInt(year);
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   // Fetch monthly collections
   const monthlyCollections = await Transaction.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: matchQuery },
     {
       $match: {
         $expr: { $eq: [{ $year: '$transactionDate' }, parsedYear] }
@@ -104,7 +111,7 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
   // Fetch monthly expenses
   const monthlyExpenses = await Expense.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: matchQuery },
     {
       $match: {
         $expr: { $eq: [{ $year: '$expenseDate' }, parsedYear] } // Assuming 'expenseDate' field for expenses
@@ -156,16 +163,18 @@ const getMonthlyExpenseSummary = asyncHandler(async (req, res) => {
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   endOfMonth.setHours(23, 59, 59, 999);
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
+  matchQuery.expenseDate = {
+    $gte: startOfMonth,
+    $lte: endOfMonth,
+  };
+
   const result = await Expense.aggregate([
-    {
-      $match: {
-        tenantOwner: req.user.tenantOwner, // Filter by tenant
-        expenseDate: {
-          $gte: startOfMonth,
-          $lte: endOfMonth,
-        },
-      },
-    },
+    { $match: matchQuery },
     {
       $group: {
         _id: null,
@@ -187,13 +196,17 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const count = await MikrotikUser.countDocuments({
-    tenantOwner: req.user.tenantOwner, // Filter by tenant
-    createdAt: {
-      $gte: startOfMonth,
-      $lte: today,
-    },
-  });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  query.createdAt = {
+    $gte: startOfMonth,
+    $lte: today,
+  };
+
+  const count = await MikrotikUser.countDocuments(query);
 
   res.json({ newSubscriptions: count });
 });
@@ -202,7 +215,12 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
 // @route   GET /api/dashboard/users/total
 // @access  Public
 const getTotalUsersCount = asyncHandler(async (req, res) => {
-  const count = await MikrotikUser.countDocuments({ tenantOwner: req.user.tenantOwner }); // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const count = await MikrotikUser.countDocuments(query);
   res.json({ totalUsers: count });
 });
 
@@ -211,11 +229,15 @@ const getTotalUsersCount = asyncHandler(async (req, res) => {
 // @access  Public
 const getActiveUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
-  const count = await MikrotikUser.countDocuments({
-    tenantOwner: req.user.tenantOwner, // Filter by tenant
-    expiryDate: { $gte: today },
-    isSuspended: false,
-  });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  query.expiryDate = { $gte: today };
+  query.isSuspended = false;
+
+  const count = await MikrotikUser.countDocuments(query);
   res.json({ activeUsers: count });
 });
 
@@ -224,13 +246,17 @@ const getActiveUsersCount = asyncHandler(async (req, res) => {
 // @access  Public
 const getExpiredUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
-  const count = await MikrotikUser.countDocuments({
-    tenantOwner: req.user.tenantOwner, // Filter by tenant
-    $or: [
-      { expiryDate: { $lt: today } },
-      { isSuspended: true },
-    ],
-  });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  query.$or = [
+    { expiryDate: { $lt: today } },
+    { isSuspended: true },
+  ];
+
+  const count = await MikrotikUser.countDocuments(query);
   res.json({ expiredUsers: count });
 });
 

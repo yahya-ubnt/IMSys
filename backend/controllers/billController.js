@@ -51,11 +51,18 @@ const createBill = asyncHandler(async (req, res) => {
 // @route   GET /api/bills
 // @access  Private
 const getBills = asyncHandler(async (req, res) => {
-  const tenantOwner = req.user.tenantOwner;
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
   const queryMonth = req.query.month ? parseInt(req.query.month) : new Date().getMonth() + 1;
   const queryYear = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
 
-  const bills = await Bill.find({ tenantOwner, month: queryMonth, year: queryYear }).sort({ dueDate: 1 });
+  query.month = queryMonth;
+  query.year = queryYear;
+
+  const bills = await Bill.find(query).sort({ dueDate: 1 });
 
   res.status(200).json(bills);
 });
@@ -64,7 +71,12 @@ const getBills = asyncHandler(async (req, res) => {
 // @route   GET /api/bills/:id
 // @access  Private
 const getBillById = asyncHandler(async (req, res) => {
-  const bill = await Bill.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).lean();
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const bill = await Bill.findOne(query).lean();
 
   if (!bill) {
     res.status(404);
@@ -93,9 +105,9 @@ const updateBill = asyncHandler(async (req, res) => {
   }
 
   // Update fields
-  bill.name = name || bill.name; // ADDED
-  bill.amount = amount || bill.amount; // ADDED
-  bill.dueDate = dueDate || bill.dueDate; // ADDED
+  bill.name = name || bill.name;
+  bill.amount = amount || bill.amount;
+  bill.dueDate = dueDate || bill.dueDate;
   bill.status = status || bill.status;
   bill.description = description ? sanitizeString(description) : bill.description;
 

@@ -5,7 +5,12 @@ const Notification = require('../models/Notification');
 // @access  Private
 const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: -1 });
+    let query = {};
+    if (!req.user.roles.includes('SUPER_ADMIN')) {
+      query.tenantOwner = req.user.tenantOwner;
+    }
+
+    const notifications = await Notification.find(query).sort({ createdAt: -1 });
     res.json(notifications);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });

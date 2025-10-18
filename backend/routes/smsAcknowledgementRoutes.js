@@ -8,10 +8,10 @@ const {
   updateAcknowledgement,
   deleteAcknowledgement,
 } = require('../controllers/smsAcknowledgementController');
-const { protect, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
-router.route('/').get(protect, isAdminTenant, getAcknowledgements).post(
-  [protect, isAdminTenant],
+router.route('/').get(protect, isSuperAdminOrAdminTenant, getAcknowledgements).post(
+  [protect, isSuperAdminOrAdminTenant],
   [
     body('triggerType', 'Trigger type is required').not().isEmpty(),
     body('description', 'Description must be a string').optional().isString(),
@@ -22,8 +22,8 @@ router.route('/').get(protect, isAdminTenant, getAcknowledgements).post(
 );
 router
   .route('/:id')
-  .get(protect, isAdminTenant, getAcknowledgementById)
-  .put(protect, isAdminTenant, updateAcknowledgement)
-  .delete(protect, isAdminTenant, deleteAcknowledgement);
+  .get(protect, isSuperAdminOrAdminTenant, getAcknowledgementById)
+  .put(protect, isSuperAdminOrAdminTenant, updateAcknowledgement)
+  .delete(protect, isSuperAdminOrAdminTenant, deleteAcknowledgement);
 
 module.exports = router;

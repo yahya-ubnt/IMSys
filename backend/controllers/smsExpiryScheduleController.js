@@ -9,7 +9,12 @@ const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeS
 // @route   GET /api/smsexpiryschedules
 // @access  Private
 const getSchedules = asyncHandler(async (req, res) => {
-  const schedules = await SmsExpirySchedule.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: 'desc' });
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const schedules = await SmsExpirySchedule.find(query).sort({ createdAt: 'desc' });
   res.json(schedules);
 });
 
@@ -17,7 +22,12 @@ const getSchedules = asyncHandler(async (req, res) => {
 // @route   GET /api/smsexpiryschedules/:id
 // @access  Private
 const getScheduleById = asyncHandler(async (req, res) => {
-  const schedule = await SmsExpirySchedule.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const schedule = await SmsExpirySchedule.findOne(query);
 
   if (schedule) {
     res.json(schedule);

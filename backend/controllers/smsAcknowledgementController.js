@@ -8,7 +8,12 @@ const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeS
 // @route   GET /api/smsacknowledgements
 // @access  Private
 const getAcknowledgements = asyncHandler(async (req, res) => {
-  const acknowledgements = await SmsAcknowledgement.find({ tenantOwner: req.user.tenantOwner }).populate('smsTemplate', 'name messageBody');
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const acknowledgements = await SmsAcknowledgement.find(query).populate('smsTemplate', 'name messageBody');
   res.json(acknowledgements);
 });
 
@@ -16,7 +21,12 @@ const getAcknowledgements = asyncHandler(async (req, res) => {
 // @route   GET /api/smsacknowledgements/:id
 // @access  Private
 const getAcknowledgementById = asyncHandler(async (req, res) => {
-  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).populate('smsTemplate', 'name messageBody');
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const acknowledgement = await SmsAcknowledgement.findOne(query).populate('smsTemplate', 'name messageBody');
 
   if (acknowledgement) {
     res.json(acknowledgement);

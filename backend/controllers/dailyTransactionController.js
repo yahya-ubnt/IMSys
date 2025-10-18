@@ -45,7 +45,10 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
 const getDailyTransactions = asyncHandler(async (req, res) => {
   const { startDate, endDate, method, label, search, category } = req.query;
 
-  const query = { tenantOwner: req.user.tenantOwner }; // Filter by tenant
+  let query = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
 
   if (startDate) {
     query.date = { ...query.date, $gte: new Date(startDate) };
@@ -84,7 +87,12 @@ const getDailyTransactions = asyncHandler(async (req, res) => {
 // @route   GET /api/daily-transactions/:id
 // @access  Private
 const getDailyTransactionById = asyncHandler(async (req, res) => {
-  const dailyTransaction = await DailyTransaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let query = { _id: req.params.id };
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    query.tenantOwner = req.user.tenantOwner;
+  }
+
+  const dailyTransaction = await DailyTransaction.findOne(query);
 
   if (dailyTransaction) {
     res.json(dailyTransaction);
@@ -150,8 +158,13 @@ const getDailyTransactionStats = asyncHandler(async (req, res) => {
   const startOfMonth = moment().startOf('month');
   const startOfYear = moment().startOf('year');
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
   const stats = await DailyTransaction.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
+    { $match: matchQuery },
     {
       $facet: {
         today: [
@@ -199,13 +212,15 @@ const getMonthlyTransactionTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
-  const matchQuery = {
-    tenantOwner: req.user.tenantOwner, // Filter by tenant
-    date: {
-      $gte: new Date(parseInt(year), 0, 1),
-      $lt: new Date(parseInt(year) + 1, 0, 1),
-    }
-  };
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
+  matchQuery.date = {
+    $gte: new Date(parseInt(year), 0, 1),
+    $lt: new Date(parseInt(year) + 1, 0, 1),
+  }
 
   if (category) {
     matchQuery.category = category;
@@ -257,15 +272,19 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const endDate = moment(startDate).endOf('month');
   const daysInMonth = endDate.date();
 
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.tenantOwner = req.user.tenantOwner;
+  }
+
+  matchQuery.date = {
+    $gte: startDate.toDate(),
+    $lte: endDate.toDate(),
+  }
+
   const dailyTotals = await DailyTransaction.aggregate([
-    { $match: { tenantOwner: req.user.tenantOwner } }, // Filter by tenant
     {
-      $match: {
-        date: {
-          $gte: startDate.toDate(),
-          $lte: endDate.toDate(),
-        },
-      },
+      $match: matchQuery,
     },
     {
       $group: {
