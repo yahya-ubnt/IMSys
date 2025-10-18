@@ -187,58 +187,58 @@ cron.schedule('0 0 1 * *', async () => { // Runs at 00:00 on the 1st of every mo
   }
 
   try {
-    // Find unique recurring bill definitions from the previous month's bills
-    const recurringBills = await Bill.aggregate([
-      {
-        $match: {
-          month: prevMonth,
-          year: prevYear,
-          // Optionally, filter by status if only 'active' recurring bills should carry over
-          // status: { $ne: 'Deleted' } // Assuming a 'Deleted' status if implemented
+    const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+    for (const tenant of tenants) {
+      // Find unique recurring bill definitions from the previous month's bills for this tenant
+      const recurringBills = await Bill.aggregate([
+        {
+          $match: {
+            tenantOwner: tenant._id,
+            month: prevMonth,
+            year: prevYear,
+          }
+        },
+        {
+          $group: {
+            _id: {
+              name: '$name',
+              amount: '$amount',
+              dueDate: '$dueDate',
+              category: '$category',
+            },
+            description: { $first: '$description' } 
+          }
         }
-      },
-      {
-        $group: {
-          _id: {
-            user: '$user',
-            name: '$name',
-            amount: '$amount',
-            dueDate: '$dueDate',
-            category: '$category',
-          },
-          // You can add other fields here if needed for the new bill instance
-          description: { $first: '$description' } // Take description from one of the previous month's bills
-        }
-      }
-    ]);
+      ]);
 
-    for (const recurringBill of recurringBills) {
-      const { user, name, amount, dueDate, category } = recurringBill._id;
-      const description = recurringBill.description;
+      for (const recurringBill of recurringBills) {
+        const { name, amount, dueDate, category } = recurringBill._id;
+        const description = recurringBill.description;
 
-      // Check if a bill for this definition already exists for the current month
-      const existingBill = await Bill.findOne({
-        user,
-        name,
-        category,
-        month: currentMonth,
-        year: currentYear,
-      });
-
-      if (!existingBill) {
-        // Create a new bill instance for the current month
-        await Bill.create({
-          user,
+        // Check if a bill for this definition already exists for the current month
+        const existingBill = await Bill.findOne({
+          tenantOwner: tenant._id,
           name,
-          amount,
-          dueDate,
           category,
-          description,
           month: currentMonth,
           year: currentYear,
-          status: 'Not Paid',
         });
-        console.log(`Created new bill for ${name} (${category}) for ${currentMonth}/${currentYear} for user ${user}`);
+
+        if (!existingBill) {
+          // Create a new bill instance for the current month
+          await Bill.create({
+            tenantOwner: tenant._id,
+            name,
+            amount,
+            dueDate,
+            category,
+            description,
+            month: currentMonth,
+            year: currentYear,
+            status: 'Not Paid',
+          });
+          console.log(`Created new bill for ${name} (${category}) for ${currentMonth}/${currentYear} for tenant ${tenant._id}`);
+        }
       }
     }
     console.log('Monthly bill reset job completed successfully.');
@@ -254,79 +254,85 @@ cron.schedule('0 0 * * *', async () => { // Runs daily at 00:00
   today.setHours(0, 0, 0, 0); // Normalize to start of day
 
   try {
-    const activeSchedules = await SmsExpirySchedule.find({ status: 'Active' })
-      .populate('smsTemplate')
-      .populate('whatsAppTemplate');
+    const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+    for (const tenant of tenants) {
+      const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenantOwner: tenant._id })
+        .populate('smsTemplate')
+        .populate('whatsAppTemplate');
 
-    for (const schedule of activeSchedules) {
-      const { days, timing, smsTemplate, whatsAppTemplate } = schedule;
+      for (const schedule of activeSchedules) {
+        const { days, timing, smsTemplate, whatsAppTemplate } = schedule;
 
-      if (!smsTemplate) {
-        console.warn(`Skipping schedule "${schedule.name}" because its SMS template is missing.`);
-        continue;
-      }
-
-      const targetDate = new Date(today);
-      if (timing === 'Before') {
-        targetDate.setDate(today.getDate() + days);
-      } else if (timing === 'After') {
-        targetDate.setDate(today.getDate() - days);
-      } else {
-        continue;
-      }
-
-      const usersToNotify = await User.find({
-        expiryDate: {
-          $gte: targetDate,
-          $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+        if (!smsTemplate) {
+          console.warn(`Skipping schedule "${schedule.name}" because its SMS template is missing.`);
+          continue;
         }
-      });
 
-      for (const user of usersToNotify) {
-        const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
-        
-        let personalizedMessage;
-        const templateData = {
-            customer_name: user.name || 'Customer',
-            reference_number: user.referenceNumber || '',
-            customer_phone: user.phoneNumber || '',
-            transaction_amount: user.transactionAmount || '',
-            expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
-        };
+        const targetDate = new Date(today);
+        if (timing === 'Before') {
+          targetDate.setDate(today.getDate() + days);
+        } else if (timing === 'After') {
+          targetDate.setDate(today.getDate() - days);
+        } else {
+          continue;
+        }
 
-        if (useWhatsApp) {
-          // For WhatsApp, the 'body' is just for reference; the service uses the providerTemplateId.
-          // The templateParameters need to match what the provider expects (e.g., { '1': 'value', '2': 'value' })
-          // This is a simplification; a more robust solution would map names to numbers.
-          const templateParameters = {
-            '1': templateData.customer_name,
-            '2': templateData.transaction_amount,
-            '3': templateData.expiry_date,
+        const usersToNotify = await MikrotikUser.find({
+          tenantOwner: tenant._id,
+          expiryDate: {
+            $gte: targetDate,
+            $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+          }
+        });
+
+        for (const user of usersToNotify) {
+          const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
+          
+          let personalizedMessage;
+          const templateData = {
+              customer_name: user.officialName || 'Customer',
+              reference_number: user.mPesaRefNo || '',
+              customer_phone: user.mobileNumber || '',
+              transaction_amount: user.package.price || '',
+              expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
           };
 
-          const whatsappResult = await sendWhatsAppMessage(user.phoneNumber, whatsAppTemplate.providerTemplateId, templateParameters);
-          
-          // Log WhatsApp message (a new model `WhatsAppLog` will be needed)
-          // await WhatsAppLog.create({ ... });
+          if (useWhatsApp) {
+            const templateParameters = {
+              '1': templateData.customer_name,
+              '2': templateData.transaction_amount,
+              '3': templateData.expiry_date,
+            };
 
-        } else {
-          // Fallback to SMS
-          personalizedMessage = smsTemplate.messageBody;
-          for (const key in templateData) {
-              const placeholder = new RegExp(`{{${key}}}`, 'g');
-              personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+            const whatsappResult = await sendWhatsAppMessage(user.tenantOwner, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
+            
+            await WhatsAppLog.create({
+              mobileNumber: user.mobileNumber,
+              templateUsed: whatsAppTemplate._id,
+              status: whatsappResult.success ? 'Queued' : 'Failed',
+              providerResponse: whatsappResult.message,
+              tenantOwner: user.tenantOwner,
+              variablesUsed: templateParameters,
+            });
+
+          } else {
+            personalizedMessage = smsTemplate.messageBody;
+            for (const key in templateData) {
+                const placeholder = new RegExp(`{{${key}}}`, 'g');
+                personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+            }
+
+            const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, personalizedMessage);
+
+            await SmsLog.create({
+              mobileNumber: user.mobileNumber,
+              message: personalizedMessage,
+              messageType: 'Expiry Alert',
+              smsStatus: smsResult.success ? 'Success' : 'Failed',
+              providerResponse: smsResult.message,
+              tenantOwner: user.tenantOwner,
+            });
           }
-
-          const smsResult = await sendSMS(user.phoneNumber, personalizedMessage);
-
-          await SmsLog.create({
-            mobileNumber: user.phoneNumber,
-            message: personalizedMessage,
-            messageType: 'Expiry Alert',
-            smsStatus: smsResult.success ? 'Success' : 'Failed',
-            providerResponse: smsResult.message,
-            user: user._id,
-          });
         }
       }
     }
