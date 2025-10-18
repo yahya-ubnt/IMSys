@@ -500,7 +500,16 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
       await client.connect();
 
       if (user.serviceType === 'pppoe') {
-        const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+        let pppSecrets;
+        try {
+          pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+        } catch (e) {
+          if (e.errno === 'UNKNOWNREPLY') {
+            pppSecrets = [];
+          } else {
+            throw e;
+          }
+        }
         if (pppSecrets.length > 0) {
           const secretId = pppSecrets[0]['.id'];
           try {

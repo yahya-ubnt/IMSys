@@ -7,6 +7,7 @@ const MikrotikUser = require('./models/MikrotikUser');
 const ApplicationSettings = require('./models/ApplicationSettings');
 const bcrypt = require('bcryptjs');
 const connectDB = require('./config/db');
+const { encrypt } = require('./utils/crypto');
 
 // Configure dotenv to use the root .env file
 dotenv.config({ path: require('path').resolve(__dirname, '../.env') });
@@ -32,30 +33,36 @@ const importData = async () => {
         isAdmin: true,
       },
     ];
-    await User.create(users);
+    const createdUsers = await User.create(users);
     console.log('Admin user created.');
+
+    const adminUser = createdUsers[0];
 
     console.log('Creating production router...');
     const router = await MikrotikRouter.create({
+      user: adminUser._id,
       name: 'AMANI ESTATE MIK',
       ipAddress: '10.10.10.1',
       apiUsername: 'admin',
-      apiPassword: '0741554490#',
+      apiPassword: encrypt('0741554490#'),
       apiPort: 8728,
     });
     console.log('Production router created:', router.name);
 
     console.log('Creating test package...');
     const testPackage = await Package.create({
+      user: adminUser._id,
       mikrotikRouter: router._id,
       serviceType: 'pppoe',
       name: 'Test Package',
       price: 1000,
+      profile: 'Test Package',
     });
     console.log('Test package created:', testPackage.name);
 
     console.log('Creating test Mikrotik user...');
     const mikrotikUser = await MikrotikUser.create({
+        user: adminUser._id,
         mikrotikRouter: router._id,
         serviceType: 'pppoe',
         package: testPackage._id,
