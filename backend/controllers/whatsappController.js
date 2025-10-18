@@ -86,7 +86,7 @@ const composeAndSendWhatsApp = asyncHandler(async (req, res) => {
     });
 
     try {
-      const gatewayResponse = await sendWhatsAppMessage(phoneNumber, template.providerTemplateId, variables);
+      const gatewayResponse = await sendWhatsAppMessage(req.user.tenantOwner, phoneNumber, template.providerTemplateId, variables);
       
       log.status = gatewayResponse.success ? 'Queued' : 'Failed';
       log.providerResponse = gatewayResponse.message;

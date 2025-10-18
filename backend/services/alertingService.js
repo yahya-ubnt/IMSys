@@ -3,10 +3,15 @@ const ApplicationSettings = require('../models/ApplicationSettings'); // Import 
 const { sendEmail } = require('./emailService'); // Import sendEmail
 const io = require('../socket').getIO(); // Import the initialized socket.io instance
 
-const sendConsolidatedAlert = async (entities, status, user = null, entityType = 'Device') => {
+const sendConsolidatedAlert = async (entities, status, tenantOwner, user = null, entityType = 'Device') => {
   let message;
   if (!Array.isArray(entities) || entities.length === 0) {
     console.warn('sendConsolidatedAlert called with empty or invalid entities array.');
+    return;
+  }
+
+  if (!tenantOwner) {
+    console.error('Could not determine tenant for alert.');
     return;
   }
 
@@ -51,19 +56,19 @@ const sendConsolidatedAlert = async (entities, status, user = null, entityType =
     const notification = new Notification({
       message,
       type: 'device_status',
-      user: user ? user._id : null,
+      tenantOwner: tenantOwner,
     });
     await notification.save();
 
     // --- Begin Email Logic ---
-    if (!user) { // This is a system-wide notification, send to admins
+    if (user) { // This is a system-wide notification, send to admins
       try {
-        const settings = await ApplicationSettings.findOne();
+        const settings = await ApplicationSettings.findOne({ tenantOwner: user.tenantOwner });
         if (settings && settings.adminNotificationEmails && settings.adminNotificationEmails.length > 0) {
           const subject = `System Alert: ${message}`;
           const text = message;
           settings.adminNotificationEmails.forEach(email => {
-            sendEmail({ to: email, subject, text }).catch(console.error);
+            sendEmail({ to: email, subject, text, tenantOwner: user.tenantOwner }).catch(console.error);
           });
         }
       } catch (emailError) {

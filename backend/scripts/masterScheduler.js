@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const ScheduledTask = require('../models/ScheduledTask');
+const User = require('../models/User');
 const cron = require('node-cron');
 const { spawn } = require('child_process');
 const path = require('path');
+const { performRouterStatusCheck } = require('../services/routerMonitoringService');
+const { performUserStatusCheck } = require('../services/userMonitoringService');
+const { checkAllDevices } = require('../services/monitoringService');
 
 const executeScript = (scriptPath, tenantId) => {
   return new Promise((resolve, reject) => {
@@ -42,6 +46,13 @@ const masterScheduler = async () => {
     console.log(`[${new Date().toISOString()}] Scheduler checking for due tasks...`);
     
     try {
+      const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+      for (const tenant of tenants) {
+        performRouterStatusCheck(tenant._id);
+        performUserStatusCheck(tenant._id);
+        checkAllDevices(tenant._id);
+      }
+
       const tasks = await ScheduledTask.find({ isEnabled: true });
       
       for (const task of tasks) {

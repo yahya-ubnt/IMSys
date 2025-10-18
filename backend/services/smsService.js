@@ -26,19 +26,19 @@ const executeSmsDriver = async (providerType, credentials, phoneNumber, message)
   }
 };
 
-exports.sendSMS = async (userId, phoneNumber, message) => {
+exports.sendSMS = async (tenantOwner, phoneNumber, message) => {
   try {
-    if (!userId) {
-      console.error('Error: A user ID must be provided to sendSMS to identify the tenant.');
-      return { success: false, message: 'User ID is missing.' };
+    if (!tenantOwner) {
+      console.error('Error: A tenantOwner ID must be provided to sendSMS.');
+      return { success: false, message: 'Tenant context is missing.' };
     }
 
-    // 1. Find the active SMS provider for the specific user from the database
-    const activeProvider = await SmsProvider.findOne({ user: userId, isActive: true });
+    // 1. Find the active SMS provider for the specific tenant from the database
+    const activeProvider = await SmsProvider.findOne({ tenantOwner, isActive: true });
 
     if (!activeProvider) {
-      console.error(`No active SMS provider is configured for user ${userId}.`);
-      return { success: false, message: 'SMS service is not configured for this user. No active provider found.' };
+      console.error(`No active SMS provider is configured for tenant ${tenantOwner}.`);
+      return { success: false, message: 'SMS service is not configured for this tenant. No active provider found.' };
     }
 
     // 2. The model's 'get' function automatically decrypts credentials
@@ -67,8 +67,13 @@ exports.sendSMS = async (userId, phoneNumber, message) => {
 
 exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data = {}) => {
   try {
-    // Acknowledgement templates are global, but sending uses a tenant's provider.
-    const acknowledgement = await SmsAcknowledgement.findOne({ triggerType, status: 'Active' }).populate('smsTemplate');
+    const tenantOwner = data.tenantOwner;
+    if (!tenantOwner) {
+        console.error(`Error sending acknowledgement for ${triggerType}: tenantOwner was not provided in the data object.`);
+        return { success: false, message: 'Cannot send acknowledgement SMS without a tenant context.' };
+    }
+
+    const acknowledgement = await SmsAcknowledgement.findOne({ triggerType, tenantOwner, status: 'Active' }).populate('smsTemplate');
 
     if (!acknowledgement || !acknowledgement.smsTemplate) {
       console.log(`No active acknowledgement mapping found for trigger type: ${triggerType}`);
@@ -85,13 +90,7 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
       }
     }
 
-    // Ensure userId is passed to sendSMS for multi-tenancy
-    if (!data.userId) {
-      console.error(`Error sending acknowledgement for ${triggerType}: userId was not provided in the data object.`);
-      return { success: false, message: 'Cannot send acknowledgement SMS without a user context.' };
-    }
-
-    const smsResult = await exports.sendSMS(data.userId, recipientPhoneNumber, messageBody);
+    const smsResult = await exports.sendSMS(tenantOwner, recipientPhoneNumber, messageBody);
 
     await SmsLog.create({
       mobileNumber: recipientPhoneNumber,
@@ -99,7 +98,7 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
       messageType: 'Acknowledgement',
       smsStatus: smsResult.success ? 'Success' : 'Failed',
       providerResponse: smsResult.message,
-      user: data.userId, // Associate log with the user
+      tenantOwner: tenantOwner, // Associate log with the tenant
     });
 
     return { success: smsResult.success, message: smsResult.message };

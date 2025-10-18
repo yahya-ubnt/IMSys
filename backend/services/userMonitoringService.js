@@ -31,14 +31,14 @@ async function checkUserOnlineStatus(user, client) {
     return isOnline;
 }
 
-async function performUserStatusCheck() {
-    console.log(`[${new Date().toISOString()}] Performing bulk user status check...`);
+async function performUserStatusCheck(tenantOwner) {
+    console.log(`[${new Date().toISOString()}] Performing bulk user status check for tenant ${tenantOwner}...`);
 
     try {
-        // 1. Fetch all users and group them by router
-        const allUsers = await MikrotikUser.find({}).populate('mikrotikRouter').lean();
+        // 1. Fetch all users for the tenant and group them by router
+        const allUsers = await MikrotikUser.find({ tenantOwner }).populate('mikrotikRouter').lean();
         if (allUsers.length === 0) {
-            console.log(`[${new Date().toISOString()}] No MikroTik users found.`);
+            console.log(`[${new Date().toISOString()}] No MikroTik users found for this tenant.`);
             return;
         }
 
@@ -125,10 +125,7 @@ async function performUserStatusCheck() {
 
                 // Send consolidated alert for users who came online
                 if (usersOnline.length > 0) {
-                    const adminUser = await User.findOne({ isAdmin: true });
-                    if (adminUser) {
-                        await sendConsolidatedAlert(usersOnline, 'ONLINE', adminUser, 'User');
-                    }
+                    await sendConsolidatedAlert(usersOnline, 'ONLINE', tenantOwner, 'User');
                 }
 
                 // 5. Retry for potentially offline users
@@ -162,7 +159,7 @@ async function performUserStatusCheck() {
                         // Log downtime start
                         console.log(`[${new Date().toISOString()}] User ${user.username} went offline. Logging downtime.`);
                         const newDowntime = new UserDowntimeLog({
-                            user: user.user,
+                            tenantOwner: user.tenantOwner,
                             mikrotikUser: user._id,
                             downStartTime: new Date(),
                         });
@@ -173,10 +170,7 @@ async function performUserStatusCheck() {
 
                 // Send consolidated alert for users who went offline
                 if (usersOffline.length > 0) {
-                    const adminUser = await User.findOne({ isAdmin: true });
-                    if (adminUser) {
-                        await sendConsolidatedAlert(usersOffline, 'OFFLINE', adminUser, 'User');
-                    }
+                    await sendConsolidatedAlert(usersOffline, 'OFFLINE', tenantOwner, 'User');
                 }
 
             } catch (error) {
@@ -189,7 +183,7 @@ async function performUserStatusCheck() {
                         // Log downtime
                         console.log(`[${new Date().toISOString()}] User ${user.username} went offline. Logging downtime.`);
                         const newDowntime = new UserDowntimeLog({
-                            user: user.user,
+                            tenantOwner: user.tenantOwner,
                             mikrotikUser: user._id,
                             downStartTime: new Date(),
                         });
@@ -199,10 +193,7 @@ async function performUserStatusCheck() {
                 }
                 // Send consolidated alert for users who went offline due to router unreachability
                 if (usersOfflineRouterUnreachable.length > 0) {
-                    const adminUser = await User.findOne({ isAdmin: true });
-                    if (adminUser) {
-                        await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', adminUser, 'User');
-                    }
+                    await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', tenantOwner, 'User');
                 }
             } finally {
                 if (client.connected) {
@@ -211,7 +202,7 @@ async function performUserStatusCheck() {
             }
         }
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] Error during bulk user status check:`, error);
+        console.error(`[${new Date().toISOString()}] Error during bulk user status check for tenant ${tenantOwner}:`, error);
     }
 }
 
@@ -223,10 +214,9 @@ function startUserMonitoring(intervalMs) {
         clearInterval(userMonitoringInterval);
     }
     console.log(`[${new Date().toISOString()}] Starting user monitoring every ${intervalMs / 1000} seconds.`);
-    // Perform an initial check immediately
-    performUserStatusCheck();
-    // Then set up the interval
-    userMonitoringInterval = setInterval(performUserStatusCheck, intervalMs);
+    // This will be triggered by the master scheduler now
+    // performUserStatusCheck();
+    // userMonitoringInterval = setInterval(performUserStatusCheck, intervalMs);
 }
 
 function stopUserMonitoring() {
@@ -242,4 +232,3 @@ module.exports = {
     stopUserMonitoring,
     performUserStatusCheck // Export for immediate manual trigger if needed
 };
-

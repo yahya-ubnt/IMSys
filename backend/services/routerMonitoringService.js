@@ -76,21 +76,21 @@ async function checkRouter(router) {
     console.log(`[${new Date().toISOString()}] Updated status for router ${router.name}.`);
 }
 
-async function performRouterStatusCheck() {
-    console.log(`[${new Date().toISOString()}] Performing router status check...`);
+async function performRouterStatusCheck(tenantOwner) {
+    console.log(`[${new Date().toISOString()}] Performing router status check for tenant ${tenantOwner}...`);
 
     try {
-        const routers = await MikrotikRouter.find({});
+        const routers = await MikrotikRouter.find({ tenantOwner });
 
         if (routers.length === 0) {
-            console.log(`[${new Date().toISOString()}] No MikroTik routers found in the database.`);
+            console.log(`[${new Date().toISOString()}] No MikroTik routers found in the database for this tenant.`);
             return;
         }
 
         await Promise.all(routers.map(checkRouter));
 
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] Error during router status check:`, error);
+        console.error(`[${new Date().toISOString()}] Error during router status check for tenant ${tenantOwner}:`, error);
     }
 }
 
@@ -102,8 +102,9 @@ function startRouterMonitoring(intervalMs) {
         clearInterval(monitoringInterval);
     }
     console.log(`[${new Date().toISOString()}] Starting router monitoring every ${intervalMs / 1000} seconds.`);
-    performRouterStatusCheck();
-    monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
+    // This will be triggered by the master scheduler now
+    // performRouterStatusCheck();
+    // monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
 }
 
 function stopRouterMonitoring() {

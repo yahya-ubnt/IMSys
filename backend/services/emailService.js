@@ -9,16 +9,16 @@ const { decrypt } = require('../utils/crypto');
  * @param {string} options.subject - Email subject.
  * @param {string} options.text - Plain text body.
  * @param {string} options.html - HTML body.
+ * @param {string} tenantOwner - The ID of the tenant to use for SMTP settings.
  * @returns {Promise<object>} - Nodemailer message info.
  */
-const sendEmail = async ({ to, subject, text, html }) => {
+const sendEmail = async ({ to, subject, text, html, tenantOwner }) => {
   try {
-    // Fetch the settings from the database. We assume a single settings document.
-    // The .select('+smtpSettings.pass') is crucial to explicitly include the password.
-    const settings = await ApplicationSettings.findOne().select('+smtpSettings.pass');
+    // Fetch the settings from the database for the specific tenant.
+    const settings = await ApplicationSettings.findOne({ tenantOwner }).select('+smtpSettings.pass');
 
     if (!settings || !settings.smtpSettings || !settings.smtpSettings.host) {
-      throw new Error('SMTP settings are not configured.');
+      throw new Error('SMTP settings are not configured for this tenant.');
     }
 
     const { host, port, secure, user, pass, from } = settings.smtpSettings;

@@ -25,13 +25,13 @@ const executeWhatsAppDriver = async (providerType, credentials, recipientPhoneNu
   }
 };
 
-const sendWhatsAppMessage = async (recipientPhoneNumber, templateName, templateParameters) => {
+const sendWhatsAppMessage = async (tenantOwner, recipientPhoneNumber, templateName, templateParameters) => {
   try {
-    const activeProvider = await WhatsAppProvider.findOne({ isActive: true });
+    const activeProvider = await WhatsAppProvider.findOne({ tenantOwner, isActive: true });
 
     if (!activeProvider) {
-      console.error('No active WhatsApp provider is configured.');
-      return { success: false, message: 'WhatsApp service is not configured. No active provider found.' };
+      console.error('No active WhatsApp provider is configured for this tenant.');
+      return { success: false, message: 'WhatsApp service is not configured for this tenant. No active provider found.' };
     }
 
     const credentials = activeProvider.credentials;

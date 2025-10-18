@@ -14,7 +14,7 @@ const handleSuccessfulPing = async (device, devicesUp) => {
   if (device.status === 'DOWN') {
     console.log(`Device ${device.ipAddress} is back UP.`);
     const openLog = await DowntimeLog.findOne({
-      user: device.user,
+      tenantOwner: device.tenantOwner,
       device: device._id,
       downEndTime: null,
     }).sort({ downStartTime: -1 });
@@ -31,12 +31,12 @@ const handleSuccessfulPing = async (device, devicesUp) => {
 };
 
 const handleFailedPing = async (device, devicesDown) => {
-  const openLog = await DowntimeLog.findOne({ user: device.user, device: device._id, downEndTime: null });
+  const openLog = await DowntimeLog.findOne({ tenantOwner: device.tenantOwner, device: device._id, downEndTime: null });
 
   if (!openLog) {
     console.log(`Device ${device.ipAddress} is DOWN. Creating new downtime log.`);
     await DowntimeLog.create({
-      user: device.user,
+      tenantOwner: device.tenantOwner,
       device: device._id,
       downStartTime: new Date(),
     });
@@ -46,13 +46,13 @@ const handleFailedPing = async (device, devicesDown) => {
   await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
 };
 
-const checkAllDevices = async () => {
-  const devices = await Device.find({}).populate('router').populate('user');
+const checkAllDevices = async (tenantOwner) => {
+  const devices = await Device.find({ tenantOwner }).populate('router').populate('tenantOwner');
   if (devices.length === 0) {
     return;
   }
 
-  console.log(`Pinging ${devices.length} devices...`);
+  console.log(`Pinging ${devices.length} devices for tenant ${tenantOwner}...`);
 
   const devicesByRouter = devices.reduce((acc, device) => {
     if (device.router) {
@@ -109,10 +109,7 @@ const checkAllDevices = async () => {
 
       // Send consolidated alert for devices that came online
       if (devicesUp.length > 0) {
-        const adminUser = await User.findOne({ isAdmin: true });
-        if (adminUser) {
-          await sendConsolidatedAlert(devicesUp, 'UP', adminUser, 'Device');
-        }
+        await sendConsolidatedAlert(devicesUp, 'UP', tenantOwner, 'Device');
       }
 
       for (const device of potentiallyOfflineDevices) {
@@ -137,10 +134,7 @@ const checkAllDevices = async () => {
 
       // Send consolidated alert for devices that went offline
       if (devicesDown.length > 0) {
-        const adminUser = await User.findOne({ isAdmin: true });
-        if (adminUser) {
-          await sendConsolidatedAlert(devicesDown, 'DOWN', adminUser, 'Device');
-        }
+        await sendConsolidatedAlert(devicesDown, 'DOWN', tenantOwner, 'Device');
       }
 
     } catch (error) {
@@ -150,7 +144,7 @@ const checkAllDevices = async () => {
         if (device.status === 'UP') {
           await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
           await DowntimeLog.create({
-            user: device.user,
+            tenantOwner: device.tenantOwner,
             device: device._id,
             downStartTime: new Date(),
           });
@@ -158,10 +152,7 @@ const checkAllDevices = async () => {
         }
       }
       if (devicesDownRouterUnreachable.length > 0) {
-        const adminUser = await User.findOne({ isAdmin: true });
-        if (adminUser) {
-          await sendConsolidatedAlert(devicesDownRouterUnreachable, 'DOWN (Router Unreachable)', adminUser, 'Device');
-        }
+        await sendConsolidatedAlert(devicesDownRouterUnreachable, 'DOWN (Router Unreachable)', tenantOwner, 'Device');
       }
     } finally {
       if (client && client.connected) {
@@ -173,7 +164,8 @@ const checkAllDevices = async () => {
 
 const startMonitoring = () => {
   console.log('Starting CPE & AP monitoring service...');
-  setInterval(checkAllDevices, PING_INTERVAL);
+  // This will be triggered by the master scheduler now
+  // setInterval(checkAllDevices, PING_INTERVAL);
 };
 
-module.exports = { startMonitoring };
+module.exports = { startMonitoring, checkAllDevices };
