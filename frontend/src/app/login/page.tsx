@@ -61,8 +61,8 @@ function LoginPageContent() {
       if (response.ok) {
         login({
           email: data.email,
-          name: data.fullName,
-          role: data.isAdmin ? 'Admin' : 'User',
+          fullName: data.fullName,
+          roles: data.roles,
           loginMethod: "email",
           token: data.token,
         });

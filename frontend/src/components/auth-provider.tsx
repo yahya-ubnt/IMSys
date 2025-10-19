@@ -6,42 +6,40 @@ import { createContext, useContext, useEffect, useState } from "react"
 interface User {
   name: string
   email: string
-  role: string
+  roles: string[]
   loginMethod: string
   avatar?: string
-  // token?: string; // Token will now be managed separately in context
 }
 
 interface AuthContextType {
   user: User | null
-  token: string | null; // Explicitly add token to context type
-  login: (userData: User & { token?: string }) => void // Allow token in login data
+  token: string | null
+  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[]; token?: string }) => void
   logout: () => void
   isLoading: boolean
-  isLoggingOut: boolean; // New state for logout in progress
+  isLoggingOut: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null); // New token state
+  const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isLoggingOut, setIsLoggingOut] = useState(false); // New state
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
-    // Check if user is logged in on mount
     const checkAuth = () => {
       if (typeof window !== "undefined") {
         const isLoggedIn = localStorage.getItem("isLoggedIn")
         const userData = localStorage.getItem("user")
-        const storedToken = localStorage.getItem("token") // Get token from localStorage
+        const storedToken = localStorage.getItem("token")
 
         if (isLoggedIn === "true" && userData) {
           try {
-            const parsedUser: User = JSON.parse(userData);
-            setUser(parsedUser);
-            setToken(storedToken); // Set token state
+            const parsedUser: User = JSON.parse(userData)
+            setUser(parsedUser)
+            setToken(storedToken)
           } catch (error) {
             console.error("Error parsing user data:", error)
             localStorage.removeItem("isLoggedIn")
@@ -56,15 +54,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = (userData: User & { token?: string }) => {
-    console.log("User data in login:", userData);
-    setIsLoggingOut(false); // Reset on login
-    setUser(userData)
+  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[]; token?: string }) => {
+    console.log("User data in login:", userData)
+    const { fullName, ...rest } = userData
+    const user: User = { ...rest, name: fullName, roles: userData.roles, loginMethod: 'email' }
+    setIsLoggingOut(false)
+    setUser(user)
     localStorage.setItem("isLoggedIn", "true")
-    localStorage.setItem("user", JSON.stringify(userData))
+    localStorage.setItem("user", JSON.stringify(user))
     if (userData.token) {
       localStorage.setItem("token", userData.token)
-      setToken(userData.token); // Set token state on login
+      setToken(userData.token)
     }
   }
 
