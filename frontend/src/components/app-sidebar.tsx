@@ -7,6 +7,7 @@ import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, S
 import Image from "next/image"
 import { useTheme } from "next-themes"
 import { useSettings } from "@/hooks/use-settings"
+import { useAuth } from "@/components/auth-provider";
 
 
 import Link from "next/link" // ADD THIS IMPORT
@@ -349,11 +350,28 @@ const menuCategories: MenuCategory[] = [
   },
 ];
 
+const superAdminMenuCategory: MenuCategory = {
+  label: "Super Admin",
+  items: [
+    {
+      title: "SA Dashboard",
+      url: "/superadmin/dashboard",
+      icon: LayoutGrid,
+    },
+    {
+      title: "Tenants",
+      url: "/superadmin/tenants",
+      icon: Building2,
+    },
+  ],
+};
+
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { settings } = useSettings();
+  const { user } = useAuth();
   const [openMenu, setOpenMenu] = React.useState<string | null>(null)
 
   // Determine which menu should be open based on current pathname
@@ -396,6 +414,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
+  const allMenuCategories = user?.roles.includes('SUPER_ADMIN') 
+    ? [superAdminMenuCategory, ...menuCategories] 
+    : menuCategories;
+
   return (
     <Sidebar collapsible="none" {...props} className="bg-zinc-900 border-r border-zinc-800 shadow-2xl">
       <SidebarHeader className="border-b border-zinc-800 pb-4">
@@ -417,7 +439,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent className="py-4">
-        {menuCategories.map((category) => (
+        {allMenuCategories.map((category) => (
           <SidebarGroup key={category.label}>
             <SidebarGroupLabel className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-4 py-2 border-b border-zinc-800 mb-2">
               {category.label}

@@ -21,7 +21,7 @@ export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, isLoggingOut } = useAuth();
+  const { token, user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -102,7 +102,7 @@ export default function PackagesPage() {
     }
   };
 
-  const columns = getColumns(handleOpenForm, (id) => setDeleteCandidateId(id));
+  const columns = useMemo(() => getColumns(user, handleOpenForm, (id) => setDeleteCandidateId(id)), [user]);
 
   const filteredPackages = useMemo(() => packages.filter(pkg => {
     const routerName = (pkg.mikrotikRouter && typeof pkg.mikrotikRouter !== 'string') ? pkg.mikrotikRouter.name : '';

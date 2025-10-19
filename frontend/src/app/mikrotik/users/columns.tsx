@@ -15,6 +15,15 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { MikrotikUser } from "./page"; // Import from the page component
 
+// --- Interface Definition ---
+interface User {
+  name: string;
+  email: string;
+  roles: string[];
+  loginMethod: string;
+  avatar?: string;
+}
+
 export const getMikrotikUserStatus = (user: MikrotikUser) => {
   const expiryDate = new Date(user.expiryDate);
   const now = new Date();
@@ -37,112 +46,103 @@ const getRemainingDays = (expiryDateString: string): string => {
 };
 
 export const getColumns = (
+  user: User | null,
   onDelete?: (userId: string) => void
-): ColumnDef<MikrotikUser>[] => [
-  {
-    accessorKey: "username",
-    header: ({ column }) => (
-      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-        Username <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <Link href={`/mikrotik/users/${row.original._id}/details`} className="font-medium text-blue-400 hover:underline">
-        {row.original.username}
-      </Link>
-    ),
-  },
-  {
-    accessorKey: "officialName",
-    header: "Official Name",
-  },
-  {
-    accessorKey: "apartment_house_number",
-    header: "Apartment/House",
-    cell: ({ row }) => (
-      <div className="pl-4">
-        {row.original.apartment_house_number}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "mobileNumber",
-    header: "Mobile Number",
-  },
-  {
-    accessorKey: "package.name",
-    header: "Package",
-    cell: ({ row }) => row.original.package?.name || 'N/A',
-  },
-  {
-    accessorKey: "mikrotikRouter.name",
-    header: "Mikrotik Router",
-  },
-  {
-    accessorKey: "station.deviceName",
-    header: "Station",
-    cell: ({ row }) => {
-      const station = row.original.station;
-      if (!station) return 'N/A';
-      return (
-        <Link href={`/devices/${station._id}`} className="font-medium text-blue-400 hover:underline">
-          {station.deviceName}
+): ColumnDef<MikrotikUser>[] => {
+  const columns: ColumnDef<MikrotikUser>[] = [
+    {
+      accessorKey: "username",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Username <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <Link href={`/mikrotik/users/${row.original._id}/details`} className="font-medium text-blue-400 hover:underline">
+          {row.original.username}
         </Link>
-      );
+      ),
     },
-  },
-  {
-    accessorKey: "expiryDate",
-    header: "Expiry Date",
-    cell: ({ row }) => new Date(row.getValue("expiryDate")).toLocaleDateString(),
-  },
-  {
-    id: "remainingDays",
-    header: "Days Left",
-    cell: ({ row }) => getRemainingDays(row.original.expiryDate),
-  },
-  {
-    id: "accountStatus",
-    header: "Status",
-    cell: ({ row }) => {
-      const { status, color } = getMikrotikUserStatus(row.original);
-      return <Badge variant="outline" className={`capitalize ${color}`}>{status}</Badge>;
+    {
+      accessorKey: "officialName",
+      header: "Official Name",
     },
-  },
-  {
-    id: "onlineStatus",
-    header: "Online",
-    cell: ({ row }) => {
-      return row.original.isOnline 
-        ? <Badge variant="outline" className="border-green-500/30 bg-green-500/20 text-green-400">Online</Badge>
-        : <Badge variant="outline" className="border-red-500/30 bg-red-500/20 text-red-400">Offline</Badge>;
+    {
+      accessorKey: "mobileNumber",
+      header: "Mobile Number",
     },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const user = row.original;
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}/details`}>View Details</Link></DropdownMenuItem>
-            <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>Edit User</Link></DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-zinc-700" />
-            {onDelete && (
-              <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-500/20" onClick={() => onDelete(user._id)}>
-                Delete User
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
+    {
+      accessorKey: "package.name",
+      header: "Package",
+      cell: ({ row }) => row.original.package?.name || 'N/A',
     },
-  },
-];
+    {
+      accessorKey: "mikrotikRouter.name",
+      header: "Mikrotik Router",
+    },
+    {
+      accessorKey: "expiryDate",
+      header: "Expiry Date",
+      cell: ({ row }) => new Date(row.getValue("expiryDate")).toLocaleDateString(),
+    },
+    {
+      id: "remainingDays",
+      header: "Days Left",
+      cell: ({ row }) => getRemainingDays(row.original.expiryDate),
+    },
+    {
+      id: "accountStatus",
+      header: "Status",
+      cell: ({ row }) => {
+        const { status, color } = getMikrotikUserStatus(row.original);
+        return <Badge variant="outline" className={`capitalize ${color}`}>{status}</Badge>;
+      },
+    },
+    {
+      id: "onlineStatus",
+      header: "Online",
+      cell: ({ row }) => {
+        return row.original.isOnline 
+          ? <Badge variant="outline" className="border-green-500/30 bg-green-500/20 text-green-400">Online</Badge>
+          : <Badge variant="outline" className="border-red-500/30 bg-red-500/20 text-red-400">Offline</Badge>;
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const user = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}/details`}>View Details</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>Edit User</Link></DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-zinc-700" />
+              {onDelete && (
+                <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-500/20" onClick={() => onDelete(user._id)}>
+                  Delete User
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
+  if (user?.roles.includes("SUPER_ADMIN")) {
+    columns.splice(1, 0, {
+      accessorKey: "tenant.fullName",
+      header: "Tenant",
+      cell: ({ row }) => row.original.tenant?.fullName || "N/A",
+    });
+  }
+
+  return columns;
+};

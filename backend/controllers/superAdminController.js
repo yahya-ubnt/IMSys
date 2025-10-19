@@ -47,6 +47,23 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get SUPER_ADMIN dashboard stats
+// @route   GET /api/super-admin/dashboard/stats
+// @access  Private/SuperAdmin
+const getSuperAdminDashboardStats = asyncHandler(async (req, res) => {
+  const totalTenants = await User.countDocuments({ roles: 'ADMIN_TENANT' });
+  const activeTenants = await User.countDocuments({ roles: 'ADMIN_TENANT', status: 'Active' });
+  const totalRouters = await MikrotikRouter.countDocuments({});
+  const totalUsers = await MikrotikUser.countDocuments({});
+
+  res.json({
+    totalTenants,
+    activeTenants,
+    totalRouters,
+    totalUsers,
+  });
+});
+
 // @desc    Get all tenants
 // @route   GET /api/superadmin/tenants
 // @access  Private/SuperAdmin
@@ -162,11 +179,86 @@ const deleteTenant = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Get router count per tenant
+// @route   GET /api/super-admin/dashboard/routers-per-tenant
+// @access  Private/SuperAdmin
+const getRoutersPerTenant = asyncHandler(async (req, res) => {
+  const routersPerTenant = await MikrotikRouter.aggregate([
+    {
+      $group: {
+        _id: '$tenantOwner',
+        routerCount: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'tenant',
+      },
+    },
+    {
+      $unwind: {
+        path: '$tenant',
+        preserveNullAndEmptyArrays: true // Keep tenants even if user is deleted
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        tenantName: { $ifNull: ['$tenant.fullName', 'Unknown Tenant'] },
+        routerCount: 1,
+      },
+    },
+  ]);
+  res.json(routersPerTenant);
+});
+
+// @desc    Get user count per package
+// @route   GET /api/super-admin/dashboard/users-by-package
+// @access  Private/SuperAdmin
+const getUsersByPackage = asyncHandler(async (req, res) => {
+  const usersByPackage = await MikrotikUser.aggregate([
+    {
+      $group: {
+        _id: '$package',
+        userCount: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: 'packages',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'packageDetails',
+      },
+    },
+    {
+        $unwind: {
+            path: '$packageDetails',
+            preserveNullAndEmptyArrays: true // Keep users even if package is deleted
+        }
+    },
+    {
+      $project: {
+        _id: 0,
+        packageName: { $ifNull: ['$packageDetails.name', 'Unknown Package'] },
+        userCount: 1,
+      },
+    },
+  ]);
+  res.json(usersByPackage);
+});
+
 module.exports = {
   getDashboardStats,
+  getSuperAdminDashboardStats,
   getTenants,
   createTenant,
   getTenantById,
   updateTenant,
   deleteTenant,
+  getRoutersPerTenant,
+  getUsersByPackage,
 };

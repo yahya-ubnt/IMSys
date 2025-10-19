@@ -31,13 +31,17 @@ export interface MikrotikUser {
   package: { _id: string; name: string; price: number };
   expiryDate: string;
   isOnline: boolean;
+  tenant?: {
+    _id: string;
+    fullName: string;
+  };
 }
 
 export default function MikrotikUsersPage() {
   const [users, setUsers] = useState<MikrotikUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, isLoggingOut } = useAuth();
+  const { token, user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -102,7 +106,7 @@ export default function MikrotikUsersPage() {
     }
   };
 
-  const columns = getColumns((id) => setDeleteCandidateId(id));
+  const columns = useMemo(() => getColumns(user, (id) => setDeleteCandidateId(id)), [user]);
 
   const filteredUsers = useMemo(() => users.filter(user => {
     const userStatus = getMikrotikUserStatus(user).status.toLowerCase();

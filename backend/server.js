@@ -92,7 +92,7 @@ app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 
 
 // app.use('/api/providers', require('./routes/providerRoutes')); // Add provider routes

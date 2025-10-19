@@ -7,4 +7,8 @@ export interface Package {
   status: 'active' | 'disabled';
   profile?: string;
   rateLimit?: string;
+  tenant?: {
+    _id: string;
+    fullName: string;
+  };
 }

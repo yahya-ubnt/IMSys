@@ -24,6 +24,10 @@ interface MikrotikRouter {
   location?: string;
   isOnline: boolean;
   lastChecked?: string;
+  tenant?: {
+    _id: string;
+    fullName: string;
+  };
 }
 
 // --- Main Component ---
@@ -31,7 +35,7 @@ export default function MikrotikRoutersPage() {
   const [routers, setRouters] = useState<MikrotikRouter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, isLoggingOut } = useAuth();
+  const { token, user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
@@ -80,7 +84,7 @@ export default function MikrotikRoutersPage() {
     }
   };
 
-  const columns = getColumns((id) => setDeleteCandidateId(id));
+  const columns = useMemo(() => getColumns(user, (id) => setDeleteCandidateId(id)), [user]);
 
   const filteredRouters = useMemo(() =>
     routers.filter(router =>
