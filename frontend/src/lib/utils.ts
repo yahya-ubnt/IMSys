@@ -24,10 +24,9 @@ export function formatBytes(bytes: number, decimals = 2): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-export function formatSpeed(bytesPerSecond: number, decimals = 2): string {
-  if (bytesPerSecond === 0) return '0 bps';
+export function formatSpeed(bitsPerSecond: number, decimals = 2): string {
+  if (bitsPerSecond === 0) return '0 bps';
 
-  const bitsPerSecond = bytesPerSecond * 8;
   const k = 1000;
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['bps', 'kbps', 'Mbps', 'Gbps', 'Tbps'];

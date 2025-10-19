@@ -637,18 +637,38 @@ const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
     let trafficData = { rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0 };
 
     if (user.serviceType === 'pppoe') {
+      console.log('Fetching traffic for PPPoE user:', user.username);
       const pppActiveUsers = await client.write('/ppp/active/print', [
-        '=.proplist=name,bytes'
+        '=.proplist=name,interface'
       ]);
+      console.log('PPP Active Users:', pppActiveUsers);
       const activeUser = pppActiveUsers.find(u => u.name === user.username);
-      if (activeUser && activeUser.bytes) {
-        const [rxBytes, txBytes] = activeUser.bytes.split('/');
-        trafficData.rxBytes = parseInt(rxBytes, 10);
-        trafficData.txBytes = parseInt(txBytes, 10);
+      if (activeUser) {
+        console.log('Active User Found:', activeUser);
+        const interfaceName = activeUser.interface;
+        const monitor = await client.write('/interface/monitor-traffic', [
+          `=interface=${interfaceName}`,
+          '=once='
+        ]);
+        console.log('Monitor Result:', monitor);
+        if (monitor.length > 0) {
+          trafficData.rxRate = parseInt(monitor[0]['rx-bits-per-second'], 10) / 8;
+          trafficData.txRate = parseInt(monitor[0]['tx-bits-per-second'], 10) / 8;
+        }
+      } else {
+        console.log('Active user not found');
       }
     } else if (user.serviceType === 'static') {
-      const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+      console.log('Fetching traffic for static user:', user.username);
+      const simpleQueues = await client.write('/queue/simple/print', [
+        `?name=${user.username}`,
+        '=.proplist=rate,bytes'
+      ]);
+      console.log('Simple Queues:', simpleQueues);
       if (simpleQueues.length > 0) {
+        const [rxRate, txRate] = simpleQueues[0].rate.split('/');
+        trafficData.rxRate = parseInt(rxRate, 10);
+        trafficData.txRate = parseInt(txRate, 10);
         const [rxBytes, txBytes] = simpleQueues[0].bytes.split('/');
         trafficData.rxBytes = parseInt(rxBytes, 10);
         trafficData.txBytes = parseInt(txBytes, 10);
