@@ -4,8 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { Topbar } from '@/components/topbar';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, ToggleLeft, ToggleRight, Building2, CheckCircle, XCircle, BarChart2, Users } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusCircle, Building2, CheckCircle, XCircle, BarChart2, Users, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -32,6 +31,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { getColumns } from './columns';
+import { DataTable } from '@/components/data-table';
 
 // --- Interface Definitions ---
 interface Tenant {
@@ -58,6 +59,7 @@ export default function TenantManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -169,6 +171,14 @@ export default function TenantManagementPage() {
     } catch (err: unknown) { setError(err instanceof Error ? err.message : 'An unknown error occurred'); }
   };
 
+  const columns = useMemo(() => getColumns(handleEditClick, handleSuspendClick, handleDeleteClick), []);
+
+  const filteredTenants = useMemo(() =>
+    tenants.filter(tenant =>
+      tenant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tenant.email.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [tenants, searchTerm]);
+
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
   if (loading && !tenants.length) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading...</div>;
@@ -211,26 +221,24 @@ export default function TenantManagementPage() {
           </Card>
         </motion.div>
 
-        <div className="rounded-lg border border-zinc-700 bg-zinc-800/50 overflow-hidden">
-          <Table>
-            <TableHeader><TableRow className="border-zinc-700"><TableHead className="text-white">Tenant Name</TableHead><TableHead className="text-white">Email</TableHead><TableHead className="text-white">Phone</TableHead><TableHead className="text-white">Status</TableHead><TableHead className="text-white">Actions</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {loading ? <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow> : error ? <TableRow><TableCell colSpan={5} className="text-center text-red-500">{error}</TableCell></TableRow> : tenants.map((tenant) => (
-                <TableRow key={tenant._id} className="border-zinc-800">
-                  <TableCell>{tenant.fullName}</TableCell>
-                  <TableCell>{tenant.email}</TableCell>
-                  <TableCell>{tenant.phone}</TableCell>
-                  <TableCell><Badge variant={tenant.status === 'Active' ? 'success' : 'destructive'}>{tenant.status}</Badge></TableCell>
-                  <TableCell className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => handleSuspendClick(tenant)}>{tenant.status === 'Active' ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}</Button>
-                    <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => handleEditClick(tenant)}><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="hover:bg-zinc-700 text-red-500" onClick={() => handleDeleteClick(tenant)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+          <Card className="bg-transparent border-none">
+            <CardHeader className="p-4 border-b border-zinc-800">
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+                  />
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <DataTable columns={columns} data={filteredTenants} />
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Edit Tenant Modal */}
         {selectedTenant && <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
