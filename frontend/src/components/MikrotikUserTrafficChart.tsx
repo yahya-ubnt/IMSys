@@ -93,7 +93,7 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
       const errorMessage = (err instanceof Error) ? err.message : "An unknown error occurred.";
       setError(errorMessage);
       toast({ title: "Traffic Monitoring Error", description: errorMessage, variant: "destructive" });
-      setIsMonitoring(false);
+      setIsMonitoring(false); // Stop monitoring on error
     } finally {
       setIsLoading(false);
     }

@@ -637,9 +637,12 @@ const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
     let trafficData = { rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0 };
 
     if (user.serviceType === 'pppoe') {
-      const pppActive = await client.write('/ppp/active/print', [`?name=${user.username}`]);
-      if (pppActive.length > 0) {
-        const [rxBytes, txBytes] = pppActive[0].bytes.split('/');
+      const pppActiveUsers = await client.write('/ppp/active/print', [
+        '=.proplist=name,bytes'
+      ]);
+      const activeUser = pppActiveUsers.find(u => u.name === user.username);
+      if (activeUser && activeUser.bytes) {
+        const [rxBytes, txBytes] = activeUser.bytes.split('/');
         trafficData.rxBytes = parseInt(rxBytes, 10);
         trafficData.txBytes = parseInt(txBytes, 10);
       }
