@@ -45,6 +45,30 @@ const importData = async () => {
     await adminTenant.save();
     console.log('ADMIN_TENANT user created.');
 
+    console.log('Creating Test Admin user...');
+    const testAdmin = await User.create({
+      fullName: 'Test Admin',
+      email: 'testadmin@example.com',
+      phone: '+254712345678',
+      password: 'testpassword',
+      roles: ['ADMIN_TENANT'],
+    });
+    testAdmin.tenantOwner = testAdmin._id;
+    await testAdmin.save();
+    console.log('Test Admin user created.');
+
+    console.log('Creating Another Admin user...');
+    const anotherAdmin = await User.create({
+      fullName: 'Another Admin',
+      email: 'anotheradmin@example.com',
+      phone: '+254787654321',
+      password: 'anotherpassword',
+      roles: ['ADMIN_TENANT'],
+    });
+    anotherAdmin.tenantOwner = anotherAdmin._id;
+    await anotherAdmin.save();
+    console.log('Another Admin user created.');
+
     console.log('Creating production router...');
     const router = await MikrotikRouter.create({
       user: adminTenant._id, // Associated with the ADMIN_TENANT

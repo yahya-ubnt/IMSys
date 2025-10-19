@@ -9,16 +9,29 @@ const { encrypt } = require('../utils/crypto'); // Import encrypt
 // @route   GET /api/settings/general
 // @access  Private
 const getGeneralSettings = asyncHandler(async (req, res) => {
+  console.log('User in getGeneralSettings:', req.user);
   let query = {};
   if (!req.user.roles.includes('SUPER_ADMIN')) {
     query.tenantOwner = req.user.tenantOwner;
   }
+  console.log('Query for settings:', query);
 
   let settings = await ApplicationSettings.findOne(query).select('-smtpSettings.pass'); // Exclude encrypted pass
+  console.log('Settings found:', settings);
 
   if (!settings && !req.user.roles.includes('SUPER_ADMIN')) {
+    console.log('No settings found, creating default ones...');
     // If no settings exist for this user, create default ones
-    settings = await ApplicationSettings.create({ tenantOwner: req.user.tenantOwner });
+    try {
+      settings = await ApplicationSettings.create({ 
+        tenantOwner: req.user.tenantOwner,
+      });
+      console.log('Default settings created:', settings);
+    } catch (error) {
+      console.error('Error creating default settings:', error);
+      res.status(500).json({ message: 'Error creating default settings' });
+      return;
+    }
   }
   res.json(settings);
 });
