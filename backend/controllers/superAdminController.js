@@ -64,6 +64,64 @@ const getSuperAdminDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get tenant stats
+// @route   GET /api/super-admin/tenants/stats
+// @access  Private/SuperAdmin
+const getTenantStats = asyncHandler(async (req, res) => {
+  const totalTenants = await User.countDocuments({ roles: 'ADMIN_TENANT' });
+  const activeTenants = await User.countDocuments({ roles: 'ADMIN_TENANT', status: 'Active' });
+  const suspendedTenants = await User.countDocuments({ roles: 'ADMIN_TENANT', status: 'Suspended' });
+
+  res.json({
+    totalTenants,
+    activeTenants,
+    suspendedTenants,
+  });
+});
+
+// @desc    Get monthly tenant growth
+// @route   GET /api/super-admin/tenants/monthly-growth/:year
+// @access  Private/SuperAdmin
+const getMonthlyTenantGrowth = asyncHandler(async (req, res) => {
+  const year = parseInt(req.params.year, 10);
+
+  const monthlyGrowth = await User.aggregate([
+    {
+      $match: {
+        roles: 'ADMIN_TENANT',
+        createdAt: {
+          $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+          $lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: 1 },
+    },
+  ]);
+
+  // Format data for the chart
+  const formattedData = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    total: 0,
+  }));
+
+  monthlyGrowth.forEach(item => {
+    const monthIndex = item._id - 1;
+    if (monthIndex >= 0 && monthIndex < 12) {
+      formattedData[monthIndex].total = item.count;
+    }
+  });
+
+  res.json(formattedData);
+});
+
 // @desc    Get all tenants
 // @route   GET /api/superadmin/tenants
 // @access  Private/SuperAdmin
@@ -254,6 +312,8 @@ const getUsersByPackage = asyncHandler(async (req, res) => {
 module.exports = {
   getDashboardStats,
   getSuperAdminDashboardStats,
+  getTenantStats,
+  getMonthlyTenantGrowth,
   getTenants,
   createTenant,
   getTenantById,
