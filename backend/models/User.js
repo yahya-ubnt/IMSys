@@ -24,7 +24,7 @@ const UserSchema = mongoose.Schema(
     },
     roles: [{
       type: String,
-      enum: ['SUPER_ADMIN', 'ADMIN_TENANT', 'STANDARD_USER'],
+      enum: ['SUPER_ADMIN', 'ADMIN_TENANT', 'USER'],
       required: true,
     }],
     tenantOwner: {

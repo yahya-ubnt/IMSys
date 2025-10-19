@@ -167,7 +167,7 @@ const createTenantUser = asyncHandler(async (req, res) => {
         email,
         password,
         phone,
-        roles: ['STANDARD_USER'],
+        roles: ['USER'],
         tenantOwner: req.user.tenantOwner,
     });
 
