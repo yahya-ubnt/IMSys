@@ -69,46 +69,46 @@ const importData = async () => {
     await anotherAdmin.save();
     console.log('Another Admin user created.');
 
-    console.log('Creating production router...');
-    const router = await MikrotikRouter.create({
-      user: adminTenant._id, // Associated with the ADMIN_TENANT
-      tenantOwner: adminTenant._id,
-      name: 'AMANI ESTATE MIK',
-      ipAddress: '10.10.10.1',
-      apiUsername: 'admin',
-      apiPassword: encrypt('0741554490#'),
-      apiPort: 8728,
-    });
-    console.log('Production router created:', router.name);
+    // console.log('Creating production router...');
+    // const router = await MikrotikRouter.create({
+    //   user: adminTenant._id, // Associated with the ADMIN_TENANT
+    //   tenantOwner: adminTenant._id,
+    //   name: 'AMANI ESTATE MIK',
+    //   ipAddress: '10.10.10.1',
+    //   apiUsername: 'admin',
+    //   apiPassword: encrypt('0741554490#'),
+    //   apiPort: 8728,
+    // });
+    // console.log('Production router created:', router.name);
 
-    console.log('Creating test package...');
-    const testPackage = await Package.create({
-      user: adminTenant._id, // Associated with the ADMIN_TENANT
-      tenantOwner: adminTenant._id,
-      mikrotikRouter: router._id,
-      serviceType: 'pppoe',
-      name: 'Test Package',
-      price: 1000,
-      profile: 'Test Package',
-    });
-    console.log('Test package created:', testPackage.name);
+    // console.log('Creating test package...');
+    // const testPackage = await Package.create({
+    //   user: adminTenant._id, // Associated with the ADMIN_TENANT
+    //   tenantOwner: adminTenant._id,
+    //   mikrotikRouter: router._id,
+    //   serviceType: 'pppoe',
+    //   name: 'Test Package',
+    //   price: 1000,
+    //   profile: 'Test Package',
+    // });
+    // console.log('Test package created:', testPackage.name);
 
-    console.log('Creating test Mikrotik user...');
-    const mikrotikUser = await MikrotikUser.create({
-        user: adminTenant._id, // Associated with the ADMIN_TENANT
-        tenantOwner: adminTenant._id,
-        mikrotikRouter: router._id,
-        serviceType: 'pppoe',
-        package: testPackage._id,
-        username: 'testuser',
-        pppoePassword: 'password',
-        officialName: 'Test User',
-        mPesaRefNo: 'TESTUSER',
-        billingCycle: 'Monthly',
-        mobileNumber: '254708374149',
-        expiryDate: new Date(),
-    });
-    console.log('Test Mikrotik user created:', mikrotikUser.username);
+    // console.log('Creating test Mikrotik user...');
+    // const mikrotikUser = await MikrotikUser.create({
+    //     user: adminTenant._id, // Associated with the ADMIN_TENANT
+    //     tenantOwner: adminTenant._id,
+    //     mikrotikRouter: router._id,
+    //     serviceType: 'pppoe',
+    //     package: testPackage._id,
+    //     username: 'testuser',
+    //     pppoePassword: 'password',
+    //     officialName: 'Test User',
+    //     mPesaRefNo: 'TESTUSER',
+    //     billingCycle: 'Monthly',
+    //     mobileNumber: '254708374149',
+    //     expiryDate: new Date(),
+    // });
+    // console.log('Test Mikrotik user created:', mikrotikUser.username);
 
     console.log('Data Imported Successfully!');
     process.exit();
