@@ -173,81 +173,81 @@ module.exports = app; // For testing purposes
 
 app.use(errorHandler);
 
-// Monthly Bill Reset Cron Job
-cron.schedule('0 0 1 * *', async () => { // Runs at 00:00 on the 1st of every month
-  console.log('Running monthly bill reset job...');
-  const today = new Date();
-  const currentMonth = today.getMonth() + 1; // 1-indexed
-  const currentYear = today.getFullYear();
-
-  // Calculate previous month and year
-  let prevMonth = currentMonth - 1;
-  let prevYear = currentYear;
-  if (prevMonth === 0) {
-    prevMonth = 12;
-    prevYear -= 1;
-  }
-
-  try {
-    const tenants = await User.find({ roles: 'ADMIN_TENANT' });
-    for (const tenant of tenants) {
-      // Find unique recurring bill definitions from the previous month's bills for this tenant
-      const recurringBills = await Bill.aggregate([
-        {
-          $match: {
-            tenantOwner: tenant._id,
-            month: prevMonth,
-            year: prevYear,
-          }
-        },
-        {
-          $group: {
-            _id: {
-              name: '$name',
-              amount: '$amount',
-              dueDate: '$dueDate',
-              category: '$category',
-            },
-            description: { $first: '$description' } 
-          }
-        }
-      ]);
-
-      for (const recurringBill of recurringBills) {
-        const { name, amount, dueDate, category } = recurringBill._id;
-        const description = recurringBill.description;
-
-        // Check if a bill for this definition already exists for the current month
-        const existingBill = await Bill.findOne({
-          tenantOwner: tenant._id,
-          name,
-          category,
-          month: currentMonth,
-          year: currentYear,
-        });
-
-        if (!existingBill) {
-          // Create a new bill instance for the current month
-          await Bill.create({
-            tenantOwner: tenant._id,
-            name,
-            amount,
-            dueDate,
-            category,
-            description,
-            month: currentMonth,
-            year: currentYear,
-            status: 'Not Paid',
-          });
-          console.log(`Created new bill for ${name} (${category}) for ${currentMonth}/${currentYear} for tenant ${tenant._id}`);
-        }
-      }
-    }
-    console.log('Monthly bill reset job completed successfully.');
-  } catch (error) {
-    console.error('Error running monthly bill reset job:', error);
-  }
-});
+// Monthly Bill Reset Cron Job (DEPRECATED - Replaced by subscription-based billing)
+// cron.schedule('0 0 1 * *', async () => { // Runs at 00:00 on the 1st of every month
+//   console.log('Running monthly bill reset job...');
+//   const today = new Date();
+//   const currentMonth = today.getMonth() + 1; // 1-indexed
+//   const currentYear = today.getFullYear();
+//
+//   // Calculate previous month and year
+//   let prevMonth = currentMonth - 1;
+//   let prevYear = currentYear;
+//   if (prevMonth === 0) {
+//     prevMonth = 12;
+//     prevYear -= 1;
+//   }
+//
+//   try {
+//     const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+//     for (const tenant of tenants) {
+//       // Find unique recurring bill definitions from the previous month's bills for this tenant
+//       const recurringBills = await Bill.aggregate([
+//         {
+//           $match: {
+//             tenantOwner: tenant._id,
+//             month: prevMonth,
+//             year: prevYear,
+//           }
+//         },
+//         {
+//           $group: {
+//             _id: {
+//               name: '$name',
+//               amount: '$amount',
+//               dueDate: '$dueDate',
+//               category: '$category',
+//             },
+//             description: { $first: '$description' } 
+//           }
+//         }
+//       ]);
+//
+//       for (const recurringBill of recurringBills) {
+//         const { name, amount, dueDate, category } = recurringBill._id;
+//         const description = recurringBill.description;
+//
+//         // Check if a bill for this definition already exists for the current month
+//         const existingBill = await Bill.findOne({
+//           tenantOwner: tenant._id,
+//           name,
+//           category,
+//           month: currentMonth,
+//           year: currentYear,
+//         });
+//
+//         if (!existingBill) {
+//           // Create a new bill instance for the current month
+//           await Bill.create({
+//             tenantOwner: tenant._id,
+//             name,
+//             amount,
+//             dueDate,
+//             category,
+//             description,
+//             month: currentMonth,
+//             year: currentYear,
+//             status: 'Not Paid',
+//           });
+//           console.log(`Created new bill for ${name} (${category}) for ${currentMonth}/${currentYear} for tenant ${tenant._id}`);
+//         }
+//       }
+//     }
+//     console.log('Monthly bill reset job completed successfully.');
+//   } catch (error) {
+//     console.error('Error running monthly bill reset job:', error);
+//   }
+// });
 
 // SMS Expiry Notification Cron Job
 cron.schedule('0 0 * * *', async () => { // Runs daily at 00:00

@@ -12,10 +12,10 @@ This section details the cron jobs that are currently active on the production s
 
 ### 2.1. Automated Monthly Billing
 
--   **Task:** Generates a `Debit` transaction in each user's wallet for their monthly subscription fee.
--   **Script:** `/home/mtk/Downloads/ISP MANAGEMENT SYs/backend/scripts/generateMonthlyDebits.js`
+-   **Task:** Generates a `Debit` transaction in each user's wallet for their monthly subscription fee based on their active subscription.
+-   **Script:** `/home/mtk/Downloads/ISP MANAGEMENT SYs/backend/scripts/generateBillsFromSubscriptions.js`
 -   **Schedule:** `5 0 * * *` (Every day at 12:05 AM)
--   **Purpose:** This is the core of the automated billing cycle. It ensures that every user is charged for their service on time, creating the necessary transaction for the payment statistics feature to work. The script is resilient and will "catch up" on any missed days if the server is down.
+-   **Purpose:** This is the core of the automated billing cycle. It reads from the Subscription model to ensure that every user is charged the correct, locked-in price for their service on time.
 -   **Log File:** `/home/mtk/Downloads/ISP MANAGEMENT SYs/backend/logs/billing.log`
 
 ### 2.2. Automated Disconnection of Expired Users
