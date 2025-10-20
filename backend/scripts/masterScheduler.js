@@ -3,6 +3,7 @@ const connectDB = require('../config/db');
 const ScheduledTask = require('../models/ScheduledTask');
 const User = require('../models/User');
 const cron = require('node-cron');
+const { Cron } = require('croner');
 const { spawn } = require('child_process');
 const path = require('path');
 const { performRouterStatusCheck } = require('../services/routerMonitoringService');
@@ -56,10 +57,18 @@ const masterScheduler = async () => {
       const tasks = await ScheduledTask.find({ isEnabled: true });
       
       for (const task of tasks) {
-        if (cron.validate(task.schedule) && cron.match(task.schedule, new Date())) {
-          console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenantOwner} is due. Executing...`);
-          
-          executeTask(task);
+        if (cron.validate(task.schedule)) {
+          try {
+            const job = new Cron(task.schedule);
+            const now = new Date();
+            const nextRun = job.nextRun(now);
+            if (nextRun && nextRun.getTime() >= now.getTime() && nextRun.getTime() < now.getTime() + 60000) {
+              console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenantOwner} is due. Executing...`);
+              executeTask(task);
+            }
+          } catch (e) {
+            console.error(`[${new Date().toISOString()}] Error processing task '${task.name}':`, e);
+          }
         }
       }
     } catch (error) {

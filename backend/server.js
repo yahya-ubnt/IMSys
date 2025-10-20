@@ -249,97 +249,97 @@ app.use(errorHandler);
 //   }
 // });
 
-// SMS Expiry Notification Cron Job
-cron.schedule('0 0 * * *', async () => { // Runs daily at 00:00
-  console.log('Running Expiry Notification Job...');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Normalize to start of day
-
-  try {
-    const tenants = await User.find({ roles: 'ADMIN_TENANT' });
-    for (const tenant of tenants) {
-      const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenantOwner: tenant._id })
-        .populate('smsTemplate')
-        .populate('whatsAppTemplate');
-
-      for (const schedule of activeSchedules) {
-        const { days, timing, smsTemplate, whatsAppTemplate } = schedule;
-
-        if (!smsTemplate) {
-          console.warn(`Skipping schedule "${schedule.name}" because its SMS template is missing.`);
-          continue;
-        }
-
-        const targetDate = new Date(today);
-        if (timing === 'Before') {
-          targetDate.setDate(today.getDate() + days);
-        } else if (timing === 'After') {
-          targetDate.setDate(today.getDate() - days);
-        } else {
-          continue;
-        }
-
-        const usersToNotify = await MikrotikUser.find({
-          tenantOwner: tenant._id,
-          expiryDate: {
-            $gte: targetDate,
-            $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
-          }
-        });
-
-        for (const user of usersToNotify) {
-          const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
-          
-          let personalizedMessage;
-          const templateData = {
-              customer_name: user.officialName || 'Customer',
-              reference_number: user.mPesaRefNo || '',
-              customer_phone: user.mobileNumber || '',
-              transaction_amount: user.package.price || '',
-              expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
-          };
-
-          if (useWhatsApp) {
-            const templateParameters = {
-              '1': templateData.customer_name,
-              '2': templateData.transaction_amount,
-              '3': templateData.expiry_date,
-            };
-
-            const whatsappResult = await sendWhatsAppMessage(user.tenantOwner, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
-            
-            await WhatsAppLog.create({
-              mobileNumber: user.mobileNumber,
-              templateUsed: whatsAppTemplate._id,
-              status: whatsappResult.success ? 'Queued' : 'Failed',
-              providerResponse: whatsappResult.message,
-              tenantOwner: user.tenantOwner,
-              variablesUsed: templateParameters,
-            });
-
-          } else {
-            personalizedMessage = smsTemplate.messageBody;
-            for (const key in templateData) {
-                const placeholder = new RegExp(`{{${key}}}`, 'g');
-                personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
-            }
-
-            const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, personalizedMessage);
-
-            await SmsLog.create({
-              mobileNumber: user.mobileNumber,
-              message: personalizedMessage,
-              messageType: 'Expiry Alert',
-              smsStatus: smsResult.success ? 'Success' : 'Failed',
-              providerResponse: smsResult.message,
-              tenantOwner: user.tenantOwner,
-            });
-          }
-        }
-      }
-    }
-    console.log('Expiry Notification Job completed successfully.');
-  } catch (error) {
-    console.error('Error running Expiry Notification Job:', error);
-  }
-});
+// SMS Expiry Notification Cron Job (DEPRECATED - Replaced by master scheduler task)
+// cron.schedule('0 0 * * *', async () => { // Runs daily at 00:00
+//   console.log('Running Expiry Notification Job...');
+//   const today = new Date();
+//   today.setHours(0, 0, 0, 0); // Normalize to start of day
+//
+//   try {
+//     const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+//     for (const tenant of tenants) {
+//       const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenantOwner: tenant._id })
+//         .populate('smsTemplate')
+//         .populate('whatsAppTemplate');
+//
+//       for (const schedule of activeSchedules) {
+//         const { days, timing, smsTemplate, whatsAppTemplate } = schedule;
+//
+//         if (!smsTemplate) {
+//           console.warn(`Skipping schedule "${schedule.name}" because its SMS template is missing.`);
+//           continue;
+//         }
+//
+//         const targetDate = new Date(today);
+//         if (timing === 'Before') {
+//           targetDate.setDate(today.getDate() + days);
+//         } else if (timing === 'After') {
+//           targetDate.setDate(today.getDate() - days);
+//         } else {
+//           continue;
+//         }
+//
+//         const usersToNotify = await MikrotikUser.find({
+//           tenantOwner: tenant._id,
+//           expiryDate: {
+//             $gte: targetDate,
+//             $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+//           }
+//         });
+//
+//         for (const user of usersToNotify) {
+//           const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
+//           
+//           let personalizedMessage;
+//           const templateData = {
+//               customer_name: user.officialName || 'Customer',
+//               reference_number: user.mPesaRefNo || '',
+//               customer_phone: user.mobileNumber || '',
+//               transaction_amount: user.package.price || '',
+//               expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
+//           };
+//
+//           if (useWhatsApp) {
+//             const templateParameters = {
+//               '1': templateData.customer_name,
+//               '2': templateData.transaction_amount,
+//               '3': templateData.expiry_date,
+//             };
+//
+//             const whatsappResult = await sendWhatsAppMessage(user.tenantOwner, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
+//             
+//             await WhatsAppLog.create({
+//               mobileNumber: user.mobileNumber,
+//               templateUsed: whatsAppTemplate._id,
+//               status: whatsappResult.success ? 'Queued' : 'Failed',
+//               providerResponse: whatsappResult.message,
+//               tenantOwner: user.tenantOwner,
+//               variablesUsed: templateParameters,
+//             });
+//
+//           } else {
+//             personalizedMessage = smsTemplate.messageBody;
+//             for (const key in templateData) {
+//                 const placeholder = new RegExp(`{{${key}}}`, 'g');
+//                 personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+//             }
+//
+//             const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, personalizedMessage);
+//
+//             await SmsLog.create({
+//               mobileNumber: user.mobileNumber,
+//               message: personalizedMessage,
+//               messageType: 'Expiry Alert',
+//               smsStatus: smsResult.success ? 'Success' : 'Failed',
+//               providerResponse: smsResult.message,
+//               tenantOwner: user.tenantOwner,
+//             });
+//           }
+//         }
+//       }
+//     }
+//     console.log('Expiry Notification Job completed successfully.');
+//   } catch (error) {
+//     console.error('Error running Expiry Notification Job:', error);
+//   }
+// });
