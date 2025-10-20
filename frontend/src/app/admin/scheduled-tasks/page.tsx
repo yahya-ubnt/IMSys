@@ -76,8 +76,14 @@ export default function ScheduledTasksPage() {
     }, [token, toast]);
 
     useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks]);
+        if (token) {
+            fetchTasks();
+        } else {
+            // Clear tasks and set loading to false if no token (logged out)
+            setTasks([]);
+            setLoading(false);
+        }
+    }, [fetchTasks, token]);
 
     const handleToggle = async (task: ScheduledTask) => {
         try {

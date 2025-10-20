@@ -10,7 +10,6 @@ const ScheduledTaskSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     description: {
@@ -45,5 +44,7 @@ const ScheduledTaskSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+ScheduledTaskSchema.index({ name: 1, tenantOwner: 1 }, { unique: true });
 
 module.exports = mongoose.model('ScheduledTask', ScheduledTaskSchema);

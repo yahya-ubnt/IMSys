@@ -8,10 +8,10 @@ const {
   deleteScheduledTask,
   runScheduledTask,
 } = require('../controllers/scheduledTaskController');
-const { protect, isSuperAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdmin, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
 router.route('/')
-  .get(protect, isSuperAdmin, getScheduledTasks)
+  .get(protect, isSuperAdminOrAdminTenant, getScheduledTasks)
   .post(
     [protect, isSuperAdmin],
     [

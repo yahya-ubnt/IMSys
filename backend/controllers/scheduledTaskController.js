@@ -31,7 +31,15 @@ const executeScript = (scriptPath) => {
 // @route   GET /api/scheduled-tasks
 // @access  Private/Admin
 const getScheduledTasks = asyncHandler(async (req, res) => {
-  const tasks = await ScheduledTask.find({ tenantOwner: req.user.tenantOwner }).sort({ createdAt: 'desc' });
+  let filter = {};
+  if (req.user.roles.includes('SUPER_ADMIN')) {
+    // Super Admin sees all tasks
+    filter = {};
+  } else {
+    // Admin Tenant sees only their own tasks
+    filter = { tenantOwner: req.user.tenantOwner };
+  }
+  const tasks = await ScheduledTask.find(filter).sort({ createdAt: 'desc' });
   res.status(200).json(tasks);
 });
 
