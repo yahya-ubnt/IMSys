@@ -23,7 +23,7 @@ router.route('/')
   );
 
 router.route('/:id')
-  .put(protect, isSuperAdmin, updateScheduledTask)
+  .put(protect, isSuperAdminOrAdminTenant, updateScheduledTask)
   .delete(protect, isSuperAdmin, deleteScheduledTask);
 
 router.route('/:id/run')
