@@ -35,62 +35,67 @@ const generateBillsFromSubscriptions = async () => {
   }
 
   try {
-    const subscriptions = await Subscription.find({
+    const cursor = Subscription.find({
       tenantOwner: tenantId,
       status: 'Active',
-    }).populate('mikrotikUser');
+    }).populate('mikrotikUser').cursor();
 
-    console.log(`Found ${subscriptions.length} active subscriptions for this tenant.`);
+    console.log('Processing active subscriptions for this tenant...');
 
-    for (const sub of subscriptions) {
-      if (!sub.mikrotikUser) {
-        console.log(`Skipping subscription ${sub._id} - No associated Mikrotik user found.`);
-        continue;
+    await cursor.eachAsync(async (sub) => {
+      try {
+        if (!sub.mikrotikUser) {
+          console.log(`Skipping subscription ${sub._id} - No associated Mikrotik user found.`);
+          return;
+        }
+
+        const cycleStartDate = getBillingCycleStartDate(sub.billingCycle);
+
+        // Check if a bill has already been generated for this cycle
+        const existingDebit = await WalletTransaction.findOne({
+          mikrotikUser: sub.mikrotikUser._id,
+          type: 'Debit',
+          source: 'Monthly Bill',
+          createdAt: { $gte: cycleStartDate },
+        });
+
+        if (existingDebit) {
+          console.log(`Skipping user ${sub.mikrotikUser.username}. A bill has already been generated for this cycle.`);
+          return;
+        }
+
+        console.log(`Generating bill for ${sub.mikrotikUser.username}...`);
+
+        const debitAmount = sub.amount;
+        const user = await MikrotikUser.findById(sub.mikrotikUser._id);
+        const newBalance = user.walletBalance - debitAmount;
+
+        // Create the debit transaction
+        await WalletTransaction.create({
+          mikrotikUser: user._id,
+          tenantOwner: user.tenantOwner,
+          transactionId: `DEBIT-${Date.now()}-${user.username}`,
+          type: 'Debit',
+          amount: debitAmount,
+          source: 'Monthly Bill',
+          balanceAfter: newBalance,
+          comment: `Subscription charge for ${sub.name}.`,
+        });
+
+        // Update the user's wallet balance
+        user.walletBalance = newBalance;
+        await user.save();
+
+        console.log(`Successfully generated debit of KES ${debitAmount} for ${user.username}. New balance: KES ${newBalance}.`);
+      } catch (userError) {
+        console.error(`Failed to process bill for user ${sub.mikrotikUser?.username || sub._id}. Error:`, userError);
+        // This error is logged, and the loop will continue with the next user.
       }
-
-      const cycleStartDate = getBillingCycleStartDate(sub.billingCycle);
-
-      // Check if a bill has already been generated for this cycle
-      const existingDebit = await WalletTransaction.findOne({
-        mikrotikUser: sub.mikrotikUser._id,
-        type: 'Debit',
-        source: 'Monthly Bill',
-        createdAt: { $gte: cycleStartDate },
-      });
-
-      if (existingDebit) {
-        console.log(`Skipping user ${sub.mikrotikUser.username}. A bill has already been generated for this cycle.`);
-        continue;
-      }
-
-      console.log(`Generating bill for ${sub.mikrotikUser.username}...`);
-
-      const debitAmount = sub.amount;
-      const user = await MikrotikUser.findById(sub.mikrotikUser._id);
-      const newBalance = user.walletBalance - debitAmount;
-
-      // Create the debit transaction
-      await WalletTransaction.create({
-        mikrotikUser: user._id,
-        tenantOwner: user.tenantOwner,
-        transactionId: `DEBIT-${Date.now()}-${user.username}`,
-        type: 'Debit',
-        amount: debitAmount,
-        source: 'Monthly Bill',
-        balanceAfter: newBalance,
-        comment: `Subscription charge for ${sub.name}.`,
-      });
-
-      // Update the user's wallet balance
-      user.walletBalance = newBalance;
-      await user.save();
-
-      console.log(`Successfully generated debit of KES ${debitAmount} for ${user.username}. New balance: KES ${newBalance}.`);
-    }
+    });
 
     console.log('Subscription-based bill generation process completed.');
   } catch (error) {
-    console.error('An error occurred during the bill generation process:', error);
+    console.error('A critical error occurred during the bill generation process:', error);
   } finally {
     // Close the database connection
     mongoose.connection.close();

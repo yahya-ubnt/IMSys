@@ -29,21 +29,16 @@ async function disconnectExpiredClients() {
         const currentDate = new Date();
         currentDate.setHours(0, 0, 0, 0); // Set to beginning of today for comparison
 
-        // 1. Identify Expired Clients from MongoDB
-        const expiredUsers = await MikrotikUser.find({
+        // 1. Identify and process expired clients from MongoDB using a cursor
+        console.log(`[${new Date().toISOString()}] Searching for expired and unsuspended clients for this tenant...`);
+
+        const cursor = MikrotikUser.find({
             tenantOwner: tenantId,
             expiryDate: { $lte: currentDate },
             isSuspended: false,
-        }).populate('mikrotikRouter'); // Populate router details to get connection info
+        }).populate('mikrotikRouter').cursor(); // Use a cursor for scalability
 
-        if (expiredUsers.length === 0) {
-            console.log(`[${new Date().toISOString()}] No expired and unsuspended clients found in the database for this tenant.`);
-            return;
-        }
-
-        console.log(`[${new Date().toISOString()}] Found ${expiredUsers.length} expired and unsuspended clients in the database for this tenant.`);
-
-        for (const user of expiredUsers) {
+        await cursor.eachAsync(async (user) => {
             console.log(`[${new Date().toISOString()}] Processing user: ${user.username} (ID: ${user._id})`);
 
             let connection;
@@ -52,7 +47,7 @@ async function disconnectExpiredClients() {
                 const router = user.mikrotikRouter;
                 if (!router) {
                     console.error(`[${new Date().toISOString()}] Error: MikroTik router not found for user ${user.username}. Skipping.`);
-                    continue;
+                    return; // Use return instead of continue in eachAsync
                 }
 
                 connection = new RouterOSAPI({
@@ -118,7 +113,9 @@ async function disconnectExpiredClients() {
                     console.log(`[${new Date().toISOString()}] Disconnected from MikroTik router for user ${user.username}.`);
                 }
             }
-        }
+        });
+
+        console.log(`[${new Date().toISOString()}] Finished processing all found expired users.`);
 
     } catch (error) {
         console.error(`[${new Date().toISOString()}] Script failed:`, error);

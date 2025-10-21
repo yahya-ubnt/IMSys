@@ -95,6 +95,12 @@ const ApplicationSettingsSchema = mongoose.Schema(
       user: { type: String, default: "" },
       pass: { type: String, default: "" }, // Encrypted
       from: { type: String, default: "" }
+    },
+    logRetentionDays: {
+      sms: { type: Number, default: 180 },
+      diagnostic: { type: Number, default: 90 },
+      userDowntime: { type: Number, default: 180 },
+      traffic: { type: Number, default: 60 },
     }
   },
   {

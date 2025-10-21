@@ -44,72 +44,83 @@ const sendExpiryNotifications = async () => {
           expiryDate: timing === 'Before' ? { $gte: today, $lte: searchWindow } : { $gte: searchWindow, $lte: today },
         };
 
-        const usersToConsider = await MikrotikUser.find(query).populate('package');
-        if (usersToConsider.length === 0) {
-          continue;
-        }
+        console.log(`Processing users for schedule "${schedule.name}"...`);
+        const userCursor = MikrotikUser.find(query).populate('package').cursor();
 
-        // 2. Find users who have already been notified for this specific schedule
-        const notifiedUserIds = (await NotificationLog.find({
-          mikrotikUser: { $in: usersToConsider.map(u => u._id) },
-          smsExpirySchedule: schedule._id,
-        })).map(log => log.mikrotikUser.toString());
+        await userCursor.eachAsync(async (user) => {
+          try {
+            // 2. Check if user has already been notified for this specific schedule
+            const alreadyNotified = await NotificationLog.findOne({
+              mikrotikUser: user._id,
+              smsExpirySchedule: schedule._id,
+            });
 
-        // 3. Filter out the notified users
-        const usersToNotify = usersToConsider.filter(user => !notifiedUserIds.includes(user._id.toString()));
-
-        console.log(`Found ${usersToNotify.length} users to notify for schedule "${schedule.name}".`);
-
-        for (const user of usersToNotify) {
-          // 4. Dynamic message logic
-          const daysRemaining = Math.round((user.expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-
-          const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
-          
-          let personalizedMessage;
-          const templateData = {
-              customer_name: user.officialName || 'Customer',
-              reference_number: user.mPesaRefNo || '',
-              customer_phone: user.mobileNumber || '',
-              transaction_amount: user.package ? user.package.price : '',
-              expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
-              days_remaining: daysRemaining, // The new dynamic placeholder
-          };
-
-          if (useWhatsApp) {
-            // Assuming WhatsApp templates are configured with a numeric parameter for days_remaining
-            const templateParameters = {
-              '1': templateData.customer_name,
-              '2': templateData.transaction_amount,
-              '3': templateData.expiry_date,
-              '4': templateData.days_remaining.toString(),
-            };
-
-            const whatsappResult = await sendWhatsAppMessage(user.tenantOwner, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
-            
-            await WhatsAppLog.create({ /* ... logging ... */ });
-
-          } else {
-            personalizedMessage = smsTemplate.messageBody;
-            for (const key in templateData) {
-                const placeholder = new RegExp(`{{${key}}}`, 'g');
-                personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+            // 3. If not already notified, proceed
+            if (alreadyNotified) {
+              return; // Skip to next user
             }
 
-            const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, personalizedMessage);
+            console.log(`Preparing to notify user ${user.username} for schedule "${schedule.name}".`);
 
-            await SmsLog.create({ /* ... logging ... */ });
+            // 4. Dynamic message logic
+            const daysRemaining = Math.round((user.expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+            const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
+            
+            const templateData = {
+                customer_name: user.officialName || 'Customer',
+                reference_number: user.mPesaRefNo || '',
+                customer_phone: user.mobileNumber || '',
+                transaction_amount: user.package ? user.package.price : '',
+                expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
+                days_remaining: daysRemaining,
+            };
+
+            if (useWhatsApp) {
+              const templateParameters = {
+                '1': templateData.customer_name,
+                '2': templateData.transaction_amount,
+                '3': templateData.expiry_date,
+                '4': templateData.days_remaining.toString(),
+              };
+              const whatsappResult = await sendWhatsAppMessage(user.tenantOwner, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
+              await WhatsAppLog.create({
+                mobileNumber: user.mobileNumber,
+                message: `WhatsApp template sent: ${whatsAppTemplate.name}`,
+                status: whatsappResult.success ? 'Success' : 'Failed',
+                providerResponse: whatsappResult.message,
+                tenantOwner: user.tenantOwner,
+              });
+            } else {
+              let personalizedMessage = smsTemplate.messageBody;
+              for (const key in templateData) {
+                  const placeholder = new RegExp(`{{${key}}}`, 'g');
+                  personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+              }
+              const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, personalizedMessage);
+              await SmsLog.create({
+                mobileNumber: user.mobileNumber,
+                message: personalizedMessage,
+                messageType: 'Expiry Alert',
+                smsStatus: smsResult.success ? 'Success' : 'Failed',
+                providerResponse: smsResult.message,
+                tenantOwner: user.tenantOwner,
+              });
+            }
+
+            // 5. Log that the notification was sent to prevent duplicates
+            await NotificationLog.create({
+              tenantOwner: user.tenantOwner,
+              mikrotikUser: user._id,
+              smsExpirySchedule: schedule._id,
+            });
+
+            console.log(`Notification sent to ${user.username} for schedule "${schedule.name}".`);
+
+          } catch (userError) {
+            console.error(`Failed to process notification for user ${user.username} on schedule "${schedule.name}". Error:`, userError);
+            // This error is logged, and the loop will continue with the next user.
           }
-
-          // 5. Log that the notification was sent to prevent duplicates
-          await NotificationLog.create({
-            tenantOwner: user.tenantOwner,
-            mikrotikUser: user._id,
-            smsExpirySchedule: schedule._id,
-          });
-
-           console.log(`Notification sent to ${user.username} for schedule "${schedule.name}".`);
-        }
+        });
       }
     }
     console.log('Robust Expiry Notification Job completed successfully.');
