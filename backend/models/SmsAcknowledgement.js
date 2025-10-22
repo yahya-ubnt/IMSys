@@ -10,7 +10,6 @@ const SmsAcknowledgementSchema = mongoose.Schema(
     triggerType: {
       type: String,
       required: [true, 'Please specify the trigger type'],
-      unique: true,
       trim: true,
     },
     description: {
@@ -33,5 +32,7 @@ const SmsAcknowledgementSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+SmsAcknowledgementSchema.index({ triggerType: 1, tenantOwner: 1 }, { unique: true });
 
 module.exports = mongoose.model('SmsAcknowledgement', SmsAcknowledgementSchema);

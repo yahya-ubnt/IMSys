@@ -61,19 +61,25 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
     throw new Error('A mapping for this trigger type already exists');
   }
 
-  const acknowledgement = await SmsAcknowledgement.create({
-    triggerType,
-    description: sanitizeString(description), // Sanitize description
-    smsTemplate,
-    status,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
-  });
+  try {
+    const acknowledgement = await SmsAcknowledgement.create({
+      triggerType,
+      description: sanitizeString(description), // Sanitize description
+      smsTemplate,
+      status,
+      tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    });
 
-  if (acknowledgement) {
-    res.status(201).json(acknowledgement);
-  } else {
-    res.status(400);
-    throw new Error('Invalid acknowledgement mapping data');
+    if (acknowledgement) {
+      res.status(201).json(acknowledgement);
+    } else {
+      res.status(400);
+      throw new Error('Invalid acknowledgement mapping data');
+    }
+  } catch (error) {
+    console.error('Error creating SMS acknowledgement:', error);
+    res.status(500);
+    throw new Error('Failed to create SMS acknowledgement');
   }
 });
 
