@@ -104,6 +104,10 @@ const MikrotikUserSchema = mongoose.Schema(
     lastChecked: {
       type: Date,
     },
+    provisionedOnMikrotik: {
+      type: Boolean,
+      default: false,
+    },
     
   },
   {

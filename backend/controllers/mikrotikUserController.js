@@ -196,6 +196,11 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
           `=max-limit=${selectedPackage.rateLimit}`,
         ]);
       }
+
+      // Mark user as provisioned on Mikrotik
+      mikrotikUser.provisionedOnMikrotik = true;
+      await mikrotikUser.save();
+
     } catch (error) {
       console.error(`Mikrotik API Provisioning Error: ${error.message}`);
       res.status(500);
@@ -414,38 +419,63 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
   }
 
   const router = await MikrotikRouter.findById(user.mikrotikRouter);
-  if (router) {
-    let client;
-    try {
-      client = new RouterOSAPI({
-        host: router.ipAddress,
-        user: router.apiUsername,
-        password: decrypt(router.apiPassword),
-        port: router.apiPort,
-      });
+  if (user.provisionedOnMikrotik) {
+    const router = await MikrotikRouter.findById(user.mikrotikRouter);
+    if (router) {
+      let client;
+      let mikrotikDeletionFailed = false; // Flag to track Mikrotik deletion status
+      try {
+        client = new RouterOSAPI({
+          host: router.ipAddress,
+          user: router.apiUsername,
+          password: decrypt(router.apiPassword),
+          port: router.apiPort,
+        });
 
-      await client.connect();
+        await client.connect();
 
-      if (user.serviceType === 'pppoe') {
-        const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-        if (pppSecrets.length > 0) {
-          const secretId = pppSecrets[0]['.id'];
-          await client.write('/ppp/secret/remove', [`=.id=${secretId}`]);
+        if (user.serviceType === 'pppoe') {
+          try {
+            const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+            if (pppSecrets.length > 0) {
+              const secretId = pppSecrets[0]['.id'];
+              await client.write('/ppp/secret/remove', [`=.id=${secretId}`]);
+            } else {
+              console.warn(`Mikrotik user ${user.username} (PPP) not found on router ${router.name}.`);
+            }
+          } catch (pppError) {
+            console.error(`Error during PPP secret operation for user ${user.username}: ${pppError.message}`);
+            mikrotikDeletionFailed = true;
+          }
+        } else if (user.serviceType === 'static') {
+          try {
+            const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+            if (simpleQueues.length > 0) {
+              const queueId = simpleQueues[0]['.id'];
+              await client.write('/queue/simple/remove', [`=.id=${queueId}`]);
+            } else {
+              console.warn(`Mikrotik user ${user.username} (Static) not found on router ${router.name}.`);
+            }
+          } catch (staticError) {
+            console.error(`Error during Simple Queue operation for user ${user.username}: ${staticError.message}`);
+            mikrotikDeletionFailed = true;
+          }
         }
-      } else if (user.serviceType === 'static') {
-        const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-        if (simpleQueues.length > 0) {
-          const queueId = simpleQueues[0]['.id'];
-          await client.write('/queue/simple/remove', [`=.id=${queueId}`]);
+      } catch (connectionError) {
+        console.error(`Mikrotik connection or API error for user ${user.username}: ${connectionError.message}`);
+        mikrotikDeletionFailed = true;
+      } finally {
+        if (client) {
+          client.close();
         }
       }
-    } catch (error) {
-      console.error(`Mikrotik API De-provisioning Error: ${error.message}`);
-    } finally {
-      if (client) {
-        client.close();
+
+      if (mikrotikDeletionFailed) {
+        console.warn(`Mikrotik de-provisioning failed for user ${user.username}. Proceeding with application database deletion.`);
       }
     }
+  } else {
+    console.warn(`Mikrotik user ${user.username} was not provisioned on Mikrotik. Deleting only from application database.`);
   }
 
   await user.deleteOne();

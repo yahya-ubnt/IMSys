@@ -164,6 +164,20 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+  console.error(`Error: ${err.message}`);
+  // Close server & exit process
+  server.close(() => process.exit(1));
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(`Uncaught Exception: ${err.message}`);
+  // Close server & exit process
+  server.close(() => process.exit(1));
+});
+
 // Initialize WebSocket terminal service
 const terminalService = require('./services/terminalService');
 terminalService.init(server);
