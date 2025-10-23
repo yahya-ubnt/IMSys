@@ -16,8 +16,8 @@ import { useAuth } from "@/components/auth-provider"
 import { Topbar } from "@/components/topbar"
 import { WhatsAppTemplateList } from "@/components/whatsapp/whatsapp-template-list"
 import { WhatsAppTemplateForm } from "@/components/whatsapp/whatsapp-template-form"
-import { getSmsTemplates } from "@/services/smsTemplateService";
-import { getWhatsAppTemplates } from "@/services/whatsappService"
+import { getSmsTemplates } from "@/lib/api/sms";
+import { getWhatsAppTemplates } from "@/lib/api/whatsapp"
 import { columns } from "./columns"
 
 export default function WhatsAppTemplatesPage() {
@@ -26,18 +26,19 @@ export default function WhatsAppTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const { toast } = useToast()
-  const { token } = useAuth()
+  // const { token } = useAuth() // Removed token from useAuth
 
   useEffect(() => {
-    if(token) fetchTemplates()
-  }, [token])
+    // if(token) fetchTemplates() // Removed token check
+    fetchTemplates()
+  }, []) // Removed token from dependency array
 
   const fetchTemplates = async () => {
-    if (!token) return;
+    // if (!token) return; // Removed token check
     try {
       const [whatsappData, smsData] = await Promise.all([
-        getWhatsAppTemplates(token),
-        getSmsTemplates(token)
+        getWhatsAppTemplates(),
+        getSmsTemplates()
       ]);
       setTemplates(whatsappData);
       setSmsTemplates(smsData);
@@ -57,7 +58,7 @@ export default function WhatsAppTemplatesPage() {
 
   const handleAddNew = () => {
     setEditingTemplate(null)
-    setIsFormOpen(true)
+    setIsModalOpen(true)
   }
 
   const onFormSuccess = () => {
@@ -102,7 +103,7 @@ export default function WhatsAppTemplatesPage() {
                 Provide the details for your WhatsApp message template.
               </DialogDescription>
             </DialogHeader>
-            <WhatsAppTemplateForm template={editingTemplate} smsTemplates={smsTemplates} onSuccess={onFormSuccess} onCancel={() => setIsFormOpen(false)} />
+            <WhatsAppTemplateForm template={editingTemplate} smsTemplates={smsTemplates} onSuccess={onFormSuccess} onCancel={() => setIsModalOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>

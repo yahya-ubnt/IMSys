@@ -11,8 +11,8 @@ import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
 import { SmsExpiryScheduleForm, SmsExpiryScheduleFormData } from "./sms-expiry-schedule-form"
 import { PlusCircle, CheckCircle, XCircle } from "lucide-react"
-import { getSmsTemplates } from "@/services/smsTemplateService"
-import { getWhatsAppTemplates } from "@/services/whatsappService"
+import { getSmsTemplates } from "@/lib/api/sms"
+import { getWhatsAppTemplates } from "@/lib/api/whatsapp"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 // --- TYPE DEFINITIONS ---
@@ -29,7 +29,7 @@ export type SmsExpirySchedule = {
 // --- MAIN COMPONENT ---
 export default function SmsExpiryPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
+  // const { token } = useAuth() // Removed token from useAuth
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
@@ -42,18 +42,18 @@ export default function SmsExpiryPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
-    if (!token) return;
+    // if (!token) return; // Removed token check
     try {
       const [smsData, whatsappData] = await Promise.all([
-        getSmsTemplates(token),
-        getWhatsAppTemplates(token)
+        getSmsTemplates(),
+        getWhatsAppTemplates()
       ]);
       setSmsTemplates(smsData);
       setWhatsAppTemplates(whatsappData);
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [toast, token]);
+  }, [toast]); // Removed token from dependency array
 
   const fetchSchedules = useCallback(async () => {
     try {

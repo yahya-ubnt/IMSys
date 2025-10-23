@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { getSmsTemplates } from "@/lib/api/sms"
+import { fetchApi } from "@/lib/api/utils"
 
 // Assuming SmsTemplate type is available or defined elsewhere
 type SmsTemplate = {
@@ -46,13 +48,8 @@ export function SmsAcknowledgementForm({ onClose, onSubmit, initialData }: SmsAc
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const token = localStorage.getItem("token")
-        if (!token) throw new Error("No token found")
-        const response = await fetch("/api/smstemplates", { 
-          headers: { "Authorization": `Bearer ${token}` } 
-        })
-        if (!response.ok) throw new Error("Failed to fetch templates")
-        setSmsTemplates(await response.json())
+        const data = await getSmsTemplates()
+        setSmsTemplates(data)
       } catch (error) {
         console.error("Error fetching templates:", error)
       }
@@ -63,13 +60,8 @@ export function SmsAcknowledgementForm({ onClose, onSubmit, initialData }: SmsAc
   useEffect(() => {
     const fetchTriggerTypes = async () => {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("No token found");
-        const response = await fetch("/api/sms/triggers", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error("Failed to fetch trigger types");
-        setTriggerTypes(await response.json());
+        const data = await fetchApi("/api/sms/triggers");
+        setTriggerTypes(data);
       } catch (error) {
         console.error("Error fetching trigger types:", error);
       }

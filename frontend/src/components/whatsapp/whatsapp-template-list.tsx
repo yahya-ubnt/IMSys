@@ -3,7 +3,7 @@
 import { DataTable } from "@/components/data-table"
 import { columns } from "@/app/whatsapp/templates/columns"
 import { useToast } from "@/components/ui/use-toast"
-import { deleteWhatsAppTemplate } from "@/services/whatsappService"
+import { deleteWhatsAppTemplate } from "@/lib/api/whatsapp"
 import { useAuth } from "@/components/auth-provider"
 
 export function WhatsAppTemplateList({ templates, onEdit, onDelete }) {

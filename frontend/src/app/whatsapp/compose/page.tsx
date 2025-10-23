@@ -9,7 +9,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Send } from "lucide-react"
 import { AudienceSelector } from "@/components/whatsapp/audience-selector"
 import { TemplateSelector } from "@/components/whatsapp/template-selector"
-import { composeWhatsApp } from "@/services/whatsappService"
+import { composeWhatsApp } from "@/lib/api/whatsapp"
 
 export default function WhatsAppComposePage() {
   const { toast } = useToast()

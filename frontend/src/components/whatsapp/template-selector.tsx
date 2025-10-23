@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/components/auth-provider"
-import { getWhatsAppTemplates } from "@/services/whatsappService"
+import { getWhatsAppTemplates } from "@/lib/api/whatsapp"
 
 export function TemplateSelector({ onTemplateChange, onVariablesChange }) {
   const [templates, setTemplates] = useState([])

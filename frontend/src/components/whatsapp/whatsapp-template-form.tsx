@@ -14,7 +14,7 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { createWhatsAppTemplate, updateWhatsAppTemplate } from "@/services/whatsappService"
+import { createWhatsAppTemplate, updateWhatsAppTemplate } from "@/lib/api/whatsapp"
 import { useAuth } from "@/components/auth-provider"
 
 export function WhatsAppTemplateForm({ template, smsTemplates, onSuccess, onCancel }) {

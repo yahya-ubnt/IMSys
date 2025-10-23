@@ -12,6 +12,7 @@ import { columns } from "./columns"
 import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form"
 import { PlusCircle, FileText } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { getSmsTemplates, createSmsTemplate, updateSmsTemplate, deleteSmsTemplate } from "@/lib/api/sms"
 
 // --- TYPE DEFINITIONS ---
 export type SmsTemplate = {
@@ -24,6 +25,7 @@ export type SmsTemplate = {
 // --- MAIN COMPONENT ---
 export default function SmsTemplatesPage() {
   const { toast } = useToast()
+  // const { token } = useAuth() // Removed token from useAuth
 
   // Data states
   const [templates, setTemplates] = useState<SmsTemplate[]>([])
@@ -34,18 +36,20 @@ export default function SmsTemplatesPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
+    // if (!token) return; // Removed token check
     try {
-      const response = await fetch("/api/smstemplates")
-      if (!response.ok) throw new Error("Failed to fetch templates")
-      setTemplates(await response.json())
+      const data = await getSmsTemplates()
+      setTemplates(data)
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [toast])
+  }, [toast]) // Removed token from dependency array
 
   useEffect(() => {
-    fetchTemplates()
-  }, [fetchTemplates])
+    // if (token) { // Removed token check
+      fetchTemplates()
+    // }
+  }, [fetchTemplates]) // Removed token from dependency array
 
   // --- EVENT HANDLERS ---
   const handleNewTemplate = () => {
@@ -60,11 +64,9 @@ export default function SmsTemplatesPage() {
 
   const handleDelete = async (template: SmsTemplate) => {
     if (!window.confirm("Are you sure you want to delete this template?")) return;
+    // if (!token) return; // Removed token check
     try {
-      const response = await fetch(`/api/smstemplates/${template._id}`, {
-        method: "DELETE",
-      })
-      if (!response.ok) throw new Error("Failed to delete template")
+      await deleteSmsTemplate(template._id)
       toast({ title: "Success", description: "Template deleted successfully." })
       fetchTemplates()
     } catch {
@@ -73,21 +75,25 @@ export default function SmsTemplatesPage() {
   }
 
   const handleFormSubmit = async (data: SmsTemplateFormData) => {
-    const url = selectedTemplate ? `/api/smstemplates/${selectedTemplate._id}` : "/api/smstemplates"
-    const method = selectedTemplate ? "PUT" : "POST"
-    
+    console.log("handleFormSubmit called with data:", data);
+    // if (!token) { // Removed token check
+    //   console.log("No token available.");
+    //   return;
+    // }
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!response.ok) throw new Error((await response.json()).message || "Failed to save template")
+      if (selectedTemplate) {
+        console.log("Updating template:", selectedTemplate._id, data);
+        await updateSmsTemplate(selectedTemplate._id, data)
+      } else {
+        console.log("Creating template:", data);
+        await createSmsTemplate(data)
+      }
       
       toast({ title: "Success", description: `Template ${selectedTemplate ? 'updated' : 'created'} successfully.` })
       setIsModalOpen(false)
       fetchTemplates()
     } catch (error: unknown) {
+      console.error("Error in handleFormSubmit:", error);
       toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unknown error occurred.", variant: "destructive" })
     }
   }
