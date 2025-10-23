@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { fetchApi } from '@/lib/api/utils';
 
 const API_URL = '/api/settings';
 
@@ -16,151 +17,77 @@ export const updateMpesaSettings = async (type: 'paybill' | 'till', data: any) =
 
 // Note: Assuming there might be an activate function, keeping it distinct.
 // If not, this can be removed.
-export const activateMpesa = async (token: string) => {
+export const activateMpesa = async () => {
   // This function's implementation seems to be missing in the original code,
   // providing a placeholder.
-  console.log("activateMpesa called with token:", token);
+  console.log("activateMpesa called");
   // Example:
-  // const response = await fetch(`${API_URL}/mpesa/activate`, {
+  // const response = await fetchApi(`${API_URL}/mpesa/activate`, {
   //   method: 'POST',
-  //   headers: { 'Authorization': `Bearer ${token}` },
   // });
-  // if (!response.ok) throw new Error('Failed to activate M-Pesa');
-  // return response.json();
+  // return response;
   return Promise.resolve({ message: "M-Pesa activated" });
 }
 
 
 // SMS Provider Settings
-const SMS_PROVIDERS_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/settings/sms-providers`;
-
-export const getSmsProviders = async (token: string) => {
-    const response = await fetch(SMS_PROVIDERS_API_URL, {
-        headers: { 'Authorization': `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error('Failed to fetch SMS providers');
-    return response.json();
+export const getSmsProviders = async () => {
+    return fetchApi('/api/settings/sms-providers');
 };
 
-export const createSmsProvider = async (providerData: any, token: string) => {
-    const response = await fetch(SMS_PROVIDERS_API_URL, {
+export const createSmsProvider = async (providerData: any) => {
+    return fetchApi('/api/settings/sms-providers', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(providerData),
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create SMS provider');
-    }
-    return response.json();
 };
 
-export const updateSmsProvider = async (id: string, providerData: any, token: string) => {
-    const response = await fetch(`${SMS_PROVIDERS_API_URL}/${id}`, {
+export const updateSmsProvider = async (id: string, providerData: any) => {
+    return fetchApi(`/api/settings/sms-providers/${id}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(providerData),
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update SMS provider');
-    }
-    return response.json();
 };
 
-export const deleteSmsProvider = async (id: string, token: string) => {
-    const response = await fetch(`${SMS_PROVIDERS_API_URL}/${id}`, {
+export const deleteSmsProvider = async (id: string) => {
+    return fetchApi(`/api/settings/sms-providers/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete SMS provider');
-    }
-    return response.json();
 };
 
-export const setActiveSmsProvider = async (id: string, token: string) => {
-    const response = await fetch(`${SMS_PROVIDERS_API_URL}/${id}/set-active`, {
+export const setActiveSmsProvider = async (id: string) => {
+    return fetchApi(`/api/settings/sms-providers/${id}/set-active`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to set active SMS provider');
-    }
-    return response.json();
 };
 
 // WhatsApp Provider Settings
-const WHATSAPP_PROVIDERS_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/settings/whatsapp-providers`;
-
-export const getWhatsAppProviders = async (token: string) => {
-    const response = await fetch(WHATSAPP_PROVIDERS_API_URL, {
-        headers: { 'Authorization': `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error('Failed to fetch WhatsApp providers');
-    return response.json();
+export const getWhatsAppProviders = async () => {
+    return fetchApi('/api/settings/whatsapp-providers');
 };
 
-export const createWhatsAppProvider = async (providerData: any, token: string) => {
-    const response = await fetch(WHATSAPP_PROVIDERS_API_URL, {
+export const createWhatsAppProvider = async (providerData: any) => {
+    return fetchApi('/api/settings/whatsapp-providers', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(providerData),
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create WhatsApp provider');
-    }
-    return response.json();
 };
 
-export const updateWhatsAppProvider = async (id: string, providerData: any, token: string) => {
-    const response = await fetch(`${WHATSAPP_PROVIDERS_API_URL}/${id}`, {
+export const updateWhatsAppProvider = async (id: string, providerData: any) => {
+    return fetchApi(`/api/settings/whatsapp-providers/${id}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(providerData),
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update WhatsApp provider');
-    }
-    return response.json();
 };
 
-export const deleteWhatsAppProvider = async (id: string, token: string) => {
-    const response = await fetch(`${WHATSAPP_PROVIDERS_API_URL}/${id}`, {
+export const deleteWhatsAppProvider = async (id: string) => {
+    return fetchApi(`/api/settings/whatsapp-providers/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete WhatsApp provider');
-    }
-    return response.json();
 };
 
-export const setActiveWhatsAppProvider = async (id: string, token: string) => {
-    const response = await fetch(`${WHATSAPP_PROVIDERS_API_URL}/${id}/set-active`, {
+export const setActiveWhatsAppProvider = async (id: string) => {
+    return fetchApi(`/api/settings/whatsapp-providers/${id}/set-active`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to set active WhatsApp provider');
-    }
-    return response.json();
 };

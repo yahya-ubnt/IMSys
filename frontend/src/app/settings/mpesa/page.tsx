@@ -103,6 +103,7 @@ const formVariants = {
 // --- Main Component ---
 export default function MpesaSettingsPage() {
   const [direction, setDirection] = useState(1);
+  const [step, setStep] = useState(1); // Add this line
   const [loading, setLoading] = useState(true);
 
     const form = useForm<MpesaSettingsFormValues>({
