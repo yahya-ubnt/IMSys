@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { createWhatsAppProvider, updateWhatsAppProvider } from "@/services/settingsService"
-import { useAuth } from "@/components/auth-provider"
 
 const providerTypes = [
   { value: "twilio", label: "Twilio" },
