@@ -13,7 +13,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null
-  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[]; token?: string }) => void
+  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[] }) => void
   logout: () => void
   isLoading: boolean
   isLoggingOut: boolean
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[]; token?: string }) => {
+  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[] }) => {
     console.log("User data in login:", userData)
     const { fullName, ...rest } = userData
     const user: User = { ...rest, name: fullName, roles: userData.roles, loginMethod: 'email' }

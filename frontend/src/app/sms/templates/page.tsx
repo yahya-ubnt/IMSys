@@ -25,7 +25,7 @@ export type SmsTemplate = {
 // --- MAIN COMPONENT ---
 export default function SmsTemplatesPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
+  const { user } = useAuth()
 
   // Data states
   const [templates, setTemplates] = useState<SmsTemplate[]>([])
@@ -36,20 +36,20 @@ export default function SmsTemplatesPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     try {
       const data = await getSmsTemplates()
       setTemplates(data)
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [toast, token])
+  }, [toast, user])
 
   useEffect(() => {
-    if (token) {
+    if (user) {
       fetchTemplates()
     }
-  }, [fetchTemplates, token])
+  }, [fetchTemplates, user])
 
   // --- EVENT HANDLERS ---
   const handleNewTemplate = () => {
@@ -64,7 +64,7 @@ export default function SmsTemplatesPage() {
 
   const handleDelete = async (template: SmsTemplate) => {
     if (!window.confirm("Are you sure you want to delete this template?")) return;
-    if (!token) return;
+    if (!user) return;
     try {
       await deleteSmsTemplate(template._id)
       toast({ title: "Success", description: "Template deleted successfully." })
@@ -75,7 +75,7 @@ export default function SmsTemplatesPage() {
   }
 
   const handleFormSubmit = async (data: SmsTemplateFormData) => {
-    if (!token) return;
+    if (!user) return;
     try {
       if (selectedTemplate) {
         await updateSmsTemplate(selectedTemplate._id, data)
