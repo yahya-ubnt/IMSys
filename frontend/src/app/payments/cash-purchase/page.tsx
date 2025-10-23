@@ -23,7 +23,6 @@ interface User {
 
 // --- MAIN COMPONENT ---
 export default function CashPurchasePage() {
-  const { token } = useAuth()
   const { toast } = useToast()
 
   // Data states
@@ -43,12 +42,9 @@ export default function CashPurchasePage() {
   // --- DATA FETCHING ---
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!token) return
       setIsLoading(true)
       try {
-        const response = await fetch('/api/mikrotik/users', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        })
+        const response = await fetch('/api/mikrotik/users')
         if (!response.ok) throw new Error('Failed to fetch users.')
         setUsers(await response.json())
       } catch (error) {
@@ -58,7 +54,7 @@ export default function CashPurchasePage() {
       }
     }
     fetchUsers()
-  }, [token, toast])
+  }, [toast])
 
   // --- EVENT HANDLERS ---
   const handleUserSelect = () => {
@@ -76,7 +72,7 @@ export default function CashPurchasePage() {
     try {
       const response = await fetch('/api/payments/cash', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedUser._id,
           amount: parseFloat(amount),

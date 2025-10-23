@@ -65,7 +65,6 @@ export default function NewRouterPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const { token } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -91,16 +90,6 @@ export default function NewRouterPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (!token) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to add a router.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
     const routerData = {
       name,
       ipAddress,
@@ -114,7 +103,6 @@ export default function NewRouterPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(routerData),
       });

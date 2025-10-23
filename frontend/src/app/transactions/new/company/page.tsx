@@ -39,7 +39,6 @@ const formVariants = {
 
 export default function AddNewCompanyTransactionPage() {
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
   
   const [step, setStep] = useState(1);
@@ -93,7 +92,6 @@ export default function AddNewCompanyTransactionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    if (!token) { toast({ title: 'Authentication Error', variant: 'destructive' }); setLoading(false); return; }
 
     try {
       const transactionData = {
@@ -102,7 +100,7 @@ export default function AddNewCompanyTransactionPage() {
         category: 'Company',
         date: `${formData.transactionDate}T${formData.transactionTime}`
       };
-      await createTransaction(transactionData, token);
+      await createTransaction(transactionData);
       toast({ title: 'Transaction Added', description: 'New company transaction has been successfully recorded.' });
       router.push(`/transactions/company`);
     } catch (err: unknown) {

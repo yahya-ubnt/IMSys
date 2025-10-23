@@ -20,7 +20,6 @@ import { ArrowLeft, MessageSquare } from 'lucide-react';
 export default function EditTicketPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -43,11 +42,6 @@ export default function EditTicketPage() {
   // Fetch ticket details and issue types on component mount
   useEffect(() => {
     const fetchData = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Ticket ID is missing.');
         setLoading(false);
@@ -55,7 +49,7 @@ export default function EditTicketPage() {
       }
       try {
         // Fetch ticket details
-        const ticketData = await getTicketById(id as string, token);
+        const ticketData = await getTicketById(id as string);
         setTicket(ticketData);
         setFormData({
           clientName: ticketData.clientName,
@@ -81,7 +75,7 @@ export default function EditTicketPage() {
     };
 
     fetchData();
-  }, [id, token, toast]);
+  }, [id, toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -96,8 +90,8 @@ export default function EditTicketPage() {
     setSubmitting(true);
     setError(null);
 
-    if (!token || !ticket) {
-      setError('Authentication token not found or ticket not loaded.');
+    if (!ticket) {
+      setError('Ticket not loaded.');
       setSubmitting(false);
       return;
     }
@@ -113,7 +107,7 @@ export default function EditTicketPage() {
         priority: formData.priority as Ticket['priority'],
       };
 
-      await updateTicket(ticket._id, updatedTicketData, token);
+      await updateTicket(ticket._id, updatedTicketData);
       toast({
         title: 'Ticket Updated',
         description: 'Ticket has been successfully updated.',
@@ -136,20 +130,20 @@ export default function EditTicketPage() {
     setNoteSubmitting(true);
     setError(null);
 
-    if (!token || !ticket || !noteContent.trim()) {
-      setError('Authentication token not found, ticket not loaded, or note is empty.');
+    if (!ticket || !noteContent.trim()) {
+      setError('Ticket not loaded or note is empty.');
       setNoteSubmitting(false);
       return;
     }
 
     try {
-      await addNoteToTicket(ticket._id, noteContent, token);
+      await addNoteToTicket(ticket._id, noteContent);
       toast({
         title: 'Note Added',
         description: 'Note has been successfully added to the ticket.',
       });
       setNoteContent('');
-      const updatedTicket = await getTicketById(ticket._id, token);
+      const updatedTicket = await getTicketById(ticket._id);
       setTicket(updatedTicket);
     } catch (err: unknown) {
       setError((err instanceof Error) ? err.message : 'Failed to add note.');

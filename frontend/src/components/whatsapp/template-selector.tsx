@@ -8,20 +8,17 @@ import { useAuth } from "@/components/auth-provider"
 import { getWhatsAppTemplates } from "@/services/whatsappService"
 
 export function TemplateSelector({ onTemplateChange, onVariablesChange }) {
-  const { token } = useAuth()
   const [templates, setTemplates] = useState([])
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [variableValues, setVariableValues] = useState({})
 
   useEffect(() => {
     const fetchTemplates = async () => {
-      if (token) {
-        const data = await getWhatsAppTemplates(token)
-        setTemplates(data)
-      }
+      const data = await getWhatsAppTemplates()
+      setTemplates(data)
     }
     fetchTemplates()
-  }, [token])
+  }, [])
 
   const handleTemplateSelect = (templateId) => {
     const template = templates.find(t => t._id === templateId)

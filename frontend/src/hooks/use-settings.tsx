@@ -17,7 +17,6 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-  const { token } = useAuth();
   const [settings, setSettings] = useState<Settings>({
     appName: "MEDIATEK",
     slogan: "MANAGEMENT SYSTEM",
@@ -26,11 +25,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!token) return;
       try {
-        const response = await fetch("/api/settings/general", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch("/api/settings/general");
         if (response.ok) {
           const data = await response.json();
           setSettings({
@@ -44,7 +40,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     fetchSettings();
-  }, [token]);
+  }, []);
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings }}>

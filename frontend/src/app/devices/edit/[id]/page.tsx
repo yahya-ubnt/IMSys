@@ -17,18 +17,17 @@ export default function EditDevicePage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { token } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
   useEffect(() => {
-    if (!token || !id) return;
+    if (!id) return;
 
     const fetchDeviceData = async () => {
       try {
-        const deviceData = await getDeviceById(id, token);
+        const deviceData = await getDeviceById(id);
         setInitialData(deviceData);
       } catch {
         setError("Failed to load device data. It may have been deleted.");
@@ -39,16 +38,12 @@ export default function EditDevicePage() {
     };
 
     fetchDeviceData();
-  }, [id, token, toast]);
+  }, [id, toast]);
 
   const handleSubmit = async (data: Partial<Device>) => {
-    if (!token) {
-      toast({ title: "Authentication Error", variant: "destructive" });
-      return;
-    }
     setLoading(true);
     try {
-      await updateDevice(id, data, token);
+      await updateDevice(id, data);
       toast({ title: "Device Updated Successfully" });
       router.push("/devices");
     } catch (error) {

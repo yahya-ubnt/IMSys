@@ -33,17 +33,14 @@ export function PppoeOverviewCards({ routerId }: { routerId: string }) {
   const [pppoeCounts, setPppoeCounts] = useState<PppoeCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchPppoeCounts = async () => {
       try {
         // No setLoading(true) here to allow stale-while-revalidate feeling
-        const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/counts`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/counts`);
         if (!response.ok) {
           throw new Error('Failed to fetch PPPoE counts');
         }
@@ -60,7 +57,7 @@ export function PppoeOverviewCards({ routerId }: { routerId: string }) {
     fetchPppoeCounts(); // Initial fetch
 
     return () => clearInterval(interval);
-  }, [routerId, token]);
+  }, [routerId]);
 
   if (loading && !pppoeCounts) {
     return (

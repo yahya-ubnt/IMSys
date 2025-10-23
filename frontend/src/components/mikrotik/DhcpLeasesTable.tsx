@@ -20,21 +20,17 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
   const [leases, setLeases] = useState<DhcpLease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   const fetchLeases = useCallback(async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`/api/routers/${routerId}/dashboard/dhcp-leases`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/routers/${routerId}/dashboard/dhcp-leases`);
       if (!response.ok) throw new Error('Failed to fetch DHCP leases');
       const data = await response.json();
       setLeases(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId]);
+  }, [routerId]);
 
   const columns: ColumnDef<DhcpLease>[] = useMemo(
     () => [
@@ -69,12 +65,12 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
   );
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
     setLoading(true);
     fetchLeases().finally(() => setLoading(false));
     const intervalId = setInterval(fetchLeases, 10000);
     return () => clearInterval(intervalId);
-  }, [routerId, token, fetchLeases]);
+  }, [routerId, fetchLeases]);
 
   if (loading) {
     return <div className="text-center text-zinc-400">Loading DHCP leases...</div>;

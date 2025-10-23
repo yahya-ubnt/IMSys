@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge'; // Import Badge
@@ -17,7 +16,6 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
   const [interfaces, setInterfaces] = useState<Interface[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
   const isInitialMount = useRef(true);
 
   const formatBitrate = (bitsPerSecond: string) => {
@@ -68,16 +66,14 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
   );
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchInterfaces = async () => {
       try {
         if (isInitialMount.current) {
           setLoading(true);
         }
-        const response = await fetch(`/api/routers/${routerId}/dashboard/interfaces`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/interfaces`);
         if (!response.ok) {
           throw new Error('Failed to fetch interfaces');
         }
@@ -95,7 +91,7 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
     const intervalId = setInterval(fetchInterfaces, 3000);
 
     return () => clearInterval(intervalId);
-  }, [routerId, token]);
+  }, [routerId]);
 
   if (loading) {
     return <div className="text-center text-zinc-400">Loading interfaces...</div>;

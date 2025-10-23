@@ -8,12 +8,11 @@ import { useAuth } from "@/components/auth-provider"
 
 export function WhatsAppTemplateList({ templates, onEdit, onDelete }) {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   const handleDelete = async (template) => {
     if (window.confirm(`Are you sure you want to delete the template "${template.templateName}"?`)) {
       try {
-        await deleteWhatsAppTemplate(template._id, token)
+        await deleteWhatsAppTemplate(template._id)
         toast({ title: "Success", description: "Template deleted." })
         onDelete()
       } catch (error) {

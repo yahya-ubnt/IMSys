@@ -19,7 +19,6 @@ import { Textarea } from '@/components/ui/textarea';
 export default function TicketDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -28,18 +27,13 @@ export default function TicketDetailsPage() {
 
   useEffect(() => {
     const fetchTicket = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Ticket ID is missing.');
         setLoading(false);
         return;
       }
       try {
-        const data = await getTicketById(id as string, token);
+        const data = await getTicketById(id as string);
         setTicket(data);
       } catch (err: unknown) {
         setError((err instanceof Error) ? err.message : 'Failed to fetch ticket details.');
@@ -54,20 +48,12 @@ export default function TicketDetailsPage() {
     };
 
     fetchTicket();
-  }, [id, token, toast]);
+  }, [id, toast]);
 
   const handleDelete = async () => {
-    if (!token) {
-      toast({
-        title: 'Authentication Error',
-        description: 'You must be logged in to delete a ticket.',
-        variant: 'destructive',
-      });
-      return;
-    }
     if (confirm('Are you sure you want to delete this ticket?')) {
       try {
-        await deleteTicket(id as string, token);
+        await deleteTicket(id as string);
         toast({
           title: 'Ticket Deleted',
           description: 'Ticket has been successfully deleted.',

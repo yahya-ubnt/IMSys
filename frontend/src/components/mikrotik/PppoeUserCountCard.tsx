@@ -14,19 +14,14 @@ export function PppoeUserCountCard({ routerId }: { routerId: string }) {
   const [pppoeCounts, setPppoeCounts] = useState<PppoeCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchPppoeCounts = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/counts`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/counts`);
         if (!response.ok) {
           throw new Error('Failed to fetch PPPoE user counts');
         }
@@ -44,7 +39,7 @@ export function PppoeUserCountCard({ routerId }: { routerId: string }) {
     };
 
     fetchPppoeCounts();
-  }, [routerId, token]);
+  }, [routerId]);
 
   if (loading) {
     return <div>Loading PPPoE user counts...</div>;

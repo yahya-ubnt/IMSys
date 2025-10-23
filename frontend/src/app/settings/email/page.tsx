@@ -30,7 +30,6 @@ type EmailSettingsFormValues = z.infer<typeof emailSettingsSchema>;
 
 // --- Main Component ---
 export default function EmailSettingsPage() {
-  const { token } = useAuth();
   const [isLoading, setIsLoading] = useState(true); // Re-introduce isLoading state
 
   const form = useForm<EmailSettingsFormValues>({
@@ -48,11 +47,10 @@ export default function EmailSettingsPage() {
   });
 
   useEffect(() => {
-    if (!token) return;
     const fetchSettings = async () => {
       setIsLoading(true); // Set loading true before fetch
       try {
-        const response = await fetch("/api/settings/general", { headers: { Authorization: `Bearer ${token}` } });
+        const response = await fetch("/api/settings/general");
         if (!response.ok) throw new Error("Failed to fetch settings.");
         const data = await response.json();
 
@@ -78,10 +76,9 @@ export default function EmailSettingsPage() {
       }
     };
     fetchSettings();
-  }, [form, token]);
+  }, [form]);
 
   const onSubmit = async (data: EmailSettingsFormValues) => {
-    if (!token) return;
     setIsLoading(true); // Set loading true before submit
     try {
       const settingsToSave = { ...data };
@@ -91,7 +88,7 @@ export default function EmailSettingsPage() {
 
       const response = await fetch("/api/settings/general", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settingsToSave),
       });
 

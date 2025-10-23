@@ -31,7 +31,6 @@ export interface WalletTransaction {
 // --- MAIN COMPONENT ---
 export default function WalletTransactionsPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
@@ -48,7 +47,6 @@ export default function WalletTransactionsPage() {
 
   // --- DATA FETCHING ---
   const fetchTransactions = useCallback(async () => {
-    if (!token) return
     setIsLoading(true)
     try {
       const params = new URLSearchParams({
@@ -59,9 +57,7 @@ export default function WalletTransactionsPage() {
         ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
       })
 
-      const response = await fetch(`/api/payments/wallet?${params.toString()}`, {
-        headers: { "Authorization": `Bearer ${token}` },
-      })
+      const response = await fetch(`/api/payments/wallet?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to fetch wallet transactions")
       
       const data = await response.json()
@@ -72,7 +68,7 @@ export default function WalletTransactionsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [token, page, pageSize, searchTerm, dateRange, toast])
+  }, [page, pageSize, searchTerm, dateRange, toast])
 
   useEffect(() => {
     fetchTransactions()

@@ -30,61 +30,40 @@ export interface DowntimeLog {
   durationSeconds?: number;
 }
 
-// Base API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+import { Device } from "@/types/device";
+import { MikrotikRouter } from "@/types/mikrotik-router";
 
-/**
- * Fetches all devices from the backend.
- * @param token The authentication token.
- * @returns A promise that resolves to an array of devices.
- */
-export const getDevices = async (token: string, deviceType?: "Access" | "Station"): Promise<Device[]> => {
-  let url = `${API_URL}/devices`;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Fetch all devices
+export const getDevices = async (deviceType?: "Access" | "Station"): Promise<Device[]> => {
+  const params = new URLSearchParams();
   if (deviceType) {
-    url += `?deviceType=${deviceType}`;
+    params.append("deviceType", deviceType);
   }
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await fetch(`/api/devices?${params.toString()}`);
   if (!response.ok) {
-    throw new Error("Failed to fetch devices");
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch devices");
   }
   return response.json();
 };
 
-/**
- * Fetches a single device by its ID.
- * @param id The ID of the device to fetch.
- * @param token The authentication token.
- * @returns A promise that resolves to the device object.
- */
-export const getDeviceById = async (id: string, token: string): Promise<Device> => {
-  const response = await fetch(`${API_URL}/devices/${id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+// Fetch a single device by ID
+export const getDeviceById = async (id: string): Promise<Device> => {
+  const response = await fetch(`/api/devices/${id}`);
   if (!response.ok) {
-    throw new Error("Failed to fetch device");
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch device");
   }
   return response.json();
 };
 
-/**
- * Creates a new device.
- * @param deviceData The data for the new device.
- * @param token The authentication token.
- * @returns A promise that resolves to the created device object.
- */
-export const createDevice = async (deviceData: Partial<Device>, token: string): Promise<Device> => {
-  const response = await fetch(`${API_URL}/devices`, {
+// Create a new device
+export const createDevice = async (deviceData: Partial<Device>): Promise<Device> => {
+  const response = await fetch(`/api/devices`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(deviceData),
   });
   if (!response.ok) {
@@ -94,20 +73,11 @@ export const createDevice = async (deviceData: Partial<Device>, token: string): 
   return response.json();
 };
 
-/**
- * Updates an existing device.
- * @param id The ID of the device to update.
- * @param deviceData The new data for the device.
- * @param token The authentication token.
- * @returns A promise that resolves to the updated device object.
- */
-export const updateDevice = async (id: string, deviceData: Partial<Device>, token: string): Promise<Device> => {
-  const response = await fetch(`${API_URL}/devices/${id}`, {
+// Update an existing device
+export const updateDevice = async (id: string, deviceData: Partial<Device>): Promise<Device> => {
+  const response = await fetch(`/api/devices/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(deviceData),
   });
   if (!response.ok) {
@@ -117,61 +87,34 @@ export const updateDevice = async (id: string, deviceData: Partial<Device>, toke
   return response.json();
 };
 
-/**
- * Deletes a device by its ID.
- * @param id The ID of the device to delete.
- * @param token The authentication token.
- * @returns A promise that resolves when the device is deleted.
- */
-export const deleteDevice = async (id: string, token: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/devices/${id}`, {
+// Delete a device
+export const deleteDevice = async (id: string): Promise<{ message: string }> => {
+  const response = await fetch(`/api/devices/${id}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || "Failed to delete device");
   }
+  return response.json();
 };
 
-/**
- * Fetches the downtime history for a specific device.
- * @param id The ID of the device.
- * @param token The authentication token.
- * @returns A promise that resolves to an array of downtime logs.
- */
-export const getDeviceDowntimeLogs = async (id: string, token: string): Promise<DowntimeLog[]> => {
-  const response = await fetch(`${API_URL}/devices/${id}/downtime`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+// Fetch Mikrotik Routers (for dropdowns in device forms)
+export const getMikrotikRouters = async (): Promise<MikrotikRouter[]> => {
+  const response = await fetch(`/api/mikrotik/routers`);
   if (!response.ok) {
-    throw new Error("Failed to fetch downtime logs");
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch Mikrotik routers");
   }
   return response.json();
 };
 
-/**
- * Fetches all Mikrotik routers.
- * @param token The authentication token.
- * @returns A promise that resolves to an array of routers.
- */
-export interface MikrotikRouter {
-  _id: string;
-  name: string;
-  ipAddress: string;
-}
-export const getMikrotikRouters = async (token: string): Promise<MikrotikRouter[]> => {
-    const response = await fetch(`/api/mikrotik/routers`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-    if (!response.ok) {
-        throw new Error('Failed to fetch Mikrotik routers');
-    }
-    return response.json();
+// Fetch Downtime Logs for a specific device
+export const getDeviceDowntimeLogs = async (deviceId: string): Promise<any[]> => {
+  const response = await fetch(`/api/devices/${deviceId}/downtime-logs`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch device downtime logs");
+  }
+  return response.json();
 };

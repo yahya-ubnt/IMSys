@@ -14,7 +14,6 @@ export function RouterLogsTable({ id }: RouterLogsTableProps) {
   const [logs, setLogs] = useState<RouterLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   // Define columns for the DataTable
   const columns: ColumnDef<RouterLog>[] = useMemo(
@@ -36,20 +35,10 @@ export function RouterLogsTable({ id }: RouterLogsTableProps) {
   );
 
   useEffect(() => {
-    if (!token) { // Only fetch if token is available
-      setError('Authentication token not found. Please log in.');
-      setIsLoading(false);
-      return;
-    }
-
     const fetchLogs = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/mikrotik/routers/${id}/dashboard/logs`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/mikrotik/routers/${id}/dashboard/logs`);
         if (!response.ok) {
           throw new Error('Failed to fetch router logs');
         }
@@ -66,7 +55,7 @@ export function RouterLogsTable({ id }: RouterLogsTableProps) {
     const interval = setInterval(fetchLogs, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(interval);
-  }, [id, token]);
+  }, [id]);
 
   if (isLoading && logs.length === 0) {
     return <p>Loading logs...</p>;

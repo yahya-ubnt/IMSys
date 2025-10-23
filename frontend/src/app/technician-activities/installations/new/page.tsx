@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { createTechnicianActivity } from '@/lib/technicianActivityService';
 import { Topbar } from '@/components/topbar';
@@ -20,7 +19,6 @@ import { cn } from '@/lib/utils';
 
 export default function AddNewInstallationPage() {
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   interface InstallationFormData {
@@ -60,19 +58,13 @@ export default function AddNewInstallationPage() {
     setLoading(true);
     setError(null);
 
-    if (!token) {
-      setError('Authentication token not found. Please log in.');
-      setLoading(false);
-      return;
-    }
-
     try {
       const activityData = {
         ...formData,
         activityType: formData.activityType as "Installation",
         activityDate: new Date(formData.activityDate),
       };
-      await createTechnicianActivity(activityData, token);
+      await createTechnicianActivity(activityData);
       toast({
         title: 'Installation Added',
         description: 'New installation activity has been successfully recorded.',

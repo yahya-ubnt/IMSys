@@ -20,7 +20,6 @@ export default function TransactionDetailsPage() {
   const router = useRouter();
   const searchParams = useSearchParams(); // Initialize useSearchParams
   const categoryFromUrl = searchParams.get('category'); // Get category from URL
-  const { token } = useAuth();
   const { toast } = useToast();
 
   // Check if 'id' is actually a category name
@@ -43,18 +42,13 @@ export default function TransactionDetailsPage() {
     }
 
     const fetchTransaction = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Transaction ID is missing.');
         setLoading(false);
         return;
       }
       try {
-        const data = await getTransactionById(id as string, token);
+        const data = await getTransactionById(id as string);
         setTransaction(data);
         setTransactionCategory(data.category || null); // Store the category
       } catch (err: unknown) {
@@ -77,20 +71,12 @@ export default function TransactionDetailsPage() {
       // as we are not fetching a specific transaction
       setLoading(false);
     }
-  }, [id, token, toast, router]);
+  }, [id, toast, router]);
 
   const handleDelete = async () => {
-    if (!token) {
-      toast({
-        title: 'Authentication Error',
-        description: 'You must be logged in to delete a transaction.',
-        variant: 'destructive',
-      });
-      return;
-    }
     if (confirm('Are you sure you want to delete this transaction?')) {
       try {
-        await deleteTransaction(id as string, token);
+        await deleteTransaction(id as string);
         toast({
           title: 'Transaction Deleted',
           description: 'Transaction has been successfully deleted.',

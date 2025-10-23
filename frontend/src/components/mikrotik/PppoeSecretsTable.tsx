@@ -44,14 +44,10 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [selectedSecret, setSelectedSecret] = useState<Secret | null>(null);
-  const { token } = useAuth();
 
   const fetchSecrets = useCallback(async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/secrets`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/secrets`);
       if (!response.ok) {
         throw new Error('Failed to fetch PPPoE secrets');
       }
@@ -60,16 +56,15 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId]);
+  }, [routerId]);
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
     setLoading(true);
     fetchSecrets().finally(() => setLoading(false));
-  }, [routerId, token, fetchSecrets]);
+  }, [routerId, fetchSecrets]);
 
   const handleFormSubmit = async (values: PppoeSecretFormValues) => {
-    if (!token) return;
     setIsSubmitting(true);
     const method = selectedSecret ? 'PUT' : 'POST';
     const url = selectedSecret
@@ -81,7 +76,6 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(values),
       });
@@ -101,14 +95,13 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
   };
 
   const handleDelete = async () => {
-    if (!selectedSecret || !token) return;
+    if (!selectedSecret) return;
 
     try {
       const response = await fetch(
         `/api/routers/${routerId}/dashboard/pppoe/secrets/${selectedSecret['.id']}`,
         {
           method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
         }
       );
 

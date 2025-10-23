@@ -102,8 +102,6 @@ const formVariants = {
 
 // --- Main Component ---
 export default function MpesaSettingsPage() {
-  const { token } = useAuth();
-  const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [loading, setLoading] = useState(true);
 
@@ -120,12 +118,9 @@ export default function MpesaSettingsPage() {
 
     useEffect(() => {
       const fetchSettings = async () => {
-        if (!token) return;
         try {
           setLoading(true);
-          const response = await fetch("/api/settings/mpesa", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const response = await fetch("/api/settings/mpesa");
           if (!response.ok) throw new Error("Failed to fetch M-Pesa settings.");
           const data = await response.json();
 
@@ -159,17 +154,16 @@ export default function MpesaSettingsPage() {
         }
       };
       fetchSettings();
-    }, [form, token]);
+    }, [form]);
 
     const onSubmit = async (data: MpesaSettingsFormValues) => {
-      if (!token) return;
       try {
       const settingsType = data.configType;
       const settingsData = data[settingsType];
 
         const response = await fetch("/api/settings/mpesa", {
           method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: settingsType, data: settingsData }),
       });
 

@@ -36,14 +36,13 @@ export default function DiagnosticReportPage() {
     const { id: userId, logId } = params;
     const [log, setLog] = useState<DiagnosticLog | null>(null);
     const [loading, setLoading] = useState(true);
-    const { token } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
-        if (!logId || !token) return;
+        if (!logId) return;
         const fetchLog = async () => {
             try {
-                const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics/${logId}`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics/${logId}`);
                 if (!response.ok) throw new Error("Failed to fetch diagnostic log");
                 setLog(await response.json());
             } catch {
@@ -53,7 +52,7 @@ export default function DiagnosticReportPage() {
             }
         };
         fetchLog();
-    }, [logId, userId, token, toast]);
+    }, [logId, userId, toast]);
 
     return (
         <div className="flex flex-col min-h-screen bg-zinc-900 text-white">

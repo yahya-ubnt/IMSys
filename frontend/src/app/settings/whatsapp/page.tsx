@@ -29,17 +29,14 @@ export default function WhatsAppSettingsPage() {
   const [editingProvider, setEditingProvider] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const { toast } = useToast()
-  const { token } = useAuth()
 
   useEffect(() => {
-    if (token) {
-      fetchProviders()
-    }
-  }, [token])
+    fetchProviders()
+  }, [])
 
   const fetchProviders = async () => {
     try {
-      const data = await getWhatsAppProviders(token)
+      const data = await getWhatsAppProviders()
       setProviders(data)
     } catch (error) {
       toast({

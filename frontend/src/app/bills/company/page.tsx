@@ -19,7 +19,6 @@ import { motion } from "framer-motion"
 
 export default function CompanyBillsPage() {
   const router = useRouter()
-  const { token } = useAuth()
   const { toast } = useToast()
 
   const [bills, setBills] = useState<Bill[]>([])
@@ -29,14 +28,9 @@ export default function CompanyBillsPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
   const fetchBills = useCallback(async () => {
-    if (!token) {
-      setError("Authentication token not found. Please log in.")
-      setLoading(false)
-      return
-    }
     setLoading(true)
     try {
-      const data = await getBills(token, selectedMonth, selectedYear)
+      const data = await getBills(selectedMonth, selectedYear)
       setBills(data.filter(bill => bill.category === 'Company'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to fetch bills."
@@ -45,17 +39,16 @@ export default function CompanyBillsPage() {
     } finally {
       setLoading(false)
     }
-  }, [token, selectedMonth, selectedYear, toast])
+  }, [selectedMonth, selectedYear, toast])
 
   useEffect(() => {
     fetchBills()
   }, [fetchBills])
 
   const handleDelete = async (id: string) => {
-    if (!token) return toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" })
     if (confirm("Are you sure you want to delete this bill?")) {
       try {
-        await deleteBill(id, token)
+        await deleteBill(id)
         toast({ title: "Bill Deleted", description: "Bill has been successfully deleted." })
         fetchBills()
       } catch (err) {

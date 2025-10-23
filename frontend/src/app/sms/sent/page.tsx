@@ -29,7 +29,6 @@ export type SmsLog = {
 // --- MAIN COMPONENT ---
 export default function SentSmsLogPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
   
   // Data states
   const [smsLogs, setSmsLogs] = useState<SmsLog[]>([])
@@ -48,7 +47,6 @@ export default function SentSmsLogPage() {
 
   // --- DATA FETCHING ---
   const fetchSmsLogs = useCallback(async () => {
-    if (!token) return
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -60,9 +58,7 @@ export default function SentSmsLogPage() {
         ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
       })
 
-      const response = await fetch(`/api/sms/log?${params.toString()}`, {
-        headers: { "Authorization": `Bearer ${token}` },
-      })
+      const response = await fetch(`/api/sms/log?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to fetch sent SMS logs")
       
       const data = await response.json()
@@ -72,7 +68,7 @@ export default function SentSmsLogPage() {
     } catch {
       toast({ title: "Error", description: "Failed to load sent SMS logs.", variant: "destructive" })
     }
-  }, [token, page, pageSize, mobileNumberFilter, messageTypeFilter, statusFilter, dateRange, toast])
+  }, [page, pageSize, mobileNumberFilter, messageTypeFilter, statusFilter, dateRange, toast])
 
   useEffect(() => {
     fetchSmsLogs()

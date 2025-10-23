@@ -20,39 +20,33 @@ export function PppoeActiveTable({ routerId }: { routerId: string }) {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   const fetchActiveSessions = useCallback(async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/active`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/active`);
       if (!response.ok) throw new Error('Failed to fetch active sessions');
       const data = await response.json();
       setSessions(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId]);
+  }, [routerId]);
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
     setLoading(true);
     fetchActiveSessions().finally(() => setLoading(false));
     const intervalId = setInterval(fetchActiveSessions, 5000);
     return () => clearInterval(intervalId);
-  }, [routerId, token, fetchActiveSessions]);
+  }, [routerId, fetchActiveSessions]);
 
   const handleDisconnect = useCallback(async (sessionId: string) => {
     if (!window.confirm('Are you sure you want to disconnect this session?')) return;
-    if (!token) return;
     try {
       const response = await fetch(`/api/routers/${routerId}/dashboard/pppoe/active/disconnect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ id: sessionId }),
       });
@@ -61,7 +55,7 @@ export function PppoeActiveTable({ routerId }: { routerId: string }) {
     } catch (err) {
       alert(`Error: ${err instanceof Error ? err.message : 'An unknown error occurred'}`);
     }
-  }, [token, routerId, fetchActiveSessions]);
+  }, [routerId, fetchActiveSessions]);
 
   const columns: ColumnDef<ActiveSession>[] = useMemo(
     () => [

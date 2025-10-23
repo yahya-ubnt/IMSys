@@ -38,19 +38,13 @@ export default function EditMikrotikRouterPage({ params: paramsPromise }: { para
   const [testLoading, setTestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { token } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
     const fetchRouter = async () => {
-      if (!token) {
-        setError("Authentication token not found.");
-        setLoading(false);
-        return;
-      }
       try {
-        const response = await fetch(`/api/mikrotik/routers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        const response = await fetch(`/api/mikrotik/routers/${id}`);
         if (!response.ok) throw new Error("Failed to fetch router");
         const data: MikrotikRouter = await response.json();
         setName(data.name);
@@ -65,20 +59,15 @@ export default function EditMikrotikRouterPage({ params: paramsPromise }: { para
       }
     };
     if (id) fetchRouter();
-  }, [id, token]);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    if (!token) {
-      toast({ title: "Authentication Error", variant: "destructive" });
-      setSubmitting(false);
-      return;
-    }
     try {
       const response = await fetch(`/api/mikrotik/routers/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, ipAddress, apiUsername, apiPassword: apiPassword || undefined, apiPort: parseInt(apiPort), location }),
       });
       if (!response.ok) {
@@ -96,15 +85,10 @@ export default function EditMikrotikRouterPage({ params: paramsPromise }: { para
 
   const handleTestConnection = async () => {
     setTestLoading(true);
-    if (!token) {
-      toast({ title: "Authentication Error", variant: "destructive" });
-      setTestLoading(false);
-      return;
-    }
     try {
       const response = await fetch("/api/mikrotik/routers/test-connection", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ipAddress, apiUsername, apiPassword, apiPort: parseInt(apiPort) }),
       });
       if (!response.ok) {

@@ -26,19 +26,16 @@ export default function WhatsAppTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const { toast } = useToast()
-  const { token } = useAuth()
 
   useEffect(() => {
-    if (token) {
-      fetchTemplates()
-    }
-  }, [token])
+    fetchTemplates()
+  }, [])
 
   const fetchTemplates = async () => {
     try {
       const [whatsappData, smsData] = await Promise.all([
-        getWhatsAppTemplates(token),
-        getSmsTemplates(token)
+        getWhatsAppTemplates(),
+        getSmsTemplates()
       ]);
       setTemplates(whatsappData);
       setSmsTemplates(smsData);

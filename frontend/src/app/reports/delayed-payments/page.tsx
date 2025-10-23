@@ -20,17 +20,12 @@ export default function DelayedPaymentsPage() {
   const [users, setUsers] = useState<MikrotikUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
   const { toast } = useToast();
   
   const [daysOverdue, setDaysOverdue] = useState(3);
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchDelayedUsers = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found.');
-      return;
-    }
     if (daysOverdue === null || daysOverdue < 0) {
         toast({ title: 'Invalid Input', description: 'Please enter a valid number of days.', variant: 'destructive' });
         return;
@@ -41,9 +36,7 @@ export default function DelayedPaymentsPage() {
       if (searchTerm) {
         url += `&name_search=${searchTerm}`;
       }
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`Failed to fetch users: ${response.statusText}`);
       setUsers(await response.json());
     } catch (err: unknown) {
@@ -52,7 +45,7 @@ export default function DelayedPaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, daysOverdue, searchTerm, toast]);
+  }, [daysOverdue, searchTerm, toast]);
 
   const columns: ColumnDef<MikrotikUser & { daysOverdue: number }>[] = getColumns();
 

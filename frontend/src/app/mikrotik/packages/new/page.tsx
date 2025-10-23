@@ -58,15 +58,13 @@ export default function NewPackagePage() {
     const [routersLoading, setRoutersLoading] = useState(true);
     const [pppProfilesLoading, setPppProfilesLoading] = useState(false);
 
-    const { token } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
     useEffect(() => {
         const fetchRouters = async () => {
-            if (!token) { setRoutersLoading(false); return; }
             try {
-                const response = await fetch("/api/mikrotik/routers", { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch("/api/mikrotik/routers");
                 if (!response.ok) throw new Error("Failed to fetch routers");
                 setRouters(await response.json());
             } catch (err) {
@@ -76,14 +74,14 @@ export default function NewPackagePage() {
             }
         };
         fetchRouters();
-    }, [token, toast]);
+    }, [toast]);
 
     useEffect(() => {
         const fetchPppProfiles = async () => {
-            if (!token || !mikrotikRouterId) { setPppProfiles([]); return; }
+            if (!mikrotikRouterId) { setPppProfiles([]); return; }
             setPppProfilesLoading(true);
             try {
-                const response = await fetch(`/api/mikrotik/routers/${mikrotikRouterId}/ppp-profiles`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`/api/mikrotik/routers/${mikrotikRouterId}/ppp-profiles`);
                 if (!response.ok) throw new Error("Failed to fetch PPP profiles");
                 setPppProfiles(await response.json());
             } catch (err) {
@@ -93,7 +91,7 @@ export default function NewPackagePage() {
             }
         };
         if (serviceType === "pppoe") fetchPppProfiles();
-    }, [token, toast, mikrotikRouterId, serviceType]);
+    }, [toast, mikrotikRouterId, serviceType]);
 
     const handleNext = () => {
         if (mikrotikRouterId && serviceType) {
@@ -120,7 +118,7 @@ export default function NewPackagePage() {
         try {
             const response = await fetch("/api/mikrotik/packages", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(packageData),
             });
             if (!response.ok) {

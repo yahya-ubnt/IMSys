@@ -58,7 +58,6 @@ export default function TenantManagementPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -71,17 +70,12 @@ export default function TenantManagementPage() {
   const [editTenant, setEditTenant] = useState({ fullName: '', email: '', phone: '' });
 
   const fetchData = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found.');
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const [tenantsRes, statsRes, growthRes] = await Promise.all([
-        fetch('/api/super-admin/tenants', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/super-admin/tenants/stats', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`/api/super-admin/tenants/monthly-growth/${selectedYear}`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch('/api/super-admin/tenants'),
+        fetch('/api/super-admin/tenants/stats'),
+        fetch(`/api/super-admin/tenants/monthly-growth/${selectedYear}`)
       ]);
 
       if (!tenantsRes.ok) throw new Error('Failed to fetch tenants');
@@ -97,7 +91,7 @@ export default function TenantManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, selectedYear]);
+  }, [selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -108,7 +102,7 @@ export default function TenantManagementPage() {
     try {
       const res = await fetch('/api/super-admin/tenants', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTenant),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -130,7 +124,7 @@ export default function TenantManagementPage() {
     try {
       const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editTenant),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -149,7 +143,7 @@ export default function TenantManagementPage() {
     try {
       const newStatus = selectedTenant.status === 'Active' ? 'Suspended' : 'Active';
       const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`,
-        { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: newStatus }) });
+        { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
       if (!res.ok) throw new Error(await res.text());
       setIsSuspendAlertOpen(false);
       fetchData(); // Refetch all data
@@ -164,7 +158,7 @@ export default function TenantManagementPage() {
   const handleDeleteTenant = async () => {
     if (!selectedTenant) return;
     try {
-      const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       setIsDeleteAlertOpen(false);
       fetchData(); // Refetch all data

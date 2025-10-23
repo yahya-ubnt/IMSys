@@ -80,7 +80,6 @@ export function QueueFormModal({ isOpen, onClose, queue, routerId, onSuccess }: 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
@@ -129,12 +128,6 @@ export function QueueFormModal({ isOpen, onClose, queue, routerId, onSuccess }: 
     setLoading(true);
     setError(null);
 
-    if (!token) {
-      setError('Authentication token not found.');
-      setLoading(false);
-      return;
-    }
-
     const url = `/api/routers/${routerId}/dashboard/queues${queue ? `/${queue['.id']}` : ''}`;
     const method = queue ? 'PUT' : 'POST';
 
@@ -157,7 +150,6 @@ export function QueueFormModal({ isOpen, onClose, queue, routerId, onSuccess }: 
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(dataToSend),
       });

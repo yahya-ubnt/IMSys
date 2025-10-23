@@ -20,7 +20,6 @@ import { useAuth } from "@/components/auth-provider"
 export function WhatsAppTemplateForm({ template, smsTemplates, onSuccess, onCancel }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm()
   const { toast } = useToast()
-  const { token } = useAuth()
 
   useEffect(() => {
     if (template) {
@@ -33,10 +32,10 @@ export function WhatsAppTemplateForm({ template, smsTemplates, onSuccess, onCanc
   const onSubmit = async (data) => {
     try {
       if (template) {
-        await updateWhatsAppTemplate(template._id, data, token)
+        await updateWhatsAppTemplate(template._id, data)
         toast({ title: "Success", description: "Template updated successfully." })
       } else {
-        await createWhatsAppTemplate(data, token)
+        await createWhatsAppTemplate(data)
         toast({ title: "Success", description: "Template created successfully." })
       }
       onSuccess()

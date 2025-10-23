@@ -22,21 +22,16 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
   const [trafficHistory, setTrafficHistory] = useState<TrafficData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
   const [availableInterfaces, setAvailableInterfaces] = useState<MikroTikInterface[]>([]); // New state
   const [selectedInterface, setSelectedInterface] = useState<string>(''); // New state for selected interface
 
   // Fetch available interfaces
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchInterfaces = async () => {
       try {
-        const response = await fetch(`/api/routers/${routerId}/dashboard/interfaces`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/interfaces`);
         if (!response.ok) {
           throw new Error('Failed to fetch interfaces');
         }
@@ -50,11 +45,11 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
       }
     };
     fetchInterfaces();
-  }, [routerId, token]);
+  }, [routerId]);
 
   // Fetch traffic data for the selected interface
   useEffect(() => {
-    if (!routerId || !token || !selectedInterface) {
+    if (!routerId || !selectedInterface) {
       setLoading(false); // Stop loading if no interface is selected
       return;
     }
@@ -64,11 +59,7 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
 
     const fetchTraffic = async () => {
       try {
-        const response = await fetch(`/api/routers/${routerId}/dashboard/traffic/${selectedInterface}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/traffic/${selectedInterface}`);
         if (!response.ok) {
           throw new Error('Failed to fetch traffic data');
         }
@@ -90,7 +81,7 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
     const interval = setInterval(fetchTraffic, 1000); // Poll every 1 second
 
     return () => clearInterval(interval); // Cleanup on unmount
-  }, [routerId, selectedInterface, token]); // Dependency on selectedInterface
+  }, [routerId, selectedInterface]); // Dependency on selectedInterface
 
   if (loading && trafficHistory.length === 0) {
     return <div>Loading traffic data...</div>;

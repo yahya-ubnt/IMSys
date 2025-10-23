@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { getTechnicianActivityById, deleteTechnicianActivity } from '@/lib/technicianActivityService';
 import { TechnicianActivity } from '@/types/technician-activity';
@@ -11,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
+import { Input } => '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, CalendarIcon, Tag, FileText, Package, Wrench } from 'lucide-react';
@@ -19,7 +18,6 @@ import { ArrowLeft, CalendarIcon, Tag, FileText, Package, Wrench } from 'lucide-
 export default function TechnicianActivityDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
@@ -30,11 +28,6 @@ export default function TechnicianActivityDetailsPage() {
 
   useEffect(() => {
     const fetchActivity = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Activity ID is missing.');
         setLoading(false);
@@ -42,7 +35,7 @@ export default function TechnicianActivityDetailsPage() {
       }
       setLoading(true);
       try {
-        const data = await getTechnicianActivityById(id as string, token);
+        const data = await getTechnicianActivityById(id as string);
         setActivity(data);
       } catch (err: unknown) {
         setError((err instanceof Error) ? err.message : 'Failed to fetch technician activity details.');
@@ -57,7 +50,7 @@ export default function TechnicianActivityDetailsPage() {
     };
 
     fetchActivity();
-  }, [id, token, toast, router, refreshKey]);
+  }, [id, toast, router, refreshKey]);
 
   useEffect(() => {
     const refreshParam = searchParams.get('refresh');
@@ -67,17 +60,9 @@ export default function TechnicianActivityDetailsPage() {
   }, [searchParams]);
 
   const handleDelete = async () => {
-    if (!token) {
-      toast({
-        title: 'Authentication Error',
-        description: 'You must be logged in to delete an activity.',
-        variant: 'destructive',
-      });
-      return;
-    }
     if (confirm('Are you sure you want to delete this activity?')) {
       try {
-        await deleteTechnicianActivity(id as string, token);
+        await deleteTechnicianActivity(id as string);
         toast({
           title: 'Activity Deleted',
           description: 'Activity has been successfully deleted.',

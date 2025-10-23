@@ -29,7 +29,6 @@ export type SmsExpirySchedule = {
 // --- MAIN COMPONENT ---
 export default function SmsExpiryPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
@@ -42,31 +41,27 @@ export default function SmsExpiryPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
-    if (!token) return;
     try {
       const [smsData, whatsappData] = await Promise.all([
-        getSmsTemplates(token),
-        getWhatsAppTemplates(token)
+        getSmsTemplates(),
+        getWhatsAppTemplates()
       ]);
       setSmsTemplates(smsData);
       setWhatsAppTemplates(whatsappData);
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [token, toast]);
+  }, [toast]);
 
   const fetchSchedules = useCallback(async () => {
-    if (!token) return
     try {
-      const response = await fetch("/api/smsexpiryschedules", { 
-        headers: { "Authorization": `Bearer ${token}` } 
-      })
+      const response = await fetch("/api/smsexpiryschedules")
       if (!response.ok) throw new Error("Failed to fetch schedules")
       setSchedules(await response.json())
     } catch {
       toast({ title: "Error", description: "Failed to load schedules.", variant: "destructive" })
     }
-  }, [token, toast])
+  }, [toast])
 
   useEffect(() => {
     fetchSchedules()
@@ -87,10 +82,8 @@ export default function SmsExpiryPage() {
   const handleDelete = async (schedule: SmsExpirySchedule) => {
     if (!window.confirm("Are you sure you want to delete this schedule?")) return;
     try {
-      if (!token) throw new Error("Authentication token not found")
       const response = await fetch(`/api/smsexpiryschedules/${schedule._id}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` },
       })
       if (!response.ok) throw new Error("Failed to delete schedule")
       toast({ title: "Success", description: "Schedule deleted successfully." })
@@ -105,10 +98,9 @@ export default function SmsExpiryPage() {
     const method = selectedSchedule ? "PUT" : "POST"
     
     try {
-      if (!token) throw new Error("Authentication token not found")
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
       if (!response.ok) throw new Error((await response.json()).message || "Failed to save schedule")

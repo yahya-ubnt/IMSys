@@ -11,7 +11,6 @@ import { useAuth } from "@/components/auth-provider"
 // import { getBuildings } from "@/services/buildingService"
 
 export function AudienceSelector({ onAudienceChange }) {
-  const { token } = useAuth()
   const [sendToType, setSendToType] = useState("users")
   
   // Data for dropdowns
@@ -28,16 +27,15 @@ export function AudienceSelector({ onAudienceChange }) {
   // Fetch data for selectors
   useEffect(() => {
     const fetchData = async () => {
-      if (!token) return
       // const [routersData, buildingsData] = await Promise.all([
-      //   getMikrotikRouters(token),
-      //   getBuildings(token),
+      //   getMikrotikRouters(),
+      //   getBuildings(),
       // ])
       // setRouters(routersData)
       // setBuildings(buildingsData)
     }
     fetchData()
-  }, [token])
+  }, [])
 
   // Notify parent component of changes
   useEffect(() => {

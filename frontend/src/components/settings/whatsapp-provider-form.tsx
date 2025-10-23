@@ -32,7 +32,6 @@ export function WhatsAppProviderForm({ provider, onSuccess, onCancel }) {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
   const [selectedProviderType, setSelectedProviderType] = useState(provider?.providerType || "twilio")
   const { toast } = useToast()
-  const { token } = useAuth()
 
   useEffect(() => {
     if (provider) {
@@ -58,10 +57,10 @@ export function WhatsAppProviderForm({ provider, onSuccess, onCancel }) {
       })
 
       if (provider) {
-        await updateWhatsAppProvider(provider._id, payload, token)
+        await updateWhatsAppProvider(provider._id, payload)
         toast({ title: "Success", description: "Provider updated successfully." })
       } else {
-        await createWhatsAppProvider(payload, token)
+        await createWhatsAppProvider(payload)
         toast({ title: "Success", description: "Provider created successfully." })
       }
       onSuccess()

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const {
   loginUser,
   getUserProfile,
@@ -17,8 +18,22 @@ const {
 } = require('../controllers/userController');
 const { protect, isSuperAdmin, isAdminTenant } = require('../middlewares/authMiddleware');
 
+// Apply rate limiting to the login route
+const loginLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: 'Too many login attempts from this IP, please try again after 1 minute',
+});
+
 // Public routes
-router.post('/login', loginUser);
+router.post('/login', 
+  [
+    loginLimiter,
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Password is required').not().isEmpty(),
+  ],
+  loginUser
+);
 
 // Authenticated user routes
 router.route('/profile').get(protect, getUserProfile);

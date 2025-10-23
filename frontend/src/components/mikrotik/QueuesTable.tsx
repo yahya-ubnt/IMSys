@@ -42,32 +42,28 @@ export function QueuesTable({ routerId }: { routerId: string }) {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingQueue, setEditingQueue] = useState<Queue | undefined>(undefined);
 
   const fetchQueues = useCallback(async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`/api/routers/${routerId}/dashboard/queues`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/routers/${routerId}/dashboard/queues`);
       if (!response.ok) throw new Error('Failed to fetch queues');
       const data = await response.json();
       setQueues(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId]);
+  }, [routerId]);
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
     setLoading(true);
     fetchQueues().finally(() => setLoading(false));
     const intervalId = setInterval(fetchQueues, 5000);
     return () => clearInterval(intervalId);
-  }, [routerId, token, fetchQueues]);
+  }, [routerId, fetchQueues]);
 
   const handleEditQueue = useCallback((queue: Queue) => {
     setEditingQueue(queue);
@@ -89,14 +85,13 @@ export function QueuesTable({ routerId }: { routerId: string }) {
     try {
       const response = await fetch(`/api/routers/${routerId}/dashboard/queues/${queueId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Failed to delete queue');
       fetchQueues();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId, fetchQueues]);
+  }, [routerId, fetchQueues]);
 
   const columns: ColumnDef<Queue>[] = useMemo(
     () => [

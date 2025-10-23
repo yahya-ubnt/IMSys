@@ -31,7 +31,6 @@ export interface TriggerType {
 // --- MAIN COMPONENT ---
 export default function SmsAcknowledgementsPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [acknowledgements, setAcknowledgements] = useState<SmsAcknowledgement[]>([])
@@ -43,25 +42,19 @@ export default function SmsAcknowledgementsPage() {
 
   // --- DATA FETCHING ---
   const fetchAcknowledgements = useCallback(async () => {
-    if (!token) return
     try {
-      const response = await fetch("/api/smsacknowledgements", { 
-        headers: { "Authorization": `Bearer ${token}` } 
-      })
+      const response = await fetch("/api/smsacknowledgements")
       if (!response.ok) throw new Error("Failed to fetch acknowledgements")
       setAcknowledgements(await response.json())
     } catch {
       toast({ title: "Error", description: "Failed to load acknowledgements.", variant: "destructive" })
     }
-  }, [token, toast])
+  }, [toast])
 
   useEffect(() => {
     const fetchTriggerTypes = async () => {
-      if (!token) return;
       try {
-        const response = await fetch("/api/sms/triggers", { 
-          headers: { "Authorization": `Bearer ${token}` } 
-        });
+        const response = await fetch("/api/sms/triggers");
         if (!response.ok) throw new Error("Failed to fetch trigger types");
         setTriggerTypes(await response.json());
       } catch (error) {
@@ -71,7 +64,7 @@ export default function SmsAcknowledgementsPage() {
 
     fetchAcknowledgements();
     fetchTriggerTypes();
-  }, [fetchAcknowledgements, token, toast]);
+  }, [fetchAcknowledgements, toast]);
 
   // --- EVENT HANDLERS ---
   const handleNewAcknowledgement = () => {
@@ -87,10 +80,8 @@ export default function SmsAcknowledgementsPage() {
   const handleDelete = async (acknowledgement: SmsAcknowledgement) => {
     if (!window.confirm("Are you sure you want to delete this acknowledgement?")) return;
     try {
-      if (!token) throw new Error("Authentication token not found")
       const response = await fetch(`/api/smsacknowledgements/${acknowledgement._id}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` },
       })
       if (!response.ok) throw new Error("Failed to delete acknowledgement")
       toast({ title: "Success", description: "Acknowledgement deleted successfully." })
@@ -105,10 +96,9 @@ export default function SmsAcknowledgementsPage() {
     const method = selectedAcknowledgement ? "PUT" : "POST"
     
     try {
-      if (!token) throw new Error("Authentication token not found")
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
       if (!response.ok) throw new Error((await response.json()).message || "Failed to save acknowledgement")

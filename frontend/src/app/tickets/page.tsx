@@ -19,7 +19,6 @@ import { getTicketColumns } from "./components/ticket-columns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function TicketsPage() {
-  const { token } = useAuth()
   const { toast } = useToast()
 
 
@@ -36,13 +35,12 @@ export default function TicketsPage() {
 
   // --- DATA FETCHING ---
   const fetchAllData = useCallback(async () => {
-    if (!token) return setError("Authentication token not found.")
     setLoading(true)
     try {
       const [ticketsData, statsData, monthlyTotalsData] = await Promise.all([
-        getTickets(token),
-        getTicketStats(token),
-        getMonthlyTicketTotals(selectedYear, token)
+        getTickets(),
+        getTicketStats(),
+        getMonthlyTicketTotals(selectedYear)
       ]);
       setTickets(ticketsData)
       if (typeof statsData === 'object' && statsData !== null && 'total' in statsData && 'new' in statsData && 'inprogress' in statsData && 'fixed' in statsData) {
@@ -56,7 +54,7 @@ export default function TicketsPage() {
     } finally {
       setLoading(false)
     }
-  }, [token, selectedYear, toast])
+  }, [selectedYear, toast])
 
   useEffect(() => {
     fetchAllData()
@@ -64,11 +62,10 @@ export default function TicketsPage() {
 
   // --- EVENT HANDLERS ---
   const handleUpdateStatus = async (id: string, status: Ticket['status']) => {
-    if (!token) return toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" })
     try {
-      const existingTicket = await getTicketById(id, token)
+      const existingTicket = await getTicketById(id)
       const updatedTicket: Ticket = { ...existingTicket, status: status }
-      await updateTicket(id, updatedTicket, token)
+      await updateTicket(id, updatedTicket)
       toast({ title: "Status Updated", description: `Ticket status changed to ${status}.` })
       fetchAllData()
     } catch (err) {
@@ -78,9 +75,9 @@ export default function TicketsPage() {
   }
 
   const handleDeleteTicket = async () => {
-    if (!token || !deleteCandidateId) return toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" })
+    if (!deleteCandidateId) return;
     try {
-      await deleteTicket(deleteCandidateId, token)
+      await deleteTicket(deleteCandidateId)
       toast({ title: "Ticket Deleted", description: "Ticket has been successfully deleted." })
       fetchAllData()
     } catch (err) {

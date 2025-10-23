@@ -19,7 +19,6 @@ import { ArrowLeft, CalendarIcon, Tag, FileText, DollarSign, Receipt } from 'luc
 export default function BillDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [bill, setBill] = useState<Bill | null>(null);
@@ -31,11 +30,6 @@ export default function BillDetailsPage() {
 
   useEffect(() => {
     const fetchBill = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Bill ID is missing.');
         setLoading(false);
@@ -43,7 +37,7 @@ export default function BillDetailsPage() {
       }
       setLoading(true);
       try {
-        const data = await getBillById(id as string, token);
+        const data = await getBillById(id as string);
         setBill(data);
       } catch (err) {
         let errorMessage = 'Failed to fetch bill details.';
@@ -62,7 +56,7 @@ export default function BillDetailsPage() {
     };
 
     fetchBill();
-  }, [id, token, toast, router, refreshKey]); // ADD refreshKey to dependencies
+  }, [id, toast, router, refreshKey]); // ADD refreshKey to dependencies
 
   // Effect to update refreshKey when the 'refresh' query parameter changes
   useEffect(() => {
@@ -73,17 +67,9 @@ export default function BillDetailsPage() {
   }, [searchParams]); // Depend on searchParams // ADD router to dependencies
 
   const handleDelete = async () => {
-    if (!token) {
-      toast({
-        title: 'Authentication Error',
-        description: 'You must be logged in to delete a bill.',
-        variant: 'destructive',
-      });
-      return;
-    }
     if (confirm('Are you sure you want to delete this bill?')) {
       try {
-        await deleteBill(id as string, token);
+        await deleteBill(id as string);
         toast({
           title: 'Bill Deleted',
           description: 'Bill has been successfully deleted.',

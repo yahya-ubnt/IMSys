@@ -41,7 +41,7 @@ export default function MikrotikUsersPage() {
   const [users, setUsers] = useState<MikrotikUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, user, isLoggingOut } = useAuth();
+  const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,26 +51,18 @@ export default function MikrotikUsersPage() {
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const fetchMonthlyTotalSubscribers = useCallback(async (year: string) => {
-    if (!token) return;
     try {
-      const response = await fetch(`/api/mikrotik/users/stats/monthly-total-subscribers/${year}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/mikrotik/users/stats/monthly-total-subscribers/${year}`);
       if (response.ok) setMonthlyTotalSubscribers(await response.json());
     } catch (err) {
       console.error('Failed to fetch monthly total subscribers:', err);
     }
-  }, [token]);
+  }, []);
 
   const fetchUsers = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found.');
-      setLoading(false);
-      return;
-    }
     try {
       setLoading(true);
-      const response = await fetch('/api/mikrotik/users', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch('/api/mikrotik/users');
       if (!response.ok) throw new Error(`Failed to fetch users: ${response.statusText}`);
       setUsers(await response.json());
     } catch (err: unknown) {
@@ -78,23 +70,18 @@ export default function MikrotikUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    if (!isLoggingOut) {
-      fetchUsers();
-      fetchMonthlyTotalSubscribers(selectedYear);
-    }
-  }, [token, isLoggingOut, selectedYear, fetchUsers, fetchMonthlyTotalSubscribers]);
+    if (isLoggingOut) { setLoading(false); return; }
+    fetchUsers();
+    fetchMonthlyTotalSubscribers(selectedYear);
+  }, [isLoggingOut, selectedYear, fetchUsers, fetchMonthlyTotalSubscribers]);
 
   const handleDeleteUser = async () => {
     if (!deleteCandidateId) return;
-    if (!token) {
-      toast({ title: 'Authentication Error', description: 'You must be logged in.', variant: 'destructive' });
-      return;
-    }
     try {
-      const response = await fetch(`/api/mikrotik/users/${deleteCandidateId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`/api/mikrotik/users/${deleteCandidateId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(`Failed to delete user: ${response.statusText}`);
       setUsers(prev => prev.filter(user => user._id !== deleteCandidateId));
       toast({ title: 'User Deleted', description: 'Mikrotik user has been successfully deleted.' });

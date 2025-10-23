@@ -15,19 +15,12 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
-  const { token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchNotifications = useCallback(async () => {
-    if (!token) {
-      return;
-    }
     try {
       const response = await fetch('/api/notifications', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         cache: 'no-store',
       });
       if (response.ok) {
@@ -38,19 +31,15 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     } catch (error) {
       console.error('Failed to fetch notifications', error);
     }
-  }, [token]);
+  }, []);
 
   const markAsRead = useCallback(async (id: string) => {
-    if (!token) return;
     const notification = notifications.find(n => n._id === id);
     if (notification && notification.status === 'read') return;
 
     try {
       const response = await fetch(`/api/notifications/${id}/read`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => n._id === id ? { ...n, status: 'read' } : n));
@@ -59,16 +48,12 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     } catch (error) {
       console.error('Failed to mark notification as read', error);
     }
-  }, [token, notifications]);
+  }, [notifications]);
 
   const markAllAsRead = useCallback(async () => {
-    if (!token) return;
     try {
       const response = await fetch('/api/notifications/read/all', {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
@@ -77,16 +62,12 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     } catch (error) {
       console.error('Failed to mark all notifications as read', error);
     }
-  }, [token]);
+  }, []);
 
   const deleteNotification = useCallback(async (id: string) => {
-    if (!token) return;
     try {
       const response = await fetch(`/api/notifications/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
       if (response.ok) {
         setNotifications(prev => prev.filter(n => n._id !== id));
@@ -98,27 +79,25 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     } catch (error) {
       console.error('Failed to delete notification', error);
     }
-  }, [token, notifications]);
+  }, [notifications]);
 
   // Initial fetch and WebSocket listener
   useEffect(() => {
-    if (token) {
-      fetchNotifications();
+    fetchNotifications();
 
-      const socket = getSocket();
+    const socket = getSocket();
 
-      const handleNewNotification = (newNotification: Notification) => {
-        setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
-        setUnreadCount(prevCount => prevCount + 1);
-      };
+    const handleNewNotification = (newNotification: Notification) => {
+      setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
+      setUnreadCount(prevCount => prevCount + 1);
+    };
 
-      socket.on('new_notification', handleNewNotification);
+    socket.on('new_notification', handleNewNotification);
 
-      return () => {
-        socket.off('new_notification', handleNewNotification);
-      };
-    }
-  }, [token, fetchNotifications]);
+    return () => {
+      socket.off('new_notification', handleNewNotification);
+    };
+  }, [fetchNotifications]);
 
   return (
     <NotificationContext.Provider value={{ notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification }}>

@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils';
 export default function EditTransactionPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<{
@@ -55,18 +54,13 @@ export default function EditTransactionPage() {
 
   useEffect(() => {
     const fetchTransaction = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Transaction ID is missing.');
         setLoading(false);
         return;
       }
       try {
-        const data = await getTransactionById(id as string, token);
+        const data = await getTransactionById(id as string);
         setFormData({
           amount: data.amount.toString(),
           method: data.method,
@@ -93,7 +87,7 @@ export default function EditTransactionPage() {
     };
 
     fetchTransaction();
-  }, [id, token, toast]);
+  }, [id, toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -112,12 +106,6 @@ export default function EditTransactionPage() {
     setSubmitting(true);
     setError(null);
 
-    if (!token) {
-      setError('Authentication token not found. Please log in.');
-      setSubmitting(false);
-      return;
-    }
-
     try {
       const dailyTransactionData = {
         ...formData,
@@ -125,7 +113,7 @@ export default function EditTransactionPage() {
         amount: parseFloat(formData.amount), // Ensure amount is parsed as float
         method: formData.method === "" ? undefined : formData.method,
       };
-      await updateTransaction(id as string, dailyTransactionData, token);
+      await updateTransaction(id as string, dailyTransactionData);
       toast({
         title: 'Transaction Updated',
         description: 'Transaction has been successfully updated.',

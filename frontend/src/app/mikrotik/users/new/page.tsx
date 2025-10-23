@@ -49,7 +49,6 @@ const formVariants = {
 // --- Main Component ---
 export default function NewMikrotikUserPage() {
     const searchParams = useSearchParams();
-    const { token } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -88,9 +87,8 @@ export default function NewMikrotikUserPage() {
     // --- Data Fetching Hooks ---
     useEffect(() => {
         const fetchData = async (url: string, key: keyof typeof dataLoading) => {
-            if (!token) return;
             try {
-                const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(url);
                 if (!response.ok) throw new Error(`Failed to fetch ${key}`);
                 return await response.json();
             } catch (err) {
@@ -103,7 +101,7 @@ export default function NewMikrotikUserPage() {
         fetchData("/api/mikrotik/routers", "routers").then(setRouters);
         fetchData("/api/mikrotik/packages", "packages").then(setPackages);
         fetchData("/api/devices?deviceType=Station", "stations").then(setStations);
-    }, [token, toast]);
+    }, [toast]);
 
     // --- Form Logic & Prefill ---
     useEffect(() => {
@@ -162,12 +160,6 @@ export default function NewMikrotikUserPage() {
         e.preventDefault();
         setLoading(true);
 
-        if (!token) {
-            toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" });
-            setLoading(false);
-            return;
-        }
-
         const userData: Partial<NewMikrotikUserData> = {
             mikrotikRouter: mikrotikRouterId,
             serviceType,
@@ -196,7 +188,7 @@ export default function NewMikrotikUserPage() {
         try {
             const response = await fetch("/api/mikrotik/users", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(userData),
             });
 

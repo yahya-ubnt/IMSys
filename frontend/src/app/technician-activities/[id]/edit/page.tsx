@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { getTechnicianActivityById, updateTechnicianActivity } from '@/lib/technicianActivityService';
 import { TechnicianActivity } from '@/types/technician-activity';
 import { Topbar } from '@/components/topbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input }m '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,7 +21,6 @@ import { cn } from '@/lib/utils';
 export default function EditTechnicianActivityPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -45,18 +43,13 @@ export default function EditTechnicianActivityPage() {
 
   useEffect(() => {
     const fetchActivity = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Activity ID is missing.');
         setLoading(false);
         return;
       }
       try {
-        const data = await getTechnicianActivityById(id as string, token);
+        const data = await getTechnicianActivityById(id as string);
         setFormData({
           technician: data.technician,
           activityType: data.activityType,
@@ -84,7 +77,7 @@ export default function EditTechnicianActivityPage() {
     };
 
     fetchActivity();
-  }, [id, token, toast]);
+  }, [id, toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -102,12 +95,6 @@ export default function EditTechnicianActivityPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-
-    if (!token) {
-      setError('Authentication token not found. Please log in.');
-      setSubmitting(false);
-      return;
-    }
 
     try {
       const activityData: Partial<TechnicianActivity> = {
@@ -129,7 +116,7 @@ export default function EditTechnicianActivityPage() {
         activityData.configurationChanges = formData.configurationChanges;
       }
 
-      await updateTechnicianActivity(id as string, activityData, token);
+      await updateTechnicianActivity(id as string, activityData);
       toast({
         title: 'Activity Updated',
         description: 'Activity has been successfully updated.',

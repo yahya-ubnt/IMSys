@@ -17,24 +17,16 @@ interface SuperAdminStats {
 
 // --- Main Page Component ---
 export default function SuperAdminDashboardPage() {
-  const { token } = useAuth();
   const [stats, setStats] = useState<SuperAdminStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!token) {
-        setError("Authentication token not found. Please log in.");
-        setLoading(false);
-        return;
-      }
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/super-admin/dashboard/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch('/api/super-admin/dashboard/stats');
 
         if (!response.ok) throw new Error(`Failed to fetch stats: ${response.statusText}`);
 
@@ -47,7 +39,7 @@ export default function SuperAdminDashboardPage() {
       }
     };
     fetchStats();
-  }, [token]);
+  }, []);
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading dashboard...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;

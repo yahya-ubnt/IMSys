@@ -24,18 +24,13 @@ export function ResourceGraphCard({ routerId, resourceType, title }: ResourceGra
   const [totalValue, setTotalValue] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchResourceData = async () => {
       try {
-        const response = await fetch(`/api/routers/${routerId}/dashboard/status`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/status`);
         if (!response.ok) {
           throw new Error('Failed to fetch resource data');
         }
@@ -76,7 +71,7 @@ export function ResourceGraphCard({ routerId, resourceType, title }: ResourceGra
     const interval = setInterval(fetchResourceData, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
-  }, [routerId, resourceType, token]);
+  }, [routerId, resourceType]);
 
   if (loading) {
     return <div>Loading {title} data...</div>;

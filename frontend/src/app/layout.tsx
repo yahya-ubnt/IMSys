@@ -48,28 +48,25 @@ export default function RootLayout({
 
 // New component to encapsulate socket initialization and event listening
 function SocketInitializer({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth(); // Assuming useAuth provides the token
   const { toast } = useToast(); // Get toast function
 
   useEffect(() => {
-    if (token) {
-      initSocket(token);
-      const socket = getSocket();
+    initSocket();
+    const socket = getSocket();
 
-      socket.on('new_notification', (notification: any) => {
-        toast({
-          title: "New Notification",
-          description: notification.message,
-        });
-        // You might also want to update a global state for notification count/list here
+    socket.on('new_notification', (notification: any) => {
+      toast({
+        title: "New Notification",
+        description: notification.message,
       });
+      // You might also want to update a global state for notification count/list here
+    });
 
-      return () => {
-        socket.off('new_notification');
-        disconnectSocket();
-      };
-    }
-  }, [token, toast]); // Add toast to dependency array
+    return () => {
+      socket.off('new_notification');
+      disconnectSocket();
+    };
+  }, [toast]); // Add toast to dependency array
 
   return <>{children}</>;
 }

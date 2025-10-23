@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { getTechnicianActivities, deleteTechnicianActivity } from '@/lib/technicianActivityService';
 import { TechnicianActivity } from '@/types/technician-activity';
@@ -16,7 +15,6 @@ import { PlusCircle } from 'lucide-react';
 
 export default function SupportActivitiesPage() {
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -25,18 +23,13 @@ export default function SupportActivitiesPage() {
   const [activities, setActivities] = useState<TechnicianActivity[]>([]);
 
   const fetchActivities = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found. Please log in.');
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const filters: { activityType: "Support"; technicianId?: string } = { activityType: 'Support' };
       if (selectedTechnician) filters.technicianId = selectedTechnician;
       // Add date range logic here if needed
 
-      const data = await getTechnicianActivities(token, filters);
+      const data = await getTechnicianActivities(filters);
       setActivities(data);
     } catch (err: unknown) {
       setError((err instanceof Error) ? err.message : 'Failed to fetch support activities.');
@@ -48,36 +41,23 @@ export default function SupportActivitiesPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, setError, setLoading, toast]);
+  }, [setError, setLoading, toast]);
 
   useEffect(() => {
     fetchActivities();
   }, [fetchActivities]);
 
   const handleDelete = async (id: string) => {
-    if (!token) {
-      toast({
-        title: 'Authentication Error',
-        description: 'You must be logged in to delete an activity.',
-        variant: 'destructive',
-      });
-      return;
-    }
     if (confirm('Are you sure you want to delete this activity?')) {
       try {
-        await deleteTechnicianActivity(id, token);
+        await deleteTechnicianActivity(id);
         toast({
           title: 'Activity Deleted',
           description: 'Activity has been successfully deleted.',
         });
         fetchActivities(); // Refresh the list
       } catch (err: unknown) {
-        setError((err instanceof Error) ? err.message : 'Failed to delete activity.');
-        toast({
-          title: 'Error',
-          description: (err instanceof Error) ? err.message : 'Failed to delete activity. Please try again.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: (err instanceof Error) ? err.message : 'Failed to delete activity.', variant: 'destructive' });
       }
     }
   };

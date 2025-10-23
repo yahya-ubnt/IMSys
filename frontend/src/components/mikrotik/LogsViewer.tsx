@@ -32,29 +32,25 @@ export function LogsViewer({ routerId }: { routerId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const { token } = useAuth();
 
   const fetchLogs = useCallback(async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`/api/routers/${routerId}/dashboard/logs`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/routers/${routerId}/dashboard/logs`);
       if (!response.ok) throw new Error('Failed to fetch logs');
       const data = await response.json();
       setLogs(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
-  }, [token, routerId]);
+  }, [routerId]);
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
     setLoading(true);
     fetchLogs().finally(() => setLoading(false));
     const intervalId = setInterval(fetchLogs, 5000);
     return () => clearInterval(intervalId);
-  }, [routerId, token, fetchLogs]);
+  }, [routerId, fetchLogs]);
 
   useEffect(() => {
     if (tableContainerRef.current) {

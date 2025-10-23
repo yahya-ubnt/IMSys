@@ -73,21 +73,20 @@ export default function EditMikrotikUserPage() {
     const [stations, setStations] = useState<Device[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const { token } = useAuth();
     const { toast } = useToast();
 
     // --- Data Fetching & Population ---
     useEffect(() => {
-        if (!id || !token) return;
+        if (!id) return;
 
         const fetchInitialData = async () => {
             try {
                 // Fetch user, routers, packages, stations in parallel
                 const [userRes, routerRes, packageRes, stationRes] = await Promise.all([
-                    fetch(`/api/mikrotik/users/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch("/api/mikrotik/routers", { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch("/api/mikrotik/packages", { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch("/api/devices?deviceType=Station", { headers: { Authorization: `Bearer ${token}` } })
+                    fetch(`/api/mikrotik/users/${id}`),
+                    fetch("/api/mikrotik/routers"),
+                    fetch("/api/mikrotik/packages"),
+                    fetch("/api/devices?deviceType=Station")
                 ]);
 
                 if (!userRes.ok) throw new Error("Failed to fetch user");
@@ -127,7 +126,7 @@ export default function EditMikrotikUserPage() {
             }
         };
         fetchInitialData();
-    }, [id, token, toast]);
+    }, [id, toast]);
 
     // --- Dependent Data Filtering ---
     useEffect(() => {
@@ -154,12 +153,6 @@ export default function EditMikrotikUserPage() {
         e.preventDefault();
         setSubmitting(true);
 
-        if (!token) {
-            toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" });
-            setSubmitting(false);
-            return;
-        }
-
         const userData = {
             mikrotikRouter: mikrotikRouterId,
             serviceType,
@@ -182,7 +175,7 @@ export default function EditMikrotikUserPage() {
         try {
             const response = await fetch(`/api/mikrotik/users/${id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(userData),
             });
 

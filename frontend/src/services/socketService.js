@@ -2,12 +2,10 @@ import { io } from 'socket.io-client';
 
 let socket;
 
-export const initSocket = (token) => {
+export const initSocket = () => {
   const socketUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
   socket = io(socketUrl, {
-    auth: {
-      token,
-    },
+    withCredentials: true
   });
 
   socket.on('connect', () => {

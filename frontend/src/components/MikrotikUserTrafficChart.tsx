@@ -63,7 +63,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // --- Main Component ---
 const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ userId }) => {
-  const { token } = useAuth();
   const { toast } = useToast();
   const [trafficHistory, setTrafficHistory] = useState<TrafficDataPoint[]>([]);
   const [currentTraffic, setCurrentTraffic] = useState<MikrotikUserTraffic | null>(null);
@@ -72,15 +71,13 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchTrafficData = useCallback(async () => {
-    if (!token || !userId) {
-      setError("Authentication token or User ID not found.");
+    if (!userId) {
+      setError("User ID not found.");
       return;
     }
     if (trafficHistory.length === 0) setIsLoading(true);
     try {
-      const response = await fetch(`/api/mikrotik/users/${userId}/traffic`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(`/api/mikrotik/users/${userId}/traffic`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to fetch traffic data");
@@ -97,7 +94,7 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
     } finally {
       setIsLoading(false);
     }
-  }, [token, userId, toast, trafficHistory.length]);
+  }, [userId, toast, trafficHistory.length]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;

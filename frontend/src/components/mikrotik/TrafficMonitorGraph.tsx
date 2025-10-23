@@ -28,18 +28,13 @@ export function TrafficMonitorGraph({ routerId, interfaceName }: TrafficMonitorG
   const [trafficData, setTrafficData] = useState<TrafficData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
-    if (!routerId || !token || !interfaceName) return;
+    if (!routerId || !interfaceName) return;
 
     const fetchTraffic = async () => {
       try {
-        const response = await fetch(`/api/routers/${routerId}/dashboard/traffic/${interfaceName}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/traffic/${interfaceName}`);
         if (!response.ok) {
           throw new Error('Failed to fetch traffic data');
         }
@@ -61,7 +56,7 @@ export function TrafficMonitorGraph({ routerId, interfaceName }: TrafficMonitorG
     const intervalId = setInterval(fetchTraffic, 5000); // Poll every 5 seconds
 
     return () => clearInterval(intervalId); // Cleanup on unmount
-  }, [routerId, token, interfaceName]);
+  }, [routerId, interfaceName]);
 
   if (loading) {
     return <div>Loading traffic data...</div>;

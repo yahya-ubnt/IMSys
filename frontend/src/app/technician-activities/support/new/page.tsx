@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { createTechnicianActivity } from '@/lib/technicianActivityService';
 import { Topbar } from '@/components/topbar';
@@ -22,7 +21,6 @@ import { Building } from '@/types/building';
 
 export default function AddNewSupportPage() {
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -62,17 +60,16 @@ export default function AddNewSupportPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
     const fetchBuildings = async () => {
       try {
-        const buildingsData = await getBuildings(token);
+        const buildingsData = await getBuildings();
         setBuildings(buildingsData);
       } catch (error) {
         console.error("Failed to fetch buildings", error);
       }
     };
     fetchBuildings();
-  }, [token]);
+  }, []);
 
   const handleSupportCategoryChange = (value: string) => {
     setFormData({
@@ -97,12 +94,6 @@ export default function AddNewSupportPage() {
     setLoading(true);
     setError(null);
 
-    if (!token) {
-      setError('Authentication token not found. Please log in.');
-      setLoading(false);
-      return;
-    }
-
     try {
       const activityData = {
         ...formData,
@@ -110,7 +101,7 @@ export default function AddNewSupportPage() {
         activityDate: new Date(formData.activityDate),
         supportCategory: formData.supportCategory === "" ? undefined : formData.supportCategory,
       };
-      await createTechnicianActivity(activityData, token);
+      await createTechnicianActivity(activityData);
       toast({
         title: 'Support Activity Added',
         description: 'New support activity has been successfully recorded.',

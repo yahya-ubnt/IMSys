@@ -23,11 +23,10 @@ import { useAuth } from "@/components/auth-provider"
 
 export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }) {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   const handleSetActive = async (id) => {
     try {
-      await setActiveSmsProvider(id, token)
+      await setActiveSmsProvider(id)
       toast({ title: "Success", description: "Provider set to active." })
       onSetActive()
     } catch (error) {
@@ -42,7 +41,7 @@ export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }) {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this provider?")) {
       try {
-        await deleteSmsProvider(id, token)
+        await deleteSmsProvider(id)
         toast({ title: "Success", description: "Provider deleted." })
         onDelete()
       } catch (error) {

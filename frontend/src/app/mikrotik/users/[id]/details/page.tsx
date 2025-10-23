@@ -56,14 +56,13 @@ export default function MikrotikUserDetailsPage() {
     const [mpesaTransactions, setMpesaTransactions] = useState<MpesaTransaction[]>([]);
     const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
     const [activeTab, setActiveTab] = useState("overview");
-    const { token } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
-        if (!id || !token) return;
+        if (!id) return;
         const fetchUser = async () => {
             try {
-                const response = await fetch(`/api/mikrotik/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`/api/mikrotik/users/${id}`);
                 if (!response.ok) throw new Error("Failed to fetch user details");
                 setUserData(await response.json());
             } catch {
@@ -73,13 +72,13 @@ export default function MikrotikUserDetailsPage() {
             }
         };
         fetchUser();
-    }, [id, token, toast]);
+    }, [id, toast]);
 
     useEffect(() => {
-        if (!token || !id) return;
+        if (!id) return;
         const fetchMpesaTransactions = async () => {
             try {
-                const response = await fetch(`/api/payments/transactions?userId=${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`/api/payments/transactions?userId=${id}`);
                 if (!response.ok) throw new Error("Failed to fetch Mpesa transactions");
                 const data = await response.json();
                 setMpesaTransactions(data.transactions);
@@ -88,13 +87,13 @@ export default function MikrotikUserDetailsPage() {
             }
         };
         fetchMpesaTransactions();
-    }, [token, id, toast]);
+    }, [id, toast]);
 
     useEffect(() => {
-        if (!id || !token) return;
+        if (!id) return;
         const fetchWalletTransactions = async () => {
             try {
-                const response = await fetch(`/api/payments/wallet/user/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await fetch(`/api/payments/wallet/user/${id}`);
                 if (!response.ok) throw new Error("Failed to fetch wallet transactions");
                 setWalletTransactions(await response.json());
             } catch (err) {
@@ -102,7 +101,7 @@ export default function MikrotikUserDetailsPage() {
             }
         };
         fetchWalletTransactions();
-    }, [id, token, toast]);
+    }, [id, toast]);
 
     const daysToExpire = useMemo(() => {
         if (!userData?.expiryDate) return { days: 0, label: 'Expired' };

@@ -24,7 +24,6 @@ const EMPTY_EXPENSE: Partial<Expense> = { status: "Due", title: "", amount: 0, d
 // --- MAIN COMPONENT ---
 export default function AllExpensesPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [data, setData] = useState<Expense[]>([])
@@ -39,13 +38,12 @@ export default function AllExpensesPage() {
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
-    if (!token) return
     setIsLoading(true)
     try {
       const [expensesRes, typesRes, usersRes] = await Promise.all([
-        fetch("/api/expenses", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/expensetypes", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/users", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/expenses"),
+        fetch("/api/expensetypes"),
+        fetch("/api/users"),
       ])
       if (!expensesRes.ok || !typesRes.ok || !usersRes.ok) throw new Error("Failed to fetch data")
       
@@ -57,7 +55,7 @@ export default function AllExpensesPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [token, toast])
+  }, [toast])
 
   useEffect(() => {
     fetchData()
@@ -65,7 +63,7 @@ export default function AllExpensesPage() {
 
   // --- EVENT HANDLERS ---
   const handleSave = async () => {
-    if (!token || !editingExpense) return;
+    if (!editingExpense) return;
     const isEditing = !!editingExpense._id;
     const url = isEditing ? `/api/expenses/${editingExpense._id}` : "/api/expenses";
     const method = isEditing ? "PUT" : "POST";
@@ -73,10 +71,10 @@ export default function AllExpensesPage() {
     try {
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingExpense),
       });
-      if (!response.ok) throw new Error((await response.json()).message || "Failed to save expense");
+      if (!response.ok) throw new Error((await response.json()).message || "Failed to save expense type");
       
       toast({ title: "Success", description: `Expense ${isEditing ? 'updated' : 'added'}.` });
       fetchData();
@@ -97,11 +95,10 @@ export default function AllExpensesPage() {
   }
 
   const handleDelete = async () => {
-    if (!token || !deleteCandidateId) return;
+    if (!deleteCandidateId) return;
     try {
       const response = await fetch(`/api/expenses/${deleteCandidateId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error("Failed to delete expense");
       toast({ title: "Success", description: "Expense deleted." });

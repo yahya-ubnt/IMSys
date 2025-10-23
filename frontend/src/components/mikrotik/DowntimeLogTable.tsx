@@ -42,16 +42,12 @@ const formatDuration = (totalSeconds: number | undefined): string => {
 export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
   const [logs, setLogs] = useState<DowntimeLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const { token } = useAuth();
 
   useEffect(() => {
     const fetchDowntimeLogs = async () => {
-      if (!token) return;
       setLoading(true);
       try {
-        const response = await fetch(`/api/mikrotik/users/${userId}/downtime-logs`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await fetch(`/api/mikrotik/users/${userId}/downtime-logs`);
         if (response.ok) {
           setLogs((await response.json()).sort((a: DowntimeLog, b: DowntimeLog) => new Date(b.downStartTime).getTime() - new Date(a.downStartTime).getTime()));
         }
@@ -61,7 +57,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
       setLoading(false);
     };
     fetchDowntimeLogs();
-  }, [userId, token]);
+  }, [userId]);
 
   const totalDowntime = useMemo(() => {
     return logs.reduce((acc, log) => acc + (log.durationSeconds || 0), 0);

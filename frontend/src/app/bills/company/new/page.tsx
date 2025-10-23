@@ -16,7 +16,6 @@ import { motion } from "framer-motion"
 
 export default function AddNewCompanyBillPage() {
   const router = useRouter()
-  const { token } = useAuth()
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -33,10 +32,6 @@ export default function AddNewCompanyBillPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!token) {
-      toast({ title: "Authentication Error", description: "Please log in.", variant: "destructive" })
-      return
-    }
     setIsLoading(true)
     try {
       const billData = {
@@ -45,7 +40,7 @@ export default function AddNewCompanyBillPage() {
         dueDate: parseInt(formData.dueDate),
         category: 'Company' as const,
       }
-      await createBill(billData, token)
+      await createBill(billData)
       toast({ title: "Bill Added", description: "New company bill has been successfully recorded." })
       router.push('/bills/company')
     } catch (err) {

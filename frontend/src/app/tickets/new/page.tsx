@@ -40,7 +40,6 @@ import { Ticket } from "@/types/ticket";
 // --- MAIN COMPONENT ---
 export default function NewTicketPage() {
   const router = useRouter()
-  const { token } = useAuth()
   const { toast } = useToast()
 
   const [formData, setFormData] = useState<TicketFormData>({
@@ -53,10 +52,9 @@ export default function NewTicketPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!token) return
       setIsLoading(true)
       try {
-        setMikrotikUsers(await getMikrotikUsers(token))
+        setMikrotikUsers(await getMikrotikUsers())
 } catch {
         toast({ title: 'Error', description: 'Failed to fetch client data.', variant: 'destructive' })
       } finally {
@@ -64,7 +62,7 @@ export default function NewTicketPage() {
       }
     }
     fetchData()
-  }, [token, toast])
+  }, [toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -90,10 +88,9 @@ export default function NewTicketPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!token) return toast({ title: "Authentication Error", description: "Please log in.", variant: "destructive" })
     setIsLoading(true)
     try {
-      await createTicket(formData as Ticket, token)
+      await createTicket(formData as Ticket)
       toast({ title: 'Ticket Created', description: 'New ticket has been successfully logged.' })
       router.push('/tickets')
     } catch (err) {

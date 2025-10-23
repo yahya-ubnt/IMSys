@@ -35,7 +35,6 @@ export default function NewDevicePage() {
     const [step, setStep] = useState(1);
     const [direction, setDirection] = useState(1);
     const [loading, setLoading] = useState(false);
-    const { token } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -60,11 +59,10 @@ export default function NewDevicePage() {
     const [accessPointsLoading, setAccessPointsLoading] = useState(true);
 
     useEffect(() => {
-        if (!token) return;
         const fetchInitialData = async () => {
             try {
-                setRouters(await getMikrotikRouters(token));
-                setAccessPoints(await getDevices(token, "Access"));
+                setRouters(await getMikrotikRouters());
+                setAccessPoints(await getDevices("Access"));
             } catch {
                 toast({ title: "Error fetching initial data", variant: "destructive" });
             } finally {
@@ -73,7 +71,7 @@ export default function NewDevicePage() {
             }
         };
         fetchInitialData();
-    }, [token, toast]);
+    }, [toast]);
 
     const handleNext = () => {
         if (routerId && deviceType) {
@@ -91,7 +89,6 @@ export default function NewDevicePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!token) { toast({ title: "Authentication Error", variant: "destructive" }); return; }
         if (!deviceType) { toast({ title: "Device Type is required", variant: "destructive" }); return; }
         setLoading(true);
         const deviceData: Partial<Device> = {
@@ -102,7 +99,7 @@ export default function NewDevicePage() {
         if (wirelessPassword) deviceData.wirelessPassword = wirelessPassword;
 
         try {
-            const newDevice = await createDevice(deviceData, token);
+            const newDevice = await createDevice(deviceData);
             toast({ title: "Device Created Successfully" });
             const redirectBack = searchParams.get('redirectBackToUserCreation');
             if (redirectBack === 'true' && newDevice.deviceType === 'Station') {

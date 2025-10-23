@@ -13,7 +13,6 @@ import { composeWhatsApp } from "@/services/whatsappService"
 
 export default function WhatsAppComposePage() {
   const { toast } = useToast()
-  const { token } = useAuth()
   const [audience, setAudience] = useState(null)
   const [template, setTemplate] = useState(null)
   const [variables, setVariables] = useState({})
@@ -33,7 +32,7 @@ export default function WhatsAppComposePage() {
         templateId: template._id,
         variables,
       }
-      await composeWhatsApp(payload, token)
+      await composeWhatsApp(payload)
       toast({ title: "Success", description: "WhatsApp message sending process initiated." })
       // Reset form
       setAudience(null)

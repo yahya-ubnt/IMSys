@@ -69,21 +69,13 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
     const [pppProfilesLoading, setPppProfilesLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const { token } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
     useEffect(() => {
         const fetchPackage = async () => {
-            if (!token) {
-                setError("Authentication token not found. Please log in.");
-                setLoading(false);
-                return;
-            }
             try {
-                const response = await fetch(`/api/mikrotik/packages/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const response = await fetch(`/api/mikrotik/packages/${id}`);
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.message || "Failed to fetch package");
@@ -103,19 +95,17 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
             }
         };
         if (id) fetchPackage();
-    }, [id, token]);
+    }, [id]);
 
     useEffect(() => {
         const fetchPppProfiles = async () => {
-            if (!token || !packageData?.mikrotikRouter?._id) {
+            if (!packageData?.mikrotikRouter?._id) {
                 setPppProfiles([]);
                 return;
             }
             setPppProfilesLoading(true);
             try {
-                const response = await fetch(`/api/mikrotik/routers/${packageData.mikrotikRouter._id}/ppp-profiles`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const response = await fetch(`/api/mikrotik/routers/${packageData.mikrotikRouter._id}/ppp-profiles`);
                 if (!response.ok) throw new Error("Failed to fetch PPP profiles");
                 setPppProfiles(await response.json());
             } catch (err: unknown) {
@@ -125,7 +115,7 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
             }
         };
         if (serviceType === "pppoe") fetchPppProfiles();
-    }, [token, toast, packageData, serviceType]);
+    }, [toast, packageData, serviceType]);
 
     const handleNext = () => {
         if (serviceType) {
@@ -152,7 +142,7 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
         try {
             const response = await fetch(`/api/mikrotik/packages/${id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updatedPackageData),
             });
             if (!response.ok) {

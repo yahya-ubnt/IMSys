@@ -13,7 +13,6 @@ interface DiagnosticButtonProps {
 
 export function DiagnosticButton({ userId }: DiagnosticButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { token } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -24,7 +23,6 @@ export function DiagnosticButton({ userId }: DiagnosticButtonProps) {
       const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics`, {
         method: 'POST',
         headers: { 
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ stream: false }) // Explicitly request non-streaming response

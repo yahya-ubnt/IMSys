@@ -35,19 +35,14 @@ export default function MikrotikRoutersPage() {
   const [routers, setRouters] = useState<MikrotikRouter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, user, isLoggingOut } = useAuth();
+  const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const fetchRouters = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found.');
-      setLoading(false);
-      return;
-    }
     try {
-      const response = await fetch('/api/mikrotik/routers', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch('/api/mikrotik/routers');
       if (!response.ok) throw new Error(`Failed to fetch routers: ${response.statusText}`);
       const data = await response.json();
       setRouters(data);
@@ -56,7 +51,7 @@ export default function MikrotikRoutersPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     if (isLoggingOut) { setLoading(false); return; }
@@ -67,12 +62,8 @@ export default function MikrotikRoutersPage() {
 
   const handleDeleteRouter = async () => {
     if (!deleteCandidateId) return;
-    if (!token) {
-      toast({ title: 'Authentication Error', variant: 'destructive' });
-      return;
-    }
     try {
-      const response = await fetch(`/api/mikrotik/routers/${deleteCandidateId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`/api/mikrotik/routers/${deleteCandidateId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error(`Failed to delete router: ${response.statusText}`);
       toast({ title: 'Router Deleted', description: 'Mikrotik router has been successfully deleted.' });
       fetchRouters();

@@ -28,7 +28,6 @@ interface MikrotikUser {
   }
 
 export default function LocationReportPage() {
-  const { token } = useAuth()
   const { toast } = useToast()
   const [date, setDate] = useState<DateRange | undefined>()
   const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
@@ -39,9 +38,8 @@ export default function LocationReportPage() {
 
   useEffect(() => {
     const fetchApartmentHouseNumbers = async () => {
-      if (!token) return
       try {
-        const response = await fetch('/api/mikrotik/users', { headers: { 'Authorization': `Bearer ${token}` } })
+        const response = await fetch('/api/mikrotik/users')
         if (!response.ok) throw new Error('Failed to fetch users')
         const users: MikrotikUser[] = await response.json()
         const uniqueApartmentHouseNumbers = ['All', ...Array.from(new Set(users.map(user => user.apartment_house_number).filter(Boolean)))];
@@ -51,7 +49,7 @@ export default function LocationReportPage() {
       }
     }
     fetchApartmentHouseNumbers()
-  }, [token, toast])
+  }, [toast])
 
   const handleGenerateReport = async () => {
     if (!date?.from || !date?.to || !selectedApartmentHouseNumber) {
@@ -62,7 +60,7 @@ export default function LocationReportPage() {
     try {
       const response = await fetch('/api/reports/location', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate: date.from, endDate: date.to, apartment_house_number: selectedApartmentHouseNumber }),
       })
       if (!response.ok) throw new Error('Failed to generate report')

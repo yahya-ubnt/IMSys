@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils';
 export default function EditBillPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -42,18 +41,13 @@ export default function EditBillPage() {
 
   useEffect(() => {
     const fetchBill = async () => {
-      if (!token) {
-        setError('Authentication token not found. Please log in.');
-        setLoading(false);
-        return;
-      }
       if (!id) {
         setError('Bill ID is missing.');
         setLoading(false);
         return;
       }
       try {
-        const data = await getBillById(id as string, token);
+        const data = await getBillById(id as string);
         setFormData({
           name: data.name,
           amount: data.amount.toString(),
@@ -82,7 +76,7 @@ export default function EditBillPage() {
     };
 
     fetchBill();
-  }, [id, token, toast]);
+  }, [id, toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -100,12 +94,6 @@ export default function EditBillPage() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-
-    if (!token) {
-      setError('Authentication token not found. Please log in.');
-      setSubmitting(false);
-      return;
-    }
 
     try {
       const billData: Partial<Bill> = {
@@ -127,7 +115,7 @@ export default function EditBillPage() {
         billData.transactionMessage = undefined;
       }
 
-      await updateBill(id as string, billData, token);
+      await updateBill(id as string, billData);
       toast({
         title: 'Bill Updated',
         description: 'Bill has been successfully updated.',

@@ -22,7 +22,6 @@ const EMPTY_EXPENSE_TYPE: Partial<ExpenseType> = { name: "", description: "", st
 // --- MAIN COMPONENT ---
 export default function ExpenseTypesPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [data, setData] = useState<ExpenseType[]>([])
@@ -34,12 +33,9 @@ export default function ExpenseTypesPage() {
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
-    if (!token) return
     setIsLoading(true)
     try {
-      const response = await fetch("/api/expensetypes", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const response = await fetch("/api/expensetypes")
       if (!response.ok) throw new Error("Failed to fetch expense types")
       setData(await response.json())
     } catch {
@@ -47,7 +43,7 @@ export default function ExpenseTypesPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [token, toast])
+  }, [toast])
 
   useEffect(() => {
     fetchData()
@@ -55,7 +51,7 @@ export default function ExpenseTypesPage() {
 
   // --- EVENT HANDLERS ---
   const handleSave = async () => {
-    if (!token || !editingExpenseType) return;
+    if (!editingExpenseType) return;
     const isEditing = !!editingExpenseType._id;
     const url = isEditing ? `/api/expensetypes/${editingExpenseType._id}` : "/api/expensetypes";
     const method = isEditing ? "PUT" : "POST";
@@ -63,7 +59,7 @@ export default function ExpenseTypesPage() {
     try {
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingExpenseType),
       });
       if (!response.ok) throw new Error((await response.json()).message || "Failed to save expense type");
@@ -87,11 +83,10 @@ export default function ExpenseTypesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!token || !window.confirm("Are you sure?")) return;
+    if (!window.confirm("Are you sure?")) return;
     try {
       const response = await fetch(`/api/expensetypes/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error("Failed to delete expense type");
       toast({ title: "Success", description: "Expense type deleted." });

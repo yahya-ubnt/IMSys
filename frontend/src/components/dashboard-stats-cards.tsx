@@ -24,28 +24,13 @@ export function DashboardStatsCards() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { token } = useAuth(); // Get token from auth context
-
   useEffect(() => {
     const fetchStats = async () => {
-
-      if (!token) {
-        setError("Authentication token not found. Please log in.");
-        setLoading(false);
-        return;
-      }
-
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
       try {
-        const collectionRes = await axios.get("/api/daily-transactions/stats", config);
+        const collectionRes = await axios.get("/api/daily-transactions/stats");
         setCollectionStats(collectionRes.data);
 
-        const expenseRes = await axios.get("/api/expenses/monthly-total", config);
+        const expenseRes = await axios.get("/api/expenses/monthly-total");
         setMonthlyExpenses(expenseRes.data);
       } catch (err) {
         console.error("Failed to fetch dashboard stats:", err);
@@ -56,7 +41,7 @@ export function DashboardStatsCards() {
     };
 
     fetchStats();
-  }, [token]);
+  }, []);
 
   if (loading) {
     return <div className="text-center text-blue-400">Loading dashboard stats...</div>;

@@ -24,7 +24,6 @@ export type SmsTemplate = {
 // --- MAIN COMPONENT ---
 export default function SmsTemplatesPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [templates, setTemplates] = useState<SmsTemplate[]>([])
@@ -35,17 +34,14 @@ export default function SmsTemplatesPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
-    if (!token) return
     try {
-      const response = await fetch("/api/smstemplates", { 
-        headers: { "Authorization": `Bearer ${token}` } 
-      })
+      const response = await fetch("/api/smstemplates")
       if (!response.ok) throw new Error("Failed to fetch templates")
       setTemplates(await response.json())
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [token, toast])
+  }, [toast])
 
   useEffect(() => {
     fetchTemplates()
@@ -65,10 +61,8 @@ export default function SmsTemplatesPage() {
   const handleDelete = async (template: SmsTemplate) => {
     if (!window.confirm("Are you sure you want to delete this template?")) return;
     try {
-      if (!token) throw new Error("Authentication token not found")
       const response = await fetch(`/api/smstemplates/${template._id}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` },
       })
       if (!response.ok) throw new Error("Failed to delete template")
       toast({ title: "Success", description: "Template deleted successfully." })
@@ -83,10 +77,9 @@ export default function SmsTemplatesPage() {
     const method = selectedTemplate ? "PUT" : "POST"
     
     try {
-      if (!token) throw new Error("Authentication token not found")
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
       if (!response.ok) throw new Error((await response.json()).message || "Failed to save template")

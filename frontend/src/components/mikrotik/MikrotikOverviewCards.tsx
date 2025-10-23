@@ -39,17 +39,14 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchSystemInfo = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/routers/${routerId}/dashboard/status`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/status`);
         if (!response.ok) {
           throw new Error('Failed to fetch system info');
         }
@@ -66,7 +63,7 @@ export function MikrotikOverviewCards({ routerId }: { routerId: string }) {
     fetchSystemInfo(); // Initial fetch
 
     return () => clearInterval(interval);
-  }, [routerId, token]);
+  }, [routerId]);
 
   const formatMemory = (bytes: string) => {
     const value = parseInt(bytes, 10);

@@ -25,19 +25,13 @@ const getBadgeVariant = (conclusion: string): "secondary" | "outline" | "destruc
 export function DiagnosticHistory({ userId }: DiagnosticHistoryProps) {
   const [logs, setLogs] = useState<DiagnosticLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { token } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!token) return;
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics`);
         if (!response.ok) {
           throw new Error('Failed to fetch diagnostic history');
         }
@@ -55,7 +49,7 @@ export function DiagnosticHistory({ userId }: DiagnosticHistoryProps) {
     };
 
     fetchHistory();
-  }, [userId, token, toast]);
+  }, [userId, toast]);
 
   return (
     <Card className="bg-zinc-900 text-white border-zinc-800 shadow-xl rounded-lg">

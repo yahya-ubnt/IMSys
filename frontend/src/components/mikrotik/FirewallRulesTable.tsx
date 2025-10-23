@@ -20,7 +20,6 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
   const [rules, setRules] = useState<FirewallRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   const columns: ColumnDef<FirewallRule>[] = useMemo(
     () => [
@@ -60,14 +59,12 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
   );
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchFirewallRules = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/routers/${routerId}/dashboard/firewall/filter`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/firewall/filter`);
         if (!response.ok) throw new Error('Failed to fetch firewall rules');
         const data = await response.json();
         setRules(data);
@@ -79,7 +76,7 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
     };
 
     fetchFirewallRules();
-  }, [routerId, token]);
+  }, [routerId]);
 
   if (loading) {
     return <div className="text-center text-zinc-400">Loading firewall rules...</div>;

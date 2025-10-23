@@ -11,13 +11,21 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
+    const token = generateToken(user._id);
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
+    });
+
     res.json({
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
       roles: user.roles,
       tenantOwner: user.tenantOwner,
-      token: generateToken(user._id),
     });
   } else {
     res.status(401);

@@ -45,11 +45,9 @@ export default function MpesaReportPage() {
     setIsLoading(true)
     setShowReport(false)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error('Authentication token not found.')
       const response = await fetch('/api/reports/mpesa-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate, endDate }),
       })
       if (!response.ok) throw new Error('Failed to generate report')

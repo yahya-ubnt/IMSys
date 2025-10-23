@@ -9,9 +9,9 @@ exports.protect = async (req, res, next) => {
 
   let token;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (req.cookies.token) {
     try {
-      token = req.headers.authorization.split(' ')[1];
+      token = req.cookies.token;
 
       const decoded = jwt.verify(token, JWT_SECRET);
 

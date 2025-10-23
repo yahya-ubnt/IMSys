@@ -15,7 +15,6 @@ interface MonthlyDataPoint { month: string; collections: number; expenses: numbe
 
 // --- Main Page Component ---
 export default function DashboardPage() {
-  const { token } = useAuth();
   const [summary, setSummary] = useState<CollectionsSummary | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -24,21 +23,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!token) {
-        setError("Authentication token not found. Please log in.");
-        setLoading(false);
-        return;
-      }
       setLoading(true);
       setError(null);
       try {
         const [summaryRes, monthlyRes] = await Promise.all([
-          fetch('/api/dashboard/collections/summary', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }),
-          fetch(`/api/dashboard/collections-and-expenses/monthly?year=${selectedYear}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
+          fetch('/api/dashboard/collections/summary'),
+          fetch(`/api/dashboard/collections-and-expenses/monthly?year=${selectedYear}`)
         ]);
 
         if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.statusText}`);
@@ -54,7 +44,7 @@ export default function DashboardPage() {
       }
     };
     fetchDashboardData();
-  }, [selectedYear, token]);
+  }, [selectedYear]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());

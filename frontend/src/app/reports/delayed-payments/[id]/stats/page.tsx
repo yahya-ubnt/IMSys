@@ -51,17 +51,14 @@ export default function PaymentStatsPage() {
     const [stats, setStats] = useState<PaymentStat | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { token } = useAuth();
     const params = useParams();
     const userId = params.id;
 
     const fetchStats = useCallback(async () => {
-        if (!token || !userId) return;
+        if (!userId) return;
         try {
             setLoading(true);
-            const response = await fetch(`/api/mikrotik/users/${userId}/payment-stats`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetch(`/api/mikrotik/users/${userId}/payment-stats`);
             if (!response.ok) throw new Error(`Failed to fetch stats: ${response.statusText}`);
             setStats(await response.json());
         } catch (err: unknown) {
@@ -69,7 +66,7 @@ export default function PaymentStatsPage() {
         } finally {
             setLoading(false);
         }
-    }, [token, userId]);
+    }, [userId]);
 
     useEffect(() => {
         fetchStats();

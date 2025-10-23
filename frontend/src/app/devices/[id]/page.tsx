@@ -50,18 +50,17 @@ export default function DeviceDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { token } = useAuth();
   const { toast } = useToast();
   const params = useParams();
   const id = params.id as string;
 
   useEffect(() => {
-    if (!token || !id) return;
+    if (!id) return;
     const fetchData = async () => {
       try {
         const [deviceData, logsData] = await Promise.all([
-          getDeviceById(id, token),
-          getDeviceDowntimeLogs(id, token),
+          getDeviceById(id),
+          getDeviceDowntimeLogs(id),
         ]);
         setDevice(deviceData);
         setDowntimeLogs(logsData);
@@ -72,14 +71,14 @@ export default function DeviceDetailsPage() {
       }
     };
     fetchData();
-  }, [id, token]);
+  }, [id]);
 
   useEffect(() => {
-    if (!token || !id || !device) { setUsersLoading(false); return; }
+    if (!id || !device) { setUsersLoading(false); return; }
     if (device.deviceType !== 'Station') { setUsersLoading(false); return; }
     const fetchUsers = async () => {
       try {
-        const response = await fetch(`/api/devices/${id}/users`, { headers: { Authorization: `Bearer ${token}` } });
+        const response = await fetch(`/api/devices/${id}/users`);
         if (!response.ok) throw new Error("Failed to fetch users");
         setUsers(await response.json());
       } catch (err) {
@@ -89,7 +88,7 @@ export default function DeviceDetailsPage() {
       }
     };
     fetchUsers();
-  }, [id, token, toast, device]);
+  }, [id, toast, device]);
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading device profile...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;

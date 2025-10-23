@@ -21,7 +21,7 @@ export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token, user, isLoggingOut } = useAuth();
+  const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -30,14 +30,9 @@ export default function PackagesPage() {
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const fetchPackages = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found.');
-      setLoading(false);
-      return;
-    }
     try {
       setLoading(true);
-      const response = await fetch('/api/mikrotik/packages', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch('/api/mikrotik/packages');
       if (!response.ok) throw new Error(`Failed to fetch packages: ${response.statusText}`);
       setPackages(await response.json());
     } catch (err: unknown) {
@@ -46,7 +41,7 @@ export default function PackagesPage() {
     finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     if (isLoggingOut) { setLoading(false); return; }
@@ -62,7 +57,7 @@ export default function PackagesPage() {
     try {
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error((await response.json()).message || `Failed to ${action} package`);
@@ -87,7 +82,6 @@ export default function PackagesPage() {
     try {
       const response = await fetch(`/api/mikrotik/packages/${deleteCandidateId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
         throw new Error((await response.json()).message || 'Failed to delete package');

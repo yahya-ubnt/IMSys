@@ -29,7 +29,6 @@ export interface Transaction {
 // --- MAIN COMPONENT ---
 export default function MpesaTransactionsPage() {
   const { toast } = useToast()
-  const { token } = useAuth()
 
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -46,7 +45,6 @@ export default function MpesaTransactionsPage() {
 
   // --- DATA FETCHING ---
   const fetchTransactions = useCallback(async () => {
-    if (!token) return
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -56,9 +54,7 @@ export default function MpesaTransactionsPage() {
         ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
       })
 
-      const response = await fetch(`/api/payments/transactions?${params.toString()}`, {
-        headers: { "Authorization": `Bearer ${token}` },
-      })
+      const response = await fetch(`/api/payments/transactions?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to fetch transactions")
       
       const data = await response.json()
@@ -68,7 +64,7 @@ export default function MpesaTransactionsPage() {
     } catch (error) {
       toast({ title: "Error", description: "Failed to load transactions.", variant: "destructive" })
     }
-  }, [token, page, pageSize, searchTerm, dateRange, toast])
+  }, [page, pageSize, searchTerm, dateRange, toast])
 
   useEffect(() => {
     fetchTransactions()

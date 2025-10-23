@@ -29,17 +29,14 @@ export default function SmsSettingsPage() {
   const [editingProvider, setEditingProvider] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const { toast } = useToast()
-  const { token } = useAuth() // Assuming useAuth provides the token
 
   useEffect(() => {
-    if (token) {
-      fetchProviders()
-    }
-  }, [token])
+    fetchProviders()
+  }, [])
 
   const fetchProviders = async () => {
     try {
-      const data = await getSmsProviders(token)
+      const data = await getSmsProviders()
       setProviders(data)
     } catch (error) {
       toast({

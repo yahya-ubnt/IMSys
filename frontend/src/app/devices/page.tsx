@@ -27,7 +27,6 @@ export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,38 +34,29 @@ export default function DevicesPage() {
   const [deviceTypeFilter, setDeviceTypeFilter] = useState<"all" | "Access" | "Station">("all");
 
   const fetchDevices = useCallback(async () => {
-    if (!token) {
-      setError("Authentication token not found. Please log in.");
-      setLoading(false);
-      return;
-    }
     try {
       setLoading(true);
       const deviceType = deviceTypeFilter === "all" ? undefined : deviceTypeFilter;
-      const data = await getDevices(token, deviceType);
+      const data = await getDevices(deviceType);
       setDevices(data);
     } catch (err: unknown) {
       setError((err instanceof Error) ? err.message : "Failed to fetch devices");
     } finally {
       setLoading(false);
     }
-  }, [token, deviceTypeFilter]);
+  }, [deviceTypeFilter]);
 
   useEffect(() => {
     fetchDevices();
-  }, [token, fetchDevices]);
+  }, [fetchDevices]);
 
   const handleDeleteDevice = async (deviceId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!token) {
-      toast({ title: "Authentication Error", variant: "destructive" });
-      return;
-    }
     if (!confirm("Are you sure you want to delete this device?")) {
       return;
     }
     try {
-      await deleteDevice(deviceId, token);
+      await deleteDevice(deviceId);
       toast({ title: "Device Deleted" });
       fetchDevices();
     } catch (error: unknown) {

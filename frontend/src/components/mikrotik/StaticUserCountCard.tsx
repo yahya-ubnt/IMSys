@@ -14,19 +14,14 @@ export function StaticUserCountCard({ routerId }: { routerId: string }) {
   const [staticCounts, setStaticCounts] = useState<StaticCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
 
   useEffect(() => {
-    if (!routerId || !token) return;
+    if (!routerId) return;
 
     const fetchStaticCounts = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/routers/${routerId}/dashboard/static/counts`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`/api/routers/${routerId}/dashboard/static/counts`);
         if (!response.ok) {
           throw new Error('Failed to fetch static user counts');
         }
@@ -44,7 +39,7 @@ export function StaticUserCountCard({ routerId }: { routerId: string }) {
     };
 
     fetchStaticCounts();
-  }, [routerId, token]);
+  }, [routerId]);
 
   if (loading) {
     return <div>Loading static user counts...</div>;

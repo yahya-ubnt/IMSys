@@ -56,7 +56,6 @@ const africanCountries = [
 ];
 
 export default function GeneralSettingsForm() {
-  const { token } = useAuth();
   const { setSettings } = useSettings();
   const router = useRouter();
 
@@ -86,11 +85,8 @@ export default function GeneralSettingsForm() {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!token) return;
       try {
-        const response = await fetch("/api/settings/general", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch("/api/settings/general");
         if (!response.ok) throw new Error("Failed to fetch settings.");
         const data = await response.json();
         
@@ -114,10 +110,9 @@ export default function GeneralSettingsForm() {
       }
     };
     fetchSettings();
-  }, [token, brandingForm, companyInfoForm, billingForm]);
+  }, [brandingForm, companyInfoForm, billingForm]);
 
   const onSubmit = async (data: any, section: string) => {
-    if (!token) return;
     try {
       const formData = new FormData();
       
@@ -138,7 +133,6 @@ export default function GeneralSettingsForm() {
 
       const response = await fetch(`/api/settings/general`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 

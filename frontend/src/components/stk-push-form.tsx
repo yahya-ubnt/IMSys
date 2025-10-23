@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function StkPushForm() {
-  const { token } = useAuth();
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [accountReference, setAccountReference] = useState('');
@@ -21,18 +20,11 @@ export default function StkPushForm() {
     setIsLoading(true);
     setMessage(null);
 
-    if (!token) {
-      setMessage({ type: 'error', text: 'Authentication error. Please log in again.' });
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch('/api/payments/initiate-stk', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ amount, phoneNumber, accountReference }),
       });

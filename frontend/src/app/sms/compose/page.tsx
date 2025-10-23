@@ -40,7 +40,6 @@ const TABS = [
 export default function ComposeSmsPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { token } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [mikrotikRouters, setMikrotikRouters] = useState<MikrotikRouter[]>([])
   const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([])
@@ -57,17 +56,12 @@ export default function ComposeSmsPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!token) {
-        toast({ title: "Authentication Error", description: "Please log in.", variant: "destructive" })
-        setIsLoading(false)
-        return
-      }
       setIsLoading(true)
       try {
         const [usersRes, routersRes, mikrotikUsersRes] = await Promise.all([
-          fetch("/api/mikrotik/users/clients-for-sms", { headers: { "Authorization": `Bearer ${token}` } }),
-          fetch("/api/mikrotik/routers", { headers: { "Authorization": `Bearer ${token}` } }),
-          fetch("/api/mikrotik/users", { headers: { "Authorization": `Bearer ${token}` } }),
+          fetch("/api/mikrotik/users/clients-for-sms"),
+          fetch("/api/mikrotik/routers"),
+          fetch("/api/mikrotik/users"),
         ])
 
         if (!usersRes.ok || !routersRes.ok || !mikrotikUsersRes.ok) {
@@ -94,14 +88,10 @@ export default function ComposeSmsPage() {
       }
     }
     fetchData()
-  }, [token, toast])
+  }, [toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!token) {
-      toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" })
-      return
-    }
     setIsSubmitting(true)
 
     let payload: { message: string; sendToType: string; userIds?: string[]; routerId?: string; apartment_house_number?: string; unregisteredMobileNumber?: string; } = { message, sendToType: activeTab }
@@ -128,7 +118,7 @@ export default function ComposeSmsPage() {
     try {
       const response = await fetch("/api/sms/compose", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 

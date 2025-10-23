@@ -50,7 +50,7 @@ export function TransactionList<T extends CommonTransaction>({
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const { token, isLoggingOut } = useAuth();
+  const { isLoggingOut } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,11 +59,6 @@ export function TransactionList<T extends CommonTransaction>({
   }, [searchTerm]);
 
   const fetchData = useCallback(async () => {
-    if (!token) {
-      setError('Authentication token not found.');
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const params = new URLSearchParams({ year: selectedYear });
@@ -71,9 +66,9 @@ export function TransactionList<T extends CommonTransaction>({
       if (category) params.append('category', category);
       
       const [transData, statsData, monthlyData] = await Promise.all([
-        transactionService.getTransactions(token, params.toString()),
-        transactionService.getStats(token, category),
-        transactionService.getMonthlyTotals(selectedYear, token, category),
+        transactionService.getTransactions(params.toString()),
+        transactionService.getStats(category),
+        transactionService.getMonthlyTotals(selectedYear, category),
       ]);
       
       setTransactions(transData);
@@ -84,16 +79,15 @@ export function TransactionList<T extends CommonTransaction>({
     } finally {
       setLoading(false);
     }
-  }, [token, selectedYear, debouncedSearchTerm, category, transactionService]);
+  }, [selectedYear, debouncedSearchTerm, category, transactionService]);
 
   useEffect(() => {
     if (!isLoggingOut) fetchData();
   }, [fetchData, isLoggingOut]);
 
   const handleDeleteTransaction = async (transactionId: string) => {
-    if (!token) { toast({ title: 'Authentication Error', variant: 'destructive' }); return; }
     try {
-      await transactionService.deleteTransaction(transactionId, token);
+      await transactionService.deleteTransaction(transactionId);
       toast({ title: 'Transaction Deleted' });
       fetchData();
     } catch (error) {

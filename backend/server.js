@@ -8,6 +8,7 @@ if (!process.env.JWT_SECRET) {
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const path = require('path'); // Import path module
 
@@ -56,7 +57,8 @@ connectDB();
 
 // Middleware
 app.use(express.json()); // For parsing application/json
-app.use(cors()); // Enable CORS
+app.use(cookieParser());
+app.use(cors({ origin: 'http://localhost:3000', credentials: true })); // Enable CORS
 
 // DIAGNOSTIC: Log all incoming requests
 app.use((req, res, next) => {
@@ -129,11 +131,11 @@ const socketio = require('./socket'); // Import socket.js
 const jwt = require('jsonwebtoken'); // Import jwt
 const server = http.createServer(app); // Create HTTP server
 
-const io = socketio.init(server); // Initialize socket.io
+const io = socketio.init(server, { cors: { origin: 'http://localhost:3000', credentials: true } }); // Initialize socket.io
 
 // Middleware to authenticate socket connections
 io.use(async (socket, next) => {
-  const token = socket.handshake.auth.token;
+  const token = socket.handshake.headers.cookie?.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
   if (!token) {
     return next(new Error('Authentication error: No token provided'));
   }
