@@ -29,6 +29,7 @@ export type SmsExpirySchedule = {
 // --- MAIN COMPONENT ---
 export default function SmsExpiryPage() {
   const { toast } = useToast()
+  const { token } = useAuth()
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
@@ -41,17 +42,18 @@ export default function SmsExpiryPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
+    if (!token) return;
     try {
       const [smsData, whatsappData] = await Promise.all([
-        getSmsTemplates(),
-        getWhatsAppTemplates()
+        getSmsTemplates(token),
+        getWhatsAppTemplates(token)
       ]);
       setSmsTemplates(smsData);
       setWhatsAppTemplates(whatsappData);
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [toast]);
+  }, [toast, token]);
 
   const fetchSchedules = useCallback(async () => {
     try {
