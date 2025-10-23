@@ -25,26 +25,37 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 });
 
 const handleDarajaCallback = asyncHandler(async (req, res) => {
-  console.log('M-Pesa Callback Received:', JSON.stringify(req.body, null, 2));
+  console.log(`[${new Date().toISOString()}] M-Pesa Callback Received:`, JSON.stringify(req.body, null, 2));
 
-  // Check if it's an STK Push callback
-  if (req.body.Body && req.body.Body.stkCallback) {
-    await processStkCallback(req.body.Body.stkCallback);
-  } 
-  // Check if it's a C2B confirmation or validation
-  else if (req.body.TransID) {
-    await processC2bCallback(req.body);
-  } 
-  // Otherwise, it's a callback we don't handle
-  else {
-    console.log('Received a callback that is not a standard STK or C2B payload.');
+  try {
+    // Check if it's an STK Push callback
+    if (req.body.Body && req.body.Body.stkCallback) {
+      console.log(`[${new Date().toISOString()}] Processing STK Push callback.`);
+      await processStkCallback(req.body.Body.stkCallback);
+    } 
+    // Check if it's a C2B confirmation or validation
+    else if (req.body.TransID) {
+      console.log(`[${new Date().toISOString()}] Processing C2B callback.`);
+      await processC2bCallback(req.body);
+    } 
+    // Otherwise, it's a callback we don't handle
+    else {
+      console.log(`[${new Date().toISOString()}] Received a callback that is not a standard STK or C2B payload.`);
+    }
+
+    // Respond to Safaricom acknowledging receipt
+    res.status(200).json({
+      "ResultCode": 0,
+      "ResultDesc": "Accepted"
+    });
+    console.log(`[${new Date().toISOString()}] M-Pesa callback successfully processed and acknowledged.`);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in handleDarajaCallback:`, error);
+    res.status(500).json({
+      "ResultCode": 1,
+      "ResultDesc": "Internal Server Error"
+    });
   }
-
-  // Respond to Safaricom acknowledging receipt
-  res.status(200).json({
-    "ResultCode": 0,
-    "ResultDesc": "Accepted"
-  });
 });
 
 const getTransactions = asyncHandler(async (req, res) => {

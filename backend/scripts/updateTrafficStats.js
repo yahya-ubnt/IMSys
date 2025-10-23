@@ -5,10 +5,15 @@ const TrafficLog = require('../models/TrafficLog');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const { decrypt } = require('../utils/crypto');
 
-const updateTrafficStats = async () => {
-  console.log('Starting traffic stats update...');
+const updateTrafficStats = async (tenantId) => {
+  if (!tenantId) {
+    console.error('Tenant ID is required.');
+    process.exit(1);
+  }
+
+  console.log(`Starting traffic stats update for tenant ${tenantId}...`);
   await connectDB();
-  const users = await MikrotikUser.find({}).populate('mikrotikRouter');
+  const users = await MikrotikUser.find({ tenantOwner: tenantId }).populate('mikrotikRouter');
 
   for (const user of users) {
     if (!user.mikrotikRouter) {
@@ -110,4 +115,5 @@ const updateTrafficStats = async () => {
   mongoose.disconnect();
 };
 
-updateTrafficStats();
+const tenantId = process.argv[2];
+updateTrafficStats(tenantId);

@@ -142,19 +142,34 @@ const processStkCallback = async (callbackData) => {
 };
 
 const processC2bCallback = async (callbackData) => {
-  const { TransID, TransAmount, BillRefNumber, MSISDN, FirstName, MiddleName, LastName, OrgAccountBalance } = callbackData;
+  const { TransID, TransAmount, BillRefNumber, MSISDN, FirstName, MiddleName, LastName, OrgAccountBalance, BusinessShortCode } = callbackData;
 
   if (!TransID) {
     console.log('C2B validation request or invalid callback. Ignoring.');
     return;
   }
 
-  const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber });
+  // Find the tenant by the paybill number (BusinessShortCode)
+  const settings = await ApplicationSettings.findOne({ 'mpesaPaybill.paybillNumber': BusinessShortCode });
+
+  if (!settings) {
+    const alertMessage = `C2B payment of KES ${TransAmount} received for paybill '${BusinessShortCode}', but no tenant is configured with this paybill.`;
+    // Since we don't know the tenant, we can't assign a tenantOwner to this alert.
+    // It will be a system-level alert.
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber });
+    console.error(alertMessage);
+    return;
+  }
+
+  const tenantOwner = settings.tenantOwner;
+
+  // Find the user within the correct tenant
+  const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber, tenantOwner: tenantOwner });
 
   if (!user) {
-    // This is a potential issue with multi-tenancy, as we can't be sure which tenant this payment belongs to.
-    // For now, we will not create an alert if the user is not found.
-    console.error(`C2B payment of KES ${TransAmount} for '${BillRefNumber}' received, but no user was found.`);
+    const alertMessage = `C2B payment of KES ${TransAmount} for account '${BillRefNumber}' received, but no user was found in tenant ${tenantOwner}.`;
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenantOwner: tenantOwner });
+    console.error(alertMessage);
     return;
   }
 

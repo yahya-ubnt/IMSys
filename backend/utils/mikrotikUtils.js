@@ -89,8 +89,8 @@ const checkCPEStatus = async (device, router) => {
     return isOnline;
 };
 
-const reconnectMikrotikUser = async (userId) => {
-  const user = await MikrotikUser.findById(userId).populate('package').populate('mikrotikRouter');
+const reconnectMikrotikUser = async (userId, tenantOwner) => {
+  const user = await MikrotikUser.findOne({ _id: userId, tenantOwner: tenantOwner }).populate('package').populate('mikrotikRouter');
 
   if (!user) {
     console.error(`User with ID ${userId} not found for reconnection.`);

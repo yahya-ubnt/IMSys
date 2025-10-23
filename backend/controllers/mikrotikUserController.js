@@ -12,12 +12,12 @@ const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
 
 // Helper function to generate a unique 6-digit number
-const generateUnique6DigitNumber = async () => {
+const generateUnique6DigitNumber = async (tenantOwner) => {
   let isUnique = false;
   let randomNumber;
   while (!isUnique) {
     randomNumber = Math.floor(100000 + Math.random() * 900000).toString();
-    const existingUser = await MikrotikUser.findOne({ mPesaRefNo: randomNumber });
+    const existingUser = await MikrotikUser.findOne({ mPesaRefNo: randomNumber, tenantOwner: tenantOwner });
     if (!existingUser) {
       isUnique = true;
     }

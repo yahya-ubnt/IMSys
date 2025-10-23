@@ -16,7 +16,7 @@ const loginUser = asyncHandler(async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'Lax', // Changed from 'strict' to 'Lax'
+      sameSite: 'Lax',
       maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
     });
 
@@ -141,7 +141,8 @@ const deleteUser = asyncHandler(async (req, res) => {
   if (user) {
     await user.deleteOne();
     res.json({ message: 'User removed' });
-  } else {
+  }
+  else {
     res.status(404);
     throw new Error('User not found');
   }
@@ -190,7 +191,8 @@ const getTenantUserById = asyncHandler(async (req, res) => {
 
     if (user) {
         res.json(user);
-    } else {
+    }
+    else {
         res.status(404);
         throw new Error('User not found in your tenancy');
     }
@@ -214,7 +216,8 @@ const updateTenantUser = asyncHandler(async (req, res) => {
 
         const updatedUser = await user.save();
         res.json(updatedUser);
-    } else {
+    }
+    else {
         res.status(404);
         throw new Error('User not found in your tenancy');
     }
@@ -229,7 +232,8 @@ const deleteTenantUser = asyncHandler(async (req, res) => {
     if (user) {
         await user.deleteOne();
         res.json({ message: 'User removed' });
-    } else {
+    }
+    else {
         res.status(404);
         throw new Error('User not found in your tenancy');
     }

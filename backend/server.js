@@ -57,6 +57,13 @@ connectDB();
 
 // Middleware
 app.use(express.json()); // For parsing application/json
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('Bad JSON:', err);
+    return res.status(400).send({ status: 400, message: err.message }); // Bad request
+  }
+  next();
+});
 app.use(cookieParser());
 app.use(cors({ origin: 'http://localhost:3000', credentials: true })); // Enable CORS
 

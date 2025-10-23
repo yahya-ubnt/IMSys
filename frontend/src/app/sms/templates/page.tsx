@@ -25,7 +25,7 @@ export type SmsTemplate = {
 // --- MAIN COMPONENT ---
 export default function SmsTemplatesPage() {
   const { toast } = useToast()
-  // const { token } = useAuth() // Removed token from useAuth
+  const { token } = useAuth()
 
   // Data states
   const [templates, setTemplates] = useState<SmsTemplate[]>([])
@@ -36,20 +36,20 @@ export default function SmsTemplatesPage() {
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
-    // if (!token) return; // Removed token check
+    if (!token) return;
     try {
       const data = await getSmsTemplates()
       setTemplates(data)
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [toast]) // Removed token from dependency array
+  }, [toast, token])
 
   useEffect(() => {
-    // if (token) { // Removed token check
+    if (token) {
       fetchTemplates()
-    // }
-  }, [fetchTemplates]) // Removed token from dependency array
+    }
+  }, [fetchTemplates, token])
 
   // --- EVENT HANDLERS ---
   const handleNewTemplate = () => {
@@ -64,7 +64,7 @@ export default function SmsTemplatesPage() {
 
   const handleDelete = async (template: SmsTemplate) => {
     if (!window.confirm("Are you sure you want to delete this template?")) return;
-    // if (!token) return; // Removed token check
+    if (!token) return;
     try {
       await deleteSmsTemplate(template._id)
       toast({ title: "Success", description: "Template deleted successfully." })
@@ -75,17 +75,11 @@ export default function SmsTemplatesPage() {
   }
 
   const handleFormSubmit = async (data: SmsTemplateFormData) => {
-    console.log("handleFormSubmit called with data:", data);
-    // if (!token) { // Removed token check
-    //   console.log("No token available.");
-    //   return;
-    // }
+    if (!token) return;
     try {
       if (selectedTemplate) {
-        console.log("Updating template:", selectedTemplate._id, data);
         await updateSmsTemplate(selectedTemplate._id, data)
       } else {
-        console.log("Creating template:", data);
         await createSmsTemplate(data)
       }
       
@@ -93,7 +87,6 @@ export default function SmsTemplatesPage() {
       setIsModalOpen(false)
       fetchTemplates()
     } catch (error: unknown) {
-      console.error("Error in handleFormSubmit:", error);
       toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unknown error occurred.", variant: "destructive" })
     }
   }
