@@ -23,6 +23,7 @@ import { useAuth } from "@/components/auth-provider"
 
 export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }) {
   const { toast } = useToast()
+  // const { token } = useAuth() // Removed token from useAuth
 
   const handleSetActive = async (id) => {
     try {

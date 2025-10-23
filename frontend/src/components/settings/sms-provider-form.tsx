@@ -50,7 +50,7 @@ export function SmsProviderForm({ provider, onSuccess, onCancel }) {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
   const [selectedProviderType, setSelectedProviderType] = useState(provider?.providerType || "")
   const { toast } = useToast()
-  const { token } = useAuth()
+  // const { token } = useAuth() // Removed token from useAuth
 
   useEffect(() => {
     if (provider) {
@@ -74,10 +74,10 @@ export function SmsProviderForm({ provider, onSuccess, onCancel }) {
       })
 
       if (provider) {
-        await updateSmsProvider(provider._id, payload, token)
+        await updateSmsProvider(provider._id, payload)
         toast({ title: "Success", description: "Provider updated successfully." })
       } else {
-        await createSmsProvider(payload, token)
+        await createSmsProvider(payload)
         toast({ title: "Success", description: "Provider created successfully." })
       }
       onSuccess()
