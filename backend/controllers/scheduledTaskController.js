@@ -78,10 +78,18 @@ const updateScheduledTask = asyncHandler(async (req, res) => {
     throw new Error('Task not found');
   }
 
-  task.name = name || task.name;
-  task.description = description || task.description;
-  task.scriptPath = scriptPath || task.scriptPath;
-  task.schedule = schedule || task.schedule;
+  // Role-based updates
+  if (req.user.roles.includes('SUPER_ADMIN')) {
+    // Super Admin can update all fields
+    task.name = name || task.name;
+    task.description = description || task.description;
+    task.scriptPath = scriptPath || task.scriptPath;
+    task.schedule = schedule || task.schedule;
+  } else {
+    // Tenant Admin can only update the schedule
+    task.schedule = schedule || task.schedule;
+  }
+
   if (isEnabled !== undefined) {
     task.isEnabled = isEnabled;
   }

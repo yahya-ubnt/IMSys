@@ -84,13 +84,6 @@ UserSchema.post('save', async function (doc, next) {
           isEnabled: true,
         },
         {
-          name: 'Automated Payment Reminders',
-          description: 'Sends SMS reminders to customers whose subscription is expiring in 3 days.',
-          scriptPath: 'scripts/sendPaymentReminders.js',
-          schedule: '0 8 * * *', // Every day at 8:00 AM
-          isEnabled: true,
-        },
-        {
           name: 'Automated Database Log Cleanup',
           description: 'Archives or deletes old log records to maintain database performance.',
           scriptPath: 'scripts/cleanupOldLogs.js',
