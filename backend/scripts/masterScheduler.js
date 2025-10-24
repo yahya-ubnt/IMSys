@@ -91,6 +91,7 @@ const masterScheduler = async () => {
   // Listen for task changes
   eventEmitter.on('task:created', scheduleTask);
   eventEmitter.on('task:updated', (task) => {
+    console.log(`[${new Date().toISOString()}] Updating schedule for task '${task.name}' to '${task.schedule}'`);
     unscheduleTask(task._id);
     if (task.isEnabled) {
       scheduleTask(task);
