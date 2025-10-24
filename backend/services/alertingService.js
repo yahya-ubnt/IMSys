@@ -76,9 +76,9 @@ const sendConsolidatedAlert = async (entities, status, tenantOwner, user = null,
     }
     // --- End Email Logic ---
 
-    // Emit a websocket event to the specific user's room
-    if (user) {
-      io.to(user._id.toString()).emit('new_notification', notification);
+    // Emit a websocket event to the tenant's room
+    if (tenantOwner) {
+      io.to(tenantOwner.toString()).emit('new_notification', notification);
     }
   } catch (error) {
     console.error('Error saving notification:', error);

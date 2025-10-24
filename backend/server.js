@@ -160,9 +160,10 @@ io.use(async (socket, next) => {
 
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
-  // Join a room based on the user ID for targeted notifications
-  socket.join(socket.user.id);
-  console.log(`Client ${socket.id} joined room ${socket.user.id}`);
+  // Join a room based on the user's tenant ID for targeted notifications
+  const room = socket.user.tenantOwner ? socket.user.tenantOwner.toString() : socket.user.id.toString();
+  socket.join(room);
+  console.log(`Client ${socket.id} joined room ${room}`);
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
