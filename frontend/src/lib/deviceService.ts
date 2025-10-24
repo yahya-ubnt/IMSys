@@ -111,7 +111,7 @@ export const getMikrotikRouters = async (): Promise<MikrotikRouter[]> => {
 
 // Fetch Downtime Logs for a specific device
 export const getDeviceDowntimeLogs = async (deviceId: string): Promise<any[]> => {
-  const response = await fetch(`/api/devices/${deviceId}/downtime-logs`);
+  const response = await fetch(`/api/devices/${deviceId}/downtime`);
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || "Failed to fetch device downtime logs");
