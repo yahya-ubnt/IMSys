@@ -71,7 +71,7 @@ interface ScheduledTask {
 export default function ScheduledTasksPage() {
     const [tasks, setTasks] = useState<ScheduledTask[]>([]);
     const [loading, setLoading] = useState(true);
-    const { token, user } = useAuth();
+    const { user } = useAuth();
     const { toast } = useToast();
 
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
@@ -83,9 +83,7 @@ export default function ScheduledTasksPage() {
     const fetchTasks = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/scheduled-tasks', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetch('/api/scheduled-tasks');
             if (!response.ok) throw new Error('Failed to fetch tasks');
             setTasks(await response.json());
         } catch (error) {
@@ -93,19 +91,19 @@ export default function ScheduledTasksPage() {
         } finally {
             setLoading(false);
         }
-    }, [token, toast]);
+    }, [toast]);
 
     useEffect(() => {
-        if (token) {
+        if (user) {
             fetchTasks();
         }
-    }, [fetchTasks, token]);
+    }, [fetchTasks, user]);
 
     const handleToggle = async (task: ScheduledTask) => {
         try {
             const response = await fetch(`/api/scheduled-tasks/${task._id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isEnabled: !task.isEnabled }),
             });
             if (!response.ok) throw new Error('Failed to update task');
@@ -120,7 +118,6 @@ export default function ScheduledTasksPage() {
         try {
             const response = await fetch(`/api/scheduled-tasks/${taskId}/run`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!response.ok) throw new Error('Failed to run task');
             toast({ title: 'Success', description: 'Task execution has been triggered.' });
@@ -272,9 +269,9 @@ export default function ScheduledTasksPage() {
                         </DialogDescription>
                     </DialogHeader>
                     {isSuperAdmin ? (
-                        <SuperAdminTaskForm task={selectedTask} onSave={() => { setIsEditModalOpen(false); fetchTasks(); }} token={token} />
+                        <SuperAdminTaskForm task={selectedTask} onSave={() => { setIsEditModalOpen(false); fetchTasks(); }} />
                     ) : (
-                        <TenantTaskForm task={selectedTask} onSave={() => { setIsEditModalOpen(false); fetchTasks(); }} token={token} />
+                        <TenantTaskForm task={selectedTask} onSave={() => { setIsEditModalOpen(false); fetchTasks(); }} />
                     )}
                 </DialogContent>
             </Dialog>
@@ -283,7 +280,7 @@ export default function ScheduledTasksPage() {
 }
 
 // Renamed from TaskForm to TenantTaskForm
-function TenantTaskForm({ task, onSave, token }: { task: Partial<ScheduledTask> | null, onSave: () => void, token: string | null }) {
+function TenantTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null, onSave: () => void }) {
     const [hour, setHour] = useState('12');
     const [minute, setMinute] = useState('00');
     const [ampm, setAmpm] = useState('AM');
@@ -311,7 +308,7 @@ function TenantTaskForm({ task, onSave, token }: { task: Partial<ScheduledTask> 
     }, [task]);
 
     const handleSave = async () => {
-        if (!token || !task) return;
+        if (!task) return;
 
         let twentyFourHour = parseInt(hour, 10);
         if (ampm === 'PM' && twentyFourHour !== 12) {
@@ -327,7 +324,7 @@ function TenantTaskForm({ task, onSave, token }: { task: Partial<ScheduledTask> 
         try {
             const response = await fetch(`/api/scheduled-tasks/${task._id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
             if (!response.ok) {
@@ -385,7 +382,7 @@ function TenantTaskForm({ task, onSave, token }: { task: Partial<ScheduledTask> 
 }
 
 // The original, full-featured form for Super Admins
-function SuperAdminTaskForm({ task, onSave, token }: { task: Partial<ScheduledTask> | null, onSave: () => void, token: string | null }) {
+function SuperAdminTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null, onSave: () => void }) {
     const [name, setName] = useState(task?.name || '');
     const [description, setDescription] = useState(task?.description || '');
     const [scriptPath, setScriptPath] = useState(task?.scriptPath || '');
@@ -399,8 +396,6 @@ function SuperAdminTaskForm({ task, onSave, token }: { task: Partial<ScheduledTa
     const { toast } = useToast();
 
     const handleSave = async () => {
-        if (!token) return;
-
         let schedule = '';
         switch (scheduleType) {
             case 'Every Minute': schedule = '* * * * *'; break;
@@ -418,7 +413,7 @@ function SuperAdminTaskForm({ task, onSave, token }: { task: Partial<ScheduledTa
         try {
             const response = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
             if (!response.ok) throw new Error('Failed to save task');

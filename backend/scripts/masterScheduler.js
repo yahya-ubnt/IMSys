@@ -3,12 +3,14 @@ const connectDB = require('../config/db');
 const ScheduledTask = require('../models/ScheduledTask');
 const User = require('../models/User');
 const cron = require('node-cron');
-const { Cron } = require('croner');
 const { spawn } = require('child_process');
 const path = require('path');
 const { performRouterStatusCheck } = require('../services/routerMonitoringService');
 const { performUserStatusCheck } = require('../services/userMonitoringService');
 const { checkAllDevices } = require('../services/monitoringService');
+const eventEmitter = require('../events');
+
+const scheduledJobs = {};
 
 const executeScript = (scriptPath, tenantId) => {
   return new Promise((resolve, reject) => {
@@ -40,43 +42,6 @@ const executeScript = (scriptPath, tenantId) => {
   });
 };
 
-const masterScheduler = async () => {
-  console.log(`[${new Date().toISOString()}] --- Master Scheduler Service Started ---`);
-  
-  cron.schedule('* * * * *', async () => {
-    console.log(`[${new Date().toISOString()}] Scheduler checking for due tasks...`);
-    
-    try {
-      const tenants = await User.find({ roles: 'ADMIN_TENANT' });
-      for (const tenant of tenants) {
-        performRouterStatusCheck(tenant._id);
-        performUserStatusCheck(tenant._id);
-        checkAllDevices(tenant._id);
-      }
-
-      const tasks = await ScheduledTask.find({ isEnabled: true });
-      
-      for (const task of tasks) {
-        if (cron.validate(task.schedule)) {
-          try {
-            const job = new Cron(task.schedule);
-            const now = new Date();
-            const nextRun = job.nextRun(now);
-            if (nextRun && nextRun.getTime() >= now.getTime() && nextRun.getTime() < now.getTime() + 60000) {
-              console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenantOwner} is due. Executing...`);
-              executeTask(task);
-            }
-          } catch (e) {
-            console.error(`[${new Date().toISOString()}] Error processing task '${task.name}':`, e);
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`[${new Date().toISOString()}] Error in scheduler main loop:`, error);
-    }
-  });
-};
-
 const executeTask = async (task) => {
     const taskDoc = await ScheduledTask.findById(task._id);
     if (!taskDoc) return;
@@ -97,6 +62,57 @@ const executeTask = async (task) => {
         await taskDoc.save();
         console.error(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenantOwner} failed: ${error.message}`);
     }
+};
+
+const scheduleTask = (task) => {
+  if (cron.validate(task.schedule)) {
+    const job = cron.schedule(task.schedule, () => {
+      console.log(`Executing task: ${task.name}`);
+      executeTask(task);
+    });
+    scheduledJobs[task._id] = job;
+  }
+};
+
+const unscheduleTask = (taskId) => {
+  if (scheduledJobs[taskId]) {
+    scheduledJobs[taskId].stop();
+    delete scheduledJobs[taskId];
+  }
+};
+
+const masterScheduler = async () => {
+  console.log(`[${new Date().toISOString()}] --- Master Scheduler Service Started ---`);
+  
+  // Schedule all existing tasks on startup
+  const tasks = await ScheduledTask.find({ isEnabled: true });
+  tasks.forEach(scheduleTask);
+
+  // Listen for task changes
+  eventEmitter.on('task:created', scheduleTask);
+  eventEmitter.on('task:updated', (task) => {
+    unscheduleTask(task._id);
+    if (task.isEnabled) {
+      scheduleTask(task);
+    }
+  });
+  eventEmitter.on('task:deleted', unscheduleTask);
+
+  // Schedule monitoring jobs to run every minute
+  cron.schedule('* * * * *', async () => {
+    console.log(`[${new Date().toISOString()}] Scheduler running monitoring jobs...`);
+    
+    try {
+      const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+      for (const tenant of tenants) {
+        performRouterStatusCheck(tenant._id);
+        performUserStatusCheck(tenant._id);
+        checkAllDevices(tenant._id);
+      }
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Error in monitoring jobs main loop:`, error);
+    }
+  });
 };
 
 // Connect to DB and start the scheduler

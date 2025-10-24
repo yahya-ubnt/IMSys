@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const ScheduledTask = require('../models/ScheduledTask');
 const { spawn } = require('child_process');
 const path = require('path');
+const eventEmitter = require('../events');
 
 // Helper to execute a script
 const executeScript = (scriptPath) => {
@@ -31,6 +32,7 @@ const executeScript = (scriptPath) => {
 // @route   GET /api/scheduled-tasks
 // @access  Private/Admin
 const getScheduledTasks = asyncHandler(async (req, res) => {
+  console.log('User in getScheduledTasks:', req.user);
   let filter = {};
   if (req.user.roles.includes('SUPER_ADMIN')) {
     // Super Admin sees all tasks
@@ -39,7 +41,9 @@ const getScheduledTasks = asyncHandler(async (req, res) => {
     // Admin Tenant sees only their own tasks
     filter = { tenantOwner: req.user.tenantOwner };
   }
+  console.log('Filter for tasks:', filter);
   const tasks = await ScheduledTask.find(filter).sort({ createdAt: 'desc' });
+  console.log('Tasks found:', tasks.length);
   res.status(200).json(tasks);
 });
 
@@ -63,6 +67,10 @@ const createScheduledTask = asyncHandler(async (req, res) => {
     tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
   });
   
+  if (task.isEnabled) {
+    eventEmitter.emit('task:created', task);
+  }
+
   res.status(201).json(task);
 });
 
@@ -96,6 +104,8 @@ const updateScheduledTask = asyncHandler(async (req, res) => {
 
   const updatedTask = await task.save();
   
+  eventEmitter.emit('task:updated', updatedTask);
+
   res.status(200).json(updatedTask);
 });
 
@@ -112,6 +122,8 @@ const deleteScheduledTask = asyncHandler(async (req, res) => {
 
   await task.deleteOne();
   
+  eventEmitter.emit('task:deleted', req.params.id);
+
   res.status(200).json({ message: 'Task removed' });
 });
 
