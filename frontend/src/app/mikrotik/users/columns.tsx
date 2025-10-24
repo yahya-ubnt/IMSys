@@ -81,6 +81,21 @@ export const getColumns = (
       header: "Mikrotik Router",
     },
     {
+      accessorKey: "station.deviceName",
+      header: "Station",
+      cell: ({ row }) => {
+        const station = row.original.station;
+        if (station) {
+          return (
+            <Link href={`/devices/${station._id}`} className="font-medium text-blue-400 hover:underline">
+              {station.deviceName}
+            </Link>
+          );
+        }
+        return 'N/A';
+      },
+    },
+    {
       accessorKey: "expiryDate",
       header: "Expiry Date",
       cell: ({ row }) => new Date(row.getValue("expiryDate")).toLocaleDateString(),

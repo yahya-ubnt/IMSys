@@ -31,6 +31,7 @@ export interface MikrotikUser {
   package: { _id: string; name: string; price: number };
   expiryDate: string;
   isOnline: boolean;
+  station?: { _id: string; deviceName: string };
   tenant?: {
     _id: string;
     fullName: string;

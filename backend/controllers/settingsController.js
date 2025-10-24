@@ -17,7 +17,14 @@ const getGeneralSettings = asyncHandler(async (req, res) => {
   console.log('Query for settings:', query);
 
   let settings = await ApplicationSettings.findOne(query).select('-smtpSettings.pass'); // Exclude encrypted pass
-  console.log('Settings found:', settings);
+  
+  // Log settings without sensitive M-Pesa data
+  if (settings) {
+    const settingsToLog = JSON.parse(JSON.stringify(settings));
+    delete settingsToLog.mpesaPaybill;
+    delete settingsToLog.mpesaTill;
+    console.log('Settings found:', settingsToLog);
+  }
 
   if (!settings && !req.user.roles.includes('SUPER_ADMIN')) {
     console.log('No settings found, creating default ones...');
