@@ -125,7 +125,7 @@ async function performUserStatusCheck(tenantOwner) {
 
                 // Send consolidated alert for users who came online
                 if (usersOnline.length > 0) {
-                    await sendConsolidatedAlert(usersOnline, 'ONLINE', tenantOwner, 'User');
+                    await sendConsolidatedAlert(usersOnline, 'ONLINE', tenantOwner, null, 'User');
                 }
 
                 // 5. Retry for potentially offline users
@@ -170,7 +170,7 @@ async function performUserStatusCheck(tenantOwner) {
 
                 // Send consolidated alert for users who went offline
                 if (usersOffline.length > 0) {
-                    await sendConsolidatedAlert(usersOffline, 'OFFLINE', tenantOwner, 'User');
+                    await sendConsolidatedAlert(usersOffline, 'OFFLINE', tenantOwner, null, 'User');
                 }
 
             } catch (error) {
@@ -193,7 +193,7 @@ async function performUserStatusCheck(tenantOwner) {
                 }
                 // Send consolidated alert for users who went offline due to router unreachability
                 if (usersOfflineRouterUnreachable.length > 0) {
-                    await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', tenantOwner, 'User');
+                    await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', tenantOwner, null, 'User');
                 }
             } finally {
                 if (client.connected) {

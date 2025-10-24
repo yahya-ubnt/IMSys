@@ -109,7 +109,7 @@ const checkAllDevices = async (tenantOwner) => {
 
       // Send consolidated alert for devices that came online
       if (devicesUp.length > 0) {
-        await sendConsolidatedAlert(devicesUp, 'UP', tenantOwner, 'Device');
+        await sendConsolidatedAlert(devicesUp, 'UP', tenantOwner, null, 'Device');
       }
 
       for (const device of potentiallyOfflineDevices) {
@@ -134,7 +134,7 @@ const checkAllDevices = async (tenantOwner) => {
 
       // Send consolidated alert for devices that went offline
       if (devicesDown.length > 0) {
-        await sendConsolidatedAlert(devicesDown, 'DOWN', tenantOwner, 'Device');
+        await sendConsolidatedAlert(devicesDown, 'DOWN', tenantOwner, null, 'Device');
       }
 
     } catch (error) {
@@ -152,7 +152,7 @@ const checkAllDevices = async (tenantOwner) => {
         }
       }
       if (devicesDownRouterUnreachable.length > 0) {
-        await sendConsolidatedAlert(devicesDownRouterUnreachable, 'DOWN (Router Unreachable)', tenantOwner, 'Device');
+        await sendConsolidatedAlert(devicesDownRouterUnreachable, 'DOWN (Router Unreachable)', tenantOwner, null, 'Device');
       }
     } finally {
       if (client && client.connected) {

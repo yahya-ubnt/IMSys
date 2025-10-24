@@ -61,19 +61,18 @@ const sendConsolidatedAlert = async (entities, status, tenantOwner, user = null,
     await notification.save();
 
     // --- Begin Email Logic ---
-    if (user) { // This is a system-wide notification, send to admins
-      try {
-        const settings = await ApplicationSettings.findOne({ tenantOwner: user.tenantOwner });
-        if (settings && settings.adminNotificationEmails && settings.adminNotificationEmails.length > 0) {
-          const subject = `System Alert: ${message}`;
-          const text = message;
-          settings.adminNotificationEmails.forEach(email => {
-            sendEmail({ to: email, subject, text, tenantOwner: user.tenantOwner }).catch(console.error);
-          });
-        }
-      } catch (emailError) {
-        console.error('Error sending admin notification email:', emailError);
+    // This is a system-wide notification, send to admins
+    try {
+      const settings = await ApplicationSettings.findOne({ tenantOwner: tenantOwner });
+      if (settings && settings.adminNotificationEmails && settings.adminNotificationEmails.length > 0) {
+        const subject = `System Alert: ${message}`;
+        const text = message;
+        settings.adminNotificationEmails.forEach(email => {
+          sendEmail({ to: email, subject, text, tenantOwner: tenantOwner }).catch(console.error);
+        });
       }
+    } catch (emailError) {
+      console.error('Error sending admin notification email:', emailError);
     }
     // --- End Email Logic ---
 
