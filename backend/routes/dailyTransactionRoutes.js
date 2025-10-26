@@ -23,8 +23,8 @@ router.route('/').post(
   [
     body('amount', 'Amount must be a number').isNumeric(),
     body('method', 'Invalid payment method').isIn(['M-Pesa', 'Bank', 'Cash']),
-    body('transactionMessage', 'Transaction message is required').not().isEmpty(),
-    body('description', 'Description is required').not().isEmpty(),
+    body('transactionMessage').optional(),
+    body('description').optional(),
     body('label', 'Label is required').not().isEmpty(),
     body('category', 'Invalid category').isIn(['Personal', 'Company']),
   ],
