@@ -56,12 +56,9 @@ export default function NewLeadPage() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error("Authentication token not found.")
-      
       const res = await fetch(`/api/leads`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
 

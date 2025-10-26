@@ -46,9 +46,7 @@ export default function LeadsPage() {
   const fetchLeads = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error("Authentication token not found.")
-      const { leads, dashboardStats, chartData } = await getLeads(token, selectedYear)
+      const { leads, dashboardStats, chartData } = await getLeads(selectedYear)
       setLeads(leads)
       setDashboardStats(dashboardStats)
       setChartData(chartData)
@@ -67,9 +65,7 @@ export default function LeadsPage() {
   const handleDeleteLead = async () => {
     if (!deleteCandidateId) return
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error("Authentication token not found.")
-      const response = await fetch(`/api/leads/${deleteCandidateId}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } })
+      const response = await fetch(`/api/leads/${deleteCandidateId}`, { method: "DELETE" })
       if (!response.ok) throw new Error("Failed to delete lead")
       toast({ title: "Lead Deleted", description: "Lead has been successfully deleted." })
       fetchLeads()
@@ -98,9 +94,7 @@ export default function LeadsPage() {
       return
     }
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error("Authentication token not found.")
-      await updateLeadStatus(token, selectedLead._id, "Converted", false)
+      await updateLeadStatus(selectedLead._id, "Converted", false)
       toast({ title: "Lead Converted", description: "Lead has been successfully converted." })
       fetchLeads()
       setIsModalOpen(false)
