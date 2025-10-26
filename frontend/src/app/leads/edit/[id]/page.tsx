@@ -38,9 +38,7 @@ export default function EditLeadPage() {
     const fetchLead = async () => {
       setIsLoading(true)
       try {
-        const token = localStorage.getItem("token")
-        if (!token) throw new Error("No token found")
-        const response = await fetch(`/api/leads/${id}`, { headers: { "Authorization": `Bearer ${token}` } })
+        const response = await fetch(`/api/leads/${id}`)
         if (!response.ok) throw new Error('Failed to fetch lead')
         const data = await response.json()
         setFormData({
@@ -84,11 +82,9 @@ export default function EditLeadPage() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error("Authentication token not found.")
       const res = await fetch(`/api/leads/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
       if (!res.ok) throw new Error((await res.json()).message || 'Failed to update lead.')
