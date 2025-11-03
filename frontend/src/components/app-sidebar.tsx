@@ -124,7 +124,24 @@ const menuCategories: MenuCategory[] = [
           },
         ],
       },
-      
+      {
+        title: "Hotspot",
+        icon: Wifi, // You might want to change this icon
+        items: [
+          {
+            title: "Plans",
+            url: "/hotspot/plans",
+          },
+          {
+            title: "Recurring Users",
+            url: "/hotspot/users",
+          },
+          {
+            title: "Vouchers",
+            url: "/hotspot/vouchers",
+          },
+        ],
+      },
     ],
   },
   {
@@ -397,6 +414,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       setOpenMenu("Network Management")
     } else if (pathname.startsWith("/devices")) {
       setOpenMenu("Network Management")
+    } else if (pathname.startsWith("/hotspot")) {
+      setOpenMenu("Hotspot")
     } else if (pathname.startsWith("/settings/mikrotik")) {
       setOpenMenu("Network Management")
     } else if (pathname.startsWith("/settings")) {
