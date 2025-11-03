@@ -2,19 +2,14 @@ import { TechnicianActivity } from '@/types/technician-activity';
 
 const API_BASE_URL = '/api/technician-activities';
 
-interface FetchOptions extends RequestInit {
-  token?: string;
-}
+interface FetchOptions extends RequestInit {}
 
 async function fetchApi<T>(url: string, options: FetchOptions = {}): Promise<T> {
-  const { token, ...restOptions } = options;
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
   };
 
-  const response = await fetch(url, { headers, ...restOptions });
+  const response = await fetch(url, { headers, ...options, credentials: 'include' });
 
   if (!response.ok) {
     const errorData = await response.json();
@@ -24,7 +19,7 @@ async function fetchApi<T>(url: string, options: FetchOptions = {}): Promise<T> 
   return response.json();
 }
 
-export const getTechnicianActivities = async (token: string, filters?: {
+export const getTechnicianActivities = async (filters?: {
   technicianId?: string;
   activityType?: 'Installation' | 'Support';
   startDate?: string;
@@ -43,32 +38,29 @@ export const getTechnicianActivities = async (token: string, filters?: {
   }
   if (params.toString()) url += `?${params.toString()}`;
 
-  return fetchApi<TechnicianActivity[]>(url, { token });
+  return fetchApi<TechnicianActivity[]>(url);
 };
 
-export const getTechnicianActivityById = async (id: string, token: string): Promise<TechnicianActivity> => {
-  return fetchApi<TechnicianActivity>(`${API_BASE_URL}/${id}`, { token });
+export const getTechnicianActivityById = async (id: string): Promise<TechnicianActivity> => {
+  return fetchApi<TechnicianActivity>(`${API_BASE_URL}/${id}`);
 };
 
-export const createTechnicianActivity = async (activityData: Omit<TechnicianActivity, '_id' | 'createdAt' | 'updatedAt'>, token: string): Promise<TechnicianActivity> => {
+export const createTechnicianActivity = async (activityData: Omit<TechnicianActivity, '_id' | 'createdAt' | 'updatedAt'>): Promise<TechnicianActivity> => {
   return fetchApi<TechnicianActivity>(API_BASE_URL, {
     method: 'POST',
     body: JSON.stringify(activityData),
-    token,
   });
 };
 
-export const updateTechnicianActivity = async (id: string, activityData: Partial<Omit<TechnicianActivity, '_id' | 'createdAt' | 'updatedAt'>>, token: string): Promise<TechnicianActivity> => {
+export const updateTechnicianActivity = async (id: string, activityData: Partial<Omit<TechnicianActivity, '_id' | 'createdAt' | 'updatedAt'>>): Promise<TechnicianActivity> => {
   return fetchApi<TechnicianActivity>(`${API_BASE_URL}/${id}`, {
     method: 'PUT',
     body: JSON.stringify(activityData),
-    token,
   });
 };
 
-export const deleteTechnicianActivity = async (id: string, token: string): Promise<{ message: string }> => {
+export const deleteTechnicianActivity = async (id: string): Promise<{ message: string }> => {
   return fetchApi<{ message: string }>(`${API_BASE_URL}/${id}`, {
     method: 'DELETE',
-    token,
   });
 };

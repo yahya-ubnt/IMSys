@@ -30,10 +30,8 @@ export default function MpesaAlertPage() {
   const fetchAlerts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error('Authentication token not found.')
       const response = await fetch('/api/reports/mpesa-alerts', {
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
       })
       if (!response.ok) throw new Error('Failed to fetch alerts')
       setAlerts(await response.json())
@@ -53,11 +51,9 @@ export default function MpesaAlertPage() {
     if (!confirm('Are you sure you want to delete this alert?')) return
 
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error('Authentication token not found.')
       const response = await fetch(`/api/reports/mpesa-alerts/${alertId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
       })
       if (!response.ok) throw new Error('Failed to delete alert')
       toast({ title: 'Alert Deleted', description: 'The alert has been successfully deleted.' })

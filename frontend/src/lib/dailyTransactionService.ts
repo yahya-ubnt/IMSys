@@ -7,7 +7,7 @@ async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
     'Content-Type': 'application/json',
   };
 
-  const response = await fetch(url, { headers, ...options });
+  const response = await fetch(url, { headers, ...options, credentials: 'include' });
 
   if (!response.ok) {
     const errorData = await response.json();

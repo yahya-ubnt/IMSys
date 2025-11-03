@@ -104,11 +104,8 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
   useEffect(() => {
     const fetchRouters = async () => {
       try {
-        const token = localStorage.getItem("token")
-        if (!token) throw new Error("No token found")
-
         const response = await fetch("/api/mikrotik/routers", {
-          headers: { "Authorization": `Bearer ${token}` },
+          credentials: 'include',
         })
 
         if (!response.ok) {
@@ -131,11 +128,8 @@ export function PackageForm({ isOpen, onClose, onSubmit, initialData, isSubmitti
       if (formData.mikrotikRouter && formData.serviceType === 'pppoe') {
         setIsProfilesLoading(true);
         try {
-          const token = localStorage.getItem("token");
-          if (!token) throw new Error("No token found");
-
           const response = await fetch(`/api/mikrotik/routers/${formData.mikrotikRouter}/ppp-profiles`, {
-            headers: { "Authorization": `Bearer ${token}` },
+            credentials: 'include',
           });
 
           if (!response.ok) {

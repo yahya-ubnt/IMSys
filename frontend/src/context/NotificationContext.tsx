@@ -22,6 +22,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     try {
       const response = await fetch('/api/notifications', {
         cache: 'no-store',
+        credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
@@ -40,6 +41,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     try {
       const response = await fetch(`/api/notifications/${id}/read`, {
         method: 'PUT',
+        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => n._id === id ? { ...n, status: 'read' } : n));
@@ -54,6 +56,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     try {
       const response = await fetch('/api/notifications/read/all', {
         method: 'PUT',
+        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
@@ -68,6 +71,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     try {
       const response = await fetch(`/api/notifications/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (response.ok) {
         setNotifications(prev => prev.filter(n => n._id !== id));

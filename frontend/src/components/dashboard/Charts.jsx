@@ -13,19 +13,14 @@ const Charts = () => {
   useEffect(() => {
     const fetchYearlyData = async () => {
       try {
-        const token = localStorage.getItem('token');
         const creditRes = await fetch(`/api/daily-transactions/monthly-totals?year=${selectedYear}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: 'include',
           }
         );
         const debitRes = await fetch(`/api/expenses/yearly-monthly-totals?year=${selectedYear}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: 'include',
           }
         );
         const creditData = await creditRes.json();
@@ -48,19 +43,14 @@ const Charts = () => {
   useEffect(() => {
     const fetchDailyData = async () => {
       try {
-        const token = localStorage.getItem('token');
         const creditRes = await fetch(`/api/daily-transactions/daily-collection-totals?year=${selectedYear}&month=${selectedMonth}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: 'include',
           }
         );
         const debitRes = await fetch(`/api/expenses/daily-expense-totals?year=${selectedYear}&month=${selectedMonth}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: 'include',
           }
         );
         const creditData = await creditRes.json();

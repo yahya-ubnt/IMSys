@@ -5,17 +5,15 @@ import { FitAddon } from '@xterm/addon-fit';
 interface UseTerminalWebSocketProps {
   terminalRef: React.RefObject<HTMLDivElement | null>;
   routerId: string;
-  token: string | null;
 }
 
-export const useTerminalWebSocket = ({ terminalRef, routerId, token }: UseTerminalWebSocketProps) => {
+export const useTerminalWebSocket = ({ terminalRef, routerId }: UseTerminalWebSocketProps) => {
   const wsRef = useRef<WebSocket | null>(null);
   const termRef = useRef<XtermTerminal | null>(null);
   const initialized = useRef(false); // Flag to track if effect has already run
 
   useEffect(() => {
     // console.log('useTerminalWebSocket: Running');
-    const authToken = token;
     const currentTerminalDiv = terminalRef.current; // Capture the ref value here
 
     // Prevent re-initialization in Strict Mode
@@ -24,8 +22,8 @@ export const useTerminalWebSocket = ({ terminalRef, routerId, token }: UseTermin
       return;
     }
 
-    if (!currentTerminalDiv || !authToken || !routerId) { // Use captured value
-      // console.log('useTerminalWebSocket: Missing ref, authToken, or routerId. Returning.');
+    if (!currentTerminalDiv || !routerId) { // Use captured value
+      // console.log('useTerminalWebSocket: Missing ref, or routerId. Returning.');
       return;
     }
 
@@ -66,7 +64,7 @@ export const useTerminalWebSocket = ({ terminalRef, routerId, token }: UseTermin
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHost = window.location.host;
-      const wsUrl = `${wsProtocol}//${wsHost}/api/terminal?routerId=${routerId}&token=${authToken}`;
+      const wsUrl = `${wsProtocol}//${wsHost}/api/terminal?routerId=${routerId}`;
 
       // console.log('useTerminalWebSocket: Connecting to WebSocket:', wsUrl);
       ws = new WebSocket(wsUrl);
@@ -140,5 +138,5 @@ export const useTerminalWebSocket = ({ terminalRef, routerId, token }: UseTermin
         clearTimeout(initTimeout);
         clearTimeout(cleanupTimeout); // Clear cleanup timeout if effect re-runs
     };
-  }, [terminalRef, routerId, token]); // Dependencies for the hook
+  }, [terminalRef, routerId]); // Dependencies for the hook
 };

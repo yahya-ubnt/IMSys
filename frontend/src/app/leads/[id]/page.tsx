@@ -57,9 +57,7 @@ export default function ViewLeadPage() {
     const fetchLead = async () => {
       setIsLoading(true)
       try {
-        const token = localStorage.getItem("token")
-        if (!token) throw new Error("No token found")
-        const response = await fetch(`/api/leads/${id}`, { headers: { "Authorization": `Bearer ${token}` } })
+        const response = await fetch(`/api/leads/${id}`, { credentials: 'include' })
         if (!response.ok) throw new Error('Failed to fetch lead')
         setLead(await response.json())
       } catch (error) {

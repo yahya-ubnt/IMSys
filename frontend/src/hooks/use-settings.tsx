@@ -26,7 +26,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch("/api/settings/general");
+        const response = await fetch("/api/settings/general", { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setSettings({
