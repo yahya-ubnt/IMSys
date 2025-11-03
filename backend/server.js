@@ -98,6 +98,7 @@ app.use('/api/mikrotik/routers', mikrotikRouterRoutes);
 app.use('/api/mikrotik/packages', packageRoutes);
 app.use('/api/mikrotik/users', mikrotikUserRoutes);
 app.use('/api/hotspot/plans', hotspotPlanRoutes);
+app.use('/api/hotspot/users', hotspotUserRoutes);
 app.use('/api/routers/:routerId/dashboard', mikrotikDashboardRoutes);
 app.use('/api/devices', deviceRoutes); // CPE & AP Devices
 app.use('/api/search', searchRoutes);

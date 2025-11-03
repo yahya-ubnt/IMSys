@@ -79,6 +79,7 @@ exports.createHotspotUser = async (req, res) => {
 // @route   GET /api/hotspot/users
 // @access  Private/Admin
 exports.getHotspotUsers = async (req, res) => {
+  console.log("Fetching hotspot users...");
   try {
     const users = await HotspotUser.find({ tenant: req.user.tenantOwner || req.user._id });
     res.json(users);
