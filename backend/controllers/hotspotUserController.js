@@ -81,7 +81,7 @@ exports.createHotspotUser = async (req, res) => {
 exports.getHotspotUsers = async (req, res) => {
   console.log("Fetching hotspot users...");
   try {
-    const users = await HotspotUser.find({ tenant: req.user.tenantOwner || req.user._id });
+    const users = await HotspotUser.find({ tenant: req.user.tenantOwner || req.user._id }).populate('mikrotikRouter', 'name');
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -174,7 +174,7 @@ exports.deleteHotspotUser = async (req, res) => {
         await removeHotspotUser(router, user.hotspotName);
       }
 
-      await user.remove();
+      await user.deleteOne();
       res.json({ message: 'User removed' });
     } else {
       res.status(404).json({ message: 'User not found' });
