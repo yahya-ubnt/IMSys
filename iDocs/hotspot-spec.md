@@ -95,6 +95,23 @@ This feature allows for the creation and management of recurring hotspot users w
 - **`expiryDate`**: Date (Required)
 - **`expiryTime`**: Time (Required)
 
+### 2.3. Cash Voucher Management
+
+This feature enables the bulk generation of prepaid cash vouchers. These vouchers are also created as users in the Mikrotik router under `/ip hotspot user` but are intended for temporary, non-recurring access.
+
+#### 2.3.1. Voucher Generation Fields
+
+- **`quantity`**: Number (Required, The number of vouchers to generate in a single batch)
+- **`withPassword`**: Boolean (Required, Dropdown Yes/No. If yes, a password is created; otherwise, the username is the password)
+- **`server`**: String (Required, Dropdown from `/ip hotspot server`)
+- **`profile`**: String (Required, Dropdown from `/ip hotspot user profile`)
+- **`dataLimitValue`**: Number (Optional, defaults to 0 for unlimited)
+- **`dataLimitUnit`**: Enum (`MB`, `GB`, Optional)
+- **`timeLimitValue`**: Number (Required)
+- **`timeLimitUnit`**: Enum (`minutes`, `hours`, `days`, `weeks`, `months`, `year`, Required)
+- **`nameLength`**: Number (Required, Dropdown 4-9, for the generated username/voucher code)
+- **`price`**: Number (Required, The price per voucher)
+
 ## 3. Proposed Technical Implementation
 
 ### 3.1. Database Schema
@@ -212,11 +229,35 @@ const HotspotUser = mongoose.model('HotspotUser', hotspotUserSchema);
 module.exports = HotspotUser;
 ```
 
+A new `Voucher` model will be created to store generated voucher codes.
+
+```javascript
+// backend/models/Voucher.js
+
+const mongoose = require('mongoose');
+
+const voucherSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String },
+  profile: { type: String, required: true },
+  price: { type: Number, required: true },
+  tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  mikrotikRouter: { type: mongoose.Schema.Types.ObjectId, ref: 'MikrotikRouter', required: true },
+  batch: { type: String, required: true }, // To group vouchers generated at the same time
+}, {
+  timestamps: true,
+});
+
+const Voucher = mongoose.model('Voucher', voucherSchema);
+
+module.exports = Voucher;
+```
+
 ### 3.2. Backend (Node.js/Express)
 
-- **New Models:** `backend/models/HotspotPlan.js`, `backend/models/HotspotUser.js`
-- **New Controllers:** `backend/controllers/hotspotPlanController.js`, `backend/controllers/hotspotUserController.js`
-- **New Routes:** `backend/routes/hotspotPlanRoutes.js`, `backend/routes/hotspotUserRoutes.js`
+- **New Models:** `backend/models/HotspotPlan.js`, `backend/models/HotspotUser.js`, `backend/models/Voucher.js`
+- **New Controllers:** `backend/controllers/hotspotPlanController.js`, `backend/controllers/hotspotUserController.js`, `backend/controllers/voucherController.js`
+- **New Routes:** `backend/routes/hotspotPlanRoutes.js`, `backend/routes/hotspotUserRoutes.js`, `backend/routes/voucherRoutes.js`
 
 **API Endpoints:**
 
@@ -232,6 +273,10 @@ module.exports = HotspotUser;
 - `PUT /api/hotspot/users/:id`: Update a recurring hotspot user.
 - `DELETE /api/hotspot/users/:id`: Delete a recurring hotspot user.
 
+- `POST /api/hotspot/vouchers`: Generate a new batch of cash vouchers.
+- `GET /api/hotspot/vouchers`: Get all generated vouchers for the tenant.
+- `DELETE /api/hotspot/vouchers/batch/:batchId`: Delete a batch of vouchers.
+
 - `GET /api/mikrotik/routers/:id/hotspot-servers`: Fetch the list of Hotspot servers from a specific router.
 - `GET /api/mikrotik/routers/:id/hotspot-profiles`: Fetch the list of Hotspot user profiles from a specific router.
 
@@ -246,3 +291,8 @@ module.exports = HotspotUser;
 - **New Components:**
   - `HotspotUserList.tsx`: Table for listing recurring hotspot users.
   - `HotspotUserForm.tsx`: Form for creating and editing recurring hotspot users.
+
+- **New Page:** A new page will be created under `/hotspot/vouchers` to generate and manage cash vouchers.
+- **New Components:**
+  - `VoucherGenerator.tsx`: A form for generating new voucher batches.
+  - `VoucherList.tsx`: A component to display and print generated voucher batches.

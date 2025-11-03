@@ -84,6 +84,7 @@ const mikrotikUserRoutes = require('./routes/mikrotikUserRoutes');
 const mikrotikDashboardRoutes = require('./routes/mikrotikDashboardRoutes');
 const hotspotPlanRoutes = require('./routes/hotspotPlanRoutes');
 const hotspotUserRoutes = require('./routes/hotspotUserRoutes');
+const voucherRoutes = require('./routes/voucherRoutes');
 const deviceRoutes = require('./routes/deviceRoutes'); // CPE & AP Devices
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const searchRoutes = require('./routes/searchRoutes');
