@@ -78,7 +78,7 @@ const getHotspotServers = async (router) => {
   if (!client) return [];
 
   try {
-    const servers = await client.write('/ip/hotspot/server/print');
+    const servers = await client.write('/ip/hotspot/print');
     return servers.map(server => server.name);
   } catch (error) {
     console.error(`Failed to get hotspot servers from router ${router.name}`, error);
