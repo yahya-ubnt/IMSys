@@ -12,7 +12,7 @@ import { getColumns } from "./columns.tsx";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-// import { HotspotPlanForm } from "./hotspot-plan-form"; // TODO: Create this file
+import { HotspotPlanForm } from "./hotspot-plan-form";
 import { motion } from "framer-motion";
 import { Topbar } from "@/components/topbar";
 
@@ -25,14 +25,15 @@ interface HotspotPlan {
   timeLimitUnit: string;
   dataLimitValue: number;
   dataLimitUnit: string;
+  sharedUsers: number;
+  profile: string;
+  server: string;
+  rateLimit?: string;
   mikrotikRouter: {
     _id: string;
     name: string;
   };
 }
-
-// TODO: Create this component
-const HotspotPlanForm = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }: any) => null;
 
 export default function HotspotPlansPage() {
   const [plans, setPlans] = useState<HotspotPlan[]>([]);
