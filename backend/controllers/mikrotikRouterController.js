@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const MikrotikUser = require('../models/MikrotikUser');
 const { encrypt, decrypt } = require('../utils/crypto'); // Import encrypt and decrypt function
+const { getHotspotServers: getServers, getHotspotProfiles: getProfiles } = require('../utils/mikrotikUtils');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 
 // @desc    Create a new Mikrotik Router
@@ -257,6 +258,26 @@ const getMikrotikRouterStatus = asyncHandler(async (req, res) => {
   }
 });
 
+const getHotspotServers = asyncHandler(async (req, res) => {
+  const router = await MikrotikRouter.findById(req.params.id);
+  if (!router) {
+    res.status(404);
+    throw new Error('Router not found');
+  }
+  const servers = await getServers(router);
+  res.json(servers);
+});
+
+const getHotspotProfiles = asyncHandler(async (req, res) => {
+  const router = await MikrotikRouter.findById(req.params.id);
+  if (!router) {
+    res.status(404);
+    throw new Error('Router not found');
+  }
+  const profiles = await getProfiles(router);
+  res.json(profiles);
+});
+
 module.exports = {
   createMikrotikRouter,
   getMikrotikRouters,
@@ -267,4 +288,6 @@ module.exports = {
   getMikrotikPppProfiles,
   getMikrotikPppServices,
   getMikrotikRouterStatus,
+  getHotspotServers,
+  getHotspotProfiles,
 };

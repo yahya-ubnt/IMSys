@@ -1,4 +1,6 @@
 const MikrotikUser = require('../models/MikrotikUser');
+const HotspotUser = require('../models/HotspotUser');
+const Voucher = require('../models/Voucher');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const Package = require('../models/Package');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
@@ -23,6 +25,85 @@ const getMikrotikApiClient = async (router) => {
   } catch (error) {
     console.error(`Failed to connect to Mikrotik router: ${router.name}`, error);
     return null;
+  }
+};
+
+const addHotspotUser = async (router, userData) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    await client.write('/ip/hotspot/user/add', [
+      `=name=${userData.username}`,
+      `=password=${userData.password}`,
+      `=server=${userData.server}`,
+      `=profile=${userData.profile}`,
+      `=limit-uptime=${userData.timeLimit}`,
+      `=limit-bytes-total=${userData.dataLimit}`,
+    ]);
+    return true;
+  } catch (error) {
+    console.error(`Failed to add hotspot user ${userData.username} to router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
+const removeHotspotUser = async (router, username) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    const users = await client.write('/ip/hotspot/user/print', [`?name=${username}`]);
+    if (users.length > 0) {
+      const userId = users[0]['.id'];
+      await client.write('/ip/hotspot/user/remove', [`=.id=${userId}`]);
+    }
+    return true;
+  } catch (error) {
+    console.error(`Failed to remove hotspot user ${username} from router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
+const getHotspotServers = async (router) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return [];
+
+  try {
+    const servers = await client.write('/ip/hotspot/server/print');
+    return servers.map(server => server.name);
+  } catch (error) {
+    console.error(`Failed to get hotspot servers from router ${router.name}`, error);
+    return [];
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
+const getHotspotProfiles = async (router) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return [];
+
+  try {
+    const profiles = await client.write('/ip/hotspot/user/profile/print');
+    return profiles.map(profile => profile.name);
+  } catch (error) {
+    console.error(`Failed to get hotspot profiles from router ${router.name}`, error);
+    return [];
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
   }
 };
 
@@ -154,4 +235,4 @@ const reconnectMikrotikUser = async (userId, tenantOwner) => {
   }
 };
 
-module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus };
+module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, removeHotspotUser, getHotspotServers, getHotspotProfiles };

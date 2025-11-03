@@ -1,4 +1,6 @@
 const Voucher = require('../models/Voucher');
+const MikrotikRouter = require('../models/MikrotikRouter');
+const { addHotspotUser, removeHotspotUser } = require('../utils/mikrotikUtils');
 const crypto = require('crypto');
 
 // Function to generate a random string
@@ -27,13 +29,38 @@ exports.generateVouchers = async (req, res) => {
       mikrotikRouter,
     } = req.body;
 
+    const router = await MikrotikRouter.findById(mikrotikRouter);
+    if (!router) {
+      return res.status(404).json({ message: 'Mikrotik router not found' });
+    }
+
     const tenantId = req.user.tenantOwner || req.user._id;
     const batchId = crypto.randomBytes(8).toString('hex');
     const createdVouchers = [];
 
     for (let i = 0; i < quantity; i++) {
       const username = generateRandomString(nameLength);
-      const password = withPassword ? generateRandomString(6) : null;
+      const password = withPassword ? generateRandomString(6) : username;
+
+      const timeLimit = `${timeLimitValue}${timeLimitUnit.charAt(0)}`;
+      const dataLimit = dataLimitValue ? `${dataLimitValue}${dataLimitUnit}` : '0';
+
+      const userData = {
+        username,
+        password,
+        server,
+        profile,
+        timeLimit,
+        dataLimit,
+      };
+
+      const success = await addHotspotUser(router, userData);
+
+      if (!success) {
+        // If one voucher fails, we stop and don't save any more.
+        // Consider a transaction or rollback mechanism for more robustness.
+        return res.status(500).json({ message: `Failed to create voucher ${i + 1} on Mikrotik router` });
+      }
 
       const voucher = new Voucher({
         username,
@@ -44,8 +71,6 @@ exports.generateVouchers = async (req, res) => {
         mikrotikRouter,
         batch: batchId,
       });
-
-      // TODO: Add voucher to Mikrotik router via API
 
       const createdVoucher = await voucher.save();
       createdVouchers.push(createdVoucher);
@@ -77,13 +102,17 @@ exports.deleteVoucherBatch = async (req, res) => {
     const { batchId } = req.params;
     const tenantId = req.user.tenantOwner || req.user._id;
 
-    const vouchers = await Voucher.find({ batch: batchId, tenant: tenantId });
+    const vouchers = await Voucher.find({ batch: batchId, tenant: tenantId }).populate('mikrotikRouter');
 
     if (!vouchers.length) {
       return res.status(404).json({ message: 'No vouchers found for this batch and tenant' });
     }
 
-    // TODO: Delete vouchers from Mikrotik router via API
+    const router = vouchers[0].mikrotikRouter;
+
+    for (const voucher of vouchers) {
+      await removeHotspotUser(router, voucher.username);
+    }
 
     await Voucher.deleteMany({ batch: batchId, tenant: tenantId });
 

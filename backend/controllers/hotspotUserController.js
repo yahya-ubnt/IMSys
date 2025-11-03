@@ -1,4 +1,6 @@
 const HotspotUser = require('../models/HotspotUser');
+const MikrotikRouter = require('../models/MikrotikRouter');
+const { addHotspotUser, removeHotspotUser } = require('../utils/mikrotikUtils');
 
 // @desc    Create a hotspot user
 // @route   POST /api/hotspot/users
@@ -24,6 +26,26 @@ exports.createHotspotUser = async (req, res) => {
       expiryTime,
       mikrotikRouter,
     } = req.body;
+
+    const router = await MikrotikRouter.findById(mikrotikRouter);
+    if (!router) {
+      return res.status(404).json({ message: 'Mikrotik router not found' });
+    }
+
+    const userData = {
+      username: hotspotName,
+      password: hotspotPassword,
+      server,
+      profile,
+      timeLimit: '0', // Assuming no time limit for recurring users, can be adjusted
+      dataLimit: '0', // Assuming no data limit for recurring users, can be adjusted
+    };
+
+    const success = await addHotspotUser(router, userData);
+
+    if (!success) {
+      return res.status(500).json({ message: 'Failed to create hotspot user on Mikrotik router' });
+    }
 
     const user = new HotspotUser({
       officialName,
@@ -143,9 +165,14 @@ exports.updateHotspotUser = async (req, res) => {
 // @access  Private/Admin
 exports.deleteHotspotUser = async (req, res) => {
   try {
-    const user = await HotspotUser.findById(req.params.id);
+    const user = await HotspotUser.findById(req.params.id).populate('mikrotikRouter');
 
     if (user && (user.tenant.toString() === (req.user.tenantOwner?.toString() || req.user._id.toString()))) {
+      const router = user.mikrotikRouter;
+      if (router) {
+        await removeHotspotUser(router, user.hotspotName);
+      }
+
       await user.remove();
       res.json({ message: 'User removed' });
     } else {
