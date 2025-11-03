@@ -50,7 +50,7 @@ exports.createHotspotPlan = async (req, res) => {
 // @access  Private/Admin
 exports.getHotspotPlans = async (req, res) => {
   try {
-    const plans = await HotspotPlan.find({ tenant: req.user.tenantOwner || req.user._id });
+    const plans = await HotspotPlan.find({ tenant: req.user.tenantOwner || req.user._id }).populate('mikrotikRouter', 'name');
     res.json(plans);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -130,7 +130,7 @@ exports.deleteHotspotPlan = async (req, res) => {
     const plan = await HotspotPlan.findById(req.params.id);
 
     if (plan && (plan.tenant.toString() === (req.user.tenantOwner?.toString() || req.user._id.toString()))) {
-      await plan.remove();
+      await plan.deleteOne();
       res.json({ message: 'Plan removed' });
     } else {
       res.status(404).json({ message: 'Plan not found' });
