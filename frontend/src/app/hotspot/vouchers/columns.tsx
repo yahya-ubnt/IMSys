@@ -12,12 +12,18 @@ interface Voucher {
   profile: string;
   price: number;
   batch: string;
+  createdAt: string;
+  password?: string;
 }
 
 export const getColumns = (user: any, setDeleteCandidateBatchId: (id: string) => void): ColumnDef<Voucher>[] => [
   {
     accessorKey: "username",
     header: "Username",
+  },
+  {
+    accessorKey: "password",
+    header: "Password",
   },
   {
     accessorKey: "profile",
@@ -27,6 +33,11 @@ export const getColumns = (user: any, setDeleteCandidateBatchId: (id: string) =>
     accessorKey: "price",
     header: ({ column }) => <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}><span className="text-xs">Price</span><ArrowUpDown className="ml-2 h-3 w-3" /></Button>,
     cell: ({ row }) => `Ksh ${row.original.price}`,
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Generated At",
+    cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
   },
   {
     id: "actions",
