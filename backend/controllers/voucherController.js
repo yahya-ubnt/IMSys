@@ -91,7 +91,7 @@ exports.generateVouchers = async (req, res) => {
 // @access  Private/Admin
 exports.getVouchers = async (req, res) => {
   try {
-    const vouchers = await Voucher.find({ tenant: req.user.tenantOwner || req.user._id });
+    const vouchers = await Voucher.find({ tenant: req.user.tenantOwner || req.user._id }).sort({ createdAt: -1 });
     res.json(vouchers);
   } catch (error) {
     res.status(500).json({ message: error.message });
