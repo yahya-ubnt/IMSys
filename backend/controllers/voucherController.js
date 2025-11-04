@@ -3,11 +3,15 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const { addHotspotUser, removeHotspotUser } = require('../utils/mikrotikUtils');
 const crypto = require('crypto');
 
-// Function to generate a random string
+// Function to generate a random string of numbers
 const generateRandomString = (length) => {
-  return crypto.randomBytes(Math.ceil(length / 2))
-    .toString('hex') // convert to hexadecimal format
-    .slice(0, length);   // return required number of characters
+  let result = '';
+  const characters = '0123456789';
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
 };
 
 // @desc    Generate a new batch of cash vouchers
