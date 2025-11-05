@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns.tsx";
 import { motion } from "framer-motion";
 import { Topbar } from "@/components/topbar";
-import { VoucherForm } from "./voucher-form";
 
 // TODO: Move to a types file
 interface Voucher {
@@ -26,8 +26,6 @@ export default function VouchersPage() {
   const [error, setError] = useState<string | null>(null);
   const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchVouchers = useCallback(async () => {
     try {
@@ -48,29 +46,6 @@ export default function VouchersPage() {
     fetchVouchers();
   }, [fetchVouchers, isLoggingOut]);
 
-  const handleFormSubmit = async (data: any) => {
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/hotspot/vouchers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to generate vouchers");
-      }
-      toast({ title: "Vouchers Generated", description: "Vouchers generated successfully." });
-      setIsFormOpen(false);
-      fetchVouchers();
-    } catch (error: unknown) {
-      toast({ title: "Error", description: (error instanceof Error) ? error.message : "Failed to generate vouchers.", variant: "destructive" });
-    }
-    finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const columns = useMemo(() => getColumns(user), [user]);
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading vouchers...</div>;
@@ -86,10 +61,12 @@ export default function VouchersPage() {
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Cash Vouchers</h1>
               <p className="text-sm text-zinc-400">Generate and manage hotspot cash vouchers.</p>
             </div>
-            <Button onClick={() => setIsFormOpen(true)} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-              <Plus className="mr-2 h-4 w-4" />
-              Generate Vouchers
-            </Button>
+            <Link href="/hotspot/vouchers/new">
+              <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Plus className="mr-2 h-4 w-4" />
+                Generate Vouchers
+              </Button>
+            </Link>
           </div>
 
           <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
@@ -101,12 +78,6 @@ export default function VouchersPage() {
           </motion.div>
         </div>
       </div>
-      <VoucherForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={handleFormSubmit}
-        isSubmitting={isSubmitting}
-      />
     </>
   );
 }
