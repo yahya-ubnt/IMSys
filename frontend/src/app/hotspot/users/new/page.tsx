@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // --- Interface Definitions ---
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
-interface HotspotPlan { _id: string; name: string; }
+interface HotspotPlan { _id: string; name: string; server: string; profile: string; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -63,13 +63,9 @@ export default function NewHotspotUserPage() {
 
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
     const [plans, setPlans] = useState<HotspotPlan[]>([]);
-    const [hotspotProfiles, setHotspotProfiles] = useState<string[]>([]);
-    const [hotspotServers, setHotspotServers] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [routersLoading, setRoutersLoading] = useState(true);
     const [plansLoading, setPlansLoading] = useState(false);
-    const [profilesLoading, setProfilesLoading] = useState(false);
-    const [serversLoading, setServersLoading] = useState(false);
 
     const { toast } = useToast();
     const router = useRouter();
@@ -90,33 +86,31 @@ export default function NewHotspotUserPage() {
     }, [toast]);
 
     useEffect(() => {
-        const fetchHotspotData = async () => {
+        const fetchPlans = async () => {
             if (!mikrotikRouterId) return;
             setPlansLoading(true);
-            setProfilesLoading(true);
-            setServersLoading(true);
             try {
-                const [plansRes, profilesRes, serversRes] = await Promise.all([
-                    fetch(`/api/hotspot/plans?router=${mikrotikRouterId}`),
-                    fetch(`/api/mikrotik/routers/${mikrotikRouterId}/hotspot-profiles`),
-                    fetch(`/api/mikrotik/routers/${mikrotikRouterId}/hotspot-servers`),
-                ]);
-                if (!plansRes.ok) throw new Error("Failed to fetch Hotspot plans");
-                if (!profilesRes.ok) throw new Error("Failed to fetch Hotspot profiles");
-                if (!serversRes.ok) throw new Error("Failed to fetch Hotspot servers");
-                setPlans(await plansRes.json());
-                setHotspotProfiles(await profilesRes.json());
-                setHotspotServers(await serversRes.json());
+                const response = await fetch(`/api/hotspot/plans?router=${mikrotikRouterId}`);
+                if (!response.ok) throw new Error("Failed to fetch Hotspot plans");
+                setPlans(await response.json());
             } catch (err) {
-                toast({ title: "Error", description: "Failed to load hotspot data.", variant: "destructive" });
+                toast({ title: "Error", description: "Failed to load hotspot plans.", variant: "destructive" });
             } finally {
                 setPlansLoading(false);
-                setProfilesLoading(false);
-                setServersLoading(false);
             }
         };
-        fetchHotspotData();
+        fetchPlans();
     }, [toast, mikrotikRouterId]);
+
+    useEffect(() => {
+        if (planId) {
+            const selectedPlan = plans.find(p => p._id === planId);
+            if (selectedPlan) {
+                setServer(selectedPlan.server);
+                setProfile(selectedPlan.profile);
+            }
+        }
+    }, [planId, plans]);
 
     const handleNext = () => {
         if (mikrotikRouterId && planId) {
@@ -197,8 +191,7 @@ export default function NewHotspotUserPage() {
                                                         <div className="space-y-1"><Label className="text-xs">Billing Cycle</Label><div className="flex gap-2"><Input type="number" value={billingCycleValue} onChange={e => setBillingCycleValue(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Select onValueChange={setBillingCycleUnit} value={billingCycleUnit}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-[120px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="days">Days</SelectItem><SelectItem value="weeks">Weeks</SelectItem><SelectItem value="months">Months</SelectItem><SelectItem value="year">Year</SelectItem></SelectContent></Select></div></div>
                                                         <div className="space-y-1"><Label className="text-xs">Expiry Date</Label><Input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">Expiry Time</Label><Input type="time" value={expiryTime} onChange={e => setExpiryTime(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={profilesLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{hotspotProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Server</Label><Select onValueChange={setServer} value={server} disabled={serversLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a server" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{hotspotServers.map(s => <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>)}</SelectContent></Select></div>
+
                                                     </div>
                                                 </motion.div>
                                             )}
