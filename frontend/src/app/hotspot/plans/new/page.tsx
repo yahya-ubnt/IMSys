@@ -52,7 +52,10 @@ export default function NewHotspotPlanPage() {
     const [sharedUsers, setSharedUsers] = useState("1");
     const [profile, setProfile] = useState("");
     const [server, setServer] = useState("");
-    const [rateLimit, setRateLimit] = useState("");
+    const [downloadSpeed, setDownloadSpeed] = useState("");
+    const [downloadSpeedUnit, setDownloadSpeedUnit] = useState("M");
+    const [uploadSpeed, setUploadSpeed] = useState("");
+    const [uploadSpeedUnit, setUploadSpeedUnit] = useState("M");
 
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
     const [hotspotProfiles, setHotspotProfiles] = useState<string[]>([]);
@@ -121,6 +124,7 @@ export default function NewHotspotPlanPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        const rateLimit = `${uploadSpeed}${uploadSpeedUnit}/${downloadSpeed}${downloadSpeedUnit}`;
         const planData = { mikrotikRouter: mikrotikRouterId, name, price: parseFloat(price), timeLimitValue: parseInt(timeLimitValue), timeLimitUnit, dataLimitValue: parseInt(dataLimitValue), dataLimitUnit, sharedUsers: parseInt(sharedUsers), profile, server, rateLimit };
         try {
             const response = await fetch("/api/hotspot/plans", {
@@ -164,6 +168,8 @@ export default function NewHotspotPlanPage() {
                                             {step === 1 ? (
                                                 <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                                                     <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId} disabled={routersLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
+                                                    <div className="space-y-1"><Label className="text-xs">Server</Label><Select onValueChange={setServer} value={server} disabled={serversLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a server" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{hotspotServers.map(s => <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>)}</SelectContent></Select></div>
+                                                    <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={profilesLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{hotspotProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>
                                                 </motion.div>
                                             ) : (
                                                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
@@ -173,9 +179,8 @@ export default function NewHotspotPlanPage() {
                                                         <div className="space-y-1"><Label className="text-xs">Time Limit</Label><div className="flex gap-2"><Input type="number" value={timeLimitValue} onChange={e => setTimeLimitValue(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Select onValueChange={setTimeLimitUnit} value={timeLimitUnit}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-[120px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="minutes">Minutes</SelectItem><SelectItem value="hours">Hours</SelectItem><SelectItem value="days">Days</SelectItem></SelectContent></Select></div></div>
                                                         <div className="space-y-1"><Label className="text-xs">Data Limit</Label><div className="flex gap-2"><Input type="number" value={dataLimitValue} onChange={e => setDataLimitValue(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Select onValueChange={setDataLimitUnit} value={dataLimitUnit}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-[120px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="MB">MB</SelectItem><SelectItem value="GB">GB</SelectItem></SelectContent></Select></div></div>
                                                         <div className="space-y-1"><Label className="text-xs">Shared Users</Label><Input type="number" value={sharedUsers} onChange={e => setSharedUsers(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Rate Limit</Label><Input value={rateLimit} onChange={e => setRateLimit(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 512k/1M" /></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={profilesLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{hotspotProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Server</Label><Select onValueChange={setServer} value={server} disabled={serversLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a server" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{hotspotServers.map(s => <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>)}</SelectContent></Select></div>
+                                                        <div className="space-y-1"><Label className="text-xs">Download Speed</Label><div className="flex gap-2"><Input type="number" value={downloadSpeed} onChange={e => setDownloadSpeed(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Select onValueChange={setDownloadSpeedUnit} value={downloadSpeedUnit}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-[120px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="k">kbps</SelectItem><SelectItem value="M">Mbps</SelectItem></SelectContent></Select></div></div>
+                                                        <div className="space-y-1"><Label className="text-xs">Upload Speed</Label><div className="flex gap-2"><Input type="number" value={uploadSpeed} onChange={e => setUploadSpeed(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Select onValueChange={setUploadSpeedUnit} value={uploadSpeedUnit}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-[120px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="k">kbps</SelectItem><SelectItem value="M">Mbps</SelectItem></SelectContent></Select></div></div>
                                                     </div>
                                                 </motion.div>
                                             )}
