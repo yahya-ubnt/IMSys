@@ -3,11 +3,14 @@ const router = express.Router();
 const {
   createHotspotPlan,
   getHotspotPlans,
+  getPublicHotspotPlans,
   getHotspotPlanById,
   updateHotspotPlan,
   deleteHotspotPlan,
 } = require('../controllers/hotspotPlanController');
 const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+
+router.route('/public/plans').get(getPublicHotspotPlans);
 
 router
   .route('/')

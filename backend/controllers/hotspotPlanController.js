@@ -1,4 +1,5 @@
 const HotspotPlan = require('../models/HotspotPlan');
+const MikrotikRouter = require('../models/MikrotikRouter');
 
 // @desc    Create a hotspot plan
 // @route   POST /api/hotspot/plans
@@ -51,6 +52,28 @@ exports.createHotspotPlan = async (req, res) => {
 exports.getHotspotPlans = async (req, res) => {
   try {
     const plans = await HotspotPlan.find({ tenant: req.user.tenantOwner || req.user._id }).populate('mikrotikRouter', 'name');
+    res.json(plans);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all public hotspot plans for a specific router
+// @route   GET /api/hotspot/public/plans
+// @access  Public
+exports.getPublicHotspotPlans = async (req, res) => {
+  try {
+    const { router_ip } = req.query;
+    if (!router_ip) {
+      return res.status(400).json({ message: 'Router IP address is required' });
+    }
+
+    const router = await MikrotikRouter.findOne({ ipAddress: router_ip });
+    if (!router) {
+      return res.status(404).json({ message: 'Router not found' });
+    }
+
+    const plans = await HotspotPlan.find({ mikrotikRouter: router._id, showInCaptivePortal: true });
     res.json(plans);
   } catch (error) {
     res.status(500).json({ message: error.message });

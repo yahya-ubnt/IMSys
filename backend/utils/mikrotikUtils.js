@@ -52,6 +52,27 @@ const addHotspotUser = async (router, userData) => {
   }
 };
 
+const addHotspotIpBinding = async (router, macAddress, server) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    await client.write('/ip/hotspot/ip-binding/add', [
+      `=mac-address=${macAddress}`,
+      `=server=${server}`,
+      '=type=bypassed',
+    ]);
+    return true;
+  } catch (error) {
+    console.error(`Failed to add hotspot IP binding for ${macAddress} to router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
 const removeHotspotUser = async (router, username) => {
   const client = await getMikrotikApiClient(router);
   if (!client) return false;
@@ -235,4 +256,4 @@ const reconnectMikrotikUser = async (userId, tenantOwner) => {
   }
 };
 
-module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, removeHotspotUser, getHotspotServers, getHotspotProfiles };
+module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles };
