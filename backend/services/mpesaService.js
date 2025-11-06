@@ -5,7 +5,12 @@ const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const StkRequest = require('../models/StkRequest');
+const HotspotPlan = require('../models/HotspotPlan');
+const HotspotSession = require('../models/HotspotSession');
+const HotspotTransaction = require('../models/HotspotTransaction');
+const MikrotikRouter = require('../models/MikrotikRouter');
 const { processSubscriptionPayment } = require('../utils/paymentProcessing');
+const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
 const { formatPhoneNumber } = require('../utils/formatters');
 
@@ -40,13 +45,16 @@ const getDarajaAxiosInstance = async (tenantOwner) => {
   });
 };
 
-const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountReference) => {
+const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountReference, type = 'SUBSCRIPTION', planId = null) => {
   const credentials = await getTenantMpesaCredentials(tenantOwner);
   const darajaAxios = await getDarajaAxiosInstance(tenantOwner);
   
   const timestamp = moment().format('YYYYMMDDHHmmss');
   const password = Buffer.from(`${credentials.paybillNumber}${credentials.passkey}${timestamp}`).toString('base64');
   const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+
+  let callbackUrl = credentials.callbackURL || DARAJA_CALLBACK_URL;
+  // The callback URL is now the same for all types, the logic is handled in processStkCallback
 
   const stkPushPayload = {
     BusinessShortCode: credentials.paybillNumber,
@@ -57,9 +65,9 @@ const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountR
     PartyA: formattedPhoneNumber,
     PartyB: credentials.paybillNumber,
     PhoneNumber: formattedPhoneNumber,
-    CallBackURL: credentials.callbackURL || DARAJA_CALLBACK_URL,
+    CallBackURL: callbackUrl,
     AccountReference: accountReference,
-    TransactionDesc: 'Subscription Payment'
+    TransactionDesc: type === 'HOTSPOT' ? 'Hotspot Payment' : 'Subscription Payment'
   };
 
   const response = await darajaAxios.post('/mpesa/stkpush/v1/processrequest', stkPushPayload);
@@ -68,6 +76,8 @@ const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountR
     tenantOwner,
     checkoutRequestId: response.data.CheckoutRequestID,
     accountReference,
+    type,
+    planId,
   });
 
   return response.data;
@@ -103,40 +113,97 @@ const processStkCallback = async (callbackData) => {
   }, {});
 
   const transId = metadata.MpesaReceiptNumber;
-  const existingTransaction = await Transaction.findOne({ transactionId: transId });
-  if (existingTransaction) {
-    console.log(`Transaction ${transId} already processed.`);
-    return;
-  }
-
   const stkRequest = await StkRequest.findOne({ checkoutRequestId: CheckoutRequestID });
+
   if (!stkRequest) {
     console.error(`STK request not found for CheckoutRequestID: ${CheckoutRequestID}`);
     return;
   }
 
-  const transAmount = metadata.Amount;
-  const msisdn = metadata.PhoneNumber.toString();
-  const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenantOwner: stkRequest.tenantOwner });
+  // --- HOTSPOT LOGIC ---
+  if (stkRequest.type === 'HOTSPOT') {
+    const hotspotTransaction = await HotspotTransaction.findOneAndUpdate(
+      { macAddress: stkRequest.accountReference, status: 'pending' },
+      { status: 'completed', transactionId: transId },
+      { new: true }
+    );
 
-  if (!user) {
-    const alertMessage = `STK payment of KES ${transAmount} received for account '${stkRequest.accountReference}', but no user was found.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: stkRequest.accountReference, tenantOwner: stkRequest.tenantOwner });
-    return;
+    if (!hotspotTransaction) {
+      console.error(`Hotspot transaction not found for MAC address: ${stkRequest.accountReference}`);
+      return;
+    }
+
+    const plan = await HotspotPlan.findById(stkRequest.planId);
+    const router = await MikrotikRouter.findById(plan.mikrotikRouter);
+
+    let endTime;
+    const now = new Date();
+    switch (plan.timeLimitUnit) {
+      case 'minutes':
+        endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 1000);
+        break;
+      case 'hours':
+        endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000);
+        break;
+      case 'days':
+        endTime = new Date(now.getTime() + plan.timeLimitValue * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); // Default to hours
+    }
+
+    await HotspotSession.findOneAndUpdate(
+      { macAddress: stkRequest.accountReference },
+      {
+        planId: stkRequest.planId,
+        startTime: now,
+        endTime: endTime,
+        dataUsage: 0,
+      },
+      { upsert: true, new: true }
+    );
+
+    await addHotspotIpBinding(router, stkRequest.accountReference, plan.server);
+
+  } 
+  // --- EXISTING SUBSCRIPTION LOGIC ---
+  else {
+    const existingTransaction = await Transaction.findOne({ transactionId: transId });
+    if (existingTransaction) {
+      console.log(`Transaction ${transId} already processed.`);
+      return;
+    }
+
+    const transAmount = metadata.Amount;
+    const msisdn = metadata.PhoneNumber.toString();
+    const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenantOwner: stkRequest.tenantOwner });
+
+    if (!user) {
+      const alertMessage = `STK payment of KES ${transAmount} received for account '${stkRequest.accountReference}', but no user was found.`;
+      await MpesaAlert.create({ 
+        message: alertMessage, 
+        transactionId: transId, 
+        amount: transAmount, 
+        referenceNumber: stkRequest.accountReference, 
+        tenantOwner: stkRequest.tenantOwner,
+        paymentDate: new Date() 
+      });
+      return;
+    }
+
+    await processSubscriptionPayment(user._id, transAmount, 'M-Pesa', transId);
+
+    await Transaction.create({
+      transactionId: transId,
+      amount: transAmount,
+      referenceNumber: user.username,
+      officialName: user.officialName,
+      msisdn: msisdn,
+      transactionDate: new Date(),
+      paymentMethod: 'M-Pesa',
+      tenantOwner: user.tenantOwner,
+    });
   }
-
-  await processSubscriptionPayment(user._id, transAmount, 'M-Pesa', transId);
-
-  await Transaction.create({
-    transactionId: transId,
-    amount: transAmount,
-    referenceNumber: user.username,
-    officialName: user.officialName,
-    msisdn: msisdn,
-    transactionDate: new Date(),
-    paymentMethod: 'M-Pesa',
-    tenantOwner: user.tenantOwner,
-  });
 
   await StkRequest.deleteOne({ _id: stkRequest._id });
 };
@@ -156,7 +223,7 @@ const processC2bCallback = async (callbackData) => {
     const alertMessage = `C2B payment of KES ${TransAmount} received for paybill '${BusinessShortCode}', but no tenant is configured with this paybill.`;
     // Since we don't know the tenant, we can't assign a tenantOwner to this alert.
     // It will be a system-level alert.
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber });
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, paymentDate: new Date() });
     console.error(alertMessage);
     return;
   }
@@ -168,7 +235,7 @@ const processC2bCallback = async (callbackData) => {
 
   if (!user) {
     const alertMessage = `C2B payment of KES ${TransAmount} for account '${BillRefNumber}' received, but no user was found in tenant ${tenantOwner}.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenantOwner: tenantOwner });
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenantOwner: tenantOwner, paymentDate: new Date() });
     console.error(alertMessage);
     return;
   }

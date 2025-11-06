@@ -29,17 +29,35 @@ export default function CaptivePortalPage() {
   const [loading, setLoading] = useState(true);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const routerIp = searchParams.get("router_ip");
   const macAddress = searchParams.get("mac_address");
+  const [initialError, setInitialError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPlans = async () => {
-      if (!routerIp) return;
+    const checkSessionAndFetchPlans = async () => {
+      if (!routerIp || !macAddress) {
+        setInitialError("Invalid connection. Please reconnect to the Wi-Fi network.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/hotspot/public/plans?router_ip=${routerIp}`);
+        const sessionResponse = await fetch(`/api/hotspot/session/${macAddress}`);
+        if (sessionResponse.ok) {
+          setHasActiveSession(true);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        // Ignore session check error and proceed to fetch plans
+      }
+
+      try {
+        const response = await fetch(`/api/hotspot/plans/public/plans?router_ip=${routerIp}`);
         if (!response.ok) throw new Error("Failed to fetch plans");
         setPlans(await response.json());
       } catch (err) {
@@ -48,8 +66,8 @@ export default function CaptivePortalPage() {
         setLoading(false);
       }
     };
-    fetchPlans();
-  }, [routerIp, toast]);
+    checkSessionAndFetchPlans();
+  }, [routerIp, macAddress, toast]);
 
   const handlePlanSelection = (plan: HotspotPlan) => {
     setSelectedPlan(plan);
@@ -77,7 +95,16 @@ export default function CaptivePortalPage() {
       toast({ title: "Payment Initiated", description: "Please check your phone to complete the payment." });
 
       // Poll for session status
+      let pollCount = 0;
+      const maxPolls = 40; // 2 minutes
       const pollInterval = setInterval(async () => {
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+          toast({ title: "Payment Timeout", description: "Payment confirmation timed out. Please try again.", variant: "destructive" });
+          setIsPaying(false);
+          return;
+        }
+
         try {
           const sessionResponse = await fetch(`/api/hotspot/session/${macAddress}`);
           if (sessionResponse.ok) {
@@ -88,11 +115,11 @@ export default function CaptivePortalPage() {
         } catch (error) {
           // Continue polling
         }
+        pollCount++;
       }, 3000);
 
     } catch (error: unknown) {
       toast({ title: "Error", description: (error instanceof Error) ? error.message : "Failed to initiate payment.", variant: "destructive" });
-    } finally {
       setIsPaying(false);
     }
   };
@@ -109,24 +136,36 @@ export default function CaptivePortalPage() {
 
       {loading ? (
         <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+      ) : initialError ? (
+        <div className="text-center text-red-500" data-testid="initial-error">
+          <p className="text-lg">{initialError}</p>
+        </div>
+      ) : hasActiveSession ? (
+        <div className="text-center text-green-400">
+          <p className="text-lg">You already have an active session. Enjoy the internet!</p>
+        </div>
       ) : (
         <AnimatePresence>
           {!selectedPlan ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl">
-              {plans.map((plan) => (
-                <motion.div key={plan._id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Card onClick={() => handlePlanSelection(plan)} className="bg-zinc-800/50 border-zinc-700 hover:border-blue-500 cursor-pointer transition-all duration-300 shadow-lg hover:shadow-blue-500/20">
-                    <CardHeader className="text-center">
-                      <CardTitle className="text-2xl font-bold text-cyan-400">{plan.name}</CardTitle>
-                      <CardDescription className="text-zinc-400">KES {plan.price}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center text-sm text-zinc-300">
-                      <p>{plan.timeLimitValue} {plan.timeLimitUnit}</p>
-                      {plan.dataLimitValue > 0 && <p>{plan.dataLimitValue} {plan.dataLimitUnit} Data Limit</p>}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+              {plans.length > 0 ? (
+                plans.map((plan) => (
+                  <motion.div key={plan._id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Card onClick={() => handlePlanSelection(plan)} className="bg-zinc-800/50 border-zinc-700 hover:border-blue-500 cursor-pointer transition-all duration-300 shadow-lg hover:shadow-blue-500/20">
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-2xl font-bold text-cyan-400">{plan.name}</CardTitle>
+                        <CardDescription className="text-zinc-400">KES {plan.price}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="text-center text-sm text-zinc-300">
+                        <p>{plan.timeLimitValue} {plan.timeLimitUnit}</p>
+                        {plan.dataLimitValue > 0 && <p>{plan.dataLimitValue} {plan.dataLimitUnit} Data Limit</p>}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
+              ) : (
+                <p className="text-zinc-400 col-span-full text-center">No hotspot plans are available for this location at the moment.</p>
+              )}
             </motion.div>
           ) : (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md">

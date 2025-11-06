@@ -15,6 +15,15 @@ const stkRequestSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  type: {
+    type: String,
+    required: true,
+    default: 'SUBSCRIPTION', // e.g., SUBSCRIPTION, HOTSPOT
+  },
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'HotspotPlan',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -15,7 +15,7 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 
   const { planId, phoneNumber, macAddress } = req.body;
 
-  const plan = await HotspotPlan.findById(planId);
+  const plan = await HotspotPlan.findById(planId).populate('mikrotikRouter');
   if (!plan) {
     return res.status(404).json({ message: 'Plan not found' });
   }
@@ -25,10 +25,18 @@ const initiateStkPush = asyncHandler(async (req, res) => {
     phoneNumber,
     macAddress,
     amount: plan.price,
+    tenantOwner: plan.tenant,
   });
 
   try {
-    const response = await initiateStkPushService(req.user.tenantOwner, plan.price, phoneNumber, macAddress);
+    const response = await initiateStkPushService(
+      plan.tenant,
+      plan.price,
+      phoneNumber,
+      macAddress, // Using macAddress as the account reference
+      'HOTSPOT',
+      planId
+    );
     res.status(200).json(response);
   } catch (error) {
     console.error('Error initiating STK push:', error);
