@@ -7,7 +7,12 @@ const getSessionStatus = asyncHandler(async (req, res) => {
   const session = await HotspotSession.findOne({ macAddress });
 
   if (session) {
-    res.json(session);
+    if (new Date() > session.endTime) {
+      await session.deleteOne();
+      res.status(404).json({ message: 'Session expired' });
+    } else {
+      res.json(session);
+    }
   } else {
     res.status(404).json({ message: 'Session not found' });
   }
