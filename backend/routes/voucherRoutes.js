@@ -4,8 +4,11 @@ const {
   generateVouchers,
   getVouchers,
   deleteVoucherBatch,
+  loginVoucher,
 } = require('../controllers/voucherController');
 const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+
+router.post('/login', loginVoucher); // Public route for voucher login
 
 router
   .route('/')
@@ -17,3 +20,4 @@ router
   .delete(protect, isSuperAdminOrAdminTenant, deleteVoucherBatch);
 
 module.exports = router;
+

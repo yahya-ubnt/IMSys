@@ -37,6 +37,7 @@ export default function CaptivePortalPage() {
   const [hasActiveSession, setHasActiveSession] = useState(false);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeTab, setActiveTab] = useState('plans');
+  const [voucherCode, setVoucherCode] = useState("");
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
@@ -148,6 +149,35 @@ export default function CaptivePortalPage() {
     }
   };
 
+  const handleVoucherLogin = async () => {
+    if (!voucherCode || !macAddress) {
+      toast({ title: "Missing Information", description: "Please enter a voucher code.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/hotspot/vouchers/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voucherCode, macAddress }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to connect with voucher");
+      }
+
+      toast({ title: "Success", description: "Connected with voucher! Enjoy the internet." });
+      setTimeout(() => window.location.reload(), 3000); // Reload to get internet access
+
+    } catch (error: unknown) {
+      toast({ title: "Error", description: (error instanceof Error) ? error.message : "Failed to connect with voucher.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderContent = () => {
     if (loading) return <Loader2 className="h-12 w-12 animate-spin text-blue-500" />;
     if (initialError) return <div className="text-center text-red-500" data-testid="initial-error"><p className="text-lg">{initialError}</p></div>;
@@ -156,9 +186,9 @@ export default function CaptivePortalPage() {
     return (
       <div className="w-full max-w-4xl">
         <div className="flex justify-center mb-6 bg-zinc-800/50 p-1 rounded-lg">
-          <Button onClick={() => setActiveTab('plans')} variant={activeTab === 'plans' ? 'default' : 'ghost'} className="flex-1">Buy a Plan</Button>
-          <Button onClick={() => setActiveTab('voucher')} variant={activeTab === 'voucher' ? 'default' : 'ghost'} className="flex-1">Use a Voucher</Button>
-          <Button onClick={() => setActiveTab('member')} variant={activeTab === 'member' ? 'default' : 'ghost'} className="flex-1">Member Login</Button>
+          <Button onClick={() => setActiveTab('plans')} variant={activeTab === 'plans' ? 'default' : 'ghost'} className={`flex-1 ${activeTab === 'plans' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white' : ''}`}>Buy a Plan</Button>
+          <Button onClick={() => setActiveTab('voucher')} variant={activeTab === 'voucher' ? 'default' : 'ghost'} className={`flex-1 ${activeTab === 'voucher' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white' : ''}`}>Use a Voucher</Button>
+          <Button onClick={() => setActiveTab('member')} variant={activeTab === 'member' ? 'default' : 'ghost'} className={`flex-1 ${activeTab === 'member' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white' : ''}`}>Member Login</Button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -247,9 +277,9 @@ export default function CaptivePortalPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-1">
                     <Label htmlFor="voucherCode" className="text-xs text-zinc-400">Voucher Code</Label>
-                    <Input id="voucherCode" placeholder="Enter voucher code" className="h-10 bg-zinc-900 border-zinc-700 text-sm" />
+                    <Input id="voucherCode" placeholder="Enter voucher code" className="h-10 bg-zinc-900 border-zinc-700 text-sm" value={voucherCode} onChange={(e) => setVoucherCode(e.target.value)} />
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">Connect</Button>
+                  <Button onClick={handleVoucherLogin} className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">Connect</Button>
                 </CardContent>
               </Card>
             )}

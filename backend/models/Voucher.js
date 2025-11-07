@@ -8,6 +8,17 @@ const voucherSchema = new mongoose.Schema({
   tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   mikrotikRouter: { type: mongoose.Schema.Types.ObjectId, ref: 'MikrotikRouter', required: true },
   batch: { type: String, required: true }, // To group vouchers generated at the same time
+  status: {
+    type: String,
+    enum: ['active', 'used', 'expired'],
+    default: 'active',
+  },
+  usedByMacAddress: {
+    type: String,
+  },
+  expiryDate: {
+    type: Date,
+  },
 }, {
   timestamps: true,
 });

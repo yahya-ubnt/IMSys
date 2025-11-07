@@ -1,6 +1,8 @@
 const Voucher = require('../models/Voucher');
 const MikrotikRouter = require('../models/MikrotikRouter');
-const { addHotspotUser, removeHotspotUser } = require('../utils/mikrotikUtils');
+const HotspotSession = require('../models/HotspotSession');
+const HotspotPlan = require('../models/HotspotPlan');
+const { addHotspotUser, removeHotspotUser, addHotspotIpBinding } = require('../utils/mikrotikUtils');
 const crypto = require('crypto');
 
 // Function to generate a random string of numbers
@@ -42,6 +44,26 @@ exports.generateVouchers = async (req, res) => {
     const batchId = crypto.randomBytes(8).toString('hex');
     const createdVouchers = [];
 
+    // Determine expiry date based on plan's time limit
+    let expiryDate = null;
+    if (timeLimitValue && timeLimitUnit) {
+      const now = new Date();
+      switch (timeLimitUnit) {
+        case 'minutes':
+          expiryDate = new Date(now.getTime() + timeLimitValue * 60 * 1000);
+          break;
+        case 'hours':
+          expiryDate = new Date(now.getTime() + timeLimitValue * 60 * 60 * 1000);
+          break;
+        case 'days':
+          expiryDate = new Date(now.getTime() + timeLimitValue * 24 * 60 * 60 * 1000);
+          break;
+        // Default to hours if unit is not recognized
+        default:
+          expiryDate = new Date(now.getTime() + timeLimitValue * 60 * 60 * 1000);
+      }
+    }
+
     for (let i = 0; i < quantity; i++) {
       const username = generateRandomString(nameLength);
       const password = withPassword ? generateRandomString(6) : username;
@@ -74,6 +96,8 @@ exports.generateVouchers = async (req, res) => {
         tenant: tenantId,
         mikrotikRouter,
         batch: batchId,
+        status: 'active',
+        expiryDate: expiryDate,
       });
 
       const createdVoucher = await voucher.save();
@@ -122,6 +146,94 @@ exports.deleteVoucherBatch = async (req, res) => {
 
     res.json({ message: `Batch ${batchId} removed` });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Login with a voucher code
+// @route   POST /api/hotspot/vouchers/login
+// @access  Public
+exports.loginVoucher = async (req, res) => {
+  const { voucherCode, macAddress } = req.body;
+
+  if (!voucherCode || !macAddress) {
+    return res.status(400).json({ message: 'Voucher code and MAC address are required' });
+  }
+
+  try {
+    const voucher = await Voucher.findOne({ username: voucherCode }).populate('mikrotikRouter');
+
+    if (!voucher) {
+      return res.status(404).json({ message: 'Voucher not found' });
+    }
+
+    if (voucher.status !== 'active') {
+      return res.status(400).json({ message: 'Voucher is not active or already used' });
+    }
+
+    if (voucher.expiryDate && new Date() > voucher.expiryDate) {
+      voucher.status = 'expired';
+      await voucher.save();
+      return res.status(400).json({ message: 'Voucher has expired' });
+    }
+
+    const router = voucher.mikrotikRouter;
+    if (!router) {
+      return res.status(500).json({ message: 'Associated Mikrotik router not found' });
+    }
+
+    // Find the HotspotPlan associated with the voucher's profile
+    const plan = await HotspotPlan.findOne({ profile: voucher.profile, mikrotikRouter: router._id });
+    if (!plan) {
+      return res.status(500).json({ message: 'Associated hotspot plan not found' });
+    }
+
+    // Bypass the user's MAC address on the Mikrotik router
+    const bypassSuccess = await addHotspotIpBinding(router, macAddress, plan.server);
+    if (!bypassSuccess) {
+      return res.status(500).json({ message: 'Failed to bypass MAC address on Mikrotik' });
+    }
+
+    // Create a HotspotSession in our database
+    const now = new Date();
+    let endTime = voucher.expiryDate || new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); // Fallback to plan time if no voucher expiry
+    
+    // If voucher has no explicit expiryDate, calculate from plan
+    if (!voucher.expiryDate) {
+      switch (plan.timeLimitUnit) {
+        case 'minutes':
+          endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 1000);
+          break;
+        case 'hours':
+          endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000);
+          break;
+        case 'days':
+          endTime = new Date(now.getTime() + plan.timeLimitValue * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); // Default to hours
+      }
+    }
+
+    await HotspotSession.findOneAndUpdate(
+      { macAddress: macAddress },
+      {
+        planId: plan._id,
+        startTime: now,
+        endTime: endTime,
+        dataUsage: 0,
+      },
+      { upsert: true, new: true }
+    );
+
+    // Mark voucher as used
+    voucher.status = 'used';
+    voucher.usedByMacAddress = macAddress;
+    await voucher.save();
+
+    res.status(200).json({ message: 'Voucher login successful' });
+  } catch (error) {
+    console.error('Error during voucher login:', error);
     res.status(500).json({ message: error.message });
   }
 };
