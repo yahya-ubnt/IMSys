@@ -7,6 +7,42 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const { initiateStkPushService } = require('../services/mpesaService');
 const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
 
+const getHotspotTransactions = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 15;
+  const searchTerm = req.query.searchTerm || '';
+
+  const query = searchTerm
+    ? {
+        $or: [
+          { phoneNumber: { $regex: searchTerm, $options: 'i' } },
+          { macAddress: { $regex: searchTerm, $options: 'i' } },
+        ],
+      }
+    : {};
+
+  const count = await HotspotTransaction.countDocuments(query);
+  const transactions = await HotspotTransaction.find(query)
+    .populate('planId', 'name price')
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .sort({ createdAt: -1 });
+
+  const totalVolume = transactions.reduce((acc, t) => acc + t.amount, 0);
+  const transactionCount = transactions.length;
+  const averageTransaction = transactionCount > 0 ? totalVolume / transactionCount : 0;
+
+  res.status(200).json({
+    transactions,
+    pages: Math.ceil(count / limit),
+    stats: {
+      totalVolume,
+      transactionCount,
+      averageTransaction,
+    },
+  });
+});
+
 const initiateStkPush = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -120,4 +156,5 @@ const handleHotspotCallback = asyncHandler(async (req, res) => {
 module.exports = {
   initiateStkPush,
   handleHotspotCallback,
+  getHotspotTransactions,
 };

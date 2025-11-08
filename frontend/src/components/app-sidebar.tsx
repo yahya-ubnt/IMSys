@@ -269,6 +269,11 @@ const menuCategories: MenuCategory[] = [
         url: "/payments/transactions",
       },
       {
+        title: "Hotspot Transactions",
+        icon: FileText, 
+        url: "/payments/hotspot-transactions",
+      },
+      {
         title: "Wallet Transactions",
         icon: DollarSign, // Using DollarSign for now, can be changed
         url: "/payments/wallet-transactions",
