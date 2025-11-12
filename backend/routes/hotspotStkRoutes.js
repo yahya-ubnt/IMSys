@@ -8,7 +8,7 @@ const {
 const { protect } = require('../middlewares/authMiddleware');
 
 router.route('/').get(protect, getHotspotTransactions);
-router.route('/stk-push').post(protect, initiateStkPush);
+router.route('/stk-push').post(initiateStkPush);
 router.route('/callback').post(handleHotspotCallback);
 
 module.exports = router;

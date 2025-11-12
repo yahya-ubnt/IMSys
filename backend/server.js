@@ -65,7 +65,7 @@ app.use((err, req, res, next) => {
   next();
 });
 app.use(cookieParser());
-app.use(cors({ origin: 'http://localhost:3000', credentials: true })); // Enable CORS
+app.use(cors({ origin: ['http://localhost:3000', 'http://10.10.10.5:3000'], credentials: true })); // Enable CORS
 
 // DIAGNOSTIC: Log all incoming requests
 app.use((req, res, next) => {
@@ -148,7 +148,7 @@ const socketio = require('./socket'); // Import socket.js
 const jwt = require('jsonwebtoken'); // Import jwt
 const server = http.createServer(app); // Create HTTP server
 
-const io = socketio.init(server, { cors: { origin: 'http://localhost:3000', credentials: true } }); // Initialize socket.io
+const io = socketio.init(server, { cors: { origin: ['http://localhost:3000', 'http://10.10.10.5:3000'], credentials: true } }); // Initialize socket.io
 
 // Middleware to authenticate socket connections
 io.use(async (socket, next) => {

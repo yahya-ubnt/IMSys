@@ -63,9 +63,14 @@ exports.getHotspotPlans = async (req, res) => {
 // @access  Public
 exports.getPublicHotspotPlans = async (req, res) => {
   try {
-    const { router_ip } = req.query;
+    let { router_ip } = req.query;
     if (!router_ip) {
       return res.status(400).json({ message: 'Router IP address is required' });
+    }
+
+    // Sanitize router_ip to remove port number if it exists
+    if (router_ip.includes(':')) {
+      router_ip = router_ip.split(':')[0];
     }
 
     const router = await MikrotikRouter.findOne({ ipAddress: router_ip });
