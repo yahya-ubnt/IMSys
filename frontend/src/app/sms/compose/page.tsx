@@ -94,14 +94,14 @@ export default function ComposeSmsPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    let payload: { message: string; sendToType: string; userIds?: string[]; routerId?: string; apartment_house_number?: string; unregisteredMobileNumber?: string; } = { message, sendToType: activeTab }
+    let payload: { message: string; sendToType: string; userIds?: string[]; mikrotikRouterId?: string; apartment_house_number?: string; unregisteredMobileNumber?: string; } = { message, sendToType: activeTab }
 
     switch (activeTab) {
       case "users":
         payload.userIds = selectedUsers;
         break
       case "mikrotik":
-        payload.routerId = selectedRouter;
+        payload.mikrotikRouterId = selectedRouter;
         break
       case "location":
         payload.apartment_house_number = selectedApartmentHouseNumber;
