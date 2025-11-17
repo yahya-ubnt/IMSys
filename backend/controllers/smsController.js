@@ -140,7 +140,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
   }
 
   if (req.query.status) {
-    query.status = req.query.status;
+    query.smsStatus = req.query.status;
   }
 
   if (req.query.startDate && req.query.endDate) {
@@ -166,13 +166,11 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
     total: count,
     success: 0,
     failed: 0,
-    pending: 0,
   };
 
   statsAggregation.forEach(status => {
     if (status._id === 'Success') stats.success = status.count;
     if (status._id === 'Failed') stats.failed = status.count;
-    if (status._id === 'Pending') stats.pending = status.count;
   });
 
   res.json({
@@ -204,7 +202,7 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
   }
 
   if (req.query.status) {
-    query.status = req.query.status;
+    query.smsStatus = req.query.status;
   }
 
   if (req.query.startDate && req.query.endDate) {
