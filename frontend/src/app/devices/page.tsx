@@ -1,19 +1,30 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Card, CardHeader } from "@/components/ui/card";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns";
 import { Device, getDevices, deleteDevice } from "@/lib/deviceService";
 import { Input } from "@/components/ui/input";
 import { Search, Server, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { Topbar } from "@/components/topbar";
-import { motion } from "framer-motion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -28,15 +39,20 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "UP" | "DOWN">("all");
-  const [deviceTypeFilter, setDeviceTypeFilter] = useState<"all" | "Access" | "Station">("all");
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
-      const deviceType = deviceTypeFilter === "all" ? undefined : deviceTypeFilter;
+      const deviceType = columnFilters.find(f => f.id === 'deviceType')?.value as string | undefined;
       const data = await getDevices(deviceType);
       setDevices(data);
     } catch (err: unknown) {
@@ -44,7 +60,7 @@ export default function DevicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [deviceTypeFilter]);
+  }, [columnFilters]);
 
   useEffect(() => {
     fetchDevices();
@@ -68,21 +84,24 @@ export default function DevicesPage() {
     }
   };
 
-  const columns = getColumns(handleDeleteDevice);
+  const columns = useMemo(() => getColumns(handleDeleteDevice), []);
 
-  const filteredDevices = useMemo(() => {
-    return devices.filter((device) => {
-      const search = searchTerm.toLowerCase();
-      const matchesSearch = (
-        device.deviceName?.toLowerCase().includes(search) ||
-        device.ipAddress.toLowerCase().includes(search) ||
-        device.macAddress.toLowerCase().includes(search)
-      );
-      const matchesStatus = statusFilter === "all" || device.status === statusFilter;
-      const matchesDeviceType = deviceTypeFilter === "all" || device.deviceType === deviceTypeFilter;
-      return matchesSearch && matchesStatus && matchesDeviceType;
-    });
-  }, [devices, searchTerm, statusFilter, deviceTypeFilter]);
+  const table = useReactTable({
+    data: devices,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
 
   const totalDevices = devices.length;
   const devicesUp = devices.filter(d => d.status === 'UP').length;
@@ -105,33 +124,45 @@ export default function DevicesPage() {
           </Button>
         </div>
 
-        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-zinc-800">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard title="Total Devices" value={totalDevices} icon={Server} />
               <StatCard title="Online" value={devicesUp} icon={ArrowUpCircle} color="text-green-400" />
               <StatCard title="Offline" value={devicesDown} icon={ArrowDownCircle} color="text-red-400" />
             </CardHeader>
-            <div className="p-4 border-t border-zinc-800">
-              <DataTableToolbar 
-                searchTerm={searchTerm} 
-                onSearch={setSearchTerm} 
-                statusFilter={statusFilter} 
-                onStatusFilter={setStatusFilter}
-                deviceTypeFilter={deviceTypeFilter}
-                onDeviceTypeFilter={setDeviceTypeFilter}
-              />
+            <div className="p-4">
+              <DataTableToolbar table={table} />
             </div>
             <div className="overflow-x-auto">
               <DataTable
+                table={table}
                 columns={columns}
-                data={filteredDevices}
                 onRowClick={(row) => window.location.href = `/devices/${row._id}`}
               />
             </div>
+            <DataTablePagination table={table} />
           </Card>
-        </motion.div>
+        </div>
       </div>
+      <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+                if (deleteCandidateId) {
+                    handleDeleteDevice(deleteCandidateId, new MouseEvent('click'));
+                }
+            }}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -147,15 +178,15 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter, deviceTypeFilter, onDeviceTypeFilter }: any) => (
+const DataTableToolbar = ({ table }: { table: any }) => (
   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
     <div className="flex items-center gap-2">
-      <Button size="sm" className={statusFilter === 'all' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('all')}>All</Button>
-      <Button size="sm" className={statusFilter === 'UP' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('UP')}>Online</Button>
-      <Button size="sm" className={statusFilter === 'DOWN' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('DOWN')}>Offline</Button>
+      <Button size="sm" className={!table.getColumn('status')?.getFilterValue() ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue(undefined)}>All</Button>
+      <Button size="sm" className={table.getColumn('status')?.getFilterValue() === 'UP' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue('UP')}>Online</Button>
+      <Button size="sm" className={table.getColumn('status')?.getFilterValue() === 'DOWN' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue('DOWN')}>Offline</Button>
     </div>
     <div className="flex items-center gap-2">
-        <Select value={deviceTypeFilter} onValueChange={onDeviceTypeFilter}>
+        <Select value={table.getColumn('deviceType')?.getFilterValue() as string ?? 'all'} onValueChange={(value) => table.getColumn('deviceType')?.setFilterValue(value === 'all' ? undefined : value)}>
           <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700">
             <SelectValue placeholder="Filter by type" />
           </SelectTrigger>
@@ -169,8 +200,8 @@ const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter, 
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input
           placeholder="Search by name, IP, or MAC..."
-          value={searchTerm}
-          onChange={e => onSearch(e.target.value)}
+          value={(table.getColumn("deviceName")?.getFilterValue() as string) ?? ""}
+          onChange={(event) => table.getColumn("deviceName")?.setFilterValue(event.target.value)}
           className="pl-10 h-9 bg-zinc-800 border-zinc-700"
         />
       </div>
