@@ -3,25 +3,10 @@
 import * as React from "react"
 import {
   ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  Table as TanstackTable,
 } from "@tanstack/react-table"
 
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -30,132 +15,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ChevronDown } from "lucide-react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select" // Import Select components
 
-interface DataTableProps<TData, TValue, TMeta extends Record<string, unknown>> {
-  handleEdit?: (expense: TData) => void;
-  handleDelete?: (id: string) => void;
+interface DataTableProps<TData, TValue> {
+  table: TanstackTable<TData>
   columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  filterColumn?: string
   onRowClick?: (rowData: TData) => void
   className?: string
-  initialColumnVisibility?: VisibilityState
-  meta?: TMeta // Allow passing meta data to the table
-  pageSizeOptions?: number[] // New prop for page size options
-  paginationEnabled?: boolean // New prop to enable/disable pagination
 }
 
-export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>({
+export function DataTable<TData, TValue>({
+  table,
   columns,
-  data,
-  filterColumn,
   onRowClick,
   className,
-  initialColumnVisibility,
-  meta,
-  pageSizeOptions,
-  paginationEnabled = true, // Default to true
-  handleEdit,
-  handleDelete,
-}: DataTableProps<TData, TValue, TMeta>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>(initialColumnVisibility || {})
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [pagination, setPagination] = React.useState({ // Define pagination state
-    pageIndex: 0,
-    pageSize: pageSizeOptions?.[0] || 10,
-  });
-
-    const table = useReactTable<TData>({
-    data,
-    columns,
-    meta: { ...meta, ...(handleEdit && { handleEdit }), ...(handleDelete && { handleDelete }) },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-      pagination, // Use the pagination state
-    },
-    initialState: {
-      pagination: {
-        pageSize: pageSizeOptions?.[0] || data.length, // Show all if pagination is disabled
-      },
-    },
-    onPaginationChange: setPagination, // Control pagination state
-  })
-
-  React.useEffect(() => {
-    if (!paginationEnabled) {
-      table.setPageSize(data.length);
-    }
-  }, [paginationEnabled, data.length, table]);
-
+}: DataTableProps<TData, TValue>) {
   return (
-    <div className={`w-full rounded-md overflow-x-auto bg-zinc-900 ${className || ''}`}> {/* Added futuristic styling */}
-      <div className="flex items-center py-4 px-4"> {/* Added padding and border */}
-        {filterColumn && table.getColumn(filterColumn) && (
-            <Input
-            placeholder={`Filter by ${filterColumn}...`}
-            value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-                table.getColumn(filterColumn)?.setFilterValue(event.target.value)
-            }
-            className="max-w-sm bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500 rounded-lg" // Styled input
-            />
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"> {/* Styled button */}
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700"> {/* Styled dropdown content */}
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize focus:bg-zinc-700 focus:text-white"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="rounded-md"> {/* Removed redundant rounded-md */}
+    <div className={`w-full rounded-md overflow-x-auto bg-zinc-900 ${className || ''}`}>
+      <div className="rounded-md">
         <Table className="w-full text-left">
           <TableHeader className="border-b border-zinc-800 bg-zinc-800">{table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="px-2 py-1 text-left text-zinc-300 font-semibold uppercase tracking-wider"> {/* Styled header cells */}
+                    <TableHead key={header.id} className="px-2 py-1 text-left text-zinc-300 font-semibold uppercase tracking-wider">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -180,7 +62,7 @@ export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>(
                     if (!isInteractiveElement) {
                       onRowClick?.(row.original);
                     }
-                  }} // Added onClick handler
+                  }}
                   className={`
                     ${onRowClick ? "cursor-pointer" : ""}
                     transition-colors
@@ -193,14 +75,12 @@ export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>(
                     <TableCell
                       key={cell.id}
                       onClick={(e) => {
-                        // Only trigger onRowClick if the cell is not part of the 'select' or 'actions' column
                         if (onRowClick && cell.column.id !== 'select' && cell.column.id !== 'actions') {
-                          // Stop propagation to prevent the row's onClick from firing if it were still there
                           e.stopPropagation();
                           onRowClick(cell.row.original);
                         }
                       }}
-                      className="px-2 py-1 align-middle [&:has([role=checkbox])]:pr-0 text-zinc-200" // Styled table cells
+                      className="px-2 py-1 align-middle [&:has([role=checkbox])]:pr-0 text-zinc-200"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -223,49 +103,6 @@ export function DataTable<TData, TValue, TMeta extends Record<string, unknown>>(
           </TableBody>
         </Table>
       </div>
-      {paginationEnabled && (
-        <div className="flex items-center justify-end space-x-2 py-4 px-4">
-          <div className="flex items-center space-x-2">
-            {pageSizeOptions && pageSizeOptions.length > 0 && (
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value))
-                }}
-              >
-                <SelectTrigger className="h-8 w-[70px] bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">
-                  <SelectValue placeholder={table.getState().pagination.pageSize} />
-                </SelectTrigger>
-                <SelectContent side="top" className="bg-zinc-800 text-white border-zinc-700">
-                  {pageSizeOptions.map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`} className="focus:bg-zinc-700 focus:text-white">
-                      {pageSize === data.length ? "All" : pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

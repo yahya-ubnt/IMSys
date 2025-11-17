@@ -1,17 +1,30 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  PaginationState,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DataTable } from "@/components/data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { columns } from "./columns"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
 import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
@@ -30,25 +43,28 @@ export default function SentSmsLogPage() {
   const { toast } = useToast()
   
   // Data states
-  const [smsLogs, setSmsLogs] = useState<SmsLog[]>([])
+  const [data, setData] = useState<SmsLog[]>([])
   const [stats, setStats] = useState({ total: 0, success: 0, failed: 0 })
-  
-  // UI states
-  
+  const [pageCount, setPageCount] = useState(0)
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState("")
   const [messageTypeFilter, setMessageTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-  const [page, setPage] = useState(1)
-  const pageSize = 10
-  const [totalPages, setTotalPages] = useState(1)
+
+  // Table states
+  const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+  const [sorting, setSorting] = useState<SortingState>([])
 
   // --- DATA FETCHING ---
   const fetchSmsLogs = useCallback(async () => {
     try {
       const params = new URLSearchParams({
-        page: page.toString(),
+        page: (pageIndex + 1).toString(),
         limit: pageSize.toString(),
         ...(searchQuery && { search: searchQuery }),
         ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
@@ -60,28 +76,38 @@ export default function SentSmsLogPage() {
       const response = await fetch(`/api/sms/log?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to fetch sent SMS logs")
       
-      const data = await response.json()
-      setSmsLogs(data.logs || [])
-      setTotalPages(data.pages || 1)
-      setStats(data.stats || { total: 0, success: 0, failed: 0 })
+      const responseData = await response.json()
+      setData(responseData.logs || [])
+      setPageCount(responseData.pages || 0)
+      setStats(responseData.stats || { total: 0, success: 0, failed: 0 })
     } catch {
       toast({ title: "Error", description: "Failed to load sent SMS logs.", variant: "destructive" })
     }
-  }, [page, pageSize, searchQuery, messageTypeFilter, statusFilter, dateRange, toast])
+  }, [pageIndex, pageSize, searchQuery, messageTypeFilter, statusFilter, dateRange, toast])
 
   useEffect(() => {
     fetchSmsLogs()
   }, [fetchSmsLogs])
 
+  const table = useReactTable({
+    data,
+    columns,
+    pageCount,
+    state: {
+      sorting,
+      pagination: { pageIndex, pageSize },
+    },
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    manualSorting: true,
+  })
+
   // --- EVENT HANDLERS ---
   const handleExport = (format: string) => toast({ title: "Export", description: `Exporting logs as ${format}...` })
   const handlePrint = () => toast({ title: "Print", description: "Printing logs..." })
   const handleCopy = () => toast({ title: "Copy", description: "Copying logs to clipboard..." })
-
-  const filteredLogs = useMemo(() => {
-    // This can be used for client-side filtering if needed, but logic is currently server-side.
-    return smsLogs;
-  }, [smsLogs]);
 
   // --- RENDER ---
   return (
@@ -116,12 +142,12 @@ export default function SentSmsLogPage() {
               <StatCard title="Successful" value={stats.success} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Failed" value={stats.failed} icon={XCircle} color="text-red-400" />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-4">
               <DataTableToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
-              <div className="mt-4 overflow-x-auto">
-                <DataTable columns={columns} data={filteredLogs} paginationEnabled={false} />
+              <div className="overflow-x-auto">
+                <DataTable columns={columns} table={table} />
               </div>
-              <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </div>
@@ -174,17 +200,3 @@ const DataTableToolbar = (props: any) => {
     </div>
   );
 };
-
-const PaginationControls = ({ page, totalPages, onPageChange }: any) => (
-  <div className="flex items-center justify-end space-x-2 py-4 mt-4">
-    <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}
-      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
-      Previous
-    </Button>
-    <span className="text-sm text-zinc-400">Page {page} of {totalPages}</span>
-    <Button variant="outline" size="sm" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
-      Next
-    </Button>
-  </div>
-);
