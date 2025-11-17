@@ -492,7 +492,7 @@ const getMikrotikClientsForSms = asyncHandler(async (req, res) => {
     query.tenantOwner = req.user.tenantOwner;
   }
 
-  const clients = await MikrotikUser.find(query).select('_id officialName mobileNumber');
+  const clients = await MikrotikUser.find(query).select('_id officialName mobileNumber expiryDate');
   res.status(200).json(clients);
 });
 

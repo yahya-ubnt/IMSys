@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Topbar } from "@/components/topbar"
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 type User = {
   _id: string
   officialName: string
+  expiryDate: string;
 }
 
 type MikrotikRouter = {
@@ -52,6 +53,7 @@ export default function ComposeSmsPage() {
   const [selectedApartmentHouseNumbers, setSelectedApartmentHouseNumbers] = useState<string[]>([])
   const [unregisteredPhone, setUnregisteredPhone] = useState("")
   const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
+  const [sendToActiveOnly, setSendToActiveOnly] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,13 +90,31 @@ export default function ComposeSmsPage() {
     fetchData()
   }, [toast])
 
-  const userOptions = users.map(user => ({ value: user._id, label: user.officialName }));
+  const userOptions = useMemo(() => {
+    const filtered = sendToActiveOnly
+      ? users.filter(user => user.expiryDate && new Date(user.expiryDate) > new Date())
+      : users;
+    return filtered.map(user => ({ value: user._id, label: user.officialName }));
+  }, [users, sendToActiveOnly]);
+
   const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
   const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
 
   const handleSelectAllUsers = (isChecked: boolean | 'indeterminate') => {
     if (isChecked) {
       setSelectedUsers(userOptions.map(u => u.value));
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleActiveOnlyChange = (isChecked: boolean | 'indeterminate') => {
+    setSendToActiveOnly(!!isChecked);
+    if (isChecked) {
+      const activeUserIds = users
+        .filter(user => user.expiryDate && new Date(user.expiryDate) > new Date())
+        .map(user => user._id);
+      setSelectedUsers(activeUserIds);
     } else {
       setSelectedUsers([]);
     }
@@ -244,7 +264,7 @@ export default function ComposeSmsPage() {
                                     placeholder="Select users..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
-                                  <div className="flex items-center space-x-2 mt-2">
+                                  <div className="flex items-center space-x-2 pt-2">
                                     <Checkbox
                                       id="select-all-users"
                                       onCheckedChange={handleSelectAllUsers}
@@ -252,6 +272,16 @@ export default function ComposeSmsPage() {
                                     />
                                     <Label htmlFor="select-all-users" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                       Send to all users
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2 pt-2">
+                                    <Checkbox
+                                      id="send-to-active"
+                                      onCheckedChange={handleActiveOnlyChange}
+                                      checked={sendToActiveOnly}
+                                    />
+                                    <Label htmlFor="send-to-active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                      Send to active users only
                                     </Label>
                                   </div>
                               </div>
