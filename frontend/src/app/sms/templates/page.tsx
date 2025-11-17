@@ -144,13 +144,6 @@ export default function SmsTemplatesPage() {
 
         <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-cyan-400">All Templates</CardTitle>
-                <CardDescription className="text-zinc-400">A list of all your SMS templates.</CardDescription>
-              </div>
-              <StatCard title="Total Templates" value={templates.length} icon={FileText} />
-            </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
                 <DataTable table={table} columns={columns({ handleEdit, handleDelete })} />
