@@ -1,8 +1,20 @@
 "use client"
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Card, CardHeader } from "@/components/ui/card";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
@@ -11,7 +23,6 @@ import { getColumns } from "./columns";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Router as RouterIcon, Wifi, WifiOff } from "lucide-react";
 import { Topbar } from "@/components/topbar";
-import { motion } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // --- Interface Definition ---
@@ -37,8 +48,15 @@ export default function MikrotikRoutersPage() {
   const [error, setError] = useState<string | null>(null);
   const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const fetchRouters = useCallback(async () => {
     try {
@@ -77,11 +95,22 @@ export default function MikrotikRoutersPage() {
 
   const columns = useMemo(() => getColumns(user, (id) => setDeleteCandidateId(id)), [user]);
 
-  const filteredRouters = useMemo(() =>
-    routers.filter(router =>
-      router.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      router.ipAddress.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [routers, searchTerm]);
+  const table = useReactTable({
+    data: routers,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
 
   const stats = useMemo(() => ({
     total: routers.length,
@@ -112,25 +141,22 @@ export default function MikrotikRoutersPage() {
             </Button>
           </div>
 
-          <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-zinc-800">
+              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <StatCard title="Total Routers" value={stats.total} icon={RouterIcon} />
                 <StatCard title="Online" value={stats.online} icon={Wifi} color="text-green-400" />
                 <StatCard title="Offline" value={stats.offline} icon={WifiOff} color="text-red-400" />
               </CardHeader>
-              <div className="p-4 border-t border-zinc-800">
-                <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} />
+              <div className="p-4">
+                <DataTableToolbar table={table} />
               </div>
               <div className="overflow-x-auto">
-                <DataTable
-                  columns={columns}
-                  data={filteredRouters}
-                  filterColumn="name"
-                />
+                <DataTable table={table} columns={columns} />
               </div>
+              <DataTablePagination table={table} />
             </Card>
-          </motion.div>
+          </div>
         </div>
       </div>
       <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
@@ -162,14 +188,14 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = ({ searchTerm, onSearch }: any) => (
+const DataTableToolbar = ({ table }: { table: any }) => (
   <div className="flex items-center justify-end">
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
       <Input
         placeholder="Search by name or IP..."
-        value={searchTerm}
-        onChange={e => onSearch(e.target.value)}
+        value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+        onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
         className="pl-10 h-9 bg-zinc-800 border-zinc-700"
       />
     </div>
