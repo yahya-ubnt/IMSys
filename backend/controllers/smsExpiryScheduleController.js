@@ -46,7 +46,13 @@ const createSchedule = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, days, timing, smsTemplate, whatsAppTemplate, status } = req.body;
+  const { name, days, timing, smsTemplate, status } = req.body;
+  let { whatsAppTemplate } = req.body;
+
+  // If whatsAppTemplate is an empty string or other falsy value, treat it as not provided.
+  if (!whatsAppTemplate) {
+    whatsAppTemplate = null;
+  }
 
   // Verify ownership of smsTemplate
   const smsTpl = await SmsTemplate.findOne({ _id: smsTemplate, tenantOwner: req.user.tenantOwner });
@@ -93,17 +99,45 @@ const createSchedule = asyncHandler(async (req, res) => {
 // @route   PUT /api/smsexpiryschedules/:id
 // @access  Private
 const updateSchedule = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  
   const { name, days, timing, smsTemplate, whatsAppTemplate, status } = req.body;
 
   const schedule = await SmsExpirySchedule.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
   if (schedule) {
-    schedule.name = name || schedule.name;
-    schedule.days = days || schedule.days;
-    schedule.timing = timing || schedule.timing;
-    schedule.smsTemplate = smsTemplate || schedule.smsTemplate;
-    schedule.whatsAppTemplate = whatsAppTemplate || schedule.whatsAppTemplate;
-    schedule.status = status || schedule.status;
+    // Verify ownership of smsTemplate if it's being changed
+    if (smsTemplate && schedule.smsTemplate.toString() !== smsTemplate) {
+      const smsTpl = await SmsTemplate.findOne({ _id: smsTemplate, tenantOwner: req.user.tenantOwner });
+      if (!smsTpl) {
+        res.status(401);
+        throw new Error('Not authorized to use this SMS template');
+      }
+    }
+
+    // Verify ownership of whatsAppTemplate if it's being changed
+    if (whatsAppTemplate && schedule.whatsAppTemplate?.toString() !== whatsAppTemplate) {
+      const waTpl = await WhatsAppTemplate.findOne({ _id: whatsAppTemplate, tenantOwner: req.user.tenantOwner });
+      if (!waTpl) {
+        res.status(401);
+        throw new Error('Not authorized to use this WhatsApp template');
+      }
+    }
+
+    schedule.name = name;
+    schedule.days = days;
+    schedule.timing = timing;
+    schedule.smsTemplate = smsTemplate;
+    schedule.status = status;
+
+    if (whatsAppTemplate && whatsAppTemplate.length > 0) {
+      schedule.whatsAppTemplate = whatsAppTemplate;
+    } else {
+      schedule.whatsAppTemplate = undefined; // Clear the field
+    }
 
     const updatedSchedule = await schedule.save();
     res.json(updatedSchedule);
