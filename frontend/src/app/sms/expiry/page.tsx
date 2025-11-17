@@ -2,12 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { columns } from "./columns"
 import { SmsExpiryScheduleForm, SmsExpiryScheduleFormData } from "./sms-expiry-schedule-form"
 import { PlusCircle, CheckCircle, XCircle } from "lucide-react"
@@ -29,7 +41,6 @@ export type SmsExpirySchedule = {
 // --- MAIN COMPONENT ---
 export default function SmsExpiryPage() {
   const { toast } = useToast()
-  // const { token } = useAuth() // Removed token from useAuth
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
@@ -40,9 +51,16 @@ export default function SmsExpiryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSchedule, setSelectedSchedule] = useState<SmsExpirySchedule | null>(null)
 
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
-    // if (!token) return; // Removed token check
     try {
       const [smsData, whatsappData] = await Promise.all([
         getSmsTemplates(),
@@ -53,7 +71,7 @@ export default function SmsExpiryPage() {
     } catch {
       toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
     }
-  }, [toast]); // Removed token from dependency array
+  }, [toast]);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -115,6 +133,23 @@ export default function SmsExpiryPage() {
     }
   }
 
+  const table = useReactTable({
+    data: schedules,
+    columns: columns({ handleEdit, handleDelete }),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
+
   const activeSchedules = schedules.filter(s => s.status === 'Active').length
   const inactiveSchedules = schedules.length - activeSchedules
 
@@ -141,10 +176,11 @@ export default function SmsExpiryPage() {
               <StatCard title="Active" value={activeSchedules} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Inactive" value={inactiveSchedules} icon={XCircle} color="text-yellow-400" />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
-                <DataTable columns={columns({ handleEdit, handleDelete })} data={schedules} filterColumn="name" />
+                <DataTable table={table} columns={columns({ handleEdit, handleDelete })} />
               </div>
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </motion.div>

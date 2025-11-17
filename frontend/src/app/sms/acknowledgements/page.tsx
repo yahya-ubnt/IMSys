@@ -1,12 +1,21 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { motion } from "framer-motion"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
 import { SmsAcknowledgementForm, SmsAcknowledgementFormData } from "./sms-acknowledgement-form"
@@ -39,6 +48,14 @@ export default function SmsAcknowledgementsPage() {
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedAcknowledgement, setSelectedAcknowledgement] = useState<SmsAcknowledgement | null>(null)
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   // --- DATA FETCHING ---
   const fetchAcknowledgements = useCallback(async () => {
@@ -111,6 +128,23 @@ export default function SmsAcknowledgementsPage() {
     }
   }
 
+  const table = useReactTable({
+    data: acknowledgements,
+    columns: columns({ handleEdit, handleDelete, triggerTypes }),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
+
   const activeAcknowledgements = acknowledgements.filter(a => a.status === 'Active').length
   const inactiveAcknowledgements = acknowledgements.length - activeAcknowledgements
 
@@ -129,8 +163,7 @@ export default function SmsAcknowledgementsPage() {
           </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard title="Total Mappings" value={acknowledgements.length} icon={PlusCircle} />
@@ -139,11 +172,11 @@ export default function SmsAcknowledgementsPage() {
             </CardHeader>
             <CardContent className="p-4">
               <div className="overflow-x-auto">
-                <DataTable columns={columns({ handleEdit, handleDelete, triggerTypes })} data={acknowledgements} filterColumn="triggerType" />
+                <DataTable table={table} columns={columns({ handleEdit, handleDelete, triggerTypes })} />
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
