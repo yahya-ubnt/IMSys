@@ -242,7 +242,7 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     res.attachment('sms_logs.xlsx');
     res.send(buffer);
   } else if (req.query.format === 'pdf') {
-    const doc = new PDFDocument({ margin: 30, size: 'A4' });
+    const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
     res.header('Content-Type', 'application/pdf');
     res.attachment('sms_logs.pdf');
     doc.pipe(res);
@@ -252,33 +252,44 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
 
     const tableTop = doc.y;
     const headers = ['Date & Time', 'Mobile Number', 'Message', 'Status', 'Sent By'];
-    const columnWidths = [100, 100, 200, 50, 80];
-    
-    let currentX = doc.x;
-    headers.forEach((header, i) => {
-      doc.fontSize(10).text(header, currentX, tableTop, { width: columnWidths[i], bold: true });
-      currentX += columnWidths[i];
-    });
+    const columnWidths = [120, 90, 300, 60, 100];
+    const rowHeight = 30;
 
-    let currentY = tableTop + 25;
-    data.forEach(row => {
-      currentX = doc.x;
-      doc.fontSize(8).text(row['Date & Time'], currentX, currentY, { width: columnWidths[0] });
-      currentX += columnWidths[0];
-      doc.text(row['Mobile Number'], currentX, currentY, { width: columnWidths[1] });
-      currentX += columnWidths[1];
-      doc.text(row['Message'], currentX, currentY, { width: columnWidths[2] });
-      currentX += columnWidths[2];
-      doc.text(row['SMS Status'], currentX, currentY, { width: columnWidths[3] });
-      currentX += columnWidths[3];
-      doc.text(row['Sent By'], currentX, currentY, { width: columnWidths[4] });
-      
-      currentY += 20;
-      if (currentY > 750) {
+    const drawHeaders = (y) => {
+      let currentX = doc.page.margins.left;
+      headers.forEach((header, i) => {
+        doc.fontSize(10).text(header, currentX, y, { width: columnWidths[i], bold: true });
+        currentX += columnWidths[i];
+      });
+    };
+
+    drawHeaders(tableTop);
+    let currentY = tableTop + 20;
+
+    for (const row of data) {
+      if (currentY + rowHeight > doc.page.height - doc.page.margins.bottom) {
         doc.addPage();
-        currentY = doc.y;
+        currentY = doc.page.margins.top;
+        drawHeaders(currentY);
+        currentY += 20;
       }
-    });
+
+      let currentX = doc.page.margins.left;
+      const rowData = [
+        row['Date & Time'],
+        row['Mobile Number'],
+        row['Message'],
+        row['SMS Status'],
+        row['Sent By']
+      ];
+
+      rowData.forEach((cell, i) => {
+        doc.fontSize(8).text(String(cell || ''), currentX, currentY, { width: columnWidths[i], align: 'left' });
+        currentX += columnWidths[i];
+      });
+      
+      currentY += rowHeight;
+    }
 
     doc.end();
   } else {
