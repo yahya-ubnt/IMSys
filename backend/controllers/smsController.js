@@ -25,10 +25,10 @@ const getSmsTriggers = asyncHandler(async (req, res) => {
 const composeAndSendSms = asyncHandler(async (req, res) => {
   const {
     message,
-    sendToType, // 'users', 'mikrotikGroup', 'location', 'unregistered'
+    sendToType, // 'users', 'mikrotik', 'location', 'unregistered'
     userIds,
-    mikrotikRouterId,
-    apartment_house_number,
+    mikrotikRouterIds,
+    apartmentHouseNumbers,
     unregisteredMobileNumber,
   } = req.body;
 
@@ -51,21 +51,20 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
       break;
 
     case 'mikrotik':
-      if (!mikrotikRouterId) {
+      if (!mikrotikRouterIds || !Array.isArray(mikrotikRouterIds) || mikrotikRouterIds.length === 0) {
         res.status(400);
-        throw new Error('Mikrotik Router ID is required for sending to Mikrotik group');
+        throw new Error('Mikrotik Router IDs are required for sending to Mikrotik group');
       }
-      // Assuming MikrotikUser model has a reference to MikrotikRouter and a mobileNumber
-      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: { $in: mikrotikRouterIds }, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
       recipientPhoneNumbers = mikrotikUsers.map(user => user.mobileNumber).filter(Boolean);
       break;
 
     case 'location':
-      if (!apartment_house_number) {
+      if (!apartmentHouseNumbers || !Array.isArray(apartmentHouseNumbers) || apartmentHouseNumbers.length === 0) {
         res.status(400);
-        throw new Error('Apartment/House Number is required for sending to location');
+        throw new Error('Apartment/House Numbers are required for sending to location');
       }
-      const usersInLocation = await MikrotikUser.find({ apartment_house_number: apartment_house_number, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      const usersInLocation = await MikrotikUser.find({ apartment_house_number: { $in: apartmentHouseNumbers }, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
       recipientPhoneNumbers = usersInLocation.map(user => user.mobileNumber).filter(Boolean);
       break;
 

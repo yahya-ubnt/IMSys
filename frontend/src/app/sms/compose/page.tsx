@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Send, Users, Router, Building, Phone } from "lucide-react"
+import { MultiSelect } from "@/components/ui/multi-select"
+import { Users, Router, Building, Phone, Send } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
 
 type User = {
   _id: string
@@ -42,15 +41,14 @@ export default function ComposeSmsPage() {
   const { toast } = useToast()
   const [users, setUsers] = useState<User[]>([])
   const [mikrotikRouters, setMikrotikRouters] = useState<MikrotikRouter[]>([])
-  const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("users")
 
   const [message, setMessage] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [selectedRouter, setSelectedRouter] = useState("")
-  const [selectedApartmentHouseNumber, setSelectedApartmentHouseNumber] = useState("")
+  const [selectedRouters, setSelectedRouters] = useState<string[]>([])
+  const [selectedApartmentHouseNumbers, setSelectedApartmentHouseNumbers] = useState<string[]>([])
   const [unregisteredPhone, setUnregisteredPhone] = useState("")
   const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
 
@@ -71,7 +69,6 @@ export default function ComposeSmsPage() {
         const mikrotikUsersData = await mikrotikUsersRes.json();
         setUsers(await usersRes.json())
         setMikrotikRouters(await routersRes.json())
-        setMikrotikUsers(mikrotikUsersData)
 
         const uniqueApartmentHouseNumbers = Array.from(new Set(mikrotikUsersData.map((user: MikrotikUser) => user.apartment_house_number).filter(Boolean)));
         setApartmentHouseNumbers(uniqueApartmentHouseNumbers as string[]);
@@ -94,17 +91,24 @@ export default function ComposeSmsPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    let payload: { message: string; sendToType: string; userIds?: string[]; mikrotikRouterId?: string; apartment_house_number?: string; unregisteredMobileNumber?: string; } = { message, sendToType: activeTab }
+    let payload: { 
+      message: string; 
+      sendToType: string; 
+      userIds?: string[]; 
+      mikrotikRouterIds?: string[]; 
+      apartmentHouseNumbers?: string[]; 
+      unregisteredMobileNumber?: string; 
+    } = { message, sendToType: activeTab }
 
     switch (activeTab) {
       case "users":
         payload.userIds = selectedUsers;
         break
       case "mikrotik":
-        payload.mikrotikRouterId = selectedRouter;
+        payload.mikrotikRouterIds = selectedRouters;
         break
       case "location":
-        payload.apartment_house_number = selectedApartmentHouseNumber;
+        payload.apartmentHouseNumbers = selectedApartmentHouseNumbers;
         break
       case "unregistered":
         payload.unregisteredMobileNumber = unregisteredPhone;
@@ -140,6 +144,10 @@ export default function ComposeSmsPage() {
     }
   }
 
+  const userOptions = users.map(user => ({ value: user._id, label: user.officialName }));
+  const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
+  const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
@@ -156,7 +164,7 @@ export default function ComposeSmsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl"
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl"
         >
           <Card className="bg-transparent border-none text-white">
             <CardHeader className="border-b border-zinc-800">
@@ -205,29 +213,38 @@ export default function ComposeSmsPage() {
                       >
                           {activeTab === "users" && (
                               <div className="space-y-2">
-                                  <Label htmlFor="users" className="text-zinc-300">Select User</Label>
-                                  <Select onValueChange={(value) => setSelectedUsers(value ? [value] : [])}>
-                                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a user" /></SelectTrigger>
-                                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">{users.map((user) => <SelectItem key={user._id} value={user._id} className="focus:bg-zinc-800">{user.officialName}</SelectItem>)}</SelectContent>
-                                  </Select>
+                                  <Label htmlFor="users" className="text-zinc-300">Select User(s)</Label>
+                                  <MultiSelect
+                                    options={userOptions}
+                                    onValueChange={setSelectedUsers}
+                                    defaultValue={selectedUsers}
+                                    placeholder="Select users..."
+                                    className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
+                                  />
                               </div>
                           )}
                           {activeTab === "mikrotik" && (
                               <div className="space-y-2">
-                                  <Label htmlFor="mikrotik-router" className="text-zinc-300">Select Mikrotik Router</Label>
-                                  <Select onValueChange={setSelectedRouter}>
-                                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a router" /></SelectTrigger>
-                                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">{mikrotikRouters.map((router) => <SelectItem key={router._id} value={router._id} className="focus:bg-zinc-800">{router.name}</SelectItem>)}</SelectContent>
-                                  </Select>
+                                  <Label htmlFor="mikrotik-router" className="text-zinc-300">Select Mikrotik Router(s)</Label>
+                                   <MultiSelect
+                                    options={routerOptions}
+                                    onValueChange={setSelectedRouters}
+                                    defaultValue={selectedRouters}
+                                    placeholder="Select routers..."
+                                    className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
+                                  />
                               </div>
                           )}
                           {activeTab === "location" && (
                               <div className="space-y-2">
-                                  <Label htmlFor="location" className="text-zinc-300">Select Apartment/House Number</Label>
-                                  <Select onValueChange={setSelectedApartmentHouseNumber}>
-                                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a location" /></SelectTrigger>
-                                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">{apartmentHouseNumbers.map((ahn) => <SelectItem key={ahn} value={ahn} className="focus:bg-zinc-800">{ahn}</SelectItem>)}</SelectContent>
-                                  </Select>
+                                  <Label htmlFor="location" className="text-zinc-300">Select Apartment/House Number(s)</Label>
+                                  <MultiSelect
+                                    options={locationOptions}
+                                    onValueChange={setSelectedApartmentHouseNumbers}
+                                    defaultValue={selectedApartmentHouseNumbers}
+                                    placeholder="Select locations..."
+                                    className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
+                                  />
                               </div>
                           )}
                           {activeTab === "unregistered" && (
