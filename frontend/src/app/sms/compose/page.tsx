@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -235,11 +234,7 @@ export default function ComposeSmsPage() {
           </div>
         </div>
 
-        <motion.div
-          layout
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+        <div
           className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl"
         >
           <Card className="bg-transparent border-none text-white">
@@ -257,11 +252,9 @@ export default function ComposeSmsPage() {
                               style={{ WebkitTapHighlightColor: "transparent" }}
                           >
                               {activeTab === tab.id && (
-                                  <motion.span
-                                      layoutId="active-tab-indicator"
+                                  <span
                                       className="absolute inset-0 z-10 bg-blue-600/40"
                                       style={{ borderRadius: 6 }}
-                                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                   />
                               )}
                               <div className="relative z-20 flex items-center justify-center">
@@ -274,16 +267,10 @@ export default function ComposeSmsPage() {
                 </div>
 
                 <div className="relative min-h-[120px]">
-                  <AnimatePresence mode="wait">
-                      <motion.div
-                          key={activeTab}
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -10, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="p-4 bg-zinc-800/40 rounded-lg border border-zinc-700/50"
-                      >
-                          {activeTab === "users" && (
+                  <div
+                    className="p-4 bg-zinc-800/40 rounded-lg border border-zinc-700/50"
+                  >
+                      {activeTab === "users" && (
                               <div className="space-y-2">
                                   <Label htmlFor="users" className="text-zinc-300">Select User(s)</Label>
                                   <MultiSelect
@@ -375,8 +362,7 @@ export default function ComposeSmsPage() {
                                   <Input id="unregistered-phone" value={unregisteredPhone} onChange={(e) => setUnregisteredPhone(e.target.value)} placeholder="Enter phone number, e.g., 2547..." className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                               </div>
                           )}
-                      </motion.div>
-                  </AnimatePresence>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -393,7 +379,7 @@ export default function ComposeSmsPage() {
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </main>
     </div>
   )
