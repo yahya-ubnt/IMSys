@@ -4,12 +4,13 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Topbar } from "@/components/topbar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { MultiSelect } from "@/components/ui/multi-select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Users, Router, Building, Phone, Send } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -87,6 +88,34 @@ export default function ComposeSmsPage() {
     fetchData()
   }, [toast])
 
+  const userOptions = users.map(user => ({ value: user._id, label: user.officialName }));
+  const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
+  const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
+
+  const handleSelectAllUsers = (isChecked: boolean | 'indeterminate') => {
+    if (isChecked) {
+      setSelectedUsers(userOptions.map(u => u.value));
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleSelectAllRouters = (isChecked: boolean | 'indeterminate') => {
+    if (isChecked) {
+      setSelectedRouters(routerOptions.map(r => r.value));
+    } else {
+      setSelectedRouters([]);
+    }
+  };
+
+  const handleSelectAllLocations = (isChecked: boolean | 'indeterminate') => {
+    if (isChecked) {
+      setSelectedApartmentHouseNumbers(locationOptions.map(l => l.value));
+    } else {
+      setSelectedApartmentHouseNumbers([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -144,10 +173,6 @@ export default function ComposeSmsPage() {
     }
   }
 
-  const userOptions = users.map(user => ({ value: user._id, label: user.officialName }));
-  const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
-  const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
-
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
@@ -197,7 +222,7 @@ export default function ComposeSmsPage() {
                   </div>
                 </div>
 
-                <div className="relative min-h-[96px]">
+                <div className="relative min-h-[120px]">
                   <AnimatePresence mode="wait">
                       <motion.div
                           key={activeTab}
@@ -217,6 +242,16 @@ export default function ComposeSmsPage() {
                                     placeholder="Select users..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <Checkbox
+                                      id="select-all-users"
+                                      onCheckedChange={handleSelectAllUsers}
+                                      checked={selectedUsers.length === userOptions.length && userOptions.length > 0}
+                                    />
+                                    <Label htmlFor="select-all-users" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                      Send to all users
+                                    </Label>
+                                  </div>
                               </div>
                           )}
                           {activeTab === "mikrotik" && (
@@ -229,6 +264,16 @@ export default function ComposeSmsPage() {
                                     placeholder="Select routers..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <Checkbox
+                                      id="select-all-routers"
+                                      onCheckedChange={handleSelectAllRouters}
+                                      checked={selectedRouters.length === routerOptions.length && routerOptions.length > 0}
+                                    />
+                                    <Label htmlFor="select-all-routers" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                      Send to all routers
+                                    </Label>
+                                  </div>
                               </div>
                           )}
                           {activeTab === "location" && (
@@ -241,6 +286,16 @@ export default function ComposeSmsPage() {
                                     placeholder="Select locations..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <Checkbox
+                                      id="select-all-locations"
+                                      onCheckedChange={handleSelectAllLocations}
+                                      checked={selectedApartmentHouseNumbers.length === locationOptions.length && locationOptions.length > 0}
+                                    />
+                                    <Label htmlFor="select-all-locations" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                      Send to all locations
+                                    </Label>
+                                  </div>
                               </div>
                           )}
                           {activeTab === "unregistered" && (
