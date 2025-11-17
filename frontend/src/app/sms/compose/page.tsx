@@ -167,10 +167,6 @@ export default function ComposeSmsPage() {
           className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl"
         >
           <Card className="bg-transparent border-none text-white">
-            <CardHeader className="border-b border-zinc-800">
-              <CardTitle className="text-cyan-400">Message Details</CardTitle>
-              <CardDescription className="text-zinc-400">Select recipients and compose your message below.</CardDescription>
-            </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-3">
