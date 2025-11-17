@@ -128,7 +128,7 @@ export default function ComposeSmsPage() {
       }
 
       toast({ title: "SMS Sent", description: "Your message has been queued for sending." })
-      router.push("/sms")
+      router.push("/sms/compose")
     } catch (error: unknown) {
       toast({
         title: "Error Sending SMS",
