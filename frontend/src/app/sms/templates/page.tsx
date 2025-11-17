@@ -1,13 +1,24 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { motion } from "framer-motion"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { columns } from "./columns"
 import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form"
 import { PlusCircle, FileText } from "lucide-react"
@@ -33,6 +44,14 @@ export default function SmsTemplatesPage() {
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<SmsTemplate | null>(null)
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   // --- DATA FETCHING ---
   const fetchTemplates = useCallback(async () => {
@@ -91,6 +110,23 @@ export default function SmsTemplatesPage() {
     }
   }
 
+  const table = useReactTable({
+    data: templates,
+    columns: columns({ handleEdit, handleDelete }),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
+
   // --- RENDER ---
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
@@ -106,23 +142,23 @@ export default function SmsTemplatesPage() {
           </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 flex flex-row items-center justify-between">
+            <CardHeader className="p-4 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-cyan-400">All Templates</CardTitle>
                 <CardDescription className="text-zinc-400">A list of all your SMS templates.</CardDescription>
               </div>
               <StatCard title="Total Templates" value={templates.length} icon={FileText} />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
-                <DataTable columns={columns({ handleEdit, handleDelete })} data={templates} filterColumn="name" />
+                <DataTable table={table} columns={columns({ handleEdit, handleDelete })} />
               </div>
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
