@@ -54,6 +54,7 @@ export default function ComposeSmsPage() {
   const [unregisteredPhone, setUnregisteredPhone] = useState("")
   const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
   const [sendToActiveOnly, setSendToActiveOnly] = useState(false);
+  const [sendToExpiredOnly, setSendToExpiredOnly] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,17 +92,25 @@ export default function ComposeSmsPage() {
   }, [toast])
 
   const userOptions = useMemo(() => {
-    const filtered = sendToActiveOnly
-      ? users.filter(user => user.expiryDate && new Date(user.expiryDate) > new Date())
-      : users;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    let filtered = users;
+    if (sendToActiveOnly) {
+      filtered = users.filter(user => user.expiryDate && new Date(user.expiryDate) >= today);
+    } else if (sendToExpiredOnly) {
+      filtered = users.filter(user => user.expiryDate && new Date(user.expiryDate) < today);
+    }
     return filtered.map(user => ({ value: user._id, label: user.officialName }));
-  }, [users, sendToActiveOnly]);
+  }, [users, sendToActiveOnly, sendToExpiredOnly]);
 
   const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
   const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
 
   const handleSelectAllUsers = (isChecked: boolean | 'indeterminate') => {
     if (isChecked) {
+      setSendToActiveOnly(false);
+      setSendToExpiredOnly(false);
       setSelectedUsers(userOptions.map(u => u.value));
     } else {
       setSelectedUsers([]);
@@ -109,12 +118,32 @@ export default function ComposeSmsPage() {
   };
 
   const handleActiveOnlyChange = (isChecked: boolean | 'indeterminate') => {
-    setSendToActiveOnly(!!isChecked);
-    if (isChecked) {
+    const checked = !!isChecked;
+    setSendToActiveOnly(checked);
+    if (checked) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSendToExpiredOnly(false); // Uncheck the other filter
       const activeUserIds = users
-        .filter(user => user.expiryDate && new Date(user.expiryDate) > new Date())
+        .filter(user => user.expiryDate && new Date(user.expiryDate) >= today)
         .map(user => user._id);
       setSelectedUsers(activeUserIds);
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleExpiredOnlyChange = (isChecked: boolean | 'indeterminate') => {
+    const checked = !!isChecked;
+    setSendToExpiredOnly(checked);
+    if (checked) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSendToActiveOnly(false); // Uncheck the other filter
+      const expiredUserIds = users
+        .filter(user => user.expiryDate && new Date(user.expiryDate) < today)
+        .map(user => user._id);
+      setSelectedUsers(expiredUserIds);
     } else {
       setSelectedUsers([]);
     }
@@ -268,7 +297,7 @@ export default function ComposeSmsPage() {
                                     <Checkbox
                                       id="select-all-users"
                                       onCheckedChange={handleSelectAllUsers}
-                                      checked={selectedUsers.length === userOptions.length && userOptions.length > 0}
+                                      checked={!sendToActiveOnly && !sendToExpiredOnly && selectedUsers.length === userOptions.length && userOptions.length > 0}
                                     />
                                     <Label htmlFor="select-all-users" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                       Send to all users
@@ -282,6 +311,16 @@ export default function ComposeSmsPage() {
                                     />
                                     <Label htmlFor="send-to-active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                                       Send to active users only
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2 pt-2">
+                                    <Checkbox
+                                      id="send-to-expired"
+                                      onCheckedChange={handleExpiredOnlyChange}
+                                      checked={sendToExpiredOnly}
+                                    />
+                                    <Label htmlFor="send-to-expired" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                      Send to expired users only
                                     </Label>
                                   </div>
                               </div>
