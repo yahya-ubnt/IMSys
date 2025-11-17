@@ -1,7 +1,19 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { DataTable } from "@/components/data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { getColumns } from "./columns"
 import { Lead, DashboardStatsProps, MonthlyLeadData } from "@/types/lead"
 import { useToast } from "@/hooks/use-toast"
@@ -17,7 +29,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { List, UserPlus, CheckCircle, PlusCircle } from "lucide-react"
 import { Topbar } from "@/components/topbar"
 import Link from "next/link"
-import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -41,6 +52,14 @@ export default function LeadsPage() {
   
   // Form states
   const [mikrotikDetails, setMikrotikDetails] = useState({ mikrotikUsername: "", mikrotikPassword: "", mikrotikService: "", mikrotikRouter: "" })
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   // --- DATA FETCHING ---
   const fetchLeads = useCallback(async () => {
@@ -103,6 +122,23 @@ export default function LeadsPage() {
     }
   }
 
+  const table = useReactTable({
+    data: leads,
+    columns: getColumns((id) => setDeleteCandidateId(id), handleStatusChange),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
+
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
   if (isLoading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading...</div>
@@ -125,10 +161,9 @@ export default function LeadsPage() {
             </Button>
           </div>
 
-          <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 border-b border-zinc-800">
+              <CardHeader className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard title="Total Leads" value={dashboardStats.totalLeads} icon={List} />
                   <StatCard title="New This Month" value={dashboardStats.newLeadsThisMonth} icon={UserPlus} color="text-yellow-400" />
@@ -171,17 +206,16 @@ export default function LeadsPage() {
                     <p className="text-xs text-zinc-400">Feature coming soon.</p>
                   </div>
                 </div>
-                <div className="p-4 border-t border-zinc-800 mt-4">
+                <div className="p-4 mt-4">
                   <DataTable
+                    table={table}
                     columns={getColumns((id) => setDeleteCandidateId(id), handleStatusChange)}
-                    data={leads}
-                    filterColumn="name"
-                    onRowClick={(lead: Lead) => router.push(`/leads/${lead._id}`)}
                   />
+                  <DataTablePagination table={table} />
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
               <DialogHeader>
