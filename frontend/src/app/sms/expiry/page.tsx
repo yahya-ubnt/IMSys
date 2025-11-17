@@ -1,12 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { motion } from "framer-motion"
 import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
-  VisibilityState,
   PaginationState,
   useReactTable,
   getCoreRowModel,
@@ -23,8 +21,6 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { columns } from "./columns"
 import { SmsExpiryScheduleForm, SmsExpiryScheduleFormData } from "./sms-expiry-schedule-form"
 import { PlusCircle, CheckCircle, XCircle } from "lucide-react"
-import { getSmsTemplates } from "@/lib/api/sms"
-import { getWhatsAppTemplates } from "@/lib/api/whatsapp"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 // --- TYPE DEFINITIONS ---
@@ -36,7 +32,13 @@ export type SmsExpirySchedule = {
   messageBody: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
+  smsTemplate: { _id: string; name: string; };
 };
+
+export interface TriggerType {
+  id: string;
+  name: string;
+}
 
 // --- MAIN COMPONENT ---
 export default function SmsExpiryPage() {
@@ -46,6 +48,7 @@ export default function SmsExpiryPage() {
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
   const [smsTemplates, setSmsTemplates] = useState<any[]>([])
   const [whatsAppTemplates, setWhatsAppTemplates] = useState<any[]>([])
+  const [triggerTypes, setTriggerTypes] = useState<TriggerType[]>([])
   
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -60,19 +63,6 @@ export default function SmsExpiryPage() {
   })
 
   // --- DATA FETCHING ---
-  const fetchTemplates = useCallback(async () => {
-    try {
-      const [smsData, whatsappData] = await Promise.all([
-        getSmsTemplates(),
-        getWhatsAppTemplates()
-      ]);
-      setSmsTemplates(smsData);
-      setWhatsAppTemplates(whatsappData);
-    } catch {
-      toast({ title: "Error", description: "Failed to load templates.", variant: "destructive" })
-    }
-  }, [toast]);
-
   const fetchSchedules = useCallback(async () => {
     try {
       const response = await fetch("/api/smsexpiryschedules")
@@ -83,10 +73,30 @@ export default function SmsExpiryPage() {
     }
   }, [toast])
 
+  const fetchTemplatesAndTriggers = useCallback(async () => {
+    try {
+      const [smsRes, whatsappRes, triggersRes] = await Promise.all([
+        fetch("/api/smstemplates"),
+        fetch("/api/whatsapp-templates"),
+        fetch("/api/sms/triggers")
+      ]);
+      if (!smsRes.ok) throw new Error("Failed to fetch SMS templates");
+      if (!whatsappRes.ok) throw new Error("Failed to fetch WhatsApp templates");
+      if (!triggersRes.ok) throw new Error("Failed to fetch trigger types");
+      
+      setSmsTemplates(await smsRes.json());
+      setWhatsAppTemplates(await whatsappRes.json());
+      setTriggerTypes(await triggersRes.json());
+
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load required data.", variant: "destructive" })
+    }
+  }, [toast]);
+
   useEffect(() => {
     fetchSchedules()
-    fetchTemplates()
-  }, [fetchSchedules, fetchTemplates])
+    fetchTemplatesAndTriggers()
+  }, [fetchSchedules, fetchTemplatesAndTriggers])
 
   // --- EVENT HANDLERS ---
   const handleNewSchedule = () => {
@@ -135,7 +145,7 @@ export default function SmsExpiryPage() {
 
   const table = useReactTable({
     data: schedules,
-    columns: columns({ handleEdit, handleDelete }),
+    columns: columns({ handleEdit, handleDelete, triggerTypes }),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -168,22 +178,21 @@ export default function SmsExpiryPage() {
           </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard title="Total Schedules" value={schedules.length} icon={PlusCircle} />
               <StatCard title="Active" value={activeSchedules} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Inactive" value={inactiveSchedules} icon={XCircle} color="text-yellow-400" />
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
-                <DataTable table={table} columns={columns({ handleEdit, handleDelete })} />
+                <DataTable table={table} columns={columns({ handleEdit, handleDelete, triggerTypes })} />
               </div>
               <DataTablePagination table={table} />
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
@@ -215,5 +224,5 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
       <p className="text-xs text-zinc-400">{title}</p>
       <p className={`text-xl font-bold ${color}`}>{value}</p>
     </div>
-  </div>
+    </div>
 );
