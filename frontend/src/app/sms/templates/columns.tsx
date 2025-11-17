@@ -19,6 +19,11 @@ interface ColumnsProps {
 
 export const columns = ({ handleEdit, handleDelete }: ColumnsProps): ColumnDef<SmsTemplate>[] => [
   {
+    id: "index",
+    header: "#",
+    cell: ({ row }) => row.index + 1,
+  },
+  {
     accessorKey: "name",
     header: "Name",
   },
