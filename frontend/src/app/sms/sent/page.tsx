@@ -119,7 +119,7 @@ export default function SentSmsLogPage() {
             <CardContent className="p-4">
               <DataTableToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
               <div className="mt-4 overflow-x-auto">
-                <DataTable columns={columns} data={filteredLogs} />
+                <DataTable columns={columns} data={filteredLogs} paginationEnabled={false} />
               </div>
               <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
             </CardContent>
