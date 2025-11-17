@@ -213,7 +213,7 @@ export default function ComposeSmsPage() {
                                   <MultiSelect
                                     options={userOptions}
                                     onValueChange={setSelectedUsers}
-                                    defaultValue={selectedUsers}
+                                    value={selectedUsers}
                                     placeholder="Select users..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
@@ -225,7 +225,7 @@ export default function ComposeSmsPage() {
                                    <MultiSelect
                                     options={routerOptions}
                                     onValueChange={setSelectedRouters}
-                                    defaultValue={selectedRouters}
+                                    value={selectedRouters}
                                     placeholder="Select routers..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
@@ -237,7 +237,7 @@ export default function ComposeSmsPage() {
                                   <MultiSelect
                                     options={locationOptions}
                                     onValueChange={setSelectedApartmentHouseNumbers}
-                                    defaultValue={selectedApartmentHouseNumbers}
+                                    value={selectedApartmentHouseNumbers}
                                     placeholder="Select locations..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />

@@ -50,7 +50,7 @@ interface MultiSelectProps
     icon?: React.ComponentType<{ className?: string }>;
   }[];
   onValueChange: (value: string[]) => void;
-  defaultValue: string[];
+  value: string[];
   placeholder?: string;
   animation?: number;
   maxCount?: number;
@@ -67,7 +67,7 @@ export const MultiSelect = React.forwardRef<
       options,
       onValueChange,
       variant,
-      defaultValue = [],
+      value = [],
       placeholder = "Select options",
       animation = 0,
       maxCount = 3,
@@ -77,13 +77,7 @@ export const MultiSelect = React.forwardRef<
     },
     ref
   ) => {
-    const [selectedValues, setSelectedValues] =
-      React.useState<string[]>(defaultValue);
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
-
-    React.useEffect(() => {
-      setSelectedValues(defaultValue);
-    }, [defaultValue]);
 
     const handleInputKeyDown = (
       event: React.KeyboardEvent<HTMLInputElement>
@@ -91,19 +85,17 @@ export const MultiSelect = React.forwardRef<
       if (event.key === "Enter") {
         setIsPopoverOpen(true);
       } else if (event.key === "Backspace" && !event.currentTarget.value) {
-        const newSelectedValues = [...selectedValues];
+        const newSelectedValues = [...value];
         newSelectedValues.pop();
-        setSelectedValues(newSelectedValues);
         onValueChange(newSelectedValues);
       }
     };
 
-    const toggleOption = (value: string) => {
-      const newSelectedValues = selectedValues.includes(value)
-        ? selectedValues.filter((v) => v !== value)
-        : [...selectedValues, value];
-      setSelectedValues(newSelectedValues);
-      onValueChange(newSelectedValues);
+    const toggleOption = (toggledValue: string) => {
+      const newValues = value.includes(toggledValue)
+        ? value.filter((v) => v !== toggledValue)
+        : [...value, toggledValue];
+      onValueChange(newValues);
     };
 
     return (
@@ -118,37 +110,40 @@ export const MultiSelect = React.forwardRef<
               className
             )}
           >
-            {selectedValues.length > 0 ? (
+            {value.length > 0 ? (
               <div className="flex justify-between items-center w-full">
                 <div className="flex flex-wrap items-center">
-                  {selectedValues.slice(0, maxCount).map((value) => {
-                    const option = options.find((o) => o.value === value);
+                  {value.slice(0, maxCount).map((val) => {
+                    const option = options.find((o) => o.value === val);
                     const Icon = option?.icon;
                     return (
                       <Badge
-                        key={value}
-                        className={cn(multiSelectVariants({ variant }))}
+                        key={val}
+                        className={cn(multiSelectVariants({ variant }), "cursor-pointer")}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleOption(val);
+                        }}
                       >
                         {Icon && <Icon className="h-4 w-4 mr-2" />}
                         {option?.label}
-                        <X
-                          className="ml-2 h-4 w-4 cursor-pointer"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleOption(value);
-                          }}
-                        />
+                        <X className="ml-2 h-4 w-4" />
                       </Badge>
                     );
                   })}
-                  {selectedValues.length > maxCount && (
+                  {value.length > maxCount && (
                     <Badge
                       className={cn(
                         "bg-transparent text-foreground border-foreground/10",
                         multiSelectVariants({ variant })
                       )}
                     >
-                      +{selectedValues.length - maxCount} more
+                      +{value.length - maxCount} more
                     </Badge>
                   )}
                 </div>
@@ -157,7 +152,6 @@ export const MultiSelect = React.forwardRef<
                     className="h-4 w-4 cursor-pointer"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setSelectedValues([]);
                       onValueChange([]);
                     }}
                   />
@@ -194,7 +188,7 @@ export const MultiSelect = React.forwardRef<
                   >
                     <div className="flex items-center w-full">
                       <div className="flex items-center gap-2">
-                        {selectedValues.includes(option.value) ? (
+                        {value.includes(option.value) ? (
                           <Check className="h-4 w-4" />
                         ) : (
                           <div className="h-4 w-4" />
