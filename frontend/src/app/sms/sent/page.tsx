@@ -13,7 +13,7 @@ import { CalendarDateRangePicker } from "@/components/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
-import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle, Clock } from "lucide-react"
+import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // --- TYPE DEFINITIONS ---
@@ -37,7 +37,7 @@ export default function SentSmsLogPage() {
   // UI states
   
   // Filter states
-  const [mobileNumberFilter, setMobileNumberFilter] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [messageTypeFilter, setMessageTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
@@ -51,7 +51,7 @@ export default function SentSmsLogPage() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pageSize.toString(),
-        ...(mobileNumberFilter && { mobileNumber: mobileNumberFilter }),
+        ...(searchQuery && { search: searchQuery }),
         ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
         ...(statusFilter !== "all" && { status: statusFilter }),
         ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
@@ -68,7 +68,7 @@ export default function SentSmsLogPage() {
     } catch {
       toast({ title: "Error", description: "Failed to load sent SMS logs.", variant: "destructive" })
     }
-  }, [page, pageSize, mobileNumberFilter, messageTypeFilter, statusFilter, dateRange, toast])
+  }, [page, pageSize, searchQuery, messageTypeFilter, statusFilter, dateRange, toast])
 
   useEffect(() => {
     fetchSmsLogs()
@@ -119,7 +119,7 @@ export default function SentSmsLogPage() {
               <StatCard title="Failed" value={stats.failed} icon={XCircle} color="text-red-400" />
             </CardHeader>
             <CardContent className="p-4">
-              <DataTableToolbar mobileNumberFilter={mobileNumberFilter} setMobileNumberFilter={setMobileNumberFilter} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
+              <DataTableToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
               <div className="mt-4 overflow-x-auto">
                 <DataTable columns={columns} data={filteredLogs} />
               </div>
@@ -144,13 +144,13 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
 );
 
 const DataTableToolbar = (props: any) => {
-  const { mobileNumberFilter, setMobileNumberFilter, messageTypeFilter, setMessageTypeFilter, statusFilter, setStatusFilter, dateRange, setDateRange } = props;
+  const { searchQuery, setSearchQuery, messageTypeFilter, setMessageTypeFilter, statusFilter, setStatusFilter, dateRange, setDateRange } = props;
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg border border-zinc-700">
       <Input
-        placeholder="Filter by number..."
-        value={mobileNumberFilter}
-        onChange={(e) => setMobileNumberFilter(e.target.value)}
+        placeholder="Search..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
         className="h-9 bg-zinc-800 border-zinc-700 w-full sm:max-w-xs"
       />
       <div className="flex items-center gap-2 w-full sm:w-auto">

@@ -131,8 +131,12 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
     query.tenantOwner = req.user.tenantOwner;
   }
 
-  if (req.query.mobileNumber) {
-    query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };
+  if (req.query.search) {
+    const searchRegex = { $regex: req.query.search, $options: 'i' };
+    query.$or = [
+      { mobileNumber: searchRegex },
+      { message: searchRegex },
+    ];
   }
 
   if (req.query.messageType) {
@@ -193,8 +197,12 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     query.tenantOwner = req.user.tenantOwner;
   }
 
-  if (req.query.mobileNumber) {
-    query.mobileNumber = { $regex: req.query.mobileNumber, $options: 'i' };
+  if (req.query.search) {
+    const searchRegex = { $regex: req.query.search, $options: 'i' };
+    query.$or = [
+      { mobileNumber: searchRegex },
+      { message: searchRegex },
+    ];
   }
 
   if (req.query.messageType) {
