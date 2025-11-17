@@ -149,10 +149,6 @@ export default function ComposeSmsPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Compose New SMS</h1>
             <p className="text-sm text-zinc-400">Send a message to your users or custom groups.</p>
           </div>
-           <Button variant="outline" onClick={() => router.push("/sms")} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to SMS List
-          </Button>
         </div>
 
         <motion.div
