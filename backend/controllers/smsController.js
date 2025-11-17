@@ -157,11 +157,30 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
     .skip(pageSize * (page - 1))
     .sort({ createdAt: -1 });
 
+  const statsAggregation = await SmsLog.aggregate([
+    { $match: query },
+    { $group: { _id: '$smsStatus', count: { $sum: 1 } } }
+  ]);
+
+  const stats = {
+    total: count,
+    success: 0,
+    failed: 0,
+    pending: 0,
+  };
+
+  statsAggregation.forEach(status => {
+    if (status._id === 'Success') stats.success = status.count;
+    if (status._id === 'Failed') stats.failed = status.count;
+    if (status._id === 'Pending') stats.pending = status.count;
+  });
+
   res.json({
     logs,
     page,
     pages: Math.ceil(count / pageSize),
     total: count,
+    stats,
   });
 });
 
