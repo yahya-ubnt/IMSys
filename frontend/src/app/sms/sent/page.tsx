@@ -21,7 +21,7 @@ export type SmsLog = {
   _id: string;
   mobileNumber: string;
   message: string;
-  status: 'Success' | 'Failed' | 'Pending' | 'Submitted';
+  smsStatus: 'Success' | 'Failed' | 'Pending' | 'Submitted';
   messageType: 'Acknowledgement' | 'Expiry Alert' | 'Manual';
   createdAt: string;
 };
@@ -32,7 +32,7 @@ export default function SentSmsLogPage() {
   
   // Data states
   const [smsLogs, setSmsLogs] = useState<SmsLog[]>([])
-  const [stats, setStats] = useState({ total: 0, success: 0, failed: 0, pending: 0 })
+  const [stats, setStats] = useState({ total: 0, success: 0, failed: 0 })
   
   // UI states
   
@@ -64,7 +64,7 @@ export default function SentSmsLogPage() {
       const data = await response.json()
       setSmsLogs(data.logs || [])
       setTotalPages(data.pages || 1)
-      setStats(data.stats || { total: 0, success: 0, failed: 0, pending: 0 })
+      setStats(data.stats || { total: 0, success: 0, failed: 0 })
     } catch {
       toast({ title: "Error", description: "Failed to load sent SMS logs.", variant: "destructive" })
     }
@@ -113,11 +113,10 @@ export default function SentSmsLogPage() {
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard title="Total Sent" value={stats.total} icon={MessageSquare} />
               <StatCard title="Successful" value={stats.success} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Failed" value={stats.failed} icon={XCircle} color="text-red-400" />
-              <StatCard title="Pending" value={stats.pending} icon={Clock} color="text-yellow-400" />
             </CardHeader>
             <CardContent className="p-4">
               <DataTableToolbar mobileNumberFilter={mobileNumberFilter} setMobileNumberFilter={setMobileNumberFilter} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
@@ -170,8 +169,6 @@ const DataTableToolbar = (props: any) => {
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="Success">Success</SelectItem>
             <SelectItem value="Failed">Failed</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Submitted">Submitted</SelectItem>
           </SelectContent>
         </Select>
         <CalendarDateRangePicker date={dateRange} setDate={setDateRange} />
