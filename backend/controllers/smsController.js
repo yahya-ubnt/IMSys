@@ -46,18 +46,18 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('User IDs are required for sending to users');
       }
-      const users = await User.find({ _id: { $in: userIds }, tenantOwner: req.user.tenantOwner }).select('phoneNumber');
-      recipientPhoneNumbers = users.map(user => user.phoneNumber).filter(Boolean);
+      const mikrotikUsersForSms = await MikrotikUser.find({ _id: { $in: userIds }, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      recipientPhoneNumbers = mikrotikUsersForSms.map(user => user.mobileNumber).filter(Boolean);
       break;
 
-    case 'mikrotikGroup':
+    case 'mikrotik':
       if (!mikrotikRouterId) {
         res.status(400);
         throw new Error('Mikrotik Router ID is required for sending to Mikrotik group');
       }
-      // Assuming MikrotikUser model has a reference to MikrotikRouter and a phoneNumber
-      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, tenantOwner: req.user.tenantOwner }).select('phoneNumber');
-      recipientPhoneNumbers = mikrotikUsers.map(user => user.phoneNumber).filter(Boolean);
+      // Assuming MikrotikUser model has a reference to MikrotikRouter and a mobileNumber
+      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: mikrotikRouterId, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      recipientPhoneNumbers = mikrotikUsers.map(user => user.mobileNumber).filter(Boolean);
       break;
 
     case 'location':
