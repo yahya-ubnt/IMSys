@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { motion } from "framer-motion"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
@@ -110,8 +109,7 @@ export default function SentSmsLogPage() {
           </DropdownMenu>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard title="Total Sent" value={stats.total} icon={MessageSquare} />
@@ -126,7 +124,7 @@ export default function SentSmsLogPage() {
               <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </main>
     </div>
   )
@@ -146,7 +144,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
 const DataTableToolbar = (props: any) => {
   const { searchQuery, setSearchQuery, messageTypeFilter, setMessageTypeFilter, statusFilter, setStatusFilter, dateRange, setDateRange } = props;
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg border border-zinc-700">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
       <Input
         placeholder="Search..."
         value={searchQuery}
@@ -178,7 +176,7 @@ const DataTableToolbar = (props: any) => {
 };
 
 const PaginationControls = ({ page, totalPages, onPageChange }: any) => (
-  <div className="flex items-center justify-end space-x-2 py-4 border-t border-zinc-800 mt-4">
+  <div className="flex items-center justify-end space-x-2 py-4 mt-4">
     <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}
       className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
       Previous
