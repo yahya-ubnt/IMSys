@@ -2,8 +2,20 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import React from "react";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
@@ -16,7 +28,6 @@ import { Search, Users, CheckCircle, Clock, Wifi, BarChart2 } from "lucide-react
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Topbar } from "@/components/topbar";
-import { motion } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export interface MikrotikUser {
@@ -45,11 +56,17 @@ export default function MikrotikUsersPage() {
   const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
   
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "expired">("all");
   const [monthlyTotalSubscribers, setMonthlyTotalSubscribers] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const fetchMonthlyTotalSubscribers = useCallback(async (year: string) => {
     try {
@@ -96,12 +113,22 @@ export default function MikrotikUsersPage() {
 
   const columns = useMemo(() => getColumns(user, (id) => setDeleteCandidateId(id)), [user]);
 
-  const filteredUsers = useMemo(() => users.filter(user => {
-    const userStatus = getMikrotikUserStatus(user).status.toLowerCase();
-    const matchesStatus = statusFilter === "all" || userStatus === statusFilter;
-    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) || user.officialName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  }), [users, searchTerm, statusFilter]);
+  const table = useReactTable({
+    data: users,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
 
   const totalUsers = users.length;
   const activeUsers = users.filter(user => getMikrotikUserStatus(user).status.toLowerCase() === 'active').length;
@@ -126,9 +153,9 @@ export default function MikrotikUsersPage() {
             </Button>
           </div>
 
-          <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <StatCard title="Total Users" value={totalUsers} icon={Users} />
                 <StatCard title="Active Users" value={activeUsers} icon={CheckCircle} color="text-green-400" />
                 <StatCard title="Expired Users" value={expiredUsers} icon={Clock} color="text-yellow-400" />
@@ -137,14 +164,15 @@ export default function MikrotikUsersPage() {
                 <ChartCard title="Subscriber Trends" selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyTotalSubscribers} />
                 <DonutChartCard active={activeUsers} expired={expiredUsers} total={totalUsers} />
               </CardContent>
-              <div className="p-4 border-t border-zinc-800">
-                <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} statusFilter={statusFilter} onStatusFilter={setStatusFilter} />
+              <div className="p-4">
+                <DataTableToolbar table={table} />
               </div>
               <div className="overflow-x-auto">
-                <DataTable columns={columns} data={filteredUsers} filterColumn="username" />
+                <DataTable table={table} columns={columns} />
               </div>
+              <DataTablePagination table={table} />
             </Card>
-          </motion.div>
+          </div>
         </div>
       </div>
       <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
@@ -219,19 +247,19 @@ const DonutChartCard = ({ active, expired, total }: any) => (
     </div>
 );
 
-const DataTableToolbar = ({ searchTerm, onSearch, statusFilter, onStatusFilter }: any) => (
+const DataTableToolbar = ({ table }: { table: any }) => (
   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
     <div className="flex items-center gap-2">
-      <Button size="sm" className={statusFilter === 'all' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('all')}>All</Button>
-      <Button size="sm" className={statusFilter === 'active' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('active')}>Active</Button>
-      <Button size="sm" className={statusFilter === 'expired' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => onStatusFilter('expired')}>Expired</Button>
+      <Button size="sm" className={!table.getColumn('accountStatus')?.getFilterValue() ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('accountStatus')?.setFilterValue(undefined)}>All</Button>
+      <Button size="sm" className={table.getColumn('accountStatus')?.getFilterValue() === 'active' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('accountStatus')?.setFilterValue('active')}>Active</Button>
+      <Button size="sm" className={table.getColumn('accountStatus')?.getFilterValue() === 'expired' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('accountStatus')?.setFilterValue('expired')}>Expired</Button>
     </div>
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
       <Input
         placeholder="Search username or name..."
-        value={searchTerm}
-        onChange={e => onSearch(e.target.value)}
+        value={(table.getColumn("username")?.getFilterValue() as string) ?? ""}
+        onChange={(event) => table.getColumn("username")?.setFilterValue(event.target.value)}
         className="pl-10 h-9 bg-zinc-800 border-zinc-700"
       />
     </div>

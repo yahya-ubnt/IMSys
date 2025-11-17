@@ -112,6 +112,10 @@ export const getColumns = (
         const { status, color } = getMikrotikUserStatus(row.original);
         return <Badge variant="outline" className={`capitalize ${color}`}>{status}</Badge>;
       },
+      filterFn: (row, id, value) => {
+        const userStatus = getMikrotikUserStatus(row.original).status.toLowerCase();
+        return value.includes(userStatus);
+      },
     },
     {
       id: "onlineStatus",
