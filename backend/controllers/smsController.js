@@ -4,6 +4,9 @@ const User = require('../models/User'); // Assuming User model has phoneNumber
 const MikrotikUser = require('../models/MikrotikUser'); // Assuming MikrotikUser model
 const { sendSMS } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
+const xlsx = require('xlsx');
+const { json2csv } = require('json-2-csv');
+const PDFDocument = require('pdfkit');
 
 // @desc    Get available SMS trigger types
 // @route   GET /api/sms/triggers
@@ -186,8 +189,6 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
   });
 });
 
-const { json2csv } = require('json-2-csv');
-
 // @desc    Export SMS logs to CSV
 // @route   GET /api/sms/log/export
 // @access  Private
@@ -220,23 +221,72 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     };
   }
 
-  const logs = await SmsLog.find(query).populate('tenantOwner', 'fullName email').sort({ createdAt: -1 });
+  const logs = await SmsLog.find(query).populate('tenantOwner', 'fullName email').sort({ createdAt: -1 }).lean();
 
-  const fields = [
-    { label: 'ID', value: '_id' },
-    { label: 'Mobile Number', value: 'mobileNumber' },
-    { label: 'Message', value: 'message' },
-    { label: 'Message Type', value: 'messageType' },
-    { label: 'SMS Status', value: 'smsStatus' },
-    { label: 'Sent By', value: 'tenantOwner.fullName' }, // Assuming tenantOwner.fullName exists
-    { label: 'Date & Time', value: 'createdAt' },
-  ];
+  const data = logs.map(log => ({
+    'Mobile Number': log.mobileNumber,
+    'Message': log.message,
+    'Message Type': log.messageType,
+    'SMS Status': log.smsStatus,
+    'Sent By': log.tenantOwner ? log.tenantOwner.fullName : 'N/A',
+    'Date & Time': log.createdAt.toLocaleString(),
+  }));
 
-  const csv = await json2csv(logs, { fields });
+  if (req.query.format === 'xlsx') {
+    const worksheet = xlsx.utils.json_to_sheet(data);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, "SMS Logs");
+    const buffer = xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    
+    res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.attachment('sms_logs.xlsx');
+    res.send(buffer);
+  } else if (req.query.format === 'pdf') {
+    const doc = new PDFDocument({ margin: 30, size: 'A4' });
+    res.header('Content-Type', 'application/pdf');
+    res.attachment('sms_logs.pdf');
+    doc.pipe(res);
 
-  res.header('Content-Type', 'text/csv');
-  res.attachment('sms_logs.csv');
-  res.send(csv);
+    doc.fontSize(18).text('SMS Logs', { align: 'center' });
+    doc.moveDown();
+
+    const tableTop = doc.y;
+    const headers = ['Date & Time', 'Mobile Number', 'Message', 'Status', 'Sent By'];
+    const columnWidths = [100, 100, 200, 50, 80];
+    
+    let currentX = doc.x;
+    headers.forEach((header, i) => {
+      doc.fontSize(10).text(header, currentX, tableTop, { width: columnWidths[i], bold: true });
+      currentX += columnWidths[i];
+    });
+
+    let currentY = tableTop + 25;
+    data.forEach(row => {
+      currentX = doc.x;
+      doc.fontSize(8).text(row['Date & Time'], currentX, currentY, { width: columnWidths[0] });
+      currentX += columnWidths[0];
+      doc.text(row['Mobile Number'], currentX, currentY, { width: columnWidths[1] });
+      currentX += columnWidths[1];
+      doc.text(row['Message'], currentX, currentY, { width: columnWidths[2] });
+      currentX += columnWidths[2];
+      doc.text(row['SMS Status'], currentX, currentY, { width: columnWidths[3] });
+      currentX += columnWidths[3];
+      doc.text(row['Sent By'], currentX, currentY, { width: columnWidths[4] });
+      
+      currentY += 20;
+      if (currentY > 750) {
+        doc.addPage();
+        currentY = doc.y;
+      }
+    });
+
+    doc.end();
+  } else {
+    const csv = await json2csv(data);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('sms_logs.csv');
+    res.send(csv);
+  }
 });
 
 module.exports = {

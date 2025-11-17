@@ -105,7 +105,44 @@ export default function SentSmsLogPage() {
   })
 
   // --- EVENT HANDLERS ---
-  const handleExport = (format: string) => toast({ title: "Export", description: `Exporting logs as ${format}...` })
+  const handleExportCsv = () => {
+    const params = new URLSearchParams({
+      ...(searchQuery && { search: searchQuery }),
+      ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
+      ...(statusFilter !== "all" && { status: statusFilter }),
+      ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
+      ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
+    });
+    const exportUrl = `/api/sms/log/export?${params.toString()}`;
+    window.location.href = exportUrl;
+  };
+
+  const handleExportXlsx = () => {
+    const params = new URLSearchParams({
+      format: 'xlsx',
+      ...(searchQuery && { search: searchQuery }),
+      ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
+      ...(statusFilter !== "all" && { status: statusFilter }),
+      ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
+      ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
+    });
+    const exportUrl = `/api/sms/log/export?${params.toString()}`;
+    window.location.href = exportUrl;
+  };
+
+  const handleExportPdf = () => {
+    const params = new URLSearchParams({
+      format: 'pdf',
+      ...(searchQuery && { search: searchQuery }),
+      ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
+      ...(statusFilter !== "all" && { status: statusFilter }),
+      ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
+      ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
+    });
+    const exportUrl = `/api/sms/log/export?${params.toString()}`;
+    window.location.href = exportUrl;
+  };
+
   const handlePrint = () => toast({ title: "Print", description: "Printing logs..." })
   const handleCopy = () => toast({ title: "Copy", description: "Copying logs to clipboard..." })
 
@@ -126,9 +163,9 @@ export default function SentSmsLogPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-zinc-800 text-white border-zinc-700">
-              <DropdownMenuItem onClick={() => handleExport('CSV')}><Copy className="mr-2 h-4 w-4" /> Export as CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('Excel')}><Copy className="mr-2 h-4 w-4" /> Export as Excel</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('PDF')}><FileDown className="mr-2 h-4 w-4" /> Export as PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCsv}><Copy className="mr-2 h-4 w-4" /> Export as CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportXlsx}><Copy className="mr-2 h-4 w-4" /> Export as Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPdf}><FileDown className="mr-2 h-4 w-4" /> Export as PDF</DropdownMenuItem>
               <DropdownMenuItem onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print</DropdownMenuItem>
               <DropdownMenuItem onClick={handleCopy}><Copy className="mr-2 h-4 w-4" /> Copy to Clipboard</DropdownMenuItem>
             </DropdownMenuContent>
