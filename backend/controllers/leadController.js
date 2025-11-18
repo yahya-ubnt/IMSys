@@ -26,6 +26,8 @@ const createLead = asyncHandler(async (req, res) => {
     agreedMonthlySubscription,
     customerHasRouter,
     routerType,
+    customerHasReceiver,
+    receiverType,
     followUpDate,
   } = req.body;
 
@@ -48,6 +50,8 @@ const createLead = asyncHandler(async (req, res) => {
       totalAmount,
       customerHasRouter,
       routerType,
+      customerHasReceiver,
+      receiverType,
       followUpDate,
       tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
     });
@@ -193,6 +197,8 @@ const updateLead = asyncHandler(async (req, res) => {
       req.body.agreedMonthlySubscription || lead.agreedMonthlySubscription;
     lead.customerHasRouter = req.body.customerHasRouter || lead.customerHasRouter;
     lead.routerType = req.body.routerType || lead.routerType;
+    lead.customerHasReceiver = req.body.customerHasReceiver || lead.customerHasReceiver;
+    lead.receiverType = req.body.receiverType || lead.receiverType;
     lead.followUpDate = req.body.followUpDate || lead.followUpDate;
 
     const totalAmount =

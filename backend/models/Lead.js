@@ -35,6 +35,8 @@ const leadSchema = new mongoose.Schema(
     totalAmount: { type: Number },
     customerHasRouter: { type: Boolean, default: false },
     routerType: { type: String },
+    customerHasReceiver: { type: Boolean, default: false },
+    receiverType: { type: String },
     followUpDate: { type: Date },
     status: {
       type: String,
