@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { motion } from "framer-motion"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,9 +81,14 @@ export default function WalletTransactionsPage() {
     fetchTransactions()
   }, [fetchTransactions])
 
-  const filteredTransactions = useMemo(() => {
-    return transactions;
-  }, [transactions]);
+  const table = useReactTable({
+    data: transactions,
+    columns: getColumns(),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
 
   // --- RENDER ---
   return (
@@ -103,7 +115,7 @@ export default function WalletTransactionsPage() {
             <CardContent className="p-4">
               <DataTableToolbar {...{ searchTerm, setSearchTerm, dateRange, setDateRange }} />
               <div className="mt-4 overflow-x-auto">
-                <DataTable columns={getColumns()} data={filteredTransactions} />
+                <DataTable table={table} columns={getColumns()} />
               </div>
               <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
             </CardContent>
