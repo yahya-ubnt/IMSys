@@ -2,6 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { getBills, deleteBill } from "@/lib/billService"
@@ -59,6 +66,15 @@ export default function PersonalBillsPage() {
     }
   }
 
+  const table = useReactTable({
+    data: bills,
+    columns: columns(handleDelete),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
+
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
   const months = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -112,7 +128,7 @@ export default function PersonalBillsPage() {
             </CardContent>
             <div className="p-4 border-t border-zinc-800">
               <h3 className="text-sm font-semibold text-cyan-400 mb-2">Bills Overview</h3>
-              <DataTable columns={columns(handleDelete)} data={bills} onRowClick={(bill: Bill) => router.push(`/bills/${bill._id}`)} />
+              <DataTable table={table} columns={columns(handleDelete)} onRowClick={(bill: Bill) => router.push(`/bills/${bill._id}`)} />
             </div>
           </Card>
         </motion.div>

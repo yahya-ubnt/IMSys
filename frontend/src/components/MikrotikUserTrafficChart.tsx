@@ -205,7 +205,7 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
   };
 
   return (
-    <Card className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex flex-col h-full">
+    <Card className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl flex flex-col h-full">
       <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800 p-3">
         <CardTitle className="text-base text-cyan-400">Live Usage</CardTitle>
         {isMonitoring && (

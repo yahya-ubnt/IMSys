@@ -142,7 +142,7 @@ export default function MikrotikUserDetailsPage() {
                     {/* Main Content Card */}
                     <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex-1 flex flex-col">
                         <Card className="bg-transparent border-none flex-1 flex flex-col">
-                            <CardHeader className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 border-b border-zinc-800">
+                            <CardHeader className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <HeaderStat icon={userData.isOnline ? Wifi : WifiOff} label="Status" value={userData.isOnline ? 'Online' : 'Offline'} color={userData.isOnline ? 'text-green-400' : 'text-red-400'} />
                                 <HeaderStat icon={Package} label="Package" value={userData.package.name} />
                                 <HeaderStat icon={DollarSign} label="Price" value={`KES ${userData.package.price}`} />
@@ -150,7 +150,7 @@ export default function MikrotikUserDetailsPage() {
                             </CardHeader>
                             
                             <TabsPrimitive.Root value={activeTab} onValueChange={setActiveTab} defaultValue="overview" className="flex-1 flex flex-col">
-                                <TabsPrimitive.List className="relative flex w-full items-center justify-start border-b border-zinc-800 p-2">
+                                <TabsPrimitive.List className="relative flex w-full items-center justify-start p-2">
                                     {tabs.map((tab) => (
                                         <TabsPrimitive.Trigger key={tab.id} value={tab.id} className="relative px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white">
                                             {activeTab === tab.id && <motion.div layoutId="active-user-tab-indicator" className="absolute inset-0 bg-zinc-700/50 rounded-md" />}

@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -48,6 +55,38 @@ export default function ExpenseTypesPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    meta: {
+      handleEdit: (expenseType: ExpenseType) => {
+        setEditingExpenseType(expenseType);
+        setIsDialogOpen(true);
+      },
+      handleDelete: (id: string) => {
+        if (!window.confirm("Are you sure?")) return;
+        deleteExpenseType(id);
+      },
+    },
+  })
+
+  const deleteExpenseType = async (id: string) => {
+    try {
+      const response = await fetch(`/api/expensetypes/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete expense type");
+      toast({ title: "Success", description: "Expense type deleted." });
+      fetchData();
+    } catch {
+      toast({ title: "Error", description: "Could not delete expense type.", variant: "destructive" });
+    }
+  };
 
   // --- EVENT HANDLERS ---
   const handleSave = async () => {
@@ -127,7 +166,7 @@ export default function ExpenseTypesPage() {
             </CardHeader>
             <CardContent className="p-4">
               <div className="overflow-x-auto">
-                <DataTable columns={columns} data={data} filterColumn="name" meta={{ handleEdit, handleDelete }} />
+                <DataTable table={table} columns={columns} />
               </div>
             </CardContent>
           </Card>
