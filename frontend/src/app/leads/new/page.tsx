@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ClipboardList, FileSignature, Router as RouterIcon, UserPlus, CalendarIcon } from "lucide-react"
+import { ArrowLeft, ClipboardList, FileSignature, Router as RouterIcon, UserPlus, CalendarIcon, DollarSign } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -115,33 +115,41 @@ export default function NewLeadPage() {
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-4xl mx-auto">
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-6xl mx-auto">
           <Card className="bg-transparent border-none">
             <form onSubmit={handleSubmit}>
               <CardHeader>
                 <CardTitle className="text-cyan-400">Lead Information</CardTitle>
                 <CardDescription className="text-zinc-400">Enter all relevant details for the new lead.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-8">
-                <Section title="Lead Details" icon={ClipboardList}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  <Section title="Primary Information" icon={ClipboardList}>
+                    <InputGroup label="Phone Number *"><Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+254712345678" required className="text-lg" /></InputGroup>
                     <InputGroup label="Lead Name"><Input name="name" value={formData.name} onChange={handleChange} placeholder="Optional" /></InputGroup>
-                    <InputGroup label="Phone Number *"><Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+254712345678" required /></InputGroup>
-                    <InputGroup label="Lead Source">
-                      <Select name="leadSource" value={formData.leadSource} onValueChange={(v) => handleSelectChange('leadSource', v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{['Manual', 'Caretaker', 'Field Sales', 'Referral', 'Website', 'WhatsApp/SMS'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </InputGroup>
+                  </Section>
+                  <Section title="Source & Referral" icon={UserPlus}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputGroup label="Lead Source">
+                        <Select name="leadSource" value={formData.leadSource} onValueChange={(v) => handleSelectChange('leadSource', v)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{['Manual', 'Caretaker', 'Field Sales', 'Referral', 'Website', 'WhatsApp/SMS'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </InputGroup>
+                      <InputGroup label="Brought In By"><Input name="broughtInBy" value={formData.broughtInBy} onChange={handleChange} placeholder="e.g., John Doe" /></InputGroup>
+                      <InputGroup label="Brought In By Contact"><Input name="broughtInByContact" value={formData.broughtInByContact} onChange={handleChange} placeholder="Phone or Email" /></InputGroup>
+                    </div>
+                  </Section>
+                  <Section title="Customer Background" icon={FileSignature}>
                     <InputGroup label="Current ISP"><Input name="currentIsp" value={formData.currentIsp} onChange={handleChange} placeholder="Optional" /></InputGroup>
-                    <InputGroup label="Brought In By"><Input name="broughtInBy" value={formData.broughtInBy} onChange={handleChange} placeholder="e.g., John Doe" /></InputGroup>
-                    <InputGroup label="Brought In By Contact"><Input name="broughtInByContact" value={formData.broughtInByContact} onChange={handleChange} placeholder="Phone or Email" /></InputGroup>
-                  </div>
-                  <InputGroup label="Reason for Interest/Dissatisfaction"><Textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="e.g., Current provider is unreliable" /></InputGroup>
-                </Section>
+                    <InputGroup label="Notes"><Textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="e.g., Current provider is unreliable" /></InputGroup>
+                  </Section>
+                </div>
 
-                <Section title="Agreement Details" icon={FileSignature}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Right Column */}
+                <div className="space-y-6">
+                  <Section title="Service & Financial" icon={DollarSign}>
                     <InputGroup label="Desired Package">
                       <Select name="desiredPackage" value={formData.desiredPackage} onValueChange={(v) => handleSelectChange('desiredPackage', v)}>
                         <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
@@ -150,22 +158,21 @@ export default function NewLeadPage() {
                         </SelectContent>
                       </Select>
                     </InputGroup>
-                    <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
-                    <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
-                  </div>
-                </Section>
-
-                <Section title="Equipment & Follow-up" icon={RouterIcon}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
+                      <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
+                    </div>
+                  </Section>
+                  <Section title="Equipment & Scheduling" icon={RouterIcon}>
                     <div className="space-y-4">
-                      <h4 className="font-medium text-zinc-300">Equipment</h4>
+                      <h4 className="font-medium text-zinc-300">Existing Equipment</h4>
                       <div className="flex items-center space-x-2"><Checkbox id="customerHasRouter" checked={formData.customerHasRouter} onCheckedChange={(c) => handleCheckboxChange('customerHasRouter', !!c)} /><Label htmlFor="customerHasRouter">Customer Has Router?</Label></div>
                       {formData.customerHasRouter && <InputGroup label="Router Type"><Input name="routerType" value={formData.routerType} onChange={handleChange} placeholder="e.g., TP-Link" /></InputGroup>}
                       <div className="flex items-center space-x-2"><Checkbox id="customerHasReceiver" checked={formData.customerHasReceiver} onCheckedChange={(c) => handleCheckboxChange('customerHasReceiver', !!c)} /><Label htmlFor="customerHasReceiver">Customer Has Receiver?</Label></div>
                       {formData.customerHasReceiver && <InputGroup label="Receiver Type"><Input name="receiverType" value={formData.receiverType} onChange={handleChange} placeholder="e.g., Ubiquiti" /></InputGroup>}
                     </div>
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-zinc-300">Follow-up</h4>
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium text-zinc-300">Scheduling</h4>
                       <InputGroup label="Follow-up Date">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -178,8 +185,8 @@ export default function NewLeadPage() {
                         </Popover>
                       </InputGroup>
                     </div>
-                  </div>
-                </Section>
+                  </Section>
+                </div>
               </CardContent>
               <div className="flex justify-end gap-2 p-4 border-t border-zinc-800">
                 <Button type="button" variant="outline" onClick={() => router.push('/leads')} disabled={isLoading} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
@@ -198,9 +205,9 @@ export default function NewLeadPage() {
 
 // --- SUB-COMPONENTS ---
 const Section = ({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) => (
-  <div className="space-y-4">
-    <h3 className="font-semibold text-cyan-400 flex items-center gap-2 border-b border-zinc-800 pb-2"><Icon className="w-5 h-5" />{title}</h3>
-    <div className="p-4 bg-zinc-800/50 rounded-lg">{children}</div>
+  <div className="space-y-4 p-4 bg-zinc-800/50 rounded-lg">
+    <h3 className="font-semibold text-cyan-400 flex items-center gap-2 border-b border-zinc-700 pb-2 mb-4"><Icon className="w-5 h-5" />{title}</h3>
+    <div className="space-y-4">{children}</div>
   </div>
 )
 
