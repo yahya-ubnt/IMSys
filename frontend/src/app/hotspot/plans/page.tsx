@@ -2,18 +2,28 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns.tsx";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { HotspotPlanForm } from "./hotspot-plan-form";
-import { motion } from "framer-motion";
 import { Topbar } from "@/components/topbar";
 
 // TODO: Move to a types file
@@ -41,11 +51,18 @@ export default function HotspotPlansPage() {
   const [error, setError] = useState<string | null>(null);
   const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<HotspotPlan | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -116,10 +133,22 @@ export default function HotspotPlansPage() {
 
   const columns = useMemo(() => getColumns(user, handleOpenForm, (id) => setDeleteCandidateId(id)), [user]);
 
-  const filteredPlans = useMemo(() => plans.filter(plan => {
-    const routerName = (plan.mikrotikRouter && typeof plan.mikrotikRouter !== 'string') ? plan.mikrotikRouter.name : '';
-    return plan.name.toLowerCase().includes(searchTerm.toLowerCase()) || routerName.toLowerCase().includes(searchTerm.toLowerCase());
-  }), [plans, searchTerm]);
+  const table = useReactTable({
+    data: plans,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading plans...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
@@ -142,24 +171,27 @@ export default function HotspotPlansPage() {
             </Link>
           </div>
 
-          <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
             <Card className="bg-transparent border-none">
-              <div className="p-4 border-b border-zinc-800">
-                <div className="relative w-full sm:max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                  <Input
-                    placeholder="Search by name or router..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-10 h-9 bg-zinc-800 border-zinc-700"
-                  />
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center justify-end">
+                  <div className="relative w-full sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                    <Input
+                      placeholder="Search by name or router..."
+                      value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                      onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
+                      className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="overflow-x-auto">
-                <DataTable columns={columns} data={filteredPlans} />
-              </div>
+                <div className="overflow-x-auto">
+                  <DataTable table={table} columns={columns} />
+                </div>
+                <DataTablePagination table={table} />
+              </CardContent>
             </Card>
-          </motion.div>
+          </div>
         </div>
       </div>
       <HotspotPlanForm

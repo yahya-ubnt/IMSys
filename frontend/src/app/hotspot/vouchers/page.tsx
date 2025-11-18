@@ -2,14 +2,25 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns.tsx";
-import { motion } from "framer-motion";
 import { Topbar } from "@/components/topbar";
 
 // TODO: Move to a types file
@@ -26,6 +37,14 @@ export default function VouchersPage() {
   const [error, setError] = useState<string | null>(null);
   const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const fetchVouchers = useCallback(async () => {
     try {
@@ -48,6 +67,23 @@ export default function VouchersPage() {
 
   const columns = useMemo(() => getColumns(user), [user]);
 
+  const table = useReactTable({
+    data: vouchers,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  })
+
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading vouchers...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
 
@@ -69,13 +105,16 @@ export default function VouchersPage() {
             </Link>
           </div>
 
-          <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
             <Card className="bg-transparent border-none">
-              <div className="overflow-x-auto">
-                <DataTable columns={columns} data={vouchers} />
-              </div>
+              <CardContent className="p-4 space-y-4">
+                <div className="overflow-x-auto">
+                  <DataTable table={table} columns={columns} />
+                </div>
+                <DataTablePagination table={table} />
+              </CardContent>
             </Card>
-          </motion.div>
+          </div>
         </div>
       </div>
     </>
