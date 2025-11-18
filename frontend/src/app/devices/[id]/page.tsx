@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -90,6 +97,33 @@ export default function DeviceDetailsPage() {
     fetchUsers();
   }, [id, toast, device]);
 
+  const downtimeTable = useReactTable({
+    data: downtimeLogs,
+    columns: downtimeColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const usersTable = useReactTable({
+    data: users,
+    columns: getConnectedUserColumns(),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const stationsTable = useReactTable({
+    data: device?.connectedStations || [],
+    columns: connectedStationsColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading device profile...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
   if (!device) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Device not found.</div>;
@@ -147,9 +181,9 @@ export default function DeviceDetailsPage() {
                     <DetailItem icon={Lock} label="Login Username" value={device.loginUsername} />
                   </div>
                 </TabsPrimitive.Content>
-                <TabsPrimitive.Content value="downtime" className="h-full"><DataTable columns={downtimeColumns} data={downtimeLogs} /></TabsPrimitive.Content>
-                <TabsPrimitive.Content value="users" className="h-full">{usersLoading ? <p>Loading users...</p> : <DataTable columns={userColumns} data={users} />}</TabsPrimitive.Content>
-                <TabsPrimitive.Content value="stations" className="h-full"><DataTable columns={connectedStationsColumns} data={device.connectedStations || []} /></TabsPrimitive.Content>
+                <TabsPrimitive.Content value="downtime" className="h-full"><DataTable table={downtimeTable} columns={downtimeColumns} /></TabsPrimitive.Content>
+                <TabsPrimitive.Content value="users" className="h-full">{usersLoading ? <p>Loading users...</p> : <DataTable table={usersTable} columns={userColumns} />}</TabsPrimitive.Content>
+                <TabsPrimitive.Content value="stations" className="h-full"><DataTable table={stationsTable} columns={connectedStationsColumns} /></TabsPrimitive.Content>
               </CardContent>
             </TabsPrimitive.Root>
           </Card>
