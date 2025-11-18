@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { Lead } from "@/types/lead";
 
@@ -33,27 +32,6 @@ export const getColumns = (
   onDelete: (leadId: string) => void,
   onStatusChange: (lead: Lead) => void
 ): ColumnDef<Lead>[] => [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-        className="border-zinc-500 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-        className="border-zinc-500 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
   {
     accessorKey: "name",
     header: ({ column }) => (
