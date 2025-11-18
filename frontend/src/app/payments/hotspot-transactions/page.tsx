@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { motion } from "framer-motion"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -60,6 +67,15 @@ export default function HotspotTransactionsPage() {
     return transactions;
   }, [transactions]);
 
+  const table = useReactTable({
+    data: filteredTransactions,
+    columns: getColumns(),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
+
   // --- RENDER ---
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
@@ -86,7 +102,7 @@ export default function HotspotTransactionsPage() {
                 {loading ? (
                   <p>Loading...</p>
                 ) : (
-                  <DataTable columns={getColumns()} data={filteredTransactions} />
+                  <DataTable table={table} columns={getColumns()} />
                 )}
               </div>
               <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
