@@ -63,7 +63,18 @@ export default function NewLeadPage() {
     setFormData(prev => ({ ...prev, [name]: isNumeric && value !== '' ? Number(value) : value }))
   }
 
-  const handleSelectChange = (name: string, value: string) => setFormData(prev => ({ ...prev, [name]: value }))
+  const handleSelectChange = (name: string, value: string) => {
+    if (name === 'desiredPackage') {
+      const selectedPackage = packages.find(p => p._id === value)
+      setFormData(prev => ({
+        ...prev,
+        desiredPackage: value,
+        agreedMonthlySubscription: selectedPackage ? selectedPackage.price : '',
+      }))
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
+  }
   const handleDateChange = (date: Date | undefined) => setFormData(prev => ({ ...prev, followUpDate: date }))
   const handleCheckboxChange = (field: 'customerHasRouter' | 'customerHasReceiver', checked: boolean) => setFormData(prev => ({ ...prev, [field]: checked }))
 
