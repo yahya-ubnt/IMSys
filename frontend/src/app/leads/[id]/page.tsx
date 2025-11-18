@@ -94,7 +94,7 @@ export default function ViewLeadPage() {
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="border-b border-zinc-800">
               <div className="flex items-center justify-between">

@@ -161,7 +161,7 @@ export default function LeadsPage() {
             </Button>
           </div>
 
-          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
+          <div className="bg-zinc-900/50 backdrop-blur-lg rounded-xl">
             <Card className="bg-transparent border-none">
               <CardHeader className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
