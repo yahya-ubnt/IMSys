@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Topbar } from "@/components/topbar"
 import { motion } from "framer-motion"
+import { getPackages } from "@/lib/packageService"
+import { Package } from "@/types/package"
 
 // --- MAIN COMPONENT ---
 export default function NewLeadPage() {
@@ -40,7 +42,20 @@ export default function NewLeadPage() {
     receiverType: '',
     followUpDate: undefined as Date | undefined,
   })
+  const [packages, setPackages] = useState<Package[]>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const pkgs = await getPackages()
+        setPackages(pkgs)
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to fetch packages.', variant: 'destructive' })
+      }
+    }
+    fetchPackages()
+  }, [toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -116,7 +131,14 @@ export default function NewLeadPage() {
 
                 <Section title="Agreement Details" icon={FileSignature}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup label="Desired Package (Mbps)"><Input name="desiredPackage" value={formData.desiredPackage} onChange={handleChange} placeholder="e.g., 10" /></InputGroup>
+                    <InputGroup label="Desired Package">
+                      <Select name="desiredPackage" value={formData.desiredPackage} onValueChange={(v) => handleSelectChange('desiredPackage', v)}>
+                        <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
+                        <SelectContent>
+                          {packages.map(pkg => <SelectItem key={pkg._id} value={pkg._id}>{pkg.name} - {pkg.price} KES</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </InputGroup>
                     <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
                     <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
                   </div>

@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Topbar } from "@/components/topbar"
 import { motion } from "framer-motion"
+import { getPackages } from "@/lib/packageService"
+import { Package } from "@/types/package"
 
 // --- MAIN COMPONENT ---
 export default function EditLeadPage() {
@@ -31,41 +33,48 @@ export default function EditLeadPage() {
     agreedMonthlySubscription: '' as number | '', customerHasRouter: false, routerType: '',
     customerHasReceiver: false, receiverType: '', followUpDate: undefined as Date | undefined, status: '',
   })
+  const [packages, setPackages] = useState<Package[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
-    const fetchLead = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/leads/${id}`)
-        if (!response.ok) throw new Error('Failed to fetch lead')
-        const data = await response.json()
+        const [leadResponse, packagesResponse] = await Promise.all([
+          fetch(`/api/leads/${id}`, { credentials: 'include' }),
+          getPackages(),
+        ])
+
+        if (!leadResponse.ok) throw new Error('Failed to fetch lead')
+        
+        const leadData = await leadResponse.json()
         setFormData({
-          name: data.name || '',
-          phoneNumber: data.phoneNumber || '',
-          leadSource: data.leadSource || '',
-          desiredPackage: data.desiredPackage?._id || '',
-          currentIsp: data.currentIsp || '',
-          notes: data.notes || '',
-          broughtInBy: data.broughtInBy || '',
-          broughtInByContact: data.broughtInByContact || '',
-          agreedInstallationFee: data.agreedInstallationFee || '',
-          agreedMonthlySubscription: data.agreedMonthlySubscription || '',
-          customerHasRouter: data.customerHasRouter || false,
-          routerType: data.routerType || '',
-          customerHasReceiver: data.customerHasReceiver || false,
-          receiverType: data.receiverType || '',
-          followUpDate: data.followUpDate ? new Date(data.followUpDate) : undefined,
-          status: data.status || '',
+          name: leadData.name || '',
+          phoneNumber: leadData.phoneNumber || '',
+          leadSource: leadData.leadSource || '',
+          desiredPackage: leadData.desiredPackage?._id || '',
+          currentIsp: leadData.currentIsp || '',
+          notes: leadData.notes || '',
+          broughtInBy: leadData.broughtInBy || '',
+          broughtInByContact: leadData.broughtInByContact || '',
+          agreedInstallationFee: leadData.agreedInstallationFee || '',
+          agreedMonthlySubscription: leadData.agreedMonthlySubscription || '',
+          customerHasRouter: leadData.customerHasRouter || false,
+          routerType: leadData.routerType || '',
+          customerHasReceiver: leadData.customerHasReceiver || false,
+          receiverType: leadData.receiverType || '',
+          followUpDate: leadData.followUpDate ? new Date(leadData.followUpDate) : undefined,
+          status: leadData.status || '',
         })
-} catch {
-        toast({ title: 'Error', description: 'Failed to fetch lead details.', variant: 'destructive' })
+        setPackages(packagesResponse)
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to fetch data.', variant: 'destructive' })
       } finally {
         setIsLoading(false)
       }
     }
-    fetchLead()
+    fetchData()
   }, [id, toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -142,7 +151,14 @@ export default function EditLeadPage() {
 
                 <Section title="Agreement Details" icon={FileSignature}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup label="Desired Package (Mbps)"><Input name="desiredPackage" value={formData.desiredPackage} onChange={handleChange} placeholder="e.g., 10" /></InputGroup>
+                    <InputGroup label="Desired Package">
+                      <Select name="desiredPackage" value={formData.desiredPackage} onValueChange={(v) => handleSelectChange('desiredPackage', v)}>
+                        <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
+                        <SelectContent>
+                          {packages.map(pkg => <SelectItem key={pkg._id} value={pkg._id}>{pkg.name} - {pkg.price} KES</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </InputGroup>
                     <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
                     <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
                   </div>

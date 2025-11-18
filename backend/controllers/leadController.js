@@ -13,17 +13,42 @@ const createLead = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, email, phoneNumber, address, serviceOfInterest, leadSource, notes } = req.body;
+  const {
+    name,
+    phoneNumber,
+    leadSource,
+    desiredPackage,
+    currentIsp,
+    notes,
+    broughtInBy,
+    broughtInByContact,
+    agreedInstallationFee,
+    agreedMonthlySubscription,
+    customerHasRouter,
+    routerType,
+    followUpDate,
+  } = req.body;
 
   try {
+    const totalAmount =
+      (Number(agreedInstallationFee) || 0) +
+      (Number(agreedMonthlySubscription) || 0);
+
     const lead = await Lead.create({
       name,
-      email,
       phoneNumber,
-      address,
-      serviceOfInterest,
       leadSource,
+      desiredPackage,
+      currentIsp,
       notes: sanitizeString(notes), // Sanitize notes field
+      broughtInBy,
+      broughtInByContact,
+      agreedInstallationFee,
+      agreedMonthlySubscription,
+      totalAmount,
+      customerHasRouter,
+      routerType,
+      followUpDate,
       tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
     });
 
