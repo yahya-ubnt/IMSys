@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -60,6 +67,22 @@ export default function AllExpensesPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    meta: {
+      handleEdit: (expense: Expense) => {
+        setEditingExpense(expense);
+        setIsDialogOpen(true);
+      },
+      handleDelete: (id: string) => setDeleteCandidateId(id),
+    },
+  })
 
   // --- EVENT HANDLERS ---
   const handleSave = async () => {
@@ -145,7 +168,7 @@ export default function AllExpensesPage() {
               </CardHeader>
               <CardContent className="p-4">
                 <div className="overflow-x-auto">
-                  <DataTable columns={columns} data={data} filterColumn="title" meta={{ handleEdit, handleDelete: (id) => setDeleteCandidateId(id) }} />
+                  <DataTable table={table} columns={columns} />
                 </div>
               </CardContent>
             </Card>

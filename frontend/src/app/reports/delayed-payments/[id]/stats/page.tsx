@@ -2,6 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { useAuth } from "@/components/auth-provider";
@@ -98,6 +105,16 @@ export default function PaymentStatsPage() {
             }
         },
     ];
+
+    const table = useReactTable({
+        data: stats?.paymentHistory || [],
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+    });
+
     if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white"><Loader2 className="h-8 w-8 animate-spin mr-4" />Loading payment insights...</div>;
     if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
     if (!stats) return null;
@@ -141,7 +158,7 @@ export default function PaymentStatsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="h-[500px] overflow-y-auto">
-                                <DataTable columns={columns} data={stats.paymentHistory} filterColumn="status" />
+                                <DataTable table={table} columns={columns} />
                             </div>
                         </CardContent>
                     </Card>

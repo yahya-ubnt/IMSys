@@ -2,6 +2,13 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import React from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -48,6 +55,15 @@ export default function DelayedPaymentsPage() {
   }, [daysOverdue, searchTerm, toast]);
 
   const columns: ColumnDef<MikrotikUser & { daysOverdue: number }>[] = getColumns();
+
+  const table = useReactTable({
+    data: users,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
 
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
 
@@ -110,7 +126,7 @@ export default function DelayedPaymentsPage() {
                   <Loader2 className="h-8 w-8 text-zinc-500 animate-spin" />
                 </div>
               ) : (
-                <DataTable columns={columns} data={users as (MikrotikUser & { daysOverdue: number; })[]} filterColumn="username" />
+                <DataTable table={table} columns={columns} />
               )}
             </CardContent>
           </Card>

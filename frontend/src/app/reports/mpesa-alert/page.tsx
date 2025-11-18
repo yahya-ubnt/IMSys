@@ -1,6 +1,13 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { DataTable } from "@/components/data-table"
@@ -45,6 +52,15 @@ export default function MpesaAlertPage() {
   useEffect(() => {
     fetchAlerts()
   }, [fetchAlerts])
+
+  const table = useReactTable({
+    data: alerts,
+    columns: getColumns(handleDelete),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
 
   // --- EVENT HANDLERS ---
   const handleDelete = async (alertId: string) => {
@@ -94,7 +110,7 @@ export default function MpesaAlertPage() {
                 ) : alerts.length === 0 ? (
                   <p className="text-center text-zinc-400 py-8">No pending alerts found.</p>
                 ) : (
-                  <DataTable columns={getColumns(handleDelete)} data={alerts} />
+                  <DataTable table={table} columns={getColumns(handleDelete)} />
                 )}
               </div>
             </CardContent>

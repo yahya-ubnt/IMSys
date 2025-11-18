@@ -1,6 +1,13 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
@@ -216,6 +223,15 @@ export default function ScheduledTasksPage() {
         },
     ];
 
+    const table = useReactTable({
+        data: tasks,
+        columns: isSuperAdmin ? superAdminColumns : tenantColumns,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+    });
+
     return (
         <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
             <Topbar />
@@ -238,7 +254,7 @@ export default function ScheduledTasksPage() {
                             <CardTitle>Task Management</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <DataTable columns={isSuperAdmin ? superAdminColumns : tenantColumns} data={tasks} filterColumn="name" />
+                            <DataTable table={table} columns={isSuperAdmin ? superAdminColumns : tenantColumns} />
                         </CardContent>
                     </Card>
                 </motion.div>

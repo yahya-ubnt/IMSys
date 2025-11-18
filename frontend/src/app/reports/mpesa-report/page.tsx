@@ -1,6 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,6 +43,15 @@ export default function MpesaReportPage() {
   // Form states
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+
+  const table = useReactTable({
+    data: reportData,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
 
   // --- EVENT HANDLERS ---
   const handleGenerateReport = async () => {
@@ -122,7 +138,7 @@ export default function MpesaReportPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <DataTable columns={columns} data={reportData} />
+                  <DataTable table={table} columns={columns} />
                 </CardContent>
               </Card>
             </motion.div>
