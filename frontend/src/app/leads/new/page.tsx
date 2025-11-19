@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ClipboardList, FileSignature, Router as RouterIcon, UserPlus, CalendarIcon, DollarSign } from "lucide-react"
+import { ArrowLeft, UserPlus, CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -94,7 +94,8 @@ export default function NewLeadPage() {
       router.push('/leads')
     } catch (error) {
       toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })
-    } finally {
+    }
+    finally {
       setIsLoading(false)
     }
   }
@@ -116,11 +117,8 @@ export default function NewLeadPage() {
               <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column */}
                 <div className="space-y-6">
-                  <Section title="Primary Information" icon={ClipboardList}>
                     <InputGroup label="Phone Number *"><Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+254712345678" required className="text-lg" /></InputGroup>
                     <InputGroup label="Lead Name"><Input name="name" value={formData.name} onChange={handleChange} placeholder="Optional" /></InputGroup>
-                  </Section>
-                  <Section title="Source & Referral" icon={UserPlus}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <InputGroup label="Lead Source">
                         <Select name="leadSource" value={formData.leadSource} onValueChange={(v) => handleSelectChange('leadSource', v)}>
@@ -131,16 +129,12 @@ export default function NewLeadPage() {
                       <InputGroup label="Brought In By"><Input name="broughtInBy" value={formData.broughtInBy} onChange={handleChange} placeholder="e.g., John Doe" /></InputGroup>
                       <InputGroup label="Brought In By Contact"><Input name="broughtInByContact" value={formData.broughtInByContact} onChange={handleChange} placeholder="Phone or Email" /></InputGroup>
                     </div>
-                  </Section>
-                  <Section title="Customer Background" icon={FileSignature}>
                     <InputGroup label="Current ISP"><Input name="currentIsp" value={formData.currentIsp} onChange={handleChange} placeholder="Optional" /></InputGroup>
                     <InputGroup label="Notes"><Textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="e.g., Current provider is unreliable" /></InputGroup>
-                  </Section>
                 </div>
 
                 {/* Right Column */}
                 <div className="space-y-6">
-                  <Section title="Service & Financial" icon={DollarSign}>
                     <InputGroup label="Desired Package">
                       <Select name="desiredPackage" value={formData.desiredPackage} onValueChange={(v) => handleSelectChange('desiredPackage', v)}>
                         <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
@@ -153,8 +147,6 @@ export default function NewLeadPage() {
                       <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
                       <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
                     </div>
-                  </Section>
-                  <Section title="Equipment & Scheduling" icon={RouterIcon}>
                     <div className="space-y-4">
                       <h4 className="font-medium text-zinc-300">Existing Equipment</h4>
                       <div className="flex items-center space-x-2"><Checkbox id="customerHasRouter" checked={formData.customerHasRouter} onCheckedChange={(c) => handleCheckboxChange('customerHasRouter', !!c)} /><Label htmlFor="customerHasRouter">Customer Has Router?</Label></div>
@@ -176,7 +168,6 @@ export default function NewLeadPage() {
                         </Popover>
                       </InputGroup>
                     </div>
-                  </Section>
                 </div>
               </CardContent>
               <div className="flex justify-end gap-2 p-4 border-t border-zinc-800">
@@ -195,13 +186,6 @@ export default function NewLeadPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const Section = ({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) => (
-  <div className="space-y-4">
-    <h3 className="font-semibold text-lg text-cyan-400 flex items-center gap-2 mb-4"><Icon className="w-5 h-5" />{title}</h3>
-    <div className="space-y-4">{children}</div>
-  </div>
-)
-
 const InputGroup = ({ label, children }: { label: string, children: React.ReactNode }) => (
   <div className="space-y-2">
     <Label className="text-zinc-300 text-sm">{label}</Label>
