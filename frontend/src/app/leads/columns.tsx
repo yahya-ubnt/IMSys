@@ -44,7 +44,14 @@ export const getColumns = (
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => row.original.name || "Anonymous Lead",
+    cell: ({ row }) => {
+      const lead = row.original;
+      return (
+        <Link href={`/leads/${lead._id}`} className="hover:underline text-cyan-400">
+          {lead.name || "Anonymous Lead"}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "phoneNumber",
