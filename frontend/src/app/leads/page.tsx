@@ -19,11 +19,7 @@ import { Lead, DashboardStatsProps, MonthlyLeadData } from "@/types/lead"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { getLeads, updateLeadStatus } from "@/lib/leadService"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users } from "lucide-react"
@@ -45,14 +41,9 @@ export default function LeadsPage() {
   // UI states
   const [isLoading, setIsLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [createMikrotikUser, setCreateMikrotikUser] = useState(false)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  const [convertCandidate, setConvertCandidate] = useState<Lead | null>(null);
   
-  // Form states
-  const [mikrotikDetails, setMikrotikDetails] = useState({ mikrotikUsername: "", mikrotikPassword: "", mikrotikService: "", mikrotikRouter: "" })
-
   // Table states
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -96,35 +87,23 @@ export default function LeadsPage() {
     }
   }
 
-  const handleStatusChange = (lead: Lead) => {
-    setSelectedLead(lead)
-    setIsModalOpen(true)
-  }
-
-  const handleModalSubmit = async () => {
-    if (!selectedLead) return
-    if (createMikrotikUser) {
-      const queryParams = new URLSearchParams({
-        clientName: selectedLead.name,
-        clientPhone: selectedLead.phoneNumber,
-        ...mikrotikDetails
-      })
-      router.push(`/mikrotik/users/new?${queryParams.toString()}`)
-      return
-    }
+  const handleConvertLead = async () => {
+    if (!convertCandidate) return
     try {
-      await updateLeadStatus(selectedLead._id, "Converted", false)
+      await updateLeadStatus(convertCandidate._id, "Converted", false)
       toast({ title: "Lead Converted", description: "Lead has been successfully converted." })
       fetchLeads()
-      setIsModalOpen(false)
     } catch (error) {
       toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
+    }
+    finally {
+      setConvertCandidate(null)
     }
   }
 
   const table = useReactTable({
     data: leads,
-    columns: getColumns((id) => setDeleteCandidateId(id), handleStatusChange),
+    columns: getColumns((id) => setDeleteCandidateId(id), (lead) => setConvertCandidate(lead)),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -204,39 +183,13 @@ export default function LeadsPage() {
                 <div className="p-4 mt-4">
                   <DataTable
                     table={table}
-                    columns={getColumns((id) => setDeleteCandidateId(id), handleStatusChange)}
+                    columns={getColumns((id) => setDeleteCandidateId(id), (lead) => setConvertCandidate(lead))}
                   />
                   <DataTablePagination table={table} />
                 </div>
               </CardContent>
             </Card>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
-              <DialogHeader>
-                <DialogTitle className="text-cyan-400">Convert Lead</DialogTitle>
-                <DialogDescription className="text-zinc-400">Convert this lead into a client.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="create-mikrotik-user" checked={createMikrotikUser} onCheckedChange={(c) => setCreateMikrotikUser(!!c)} className="border-zinc-500 data-[state=checked]:bg-blue-600" />
-                  <Label htmlFor="create-mikrotik-user" className="text-zinc-300">Create MikroTik User?</Label>
-                </div>
-                {createMikrotikUser && (
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
-                    <div className="space-y-2"><Label className="text-zinc-300">Username</Label><Input value={mikrotikDetails.mikrotikUsername} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikUsername: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                    <div className="space-y-2"><Label className="text-zinc-300">Password</Label><Input type="password" value={mikrotikDetails.mikrotikPassword} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikPassword: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                    <div className="space-y-2"><Label className="text-zinc-300">Service</Label><Input value={mikrotikDetails.mikrotikService} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikService: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                    <div className="space-y-2"><Label className="text-zinc-300">Router</Label><Input value={mikrotikDetails.mikrotikRouter} onChange={(e) => setMikrotikDetails({ ...mikrotikDetails, mikrotikRouter: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
-                <Button onClick={handleModalSubmit} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">Convert</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </main>
       </div>
       <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
@@ -250,6 +203,20 @@ export default function LeadsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteLead}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!convertCandidate} onOpenChange={() => setConvertCandidate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to convert "{convertCandidate?.name}" to a client?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConvertLead}>Convert</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
