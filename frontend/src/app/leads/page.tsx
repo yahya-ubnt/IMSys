@@ -211,7 +211,7 @@ export default function LeadsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Convert Lead</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to convert "{convertCandidate?.name}" to a client?
+              Are you sure you want to change the status of "{convertCandidate?.name || 'this lead'}" to "Converted"?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
