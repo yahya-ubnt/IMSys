@@ -35,7 +35,7 @@ export default function LeadsPage() {
 
   // Data states
   const [leads, setLeads] = useState<Lead[]>([])
-  const [dashboardStats, setDashboardStats] = useState<DashboardStatsProps>({ totalLeads: 0, newLeadsThisMonth: 0, totalConvertedLeads: 0 })
+  const [dashboardStats, setDashboardStats] = useState<DashboardStatsProps>({ totalLeads: 0, newLeadsThisMonth: 0, totalConvertedLeads: 0, convertedLeadsThisMonth: 0 })
   const [chartData, setChartData] = useState<MonthlyLeadData[]>([])
   
   // UI states
@@ -145,9 +145,9 @@ export default function LeadsPage() {
               <CardHeader className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard title="Total Leads" value={dashboardStats.totalLeads} icon={List} />
-                  <StatCard title="New This Month" value={dashboardStats.newLeadsThisMonth} icon={UserPlus} color="text-yellow-400" />
-                  <StatCard title="Converted This Month" value={dashboardStats.totalConvertedLeads} icon={CheckCircle} color="text-green-400" />
                   <StatCard title="Total Converted" value={dashboardStats.totalConvertedLeads} icon={CheckCircle} color="text-green-400" />
+                  <StatCard title="New This Month" value={dashboardStats.newLeadsThisMonth} icon={UserPlus} color="text-yellow-400" />
+                  <StatCard title="Converted This Month" value={dashboardStats.convertedLeadsThisMonth} icon={CheckCircle} color="text-green-400" />
                 </div>
               </CardHeader>
               <CardContent className="p-4">

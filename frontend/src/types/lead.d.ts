@@ -28,6 +28,7 @@ export interface DashboardStatsProps {
   totalLeads: number;
   newLeadsThisMonth: number;
   totalConvertedLeads: number;
+  convertedLeadsThisMonth: number;
 }
 
 export interface MonthlyLeadData {
