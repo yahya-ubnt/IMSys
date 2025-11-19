@@ -114,14 +114,9 @@ export default function NewLeadPage() {
           </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-6xl mx-auto">
+        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <Card className="bg-transparent border-none">
             <form onSubmit={handleSubmit}>
-              <CardHeader>
-                <CardTitle className="text-cyan-400">Lead Information</CardTitle>
-                <CardDescription className="text-zinc-400">Enter all relevant details for the new lead.</CardDescription>
-              </CardHeader>
               <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column */}
                 <div className="space-y-6">
@@ -205,7 +200,7 @@ export default function NewLeadPage() {
 
 // --- SUB-COMPONENTS ---
 const Section = ({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) => (
-  <div className="space-y-4 p-4 bg-zinc-800/50 rounded-lg">
+  <div className="space-y-4">
     <h3 className="font-semibold text-cyan-400 flex items-center gap-2 border-b border-zinc-700 pb-2 mb-4"><Icon className="w-5 h-5" />{title}</h3>
     <div className="space-y-4">{children}</div>
   </div>

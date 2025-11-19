@@ -53,15 +53,6 @@ export default function MpesaAlertPage() {
     fetchAlerts()
   }, [fetchAlerts])
 
-  const table = useReactTable({
-    data: alerts,
-    columns: getColumns(handleDelete),
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  })
-
   // --- EVENT HANDLERS ---
   const handleDelete = async (alertId: string) => {
     if (!confirm('Are you sure you want to delete this alert?')) return
@@ -78,6 +69,15 @@ export default function MpesaAlertPage() {
       toast({ title: 'Error', description: 'Failed to delete alert.', variant: 'destructive' })
     }
   }
+
+  const table = useReactTable({
+    data: alerts,
+    columns: getColumns(handleDelete),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
 
   // --- RENDER ---
   return (
