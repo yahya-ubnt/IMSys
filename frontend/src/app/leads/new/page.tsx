@@ -108,10 +108,6 @@ export default function NewLeadPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Add New Lead</h1>
             <p className="text-sm text-zinc-400">Create a new lead to track potential customers.</p>
           </div>
-          <Button variant="outline" onClick={() => router.push('/leads')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Leads
-          </Button>
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -201,7 +197,7 @@ export default function NewLeadPage() {
 // --- SUB-COMPONENTS ---
 const Section = ({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) => (
   <div className="space-y-4">
-    <h3 className="font-semibold text-cyan-400 flex items-center gap-2 border-b border-zinc-700 pb-2 mb-4"><Icon className="w-5 h-5" />{title}</h3>
+    <h3 className="font-semibold text-lg text-cyan-400 flex items-center gap-2 mb-4"><Icon className="w-5 h-5" />{title}</h3>
     <div className="space-y-4">{children}</div>
   </div>
 )
