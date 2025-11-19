@@ -117,7 +117,7 @@ export default function NewLeadPage() {
               <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column */}
                 <div className="space-y-6">
-                    <InputGroup label="Phone Number *"><Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+254712345678" required className="text-lg" /></InputGroup>
+                    <InputGroup label="Phone Number *"><Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+254712345678" required /></InputGroup>
                     <InputGroup label="Lead Name"><Input name="name" value={formData.name} onChange={handleChange} placeholder="Optional" /></InputGroup>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <InputGroup label="Lead Source">
