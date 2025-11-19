@@ -59,8 +59,8 @@ export default function ViewLeadPage() {
         {/* --- HEADER --- */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{lead.name || 'Unnamed Lead'}</h1>
-            <p className="text-lg text-zinc-400 flex items-center gap-2"><Phone size={16} /> {lead.phoneNumber}</p>
+            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{lead.name || 'Unnamed Lead'}</h1>
+            <p className="text-base text-zinc-400 flex items-center gap-2"><Phone size={14} /> {lead.phoneNumber}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => router.push('/leads')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
@@ -103,7 +103,7 @@ export default function ViewLeadPage() {
             <InfoCard title="Status" icon={Info}>
                 <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${statusConfig[lead.status]?.color || 'bg-gray-400'}`} />
-                    <span className="text-lg font-semibold">{lead.status}</span>
+                    <span className="text-base font-semibold">{lead.status}</span>
                 </div>
             </InfoCard>
             <InfoCard title="Equipment" icon={RouterIcon}>
@@ -133,8 +133,8 @@ const InfoCard = ({ title, icon: Icon, children }: { title: string, icon: React.
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Card className="bg-zinc-900 border border-zinc-800 shadow-lg">
             <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-4 border-b border-zinc-800">
-                <Icon className="w-6 h-6 text-cyan-400" />
-                <CardTitle className="text-xl text-zinc-200">{title}</CardTitle>
+                <Icon className="w-5 h-5 text-cyan-400" />
+                <CardTitle className="text-lg text-zinc-200">{title}</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
                 {children}
@@ -156,7 +156,7 @@ const InfoItem = ({ label, value, isCurrency = false, icon: Icon }: { label: str
         {Icon && <Icon className="w-4 h-4 text-zinc-400" />}
         <label className="text-sm font-medium text-zinc-400">{label}</label>
       </div>
-      <p className="text-lg text-zinc-100 pl-6">{formattedValue}</p>
+      <p className="text-base text-zinc-100 pl-6">{formattedValue}</p>
     </div>
   )
 }
@@ -164,7 +164,7 @@ const InfoItem = ({ label, value, isCurrency = false, icon: Icon }: { label: str
 const BooleanItem = ({ value, label }: { value?: boolean, label: string }) => (
     <div className="flex items-center gap-3">
         {value ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
-        <span className="text-base text-zinc-200">{label}</span>
+        <span className="text-sm text-zinc-200">{label}</span>
     </div>
 )
 
@@ -175,7 +175,7 @@ const StatusTimeline = ({ history }: { history: Lead['statusHistory'] }) => (
         <div className="absolute -left-[34px] top-1 flex items-center justify-center w-4 h-4 bg-zinc-700 rounded-full">
             <div className="w-2 h-2 bg-cyan-400 rounded-full" />
         </div>
-        <p className="font-semibold text-md">{item.status}</p>
+        <p className="font-semibold text-base">{item.status}</p>
         <p className="text-xs text-zinc-400">{format(new Date(item.changedAt), "PPP 'at' p")}</p>
       </div>
     ))}
