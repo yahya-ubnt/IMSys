@@ -47,7 +47,7 @@ export const getColumns = (
     cell: ({ row }) => {
       const lead = row.original;
       return (
-        <Link href={`/leads/${lead._id}`} className="hover:underline text-cyan-400">
+        <Link href={`/leads/${lead._id}`} className="font-medium text-blue-400 hover:underline">
           {lead.name || "Anonymous Lead"}
         </Link>
       );
