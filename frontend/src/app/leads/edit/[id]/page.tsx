@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ClipboardList, FileSignature, Router as RouterIcon, UserPlus, CalendarIcon } from "lucide-react"
+import { ArrowLeft, User, CalendarIcon, Save } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -19,6 +19,7 @@ import { Topbar } from "@/components/topbar"
 import { motion } from "framer-motion"
 import { getPackages } from "@/lib/packageService"
 import { Package } from "@/types/package"
+import { Lead } from "@/types/lead" // Assuming you have a Lead type
 
 // --- MAIN COMPONENT ---
 export default function EditLeadPage() {
@@ -28,54 +29,62 @@ export default function EditLeadPage() {
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
-    name: '', phoneNumber: '', leadSource: '', desiredPackage: '', currentIsp: '', notes: '',
-    broughtInBy: '', broughtInByContact: '', agreedInstallationFee: '' as number | '',
-    agreedMonthlySubscription: '' as number | '', customerHasRouter: false, routerType: '',
-    customerHasReceiver: false, receiverType: '', followUpDate: undefined as Date | undefined, status: '',
+    name: '',
+    phoneNumber: '',
+    leadSource: 'Manual',
+    desiredPackage: '',
+    currentIsp: '',
+    notes: '',
+    broughtInBy: '',
+    broughtInByContact: '',
+    agreedInstallationFee: '' as number | '',
+    agreedMonthlySubscription: '' as number | '',
+    customerHasRouter: false,
+    routerType: '',
+    customerHasReceiver: false,
+    receiverType: '',
+    followUpDate: undefined as Date | undefined,
   })
   const [packages, setPackages] = useState<Package[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
 
   useEffect(() => {
-    if (!id) return
-    const fetchData = async () => {
-      setIsLoading(true)
+    const fetchLead = async () => {
+      if (!id) return
+      setIsFetching(true)
       try {
-        const [leadResponse, packagesResponse] = await Promise.all([
-          fetch(`/api/leads/${id}`, { credentials: 'include' }),
-          getPackages(),
-        ])
-
-        if (!leadResponse.ok) throw new Error('Failed to fetch lead')
+        const res = await fetch(`/api/leads/${id}`)
+        if (!res.ok) throw new Error('Failed to fetch lead data.')
+        const lead: Lead = await res.json()
         
-        const leadData = await leadResponse.json()
         setFormData({
-          name: leadData.name || '',
-          phoneNumber: leadData.phoneNumber || '',
-          leadSource: leadData.leadSource || '',
-          desiredPackage: leadData.desiredPackage?._id || '',
-          currentIsp: leadData.currentIsp || '',
-          notes: leadData.notes || '',
-          broughtInBy: leadData.broughtInBy || '',
-          broughtInByContact: leadData.broughtInByContact || '',
-          agreedInstallationFee: leadData.agreedInstallationFee || '',
-          agreedMonthlySubscription: leadData.agreedMonthlySubscription || '',
-          customerHasRouter: leadData.customerHasRouter || false,
-          routerType: leadData.routerType || '',
-          customerHasReceiver: leadData.customerHasReceiver || false,
-          receiverType: leadData.receiverType || '',
-          followUpDate: leadData.followUpDate ? new Date(leadData.followUpDate) : undefined,
-          status: leadData.status || '',
+          ...lead,
+          agreedInstallationFee: lead.agreedInstallationFee || '',
+          agreedMonthlySubscription: lead.agreedMonthlySubscription || '',
+          followUpDate: lead.followUpDate ? new Date(lead.followUpDate) : undefined,
+          desiredPackage: lead.desiredPackage?._id || lead.desiredPackage || '',
         })
-        setPackages(packagesResponse)
       } catch (error) {
-        toast({ title: 'Error', description: 'Failed to fetch data.', variant: 'destructive' })
+        toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })
+        router.push('/leads')
       } finally {
-        setIsLoading(false)
+        setIsFetching(false)
       }
     }
-    fetchData()
-  }, [id, toast])
+
+    const fetchPackages = async () => {
+      try {
+        const pkgs = await getPackages()
+        setPackages(pkgs)
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to fetch packages.', variant: 'destructive' })
+      }
+    }
+
+    fetchPackages()
+    fetchLead()
+  }, [id, toast, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -107,17 +116,31 @@ export default function EditLeadPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
+
       if (!res.ok) throw new Error((await res.json()).message || 'Failed to update lead.')
+      
       toast({ title: 'Success', description: 'Lead updated successfully.' })
       router.push('/leads')
     } catch (error) {
       toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })
-    } finally {
+    }
+    finally {
       setIsLoading(false)
     }
   }
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading...</div>
+  if (isFetching) {
+    return (
+        <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+            <Topbar />
+            <main className="flex-1 p-6 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-lg">Loading lead data...</p>
+                </div>
+            </main>
+        </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
@@ -126,42 +149,34 @@ export default function EditLeadPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Edit Lead</h1>
-            <p className="text-sm text-zinc-400">Update the details of an existing lead.</p>
+            <p className="text-sm text-zinc-400">Update the details for {formData.name || 'this lead'}.</p>
           </div>
-          <Button variant="outline" onClick={() => router.push('/leads')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Leads
-          </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-4xl mx-auto">
+        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <Card className="bg-transparent border-none">
             <form onSubmit={handleSubmit}>
-              <CardHeader>
-                <CardTitle className="text-cyan-400">Lead Information</CardTitle>
-                <CardDescription className="text-zinc-400">Update the relevant details for this lead.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <Section title="Lead Details" icon={ClipboardList}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup label="Lead Name"><Input name="name" value={formData.name} onChange={handleChange} placeholder="Optional" /></InputGroup>
+              <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column */}
+                <div className="space-y-6">
                     <InputGroup label="Phone Number *"><Input name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+254712345678" required /></InputGroup>
-                    <InputGroup label="Lead Source">
-                      <Select name="leadSource" value={formData.leadSource} onValueChange={(v) => handleSelectChange('leadSource', v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{['Manual', 'Caretaker', 'Field Sales', 'Referral', 'Website', 'WhatsApp/SMS'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </InputGroup>
+                    <InputGroup label="Lead Name"><Input name="name" value={formData.name} onChange={handleChange} placeholder="Optional" /></InputGroup>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputGroup label="Lead Source">
+                        <Select name="leadSource" value={formData.leadSource} onValueChange={(v) => handleSelectChange('leadSource', v)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{['Manual', 'Caretaker', 'Field Sales', 'Referral', 'Website', 'WhatsApp/SMS'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </InputGroup>
+                      <InputGroup label="Brought In By"><Input name="broughtInBy" value={formData.broughtInBy} onChange={handleChange} placeholder="e.g., John Doe" /></InputGroup>
+                      <InputGroup label="Brought In By Contact"><Input name="broughtInByContact" value={formData.broughtInByContact} onChange={handleChange} placeholder="Phone or Email" /></InputGroup>
+                    </div>
                     <InputGroup label="Current ISP"><Input name="currentIsp" value={formData.currentIsp} onChange={handleChange} placeholder="Optional" /></InputGroup>
-                    <InputGroup label="Brought In By"><Input name="broughtInBy" value={formData.broughtInBy} onChange={handleChange} placeholder="e.g., John Doe" /></InputGroup>
-                    <InputGroup label="Brought In By Contact"><Input name="broughtInByContact" value={formData.broughtInByContact} onChange={handleChange} placeholder="Phone or Email" /></InputGroup>
-                  </div>
-                  <InputGroup label="Reason for Interest/Dissatisfaction"><Textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="e.g., Current provider is unreliable" /></InputGroup>
-                </Section>
+                    <InputGroup label="Notes"><Textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="e.g., Current provider is unreliable" /></InputGroup>
+                </div>
 
-                <Section title="Agreement Details" icon={FileSignature}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Right Column */}
+                <div className="space-y-6">
                     <InputGroup label="Desired Package">
                       <Select name="desiredPackage" value={formData.desiredPackage} onValueChange={(v) => handleSelectChange('desiredPackage', v)}>
                         <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
@@ -170,22 +185,19 @@ export default function EditLeadPage() {
                         </SelectContent>
                       </Select>
                     </InputGroup>
-                    <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
-                    <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
-                  </div>
-                </Section>
-
-                <Section title="Equipment & Follow-up" icon={RouterIcon}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputGroup label="Agreed Monthly Subscription (KES)"><Input name="agreedMonthlySubscription" type="number" value={formData.agreedMonthlySubscription} onChange={handleChange} placeholder="0" /></InputGroup>
+                      <InputGroup label="Agreed Installation Fee (KES)"><Input name="agreedInstallationFee" type="number" value={formData.agreedInstallationFee} onChange={handleChange} placeholder="0" /></InputGroup>
+                    </div>
                     <div className="space-y-4">
-                      <h4 className="font-medium text-zinc-300">Equipment</h4>
+                      <h4 className="font-medium text-zinc-300">Existing Equipment</h4>
                       <div className="flex items-center space-x-2"><Checkbox id="customerHasRouter" checked={formData.customerHasRouter} onCheckedChange={(c) => handleCheckboxChange('customerHasRouter', !!c)} /><Label htmlFor="customerHasRouter">Customer Has Router?</Label></div>
                       {formData.customerHasRouter && <InputGroup label="Router Type"><Input name="routerType" value={formData.routerType} onChange={handleChange} placeholder="e.g., TP-Link" /></InputGroup>}
                       <div className="flex items-center space-x-2"><Checkbox id="customerHasReceiver" checked={formData.customerHasReceiver} onCheckedChange={(c) => handleCheckboxChange('customerHasReceiver', !!c)} /><Label htmlFor="customerHasReceiver">Customer Has Receiver?</Label></div>
                       {formData.customerHasReceiver && <InputGroup label="Receiver Type"><Input name="receiverType" value={formData.receiverType} onChange={handleChange} placeholder="e.g., Ubiquiti" /></InputGroup>}
                     </div>
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-zinc-300">Follow-up</h4>
+                    <div className="space-y-4 mt-6">
+                      <h4 className="font-medium text-zinc-300">Scheduling</h4>
                       <InputGroup label="Follow-up Date">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -198,14 +210,13 @@ export default function EditLeadPage() {
                         </Popover>
                       </InputGroup>
                     </div>
-                  </div>
-                </Section>
+                </div>
               </CardContent>
               <div className="flex justify-end gap-2 p-4 border-t border-zinc-800">
                 <Button type="button" variant="outline" onClick={() => router.push('/leads')} disabled={isLoading} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
-                <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  {isLoading ? 'Updating...' : 'Update Lead'}
+                <Button type="submit" disabled={isLoading || isFetching} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
+                  <Save className="mr-2 h-4 w-4" />
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
@@ -217,13 +228,6 @@ export default function EditLeadPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const Section = ({ title, icon: Icon, children }: { title: string, icon: React.ElementType, children: React.ReactNode }) => (
-  <div className="space-y-4">
-    <h3 className="font-semibold text-cyan-400 flex items-center gap-2 border-b border-zinc-800 pb-2"><Icon className="w-5 h-5" />{title}</h3>
-    <div className="p-4 bg-zinc-800/50 rounded-lg">{children}</div>
-  </div>
-)
-
 const InputGroup = ({ label, children }: { label: string, children: React.ReactNode }) => (
   <div className="space-y-2">
     <Label className="text-zinc-300 text-sm">{label}</Label>
