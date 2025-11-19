@@ -142,6 +142,16 @@ const getAllLeads = asyncHandler(async (req, res) => {
     { $sort: { '_id.year': 1, '_id.month': 1 } },
   ]);
 
+  const monthlyData = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    const monthData = leadsByMonth.find(item => item._id.month === month);
+    return {
+      month: month,
+      newLeads: monthData ? monthData.newLeads : 0,
+      convertedLeads: monthData ? monthData.convertedLeads : 0,
+    };
+  });
+
   res.json({
     leads,
     dashboardStats: {
@@ -150,11 +160,7 @@ const getAllLeads = asyncHandler(async (req, res) => {
       newLeadsThisMonth,
       convertedLeadsThisMonth,
     },
-    chartData: leadsByMonth.map(item => ({
-      month: item._id.month,
-      newLeads: item.newLeads,
-      convertedLeads: item.convertedLeads
-    })),
+    chartData: monthlyData,
   });
 });
 

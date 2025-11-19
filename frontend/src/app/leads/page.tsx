@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { List, UserPlus, CheckCircle, PlusCircle } from "lucide-react"
+import { List, UserPlus, CheckCircle, PlusCircle, BarChart2 } from "lucide-react"
 import { Topbar } from "@/components/topbar"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -175,7 +175,7 @@ export default function LeadsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="lg:col-span-2 bg-zinc-800/50 p-4 rounded-lg">
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-sm font-semibold text-cyan-400">Monthly Lead Trends</h3>
+                      <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Lead Trends</h3>
                       <Select value={selectedYear} onValueChange={setSelectedYear}>
                         <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
@@ -184,20 +184,15 @@ export default function LeadsPage() {
                     <ResponsiveContainer width="100%" height={200}>
                       <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <defs>
-                          <linearGradient id="newLeadsFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="convertedLeadsFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
                         <XAxis dataKey="month" tickFormatter={m => new Date(2000, m - 1).toLocaleString('default', { month: 'short' })} style={{ fontSize: '0.75rem' }} stroke="#888" />
                         <YAxis style={{ fontSize: '0.75rem' }} stroke="#888" />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-                        <Area type="monotone" dataKey="newLeads" stroke="#f59e0b" fill="url(#newLeadsFill)" name="New Leads" />
-                        <Area type="monotone" dataKey="convertedLeads" stroke="#10b981" fill="url(#convertedLeadsFill)" name="Converted Leads" />
+                        <Area type="monotone" dataKey="newLeads" stroke="#22d3ee" fill="url(#chartFill)" name="New Leads" fillOpacity={1} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -277,12 +272,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
     const newLeads = payload.find((p: any) => p.dataKey === 'newLeads')?.value || 0;
-    const convertedLeads = payload.find((p: any) => p.dataKey === 'convertedLeads')?.value || 0;
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
         <p className="font-bold">{monthName}</p>
-        <p style={{ color: '#f59e0b' }}>New Leads: {newLeads}</p>
-        <p style={{ color: '#10b981' }}>Converted Leads: {convertedLeads}</p>
+        <p style={{ color: '#22d3ee' }}>New Leads: {newLeads}</p>
       </div>
     );
   }
