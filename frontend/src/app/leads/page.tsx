@@ -25,8 +25,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { List, UserPlus, CheckCircle, PlusCircle, BarChart2 } from "lucide-react"
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
+import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users } from "lucide-react"
 import { Topbar } from "@/components/topbar"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -172,8 +172,8 @@ export default function LeadsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="lg:col-span-2 bg-zinc-800/50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="bg-zinc-800/50 p-4 rounded-lg">
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Lead Trends</h3>
                       <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -196,10 +196,10 @@ export default function LeadsPage() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="bg-zinc-800/50 p-4 rounded-lg">
-                    <h3 className="text-sm font-semibold text-cyan-400 mb-2">Quick Actions</h3>
-                    <p className="text-xs text-zinc-400">Feature coming soon.</p>
-                  </div>
+                  <DonutChartCard 
+                    total={dashboardStats.totalLeads} 
+                    converted={dashboardStats.totalConvertedLeads} 
+                  />
                 </div>
                 <div className="p-4 mt-4">
                   <DataTable
@@ -268,14 +268,43 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
+const DonutChartCard = ({ total, converted }: { total: number, converted: number }) => {
+    const other = total - converted;
+    const data = [
+        { name: 'Converted', value: converted },
+        { name: 'Other', value: other },
+    ];
+    return (
+        <div className="bg-zinc-800/50 p-4 rounded-lg">
+            <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2"><Users size={16}/> Lead Status</h3>
+            <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                    <defs>
+                        <linearGradient id="convertedFill"><stop offset="0%" stopColor="#10b981" /><stop offset="100%" stopColor="#34d399" /></linearGradient>
+                        <linearGradient id="otherFill"><stop offset="0%" stopColor="#f59e0b" /><stop offset="100%" stopColor="#fbbf24" /></linearGradient>
+                    </defs>
+                    <Pie data={data} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} stroke="none">
+                        <Cell key="converted" fill="url(#convertedFill)" />
+                        <Cell key="other" fill="url(#otherFill)" />
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend iconSize={10} wrapperStyle={{ fontSize: '0.75rem' }} />
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="24" fontWeight="bold">{total}</text>
+                    <text x="50%" y="65%" textAnchor="middle" dominantBaseline="middle" fill="#aaa" fontSize="12">Total Leads</text>
+                </PieChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
     const newLeads = payload.find((p: any) => p.dataKey === 'newLeads')?.value || 0;
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
-        <p className="font-bold">{monthName}</p>
-        <p style={{ color: '#22d3ee' }}>New Leads: {newLeads}</p>
+        <p className="font-bold">{monthName || payload[0].name}</p>
+        <p style={{ color: '#22d3ee' }}>{payload[0].name}: {payload[0].value}</p>
       </div>
     );
   }
