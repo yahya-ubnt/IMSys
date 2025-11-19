@@ -19,7 +19,7 @@ import { Topbar } from "@/components/topbar"
 import { motion } from "framer-motion"
 import { getPackages } from "@/lib/packageService"
 import { Package } from "@/types/package"
-import { Lead } from "@/types/lead" // Assuming you have a Lead type
+import { Lead } from "@/types/lead"
 
 // --- MAIN COMPONENT ---
 export default function EditLeadPage() {

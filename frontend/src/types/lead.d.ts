@@ -1,9 +1,11 @@
+import { Package } from './package';
+
 export interface Lead {
   _id: string;
   name: string;
   phoneNumber: string;
   leadSource: string;
-  desiredPackage?: string;
+  desiredPackage?: Package;
   currentIsp?: string;
   notes?: string;
   broughtInBy?: string;
