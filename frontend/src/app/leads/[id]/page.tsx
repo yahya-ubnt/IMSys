@@ -58,9 +58,9 @@ export default function ViewLeadPage() {
       <main className="flex-1 p-4 md:p-8 space-y-6">
         {/* --- HEADER --- */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
+          <div className="flex items-baseline gap-3">
             <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{lead.name || 'Unnamed Lead'}</h1>
-            <p className="text-md text-zinc-400 flex items-center gap-2"><Phone size={16} /> {lead.phoneNumber}</p>
+            <p className="text-lg text-zinc-400 flex items-center gap-2"><Phone size={16} /> {lead.phoneNumber}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => router.push('/leads')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
