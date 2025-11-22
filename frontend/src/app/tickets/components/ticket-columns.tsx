@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Ticket } from '@/types/ticket'; // Assuming Ticket type is defined
+import { Badge } from "@/components/ui/badge"
 
 interface TicketColumnsProps {
   onUpdateStatus: (id: string, status: Ticket['status']) => void;
@@ -30,6 +31,11 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
         </Button>
       );
     },
+    cell: ({ row }) => (
+      <Link href={`/tickets/${row.original._id}`} className="font-medium text-blue-400 hover:underline">
+        {row.original.ticketRef}
+      </Link>
+    ),
   },
   {
     accessorKey: 'clientName',
@@ -47,31 +53,11 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
   },
   {
     accessorKey: 'clientPhone',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Client Phone
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: "Client Phone",
   },
   {
     accessorKey: 'issueType',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Issue Type
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: "Issue Type",
   },
   {
     accessorKey: 'status',
@@ -87,35 +73,31 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
       );
     },
     cell: ({ row }) => {
-      const status = row.getValue('status');
+      const status = row.getValue('status') as string;
       let statusColor = '';
       switch (status) {
         case 'New':
-          statusColor = 'bg-blue-100 text-blue-800';
+          statusColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
           break;
         case 'Open':
-          statusColor = 'bg-yellow-100 text-yellow-800';
+          statusColor = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
           break;
         case 'In Progress':
-          statusColor = 'bg-orange-100 text-orange-800';
+          statusColor = 'bg-orange-500/20 text-orange-400 border-orange-500/30';
           break;
         case 'Dispatched':
-          statusColor = 'bg-purple-100 text-purple-800';
+          statusColor = 'bg-purple-500/20 text-purple-400 border-purple-500/30';
           break;
         case 'Fixed':
-          statusColor = 'bg-green-100 text-green-800';
+          statusColor = 'bg-green-500/20 text-green-400 border-green-500/30';
           break;
         case 'Closed':
-          statusColor = 'bg-gray-100 text-gray-800';
+          statusColor = 'bg-gray-500/20 text-gray-400 border-gray-500/30';
           break;
         default:
-          statusColor = 'bg-gray-100 text-gray-800';
+          statusColor = 'bg-gray-500/20 text-gray-400 border-gray-500/30';
       }
-      return (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-          {status as string}
-        </span>
-      );
+      return <Badge variant="outline" className={`capitalize ${statusColor}`}>{status}</Badge>;
     },
   },
   {
@@ -132,44 +114,34 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
       );
     },
     cell: ({ row }) => {
-      const priority = row.getValue('priority');
+      const priority = row.getValue('priority') as string;
       let priorityColor = '';
       switch (priority) {
         case 'Low':
-          priorityColor = 'text-green-600';
+          priorityColor = 'text-green-400';
           break;
         case 'Medium':
-          priorityColor = 'text-yellow-600';
+          priorityColor = 'text-yellow-400';
           break;
         case 'High':
-          priorityColor = 'text-orange-600';
+          priorityColor = 'text-orange-400';
           break;
         case 'Urgent':
-          priorityColor = 'text-red-600';
+          priorityColor = 'text-red-400';
           break;
         default:
-          priorityColor = 'text-gray-600';
+          priorityColor = 'text-gray-400';
       }
       return (
         <span className={`font-medium ${priorityColor}`}>
-          {priority as string}
+          {priority}
         </span>
       );
     },
   },
   {
     accessorKey: 'createdAt',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Created At
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: "Created At",
     cell: ({ row }) => {
       const date = new Date(row.getValue('createdAt'));
       return date.toLocaleString();
@@ -188,18 +160,18 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
             <DropdownMenuItem asChild>
               <Link href={`/tickets/${ticket._id}`}>View Details</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={`/tickets/${ticket._id}/edit`}>Edit</Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'Resolved')}>
+            <DropdownMenuSeparator className="bg-zinc-700" />
+            <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'Fixed')}>
               Mark as Fixed
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDeleteTicket(ticket._id)} className="text-red-600">
+            <DropdownMenuItem onClick={() => onDeleteTicket(ticket._id)} className="text-red-400 focus:text-red-400 focus:bg-red-500/20">
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>

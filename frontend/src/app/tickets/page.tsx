@@ -16,7 +16,9 @@ import { Ticket } from "@/types/ticket";
 import { getTickets, getTicketStats, getMonthlyTicketTotals, updateTicket, deleteTicket, getTicketById } from "@/lib/ticketService";
 import { getTicketColumns } from "./components/ticket-columns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, getFilteredRowModel } from "@tanstack/react-table";
+import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, getFilteredRowModel, ColumnFiltersState, SortingState, PaginationState } from "@tanstack/react-table";
+import { TicketToolbar } from "./components/ticket-toolbar"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 
 export default function TicketsPage() {
   const { toast } = useToast()
@@ -32,6 +34,14 @@ export default function TicketsPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   // --- DATA FETCHING ---
   const fetchAllData = useCallback(async () => {
@@ -95,10 +105,18 @@ export default function TicketsPage() {
   const table = useReactTable({
     data: tickets,
     columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
   })
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white"></div>
@@ -154,7 +172,11 @@ export default function TicketsPage() {
               </CardContent>
               <div className="p-4">
                 <h3 className="text-sm font-semibold text-cyan-400 mb-2">All Tickets</h3>
-                <DataTable table={table} columns={columns} />
+                <TicketToolbar table={table} />
+                <div className="overflow-x-auto mt-4">
+                  <DataTable table={table} columns={columns} />
+                </div>
+                <DataTablePagination table={table} />
               </div>
             </Card>
           </div>
