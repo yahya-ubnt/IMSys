@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Expense, ExpenseType } from "@/types/expenses"
 import moment from "moment"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 
 const EMPTY_EXPENSE: Partial<Expense> = { title: "", amount: 0, description: "", expenseDate: moment().format("YYYY-MM-DDTHH:mm") };
 
@@ -167,6 +168,7 @@ export default function AllExpensesPage() {
                 <div className="overflow-x-auto">
                   <DataTable table={table} columns={columns} />
                 </div>
+                <DataTablePagination table={table} />
               </CardContent>
             </Card>
           </motion.div>

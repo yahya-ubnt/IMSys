@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ExpenseType } from "@/types/expenses"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 
 const EMPTY_EXPENSE_TYPE: Partial<ExpenseType> = { name: "", description: "" };
 
@@ -163,6 +164,7 @@ export default function ExpenseTypesPage() {
               <div className="overflow-x-auto">
                 <DataTable table={table} columns={columns} />
               </div>
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </motion.div>
