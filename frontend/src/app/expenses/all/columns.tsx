@@ -24,6 +24,13 @@ declare module "@tanstack/react-table" {
 
 export const columns: ColumnDef<Expense>[] = [
   {
+    id: "rowNumber",
+    header: "#",
+    cell: ({ row }) => {
+      return <div>{row.index + 1}</div>;
+    },
+  },
+  {
     accessorKey: "title",
     header: ({ column }) => {
       return (

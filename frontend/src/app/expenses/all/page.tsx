@@ -158,9 +158,9 @@ export default function AllExpensesPage() {
           </div>
 
           <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+            className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1">
+              <CardHeader className="p-4 grid grid-cols-1">
                 <StatCard title="Total Amount" value={formatCurrency(stats.totalAmount)} icon={DollarSign} />
               </CardHeader>
               <CardContent className="p-4">

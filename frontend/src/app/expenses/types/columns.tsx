@@ -15,6 +15,13 @@ import { ExpenseType } from "@/types/expenses"
 
 export const columns: ColumnDef<ExpenseType>[] = [
   {
+    id: "rowNumber",
+    header: "#",
+    cell: ({ row }) => {
+      return <div>{row.index + 1}</div>;
+    },
+  },
+  {
     accessorKey: "name",
     header: ({ column }) => {
       return (
