@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const Ticket = require('../models/Ticket');
 const User = require('../models/User'); // Assuming User model is needed for createdBy/updatedBy
 const { sendSms } = require('../services/smsService'); // Assuming this is the correct path and function
+const mongoose = require('mongoose');
 
 // @desc    Create a new ticket
 // @route   POST /api/tickets
@@ -35,7 +36,6 @@ const createTicket = asyncHandler(async (req, res) => {
     issueType,
     description,
     priority: priority || 'Medium', // Default to Medium if not provided
-    createdBy: req.user.id, // Assuming req.user.id is set by protect middleware
     tenantOwner: req.user.tenantOwner,
     statusHistory: [{ status: 'New', updatedBy: req.user.id }],
   });
@@ -78,7 +78,6 @@ const getTickets = asyncHandler(async (req, res) => {
   }
 
   const tickets = await Ticket.find(query)
-    .populate('createdBy', 'fullName email') // Populate creator info
     .populate('assignedTo', 'fullName email') // Populate assigned technician info
     .sort({ createdAt: -1 }); // Sort by newest first
 
@@ -95,7 +94,6 @@ const getTicketById = asyncHandler(async (req, res) => {
   }
 
   const ticket = await Ticket.findOne(query)
-    .populate('createdBy', 'fullName email')
     .populate('assignedTo', 'fullName email')
     .populate('statusHistory.updatedBy', 'fullName email')
     .populate('notes.addedBy', 'fullName email');
@@ -184,7 +182,7 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
 const getTicketStats = asyncHandler(async (req, res) => {
   let matchQuery = {};
   if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
+    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
   }
 
   const stats = await Ticket.aggregate([
@@ -198,9 +196,20 @@ const getTicketStats = asyncHandler(async (req, res) => {
   ]);
 
   // Format stats into a more usable object
-  const formattedStats = {};
+  const formattedStats = {
+    total: 0,
+    new: 0,
+    inprogress: 0,
+    fixed: 0,
+    open: 0,
+    dispatched: 0,
+    closed: 0,
+  };
   stats.forEach(s => {
-    formattedStats[s._id.toLowerCase().replace(/\s/g, '')] = s.count;
+    const status = s._id.toLowerCase().replace(/\s/g, '');
+    if (formattedStats.hasOwnProperty(status)) {
+      formattedStats[status] = s.count;
+    }
   });
 
   // Add total count
@@ -222,7 +231,7 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
 
   let matchQuery = {};
   if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
+    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
   }
 
   matchQuery.createdAt = {
