@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { motion } from "framer-motion"
 import {
   useReactTable,
   getCoreRowModel,
@@ -154,8 +153,7 @@ export default function ExpenseTypesPage() {
           </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 grid grid-cols-1">
               <StatCard title="Total Types" value={stats.total} icon={List} />
@@ -167,7 +165,7 @@ export default function ExpenseTypesPage() {
               <DataTablePagination table={table} />
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="bg-zinc-900/80 backdrop-blur-lg border-zinc-700 text-white">
