@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, PlusCircle } from "lucide-react"
-import { motion } from "framer-motion"
 
 // --- TYPE DEFINITIONS ---
 interface MikrotikUser {
@@ -116,8 +115,7 @@ export default function NewTicketPage() {
           </Button>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl max-w-4xl mx-auto">
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-4xl mx-auto">
           <Card className="bg-transparent border-none">
             <CardHeader>
               <CardTitle className="text-cyan-400">Ticket Details</CardTitle>
@@ -157,7 +155,7 @@ export default function NewTicketPage() {
                   <Label htmlFor="description" className="text-zinc-300">Description</Label>
                   <Textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={5} required className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                 </div>
-                <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+                <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => router.push('/tickets')} disabled={isLoading} className="bg-transparent border-zinc-700 hover:bg-zinc-800">Cancel</Button>
                   <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -167,7 +165,7 @@ export default function NewTicketPage() {
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </main>
     </div>
   )

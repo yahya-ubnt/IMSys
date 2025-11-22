@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PlusCircle, List, AlertTriangle, Wrench, CheckCircle } from "lucide-react";
-import { motion } from "framer-motion";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area } from 'recharts';
 import { DataTable } from '@/components/data-table';
@@ -121,10 +120,9 @@ export default function TicketsPage() {
             </Button>
           </div>
 
-          <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard title="Total Tickets" value={stats.total || 0} icon={List} />
                 <StatCard title="New" value={stats.new || 0} icon={AlertTriangle} color="text-yellow-400" />
                 <StatCard title="In Progress" value={stats.inprogress || 0} icon={Wrench} color="text-orange-400" />
@@ -154,12 +152,12 @@ export default function TicketsPage() {
                   <p className="text-xs text-zinc-400">Feature coming soon.</p>
                 </div>
               </CardContent>
-              <div className="p-4 border-t border-zinc-800">
+              <div className="p-4">
                 <h3 className="text-sm font-semibold text-cyan-400 mb-2">All Tickets</h3>
                 <DataTable table={table} columns={columns} />
               </div>
             </Card>
-          </motion.div>
+          </div>
         </main>
       </div>
       <AlertDialog open={!!deleteCandidateId} onOpenChange={() => setDeleteCandidateId(null)}>
