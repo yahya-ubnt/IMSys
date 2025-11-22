@@ -8,6 +8,7 @@ const {
   addNoteToTicket,
   getTicketStats, // Import new function
   getMonthlyTicketTotals, // Import new function
+  deleteTicket,
 } = require('../controllers/ticketController');
 const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
@@ -27,7 +28,8 @@ router.route('/monthly-totals')
 // Routes for /api/tickets/:id
 router.route('/:id')
   .get(protect, isSuperAdminOrAdminTenant, getTicketById)
-  .put(protect, isSuperAdminOrAdminTenant, updateTicket);
+  .put(protect, isSuperAdminOrAdminTenant, updateTicket)
+  .delete(protect, isSuperAdminOrAdminTenant, deleteTicket);
 
 // Route for /api/tickets/:id/notes
 router.route('/:id/notes')

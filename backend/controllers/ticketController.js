@@ -268,6 +268,22 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
   res.status(200).json(fullMonthlyTotals);
 });
 
+// @desc    Delete a ticket
+// @route   DELETE /api/tickets/:id
+// @access  Admin
+const deleteTicket = asyncHandler(async (req, res) => {
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+
+  if (!ticket) {
+    res.status(404);
+    throw new Error('Ticket not found');
+  }
+
+  await ticket.deleteOne();
+
+  res.status(200).json({ message: 'Ticket removed' });
+});
+
 module.exports = {
   createTicket,
   getTickets,
@@ -276,4 +292,5 @@ module.exports = {
   addNoteToTicket,
   getTicketStats,
   getMonthlyTicketTotals,
+  deleteTicket,
 };
