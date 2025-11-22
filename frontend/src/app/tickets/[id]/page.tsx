@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
-import { getTicketById, deleteTicket } from '@/lib/ticketService'; // Import ticket service functions
-import { Ticket } from '@/types/ticket'; // Import Ticket type
+import { getTicketById, deleteTicket } from '@/lib/ticketService';
+import { Ticket } from '@/types/ticket';
 import { Topbar } from '@/components/topbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Tag, FileText, CalendarIcon, User, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Tag, FileText, CalendarIcon, User, MessageSquare, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+
+const DetailItem = ({ label, value }: { label: string, value: string | undefined | null }) => (
+    <div className="flex flex-col space-y-1">
+        <p className="text-sm font-medium text-zinc-400">{label}</p>
+        <p className="text-base text-white">{value || 'N/A'}</p>
+    </div>
+);
 
 export default function TicketDetailsPage() {
   const { id } = useParams();
@@ -36,10 +39,11 @@ export default function TicketDetailsPage() {
         const data = await getTicketById(id as string);
         setTicket(data);
       } catch (err: unknown) {
-        setError((err instanceof Error) ? err.message : 'Failed to fetch ticket details.');
+        const errorMessage = (err instanceof Error) ? err.message : 'Failed to fetch ticket details.';
+        setError(errorMessage);
         toast({
           title: 'Error',
-          description: (err instanceof Error) ? err.message : 'Failed to fetch ticket details. Please try again.',
+          description: `${errorMessage} Please try again.`,
           variant: 'destructive',
         });
       } finally {
@@ -51,19 +55,20 @@ export default function TicketDetailsPage() {
   }, [id, toast]);
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this ticket?')) {
+    if (confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
       try {
         await deleteTicket(id as string);
         toast({
           title: 'Ticket Deleted',
           description: 'Ticket has been successfully deleted.',
         });
-        router.push('/tickets'); // Redirect to tickets list after deletion
+        router.push('/tickets');
       } catch (err: unknown) {
-        setError((err instanceof Error) ? err.message : 'Failed to delete ticket.');
+        const errorMessage = (err instanceof Error) ? err.message : 'Failed to delete ticket.';
+        setError(errorMessage);
         toast({
           title: 'Error',
-          description: (err instanceof Error) ? err.message : 'Failed to delete ticket. Please try again.',
+          description: `${errorMessage} Please try again.`,
           variant: 'destructive',
         });
       }
@@ -72,25 +77,25 @@ export default function TicketDetailsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-950 to-black text-white">
+      <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
         <Topbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading ticket details...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto"></div>
+            <p className="mt-2 text-zinc-400">Loading ticket details...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !ticket) {
     return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-950 to-black text-white">
+      <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
         <Topbar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-lg font-semibold text-red-500">Error: {error}</p>
+          <div className="text-center bg-zinc-800 p-8 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold text-red-500">{error || 'Ticket not found.'}</p>
             <Button onClick={() => router.push('/tickets')} className="mt-4 bg-red-600 hover:bg-red-700 text-white">Back to Tickets</Button>
           </div>
         </div>
@@ -98,157 +103,86 @@ export default function TicketDetailsPage() {
     );
   }
 
-  if (!ticket) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-950 to-black text-white">
-        <Topbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-lg font-semibold text-blue-400">Ticket not found.</p>
-            <Button onClick={() => router.push('/tickets')} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Back to Tickets</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-950 to-black text-white">
+    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
-
-      <div className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button onClick={() => router.push('/tickets')} className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Ticket Details</h1>
+            <p className="text-sm text-zinc-400">Viewing ticket {ticket.ticketRef}.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/tickets')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Tickets
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-blue-400">Ticket Details</h1>
-              <p className="text-sm text-zinc-400">Detailed view of ticket {ticket.ticketRef}.</p>
-            </div>
-          </div>
-          <div className="ml-auto flex gap-2">
-            <Button asChild variant="outline" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all duration-300 hover:scale-105">
+            <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
               <Link href={`/tickets/${ticket._id}/edit`}>
-                Edit Ticket
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
               </Link>
             </Button>
-            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              Delete Ticket
+            <Button variant="destructive" onClick={handleDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
             </Button>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto"> {/* Centered content */}
-          <Card className="bg-zinc-900 text-white border-zinc-700 shadow-xl rounded-lg hover:shadow-blue-500/50 transition-all duration-300">
-            <CardHeader className="border-b border-zinc-700 pb-4">
-              <CardTitle className="flex items-center gap-2 text-cyan-400">
-                <FileText className="h-5 w-5 text-blue-400" />
-                Ticket Information
-              </CardTitle>
+        <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-5xl mx-auto">
+          <Card className="bg-transparent border-none">
+            <CardHeader>
+              <CardTitle className="text-cyan-400 flex items-center"><Tag className="mr-2"/>Ticket Information</CardTitle>
+              <CardDescription className="text-zinc-400">All details related to this support ticket.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Basic Details */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-blue-400">
-                  <Tag className="h-4 w-4 text-blue-400" />
-                  Basic Details
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Reference Number</Label>
-                    <Input value={ticket.ticketRef} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Status</Label>
-                    <Input value={ticket.status} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Priority</Label>
-                    <Input value={ticket.priority} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Issue Type</Label>
-                    <Input value={ticket.issueType} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Created By</Label>
-                    <Input value={ticket.createdBy?.name || 'N/A'} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Assigned To</Label>
-                    <Input value={ticket.assignedTo?.name || 'N/A'} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                </div>
+            <CardContent className="space-y-8">
+              {/* Ticket & Client Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <DetailItem label="Ticket Reference" value={ticket.ticketRef} />
+                <DetailItem label="Status" value={ticket.status} />
+                <DetailItem label="Priority" value={ticket.priority} />
+                <DetailItem label="Issue Type" value={ticket.issueType} />
+                <DetailItem label="Created By" value={ticket.createdBy?.name} />
+                <DetailItem label="Assigned To" value={ticket.assignedTo?.name} />
+                <DetailItem label="Client Name" value={ticket.clientName} />
+                <DetailItem label="Client Phone" value={ticket.clientPhone} />
+                <DetailItem label="Client Email" value={ticket.clientEmail} />
+                <DetailItem label="Client Account ID" value={ticket.clientAccountId} />
               </div>
 
-              {/* Client Details */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-blue-400">
-                  <User className="h-4 w-4 text-blue-400" />
-                  Client Details
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Client Name</Label>
-                    <Input value={ticket.clientName} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Client Phone</Label>
-                    <Input value={ticket.clientPhone} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Client Email</Label>
-                    <Input value={ticket.clientEmail || 'N/A'} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Client Account ID</Label>
-                    <Input value={ticket.clientAccountId || 'N/A'} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Issue Description */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-blue-400">
-                  <MessageSquare className="h-4 w-4 text-blue-400" />
-                  Issue Description
-                </div>
-                <div className="space-y-2">
-                  <Textarea value={ticket.description} rows={5} disabled className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500" />
-                </div>
+              {/* Description */}
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-400 mb-2 flex items-center"><FileText className="mr-2"/>Description</h3>
+                <p className="text-white bg-zinc-800 p-4 rounded-md">{ticket.description}</p>
               </div>
 
               {/* Status History */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-blue-400">
-                  <CalendarIcon className="h-4 w-4 text-blue-400" />
-                  Status History
-                </div>
-                <div className="space-y-2">
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-400 mb-2 flex items-center"><Clock className="mr-2"/>Status History</h3>
+                <div className="border border-zinc-700 rounded-md">
                   {ticket.statusHistory.map((history, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm border-b pb-1 last:border-b-0 last:pb-0 border-zinc-700">
-                      <span className="text-white">{history.status}</span>
-                      <span className="text-zinc-400">{format(new Date(history.timestamp), 'PPP p')} by {history.updatedBy?.name || 'N/A'}</span>
+                    <div key={index} className={`flex items-center justify-between p-3 ${index < ticket.statusHistory.length - 1 ? 'border-b border-zinc-700' : ''}`}>
+                      <div>
+                        <span className="font-semibold text-white">{history.status}</span>
+                        <span className="text-zinc-400 text-sm ml-2">by {history.updatedBy?.name || 'N/A'}</span>
+                      </div>
+                      <span className="text-zinc-400 text-sm">{format(new Date(history.timestamp), 'PPP p')}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Notes */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-blue-400">
-                  <MessageSquare className="h-4 w-4 text-blue-400" />
-                  Notes
-                </div>
-                <div className="space-y-2">
+              <div>
+                <h3 className="text-lg font-semibold text-cyan-400 mb-2 flex items-center"><MessageSquare className="mr-2"/>Notes</h3>
+                <div className="space-y-4">
                   {ticket.notes.length > 0 ? (
                     ticket.notes.map((note, index) => (
-                      <div key={index} className="text-sm border-b pb-1 last:border-b-0 last:pb-0 border-zinc-700">
+                      <div key={index} className="bg-zinc-800 p-4 rounded-md">
                         <p className="text-white">{note.content}</p>
-                        <p className="text-zinc-400 text-xs mt-1">
-                          {format(new Date(note.timestamp), 'PPP p')} by {note.addedBy?.name || 'N/A'}
+                        <p className="text-zinc-400 text-xs mt-2">
+                          by {note.addedBy?.name || 'N/A'} on {format(new Date(note.timestamp), 'PPP p')}
                         </p>
                       </div>
                     ))
@@ -260,7 +194,7 @@ export default function TicketDetailsPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
