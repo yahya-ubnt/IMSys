@@ -143,8 +143,6 @@ export default function TicketDetailsPage() {
                 <DetailItem label="Status" value={ticket.status} />
                 <DetailItem label="Priority" value={ticket.priority} />
                 <DetailItem label="Issue Type" value={ticket.issueType} />
-                <DetailItem label="Created By" value={ticket.createdBy?.name} />
-                <DetailItem label="Assigned To" value={ticket.assignedTo?.name} />
                 <DetailItem label="Client Name" value={ticket.clientName} />
                 <DetailItem label="Client Phone" value={ticket.clientPhone} />
                 <DetailItem label="Client Email" value={ticket.clientEmail} />
@@ -165,7 +163,6 @@ export default function TicketDetailsPage() {
                     <div key={index} className={`flex items-center justify-between p-3 ${index < ticket.statusHistory.length - 1 ? 'border-b border-zinc-700' : ''}`}>
                       <div>
                         <span className="font-semibold text-white">{history.status}</span>
-                        <span className="text-zinc-400 text-sm ml-2">by {history.updatedBy?.name || 'N/A'}</span>
                       </div>
                       <span className="text-zinc-400 text-sm">{format(new Date(history.timestamp), 'PPP p')}</span>
                     </div>
@@ -182,7 +179,7 @@ export default function TicketDetailsPage() {
                       <div key={index} className="bg-zinc-800 p-4 rounded-md">
                         <p className="text-white">{note.content}</p>
                         <p className="text-zinc-400 text-xs mt-2">
-                          by {note.addedBy?.name || 'N/A'} on {format(new Date(note.timestamp), 'PPP p')}
+                          {format(new Date(note.timestamp), 'PPP p')}
                         </p>
                       </div>
                     ))

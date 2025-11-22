@@ -37,7 +37,7 @@ const createTicket = asyncHandler(async (req, res) => {
     description,
     priority: priority || 'Medium', // Default to Medium if not provided
     tenantOwner: req.user.tenantOwner,
-    statusHistory: [{ status: 'New', updatedBy: req.user.id }],
+    statusHistory: [{ status: 'New' }],
   });
 
   if (ticket) {
@@ -73,12 +73,8 @@ const getTickets = asyncHandler(async (req, res) => {
   if (req.query.issueType) {
     query.issueType = req.query.issueType;
   }
-  if (req.query.assignedTo) {
-    query.assignedTo = req.query.assignedTo;
-  }
 
   const tickets = await Ticket.find(query)
-    .populate('assignedTo', 'fullName email') // Populate assigned technician info
     .sort({ createdAt: -1 }); // Sort by newest first
 
   res.status(200).json(tickets);
@@ -93,10 +89,7 @@ const getTicketById = asyncHandler(async (req, res) => {
     query.tenantOwner = req.user.tenantOwner;
   }
 
-  const ticket = await Ticket.findOne(query)
-    .populate('assignedTo', 'fullName email')
-    .populate('statusHistory.updatedBy', 'fullName email')
-    .populate('notes.addedBy', 'fullName email');
+  const ticket = await Ticket.findOne(query);
 
   if (ticket) {
     res.status(200).json(ticket);
@@ -110,7 +103,7 @@ const getTicketById = asyncHandler(async (req, res) => {
 // @route   PUT /api/tickets/:id
 // @access  Admin
 const updateTicket = asyncHandler(async (req, res) => {
-  const { status, assignedTo, notes, ...otherUpdates } = req.body;
+  const { status, notes, ...otherUpdates } = req.body;
 
   const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
@@ -121,7 +114,7 @@ const updateTicket = asyncHandler(async (req, res) => {
 
   // Update status and add to history
   if (status && status !== ticket.status) {
-    ticket.statusHistory.push({ status, updatedBy: req.user.id });
+    ticket.statusHistory.push({ status });
     ticket.status = status;
 
     // Send SMS notification if status is "Fixed"
@@ -129,16 +122,11 @@ const updateTicket = asyncHandler(async (req, res) => {
       const smsMessage = `Dear ${ticket.clientName}, your ticket ${ticket.ticketRef} has been marked as FIXED. Thank you for your patience.`;
       try {
         await sendSms(ticket.clientPhone, smsMessage);
-        console.log(`SMS sent to ${ticket.clientPhone} for ticket ${ticket.ticketRef} status Fixed`);
+        console.log(`SMS sent to ${ticket.clientPhone} for ticket ${ticketRef} status Fixed`);
       } catch (smsError) {
-        console.error(`Failed to send SMS for ticket ${ticket.ticketRef} status Fixed: ${smsError.message}`);
+        console.error(`Failed to send SMS for ticket ${ticketRef} status Fixed: ${smsError.message}`);
       }
     }
-  }
-
-  // Update assignedTo
-  if (assignedTo) {
-    ticket.assignedTo = assignedTo;
   }
 
   // Apply other updates (e.g., client info, issue details)
@@ -169,7 +157,7 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
     throw new Error('Ticket not found');
   }
 
-  ticket.notes.push({ content, addedBy: req.user.id });
+  ticket.notes.push({ content });
 
   const updatedTicket = await ticket.save();
 

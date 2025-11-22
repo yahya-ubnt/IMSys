@@ -43,11 +43,6 @@ const ticketSchema = mongoose.Schema(
       enum: ["Low", "Medium", "High", "Urgent"],
       default: "Medium",
     },
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: false,
-    },
     tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -57,14 +52,12 @@ const ticketSchema = mongoose.Schema(
       {
         status: { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
-        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
       },
     ],
     notes: [
       {
         content: { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
-        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
       },
     ],
   },
