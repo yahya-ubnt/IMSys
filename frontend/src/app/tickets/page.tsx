@@ -17,6 +17,7 @@ import { Ticket } from "@/types/ticket";
 import { getTickets, getTicketStats, getMonthlyTicketTotals, updateTicket, deleteTicket, getTicketById } from "@/lib/ticketService";
 import { getTicketColumns } from "./components/ticket-columns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, getFilteredRowModel } from "@tanstack/react-table";
 
 export default function TicketsPage() {
   const { toast } = useToast()
@@ -92,6 +93,15 @@ export default function TicketsPage() {
   const columns = getTicketColumns({ onUpdateStatus: handleUpdateStatus, onDeleteTicket: (id) => setDeleteCandidateId(id) })
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
+  const table = useReactTable({
+    data: tickets,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
+
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white"></div>
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>
 
@@ -146,7 +156,7 @@ export default function TicketsPage() {
               </CardContent>
               <div className="p-4 border-t border-zinc-800">
                 <h3 className="text-sm font-semibold text-cyan-400 mb-2">All Tickets</h3>
-                <DataTable columns={columns} data={tickets} filterColumn="clientName" />
+                <DataTable table={table} columns={columns} />
               </div>
             </Card>
           </motion.div>
