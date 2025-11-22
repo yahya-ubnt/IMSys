@@ -1,6 +1,6 @@
-import { apiClient } from "@/lib/api-client"
+import axios from "axios";
 
 export const getHotspotTransactions = async () => {
-  const response = await apiClient.get("/hotspot")
+  const response = await axios.get("/hotspot")
   return response.data
 }
