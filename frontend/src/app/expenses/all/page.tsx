@@ -189,7 +189,7 @@ export default function AllExpensesPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-zinc-300">Expense Type</Label>
-                    <Select value={typeof editingExpense?.expenseType === 'object' ? editingExpense.expenseType._id : editingExpense?.expenseType} onValueChange={(value) => {
+                    <Select value={(typeof editingExpense?.expenseType === 'object' ? editingExpense.expenseType._id : editingExpense?.expenseType) || ''} onValueChange={(value) => {
                       const selectedType = expenseTypes.find(type => type._id === value);
                       setEditingExpense({ ...editingExpense, expenseType: selectedType })
                     }}>
