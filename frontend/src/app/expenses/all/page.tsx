@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
-import { PlusCircle, DollarSign } from "lucide-react"
+import { PlusCircle, DollarSign, Calendar, CalendarDays, CalendarClock, CalendarCheck2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +34,7 @@ export default function AllExpensesPage() {
   // Data states
   const [data, setData] = useState<Expense[]>([])
   const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([])
+  const [stats, setStats] = useState({ today: 0, week: 0, month: 0, year: 0 })
   
   // UI states
   const [isLoading, setIsLoading] = useState(true)
@@ -45,14 +46,16 @@ export default function AllExpensesPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [expensesRes, typesRes] = await Promise.all([
+      const [expensesRes, typesRes, statsRes] = await Promise.all([
         fetch("/api/expenses"),
         fetch("/api/expensetypes"),
+        fetch("/api/expenses/stats"),
       ])
-      if (!expensesRes.ok || !typesRes.ok) throw new Error("Failed to fetch data")
+      if (!expensesRes.ok || !typesRes.ok || !statsRes.ok) throw new Error("Failed to fetch data")
       
       setData(await expensesRes.json())
       setExpenseTypes(await typesRes.json())
+      setStats(await statsRes.json())
     } catch {
       toast({ title: "Error", description: "Could not fetch data.", variant: "destructive" })
     } finally {
@@ -135,12 +138,6 @@ export default function AllExpensesPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES" }).format(amount);
-
-  const stats = {
-    totalAmount: data.reduce((acc, curr) => acc + curr.amount, 0),
-  }
-
   // --- RENDER ---
   return (
     <>
@@ -160,8 +157,11 @@ export default function AllExpensesPage() {
           <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 grid grid-cols-1">
-                <StatCard title="Total Amount" value={formatCurrency(stats.totalAmount)} icon={DollarSign} />
+              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard title="Today's Expenses" value={stats.today} icon={Calendar} />
+                <StatCard title="This Week's Expenses" value={stats.week} icon={CalendarDays} />
+                <StatCard title="This Month's Expenses" value={stats.month} icon={CalendarClock} />
+                <StatCard title="This Year's Expenses" value={stats.year} icon={CalendarCheck2} />
               </CardHeader>
               <CardContent className="p-4">
                 <div className="overflow-x-auto">
@@ -236,12 +236,12 @@ export default function AllExpensesPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon }: { title: string; value: number; icon: React.ElementType; }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
-    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
+    <div className="p-2 bg-zinc-700 rounded-md text-cyan-400"><Icon className="h-5 w-5" /></div>
     <div>
       <p className="text-xs text-zinc-400">{title}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
+      <p className="text-xl font-bold text-white">KES {value.toLocaleString()}</p>
     </div>
   </div>
 );

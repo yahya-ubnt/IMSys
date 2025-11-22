@@ -241,6 +241,43 @@ const getDailyExpenseTotals = asyncHandler(async (req, res) => {
   res.json(fullMonthTotals);
 });
 
+const getExpenseStats = asyncHandler(async (req, res) => {
+  let matchQuery = {};
+  if (!req.user.roles.includes('SUPER_ADMIN')) {
+    matchQuery.expenseBy = new mongoose.Types.ObjectId(req.user._id);
+  }
+
+  const today = moment();
+  const startOfToday = today.clone().startOf('day');
+  const endOfToday = today.clone().endOf('day');
+
+  const startOfWeek = today.clone().startOf('week');
+  const endOfWeek = today.clone().endOf('week');
+
+  const startOfMonth = today.clone().startOf('month');
+  const endOfMonth = today.clone().endOf('month');
+
+  const startOfYear = today.clone().startOf('year');
+  const endOfYear = today.clone().endOf('year');
+
+  const todayQuery = { ...matchQuery, expenseDate: { $gte: startOfToday.toDate(), $lte: endOfToday.toDate() } };
+  const weekQuery = { ...matchQuery, expenseDate: { $gte: startOfWeek.toDate(), $lte: endOfWeek.toDate() } };
+  const monthQuery = { ...matchQuery, expenseDate: { $gte: startOfMonth.toDate(), $lte: endOfMonth.toDate() } };
+  const yearQuery = { ...matchQuery, expenseDate: { $gte: startOfYear.toDate(), $lte: endOfYear.toDate() } };
+
+  const todayTotal = await Expense.aggregate([{ $match: todayQuery }, { $group: { _id: null, total: { $sum: '$amount' } } }]);
+  const weekTotal = await Expense.aggregate([{ $match: weekQuery }, { $group: { _id: null, total: { $sum: '$amount' } } }]);
+  const monthTotal = await Expense.aggregate([{ $match: monthQuery }, { $group: { _id: null, total: { $sum: '$amount' } } }]);
+  const yearTotal = await Expense.aggregate([{ $match: yearQuery }, { $group: { _id: null, total: { $sum: '$amount' } } }]);
+
+  res.json({
+    today: todayTotal.length > 0 ? todayTotal[0].total : 0,
+    week: weekTotal.length > 0 ? weekTotal[0].total : 0,
+    month: monthTotal.length > 0 ? monthTotal[0].total : 0,
+    year: yearTotal.length > 0 ? yearTotal[0].total : 0,
+  });
+});
+
 module.exports = {
   createExpense,
   getExpenses,
@@ -250,4 +287,5 @@ module.exports = {
   getMonthlyExpenseTotal,
   getYearlyMonthlyExpenseTotals,
   getDailyExpenseTotals,
+  getExpenseStats,
 };

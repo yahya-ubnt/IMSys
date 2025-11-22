@@ -10,9 +10,11 @@ const {
   getMonthlyExpenseTotal,
   getYearlyMonthlyExpenseTotals,
   getDailyExpenseTotals,
+  getExpenseStats,
 } = require('../controllers/expenseController');
 const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
 
+router.route('/stats').get(protect, isSuperAdminOrAdminTenant, getExpenseStats);
 router.route('/monthly-total').get(protect, isSuperAdminOrAdminTenant, getMonthlyExpenseTotal);
 router.route('/yearly-monthly-totals').get(protect, isSuperAdminOrAdminTenant, getYearlyMonthlyExpenseTotals);
 router.route('/daily-expense-totals').get(protect, isSuperAdminOrAdminTenant, getDailyExpenseTotals);
