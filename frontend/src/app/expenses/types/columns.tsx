@@ -59,7 +59,7 @@ export const columns: ColumnDef<ExpenseType>[] = [
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => table.options.meta?.handleEdit && table.options.meta.handleEdit(expenseType)}>
               Edit
