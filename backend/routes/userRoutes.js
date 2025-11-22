@@ -38,6 +38,23 @@ router.post('/login',
 // Authenticated user routes
 router.route('/profile').get(protect, getUserProfile);
 
+// ADMIN_TENANT routes for managing their own users
+router.route('/my-users').get(protect, isAdminTenant, getTenantUsers).post(
+  [protect, isAdminTenant],
+  [
+    body('fullName', 'Full name is required').not().isEmpty(),
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Password must be 6 or more characters').isLength({ min: 6 }),
+    body('phone', 'Phone number is required').not().isEmpty(),
+  ],
+  createTenantUser
+);
+router
+    .route('/my-users/:id')
+    .get(protect, isAdminTenant, getTenantUserById)
+    .put(protect, isAdminTenant, updateTenantUser)
+    .delete(protect, isAdminTenant, deleteTenantUser);
+
 // SUPER_ADMIN routes for managing all users
 router.route('/').get(protect, isSuperAdmin, getUsers).post(
   [protect, isSuperAdmin],
@@ -65,22 +82,5 @@ router
     updateUser
   )
   .delete(protect, isSuperAdmin, deleteUser);
-
-// ADMIN_TENANT routes for managing their own users
-router.route('/my-users').get(protect, isAdminTenant, getTenantUsers).post(
-  [protect, isAdminTenant],
-  [
-    body('fullName', 'Full name is required').not().isEmpty(),
-    body('email', 'Please include a valid email').isEmail(),
-    body('password', 'Password must be 6 or more characters').isLength({ min: 6 }),
-    body('phone', 'Phone number is required').not().isEmpty(),
-  ],
-  createTenantUser
-);
-router
-    .route('/my-users/:id')
-    .get(protect, isAdminTenant, getTenantUserById)
-    .put(protect, isAdminTenant, updateTenantUser)
-    .delete(protect, isAdminTenant, deleteTenantUser);
 
 module.exports = router;

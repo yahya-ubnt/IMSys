@@ -13,10 +13,9 @@ import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
-import { PlusCircle, DollarSign, CheckCircle, AlertCircle } from "lucide-react"
+import { PlusCircle, DollarSign } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,9 +23,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Expense, ExpenseType } from "@/types/expenses"
-import { User } from "@/types/users"
+import moment from "moment"
 
-const EMPTY_EXPENSE: Partial<Expense> = { status: "Due", title: "", amount: 0, description: "" };
+const EMPTY_EXPENSE: Partial<Expense> = { title: "", amount: 0, description: "", expenseDate: moment().format("YYYY-MM-DDTHH:mm") };
 
 // --- MAIN COMPONENT ---
 export default function AllExpensesPage() {
@@ -35,7 +34,6 @@ export default function AllExpensesPage() {
   // Data states
   const [data, setData] = useState<Expense[]>([])
   const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([])
-  const [users, setUsers] = useState<User[]>([])
   
   // UI states
   const [isLoading, setIsLoading] = useState(true)
@@ -47,16 +45,14 @@ export default function AllExpensesPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [expensesRes, typesRes, usersRes] = await Promise.all([
+      const [expensesRes, typesRes] = await Promise.all([
         fetch("/api/expenses"),
         fetch("/api/expensetypes"),
-        fetch("/api/users"),
       ])
-      if (!expensesRes.ok || !typesRes.ok || !usersRes.ok) throw new Error("Failed to fetch data")
+      if (!expensesRes.ok || !typesRes.ok) throw new Error("Failed to fetch data")
       
       setData(await expensesRes.json())
       setExpenseTypes(await typesRes.json())
-      setUsers(await usersRes.json())
     } catch {
       toast({ title: "Error", description: "Could not fetch data.", variant: "destructive" })
     } finally {
@@ -91,11 +87,16 @@ export default function AllExpensesPage() {
     const url = isEditing ? `/api/expenses/${editingExpense._id}` : "/api/expenses";
     const method = isEditing ? "PUT" : "POST";
 
+    const payload = {
+      ...editingExpense,
+      expenseType: typeof editingExpense.expenseType === 'object' ? editingExpense.expenseType._id : editingExpense.expenseType,
+    };
+
     try {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingExpense),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error((await response.json()).message || "Failed to save expense type");
       
@@ -138,8 +139,6 @@ export default function AllExpensesPage() {
 
   const stats = {
     totalAmount: data.reduce((acc, curr) => acc + curr.amount, 0),
-    paid: data.filter(d => d.status === 'Paid').reduce((acc, curr) => acc + curr.amount, 0),
-    due: data.filter(d => d.status === 'Due').reduce((acc, curr) => acc + curr.amount, 0),
   }
 
   // --- RENDER ---
@@ -161,10 +160,8 @@ export default function AllExpensesPage() {
           <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1">
                 <StatCard title="Total Amount" value={formatCurrency(stats.totalAmount)} icon={DollarSign} />
-                <StatCard title="Paid" value={formatCurrency(stats.paid)} icon={CheckCircle} color="text-green-400" />
-                <StatCard title="Due" value={formatCurrency(stats.due)} icon={AlertCircle} color="text-yellow-400" />
               </CardHeader>
               <CardContent className="p-4">
                 <div className="overflow-x-auto">
@@ -183,15 +180,15 @@ export default function AllExpensesPage() {
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title" className="text-zinc-300">Title</Label>
-                    <Input id="title" placeholder="e.g., Fiber Cable Purchase" value={editingExpense?.title || ''} onChange={(e) => setEditingExpense({ ...editingExpense, title: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+                    <Label htmlFor="title" className="text-zinc-300">Expense Name</Label>
+                    <Input id="title" placeholder="e.g., Router" value={editingExpense?.title || ''} onChange={(e) => setEditingExpense({ ...editingExpense, title: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="amount" className="text-zinc-300">Amount</Label>
                     <Input id="amount" type="number" placeholder="e.g., 15000" value={editingExpense?.amount || ''} onChange={(e) => setEditingExpense({ ...editingExpense, amount: Number(e.target.value) })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Type</Label>
+                    <Label className="text-zinc-300">Expense Type</Label>
                     <Select value={typeof editingExpense?.expenseType === 'object' ? editingExpense.expenseType._id : editingExpense?.expenseType} onValueChange={(value) => {
                       const selectedType = expenseTypes.find(type => type._id === value);
                       setEditingExpense({ ...editingExpense, expenseType: selectedType })
@@ -203,35 +200,13 @@ export default function AllExpensesPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-zinc-300">Expensed By</Label>
-                    <Select value={typeof editingExpense?.expenseBy === 'object' ? editingExpense.expenseBy._id : editingExpense?.expenseBy} onValueChange={(value) => {
-                      const selectedUser = users.find(user => user._id === value);
-                      setEditingExpense({ ...editingExpense, expenseBy: selectedUser })
-                    }}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue placeholder="Select a user" /></SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                        {users.map(u => <SelectItem key={u._id} value={u._id}>{u.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="expenseDate" className="text-zinc-300">Expense Date</Label>
-                    <Input id="expenseDate" type="date" value={editingExpense?.expenseDate?.toString().split('T')[0] || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expenseDate: e.target.value })} className="bg-zinc-800 border-zinc-700" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-zinc-300">Status</Label>
-                    <Select value={editingExpense?.status || 'Due'} onValueChange={(value) => setEditingExpense({ ...editingExpense, status: value as 'Due' | 'Paid' })}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                        <SelectItem value="Due">Due</SelectItem>
-                        <SelectItem value="Paid">Paid</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input id="expenseDate" type="datetime-local" value={editingExpense?.expenseDate?.toString().slice(0, 16) || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expenseDate: e.target.value })} className="bg-zinc-800 border-zinc-700" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description" className="text-zinc-300">Description</Label>
-                  <Textarea id="description" placeholder="e.g., Purchase of 500m of outdoor fiber optic cable." value={editingExpense?.description || ''} onChange={(e) => setEditingExpense({ ...editingExpense, description: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
+                  <Textarea id="description" placeholder="" value={editingExpense?.description || ''} onChange={(e) => setEditingExpense({ ...editingExpense, description: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">

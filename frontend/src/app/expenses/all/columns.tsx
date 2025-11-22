@@ -31,7 +31,7 @@ export const columns: ColumnDef<Expense>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Title
+          Expense Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       )
@@ -59,27 +59,10 @@ export const columns: ColumnDef<Expense>[] = [
     },
   },
   {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string
-      const variant = status === "Paid" ? "secondary" : "outline"
-      return <Badge variant={variant}>{status}</Badge>
-    },
-  },
-  {
     accessorKey: "expenseDate",
     header: "Expense Date",
     cell: ({ row }) => {
-      return new Date(row.getValue("expenseDate")).toLocaleDateString()
-    },
-  },
-  {
-    accessorKey: "expenseBy",
-    header: "Expense By",
-    cell: ({ row }) => {
-      const expenseBy = row.original.expenseBy
-      return <div>{expenseBy?.name || "N/A"}</div>
+      return new Date(row.getValue("expenseDate")).toLocaleString()
     },
   },
   {

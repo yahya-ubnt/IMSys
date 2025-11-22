@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ExpenseType } from "@/types/expenses"
-import { Badge } from "@/components/ui/badge"
 
 export const columns: ColumnDef<ExpenseType>[] = [
   {
@@ -32,23 +31,6 @@ export const columns: ColumnDef<ExpenseType>[] = [
   {
     accessorKey: "description",
     header: "Description",
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string
-      const variant = status === "Active" ? "default" : "destructive"
-      return <Badge variant={variant}>{status}</Badge>
-    },
-  },
-  {
-    accessorKey: "addedBy",
-    header: "Added By",
-    cell: ({ row }) => {
-      const addedBy = row.original.addedBy
-      return <div>{addedBy?.name || "N/A"}</div>
-    },
   },
   {
     accessorKey: "createdAt",

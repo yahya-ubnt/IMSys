@@ -15,7 +15,6 @@ router.route('/').post(
   [
     body('name', 'Name is required').not().isEmpty(),
     body('description', 'Description must be a string').optional().isString(),
-    body('status', 'Invalid status').optional().isIn(['Active', 'Inactive']),
   ],
   createExpenseType
 ).get(protect, isSuperAdminOrAdminTenant, getExpenseTypes);

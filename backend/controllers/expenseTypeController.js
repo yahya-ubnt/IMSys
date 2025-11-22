@@ -66,7 +66,7 @@ const getExpenseTypeById = asyncHandler(async (req, res) => {
 // @route   PUT /api/expensetypes/:id
 // @access  Private
 const updateExpenseType = asyncHandler(async (req, res) => {
-  const { name, description, status } = req.body;
+  const { name, description } = req.body;
 
   let expenseType = await ExpenseType.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
 
@@ -77,7 +77,6 @@ const updateExpenseType = asyncHandler(async (req, res) => {
 
   expenseType.name = name || expenseType.name;
   expenseType.description = description ? sanitizeString(description) : expenseType.description;
-  expenseType.status = status || expenseType.status;
 
   const updatedExpenseType = await expenseType.save();
 

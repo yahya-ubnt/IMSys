@@ -10,12 +10,6 @@ const expenseTypeSchema = mongoose.Schema(
     description: {
       type: String,
     },
-    status: {
-      type: String,
-      required: true,
-      enum: ['Active', 'Inactive'],
-      default: 'Active',
-    },
     tenantOwner: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

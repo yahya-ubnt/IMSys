@@ -23,7 +23,6 @@ router.route('/').post(
     body('amount', 'Amount must be a number').isNumeric(),
     body('expenseType', 'Expense Type ID is required and must be a valid Mongo ID').isMongoId(),
     body('expenseDate', 'Expense Date is required and must be a valid date').isISO8601().toDate(),
-    body('status', 'Invalid status').optional().isIn(['Due', 'Paid']),
   ],
   createExpense
 ).get(protect, isSuperAdminOrAdminTenant, getExpenses);

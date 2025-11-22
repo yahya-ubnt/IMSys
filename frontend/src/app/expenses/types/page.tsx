@@ -16,15 +16,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
-import { PlusCircle, List, CheckCircle, XCircle } from "lucide-react"
+import { PlusCircle, List } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseType } from "@/types/expenses"
 
-const EMPTY_EXPENSE_TYPE: Partial<ExpenseType> = { name: "", description: "", status: "Active" };
+const EMPTY_EXPENSE_TYPE: Partial<ExpenseType> = { name: "", description: "" };
 
 // --- MAIN COMPONENT ---
 export default function ExpenseTypesPage() {
@@ -137,8 +136,6 @@ export default function ExpenseTypesPage() {
 
   const stats = {
     total: data.length,
-    active: data.filter(d => d.status === 'Active').length,
-    inactive: data.length - data.filter(d => d.status === 'Active').length,
   }
 
   // --- RENDER ---
@@ -159,10 +156,8 @@ export default function ExpenseTypesPage() {
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1">
               <StatCard title="Total Types" value={stats.total} icon={List} />
-              <StatCard title="Active" value={stats.active} icon={CheckCircle} color="text-green-400" />
-              <StatCard title="Inactive" value={stats.inactive} icon={XCircle} color="text-yellow-400" />
             </CardHeader>
             <CardContent className="p-4">
               <div className="overflow-x-auto">
@@ -179,20 +174,10 @@ export default function ExpenseTypesPage() {
               <DialogDescription className="text-zinc-400">Create or update a category for your expenses.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-zinc-300">Name</Label>
                   <Input id="name" placeholder="e.g., Network Equipment" value={editingExpenseType?.name || ''} onChange={(e) => setEditingExpenseType({ ...editingExpenseType, name: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-zinc-300">Status</Label>
-                  <Select value={editingExpenseType?.status || 'Active'} onValueChange={(value) => setEditingExpenseType({ ...editingExpenseType, status: value as 'Active' | 'Inactive' })}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
               <div className="space-y-2">

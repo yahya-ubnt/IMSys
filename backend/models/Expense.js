@@ -15,7 +15,7 @@ const expenseSchema = mongoose.Schema(
       required: true,
       ref: 'ExpenseType',
     },
-    tenantOwner: {
+    expenseBy: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       ref: 'User',
@@ -26,12 +26,6 @@ const expenseSchema = mongoose.Schema(
     expenseDate: {
       type: Date,
       required: true,
-    },
-    status: {
-      type: String,
-      required: true,
-      enum: ['Due', 'Paid'],
-      default: 'Due',
     },
   },
   {
