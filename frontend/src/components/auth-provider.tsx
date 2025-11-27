@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[] }) => void
-  logout: () => void
+  logout: () => Promise<void>
   isLoading: boolean
   isLoggingOut: boolean
 }
@@ -27,24 +27,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
-    const checkAuth = () => {
-      if (typeof window !== "undefined") {
-        const isLoggedIn = localStorage.getItem("isLoggedIn")
-        const userData = localStorage.getItem("user")
-
-        if (isLoggedIn === "true" && userData) {
-          try {
-            const parsedUser: User = JSON.parse(userData)
-            setUser(parsedUser)
-          } catch (error) {
-            console.error("Error parsing user data:", error)
-            localStorage.removeItem("isLoggedIn")
-            localStorage.removeItem("user")
-          }
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/users/profile');
+        if (response.ok) {
+          const data = await response.json();
+          const user: User = {
+            name: data.fullName,
+            email: data.email,
+            roles: data.roles,
+            loginMethod: 'email', // Assuming email login
+          };
+          setUser(user);
+        } else {
+          setUser(null);
         }
+      } catch (error) {
+        setUser(null);
+        console.error('Error checking auth status:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false)
-    }
+    };
 
     checkAuth()
   }, [])
@@ -55,15 +59,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const user: User = { ...rest, name: fullName, roles: userData.roles, loginMethod: 'email' }
     setIsLoggingOut(false)
     setUser(user)
-    localStorage.setItem("isLoggedIn", "true")
-    localStorage.setItem("user", JSON.stringify(user))
   }
 
-  const logout = () => {
-    setIsLoggingOut(true); // Set logging out state
-    setUser(null)
-    localStorage.removeItem("isLoggedIn")
-    localStorage.removeItem("user")
+  const logout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/users/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setUser(null);
+      setIsLoggingOut(false);
+    }
   }
 
   return <AuthContext.Provider value={{ user, login, logout, isLoading, isLoggingOut }}>{children}</AuthContext.Provider>

@@ -24,22 +24,19 @@ function LoginPageContent() {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { login } = useAuth()
+  const { login, user } = useAuth()
 
   // Ensure component is mounted before accessing theme
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Check if user is already logged in
+  // Redirect if user is already logged in
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isLoggedIn = localStorage.getItem("isLoggedIn")
-      if (isLoggedIn === "true") {
-        router.push("/")
-      }
+    if (user) {
+      router.push("/")
     }
-  }, [router])
+  }, [user, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,7 +60,6 @@ function LoginPageContent() {
           fullName: data.fullName,
           roles: data.roles,
           loginMethod: "email",
-          token: data.token,
         });
         router.push("/");
       } else {

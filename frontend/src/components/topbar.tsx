@@ -22,9 +22,9 @@ export function Topbar() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout()
     router.push("/login")
-    logout()
   }
 
   const toggleTheme = () => {

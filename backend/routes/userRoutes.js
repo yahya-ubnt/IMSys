@@ -4,6 +4,7 @@ const { body } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const {
   loginUser,
+  logoutUser,
   getUserProfile,
   getUsers,
   getUserById,
@@ -34,6 +35,7 @@ router.post('/login',
   ],
   loginUser
 );
+router.post('/logout', logoutUser);
 
 // Authenticated user routes
 router.route('/profile').get(protect, getUserProfile);
