@@ -1,6 +1,17 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+} from "@tanstack/react-table";
 import { useAuth } from '@/components/auth-provider';
 import { Topbar } from '@/components/topbar';
 import { Button } from '@/components/ui/button';
@@ -27,19 +38,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { getColumns } from './columns';
 import { DataTable } from '@/components/data-table';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // --- Interface Definitions ---
 interface Tenant {
   _id: string;
-  fullName: string;
-  email: string;
-  phone: string;
+  name: string;
+  owner: {
+    fullName: string;
+    email: string;
+  };
   status: 'Active' | 'Suspended';
   createdAt: string;
 }
@@ -58,16 +72,23 @@ export default function TenantManagementPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isSuspendAlertOpen, setIsSuspendAlertOpen] = useState(false);
 
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [newTenant, setNewTenant] = useState({ fullName: '', email: '', phone: '', password: '' });
-  const [editTenant, setEditTenant] = useState({ fullName: '', email: '', phone: '' });
+  const [newTenant, setNewTenant] = useState({ fullName: '', tenantName: '', email: '', phone: '', password: '' });
+  const [editTenant, setEditTenant] = useState({ name: '' });
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -105,16 +126,19 @@ export default function TenantManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTenant),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to create tenant');
+      }
       setIsCreateModalOpen(false);
-      setNewTenant({ fullName: '', email: '', phone: '', password: '' });
+      setNewTenant({ fullName: '', tenantName: '', email: '', phone: '', password: '' });
       fetchData(); // Refetch all data
     } catch (err: unknown) { setError(err instanceof Error ? err.message : 'An unknown error occurred'); }
   };
 
   const handleEditClick = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setEditTenant({ fullName: tenant.fullName, email: tenant.email, phone: tenant.phone });
+    setEditTenant({ name: tenant.name });
     setIsEditModalOpen(true);
   };
 
@@ -167,11 +191,22 @@ export default function TenantManagementPage() {
 
   const columns = useMemo(() => getColumns(handleEditClick, handleSuspendClick, handleDeleteClick), []);
 
-  const filteredTenants = useMemo(() =>
-    tenants.filter(tenant =>
-      tenant.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tenant.email.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [tenants, searchTerm]);
+  const table = useReactTable({
+    data: tenants,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
+  });
 
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
@@ -192,10 +227,11 @@ export default function TenantManagementPage() {
             <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700 text-white">
               <DialogHeader><DialogTitle className="text-cyan-400">Create New Tenant</DialogTitle><DialogDescription className="text-zinc-400">Fill in the details below to create a new tenant account.</DialogDescription></DialogHeader>
               <form onSubmit={handleCreateTenant}><div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="fullName" className="text-right text-zinc-400">Full Name</Label><Input id="fullName" value={newTenant.fullName} onChange={(e) => setNewTenant({ ...newTenant, fullName: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
-                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="email" className="text-right text-zinc-400">Email</Label><Input id="email" type="email" value={newTenant.email} onChange={(e) => setNewTenant({ ...newTenant, email: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
-                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="phone" className="text-right text-zinc-400">Phone</Label><Input id="phone" value={newTenant.phone} onChange={(e) => setNewTenant({ ...newTenant, phone: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
-                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="password" className="text-right text-zinc-400">Password</Label><Input id="password" type="password" value={newTenant.password} onChange={(e) => setNewTenant({ ...newTenant, password: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="tenantName" className="text-right text-zinc-400">Tenant Name</Label><Input id="tenantName" value={newTenant.tenantName} onChange={(e) => setNewTenant({ ...newTenant, tenantName: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="fullName" className="text-right text-zinc-400">Owner Name</Label><Input id="fullName" value={newTenant.fullName} onChange={(e) => setNewTenant({ ...newTenant, fullName: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="email" className="text-right text-zinc-400">Owner Email</Label><Input id="email" type="email" value={newTenant.email} onChange={(e) => setNewTenant({ ...newTenant, email: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="phone" className="text-right text-zinc-400">Owner Phone</Label><Input id="phone" value={newTenant.phone} onChange={(e) => setNewTenant({ ...newTenant, phone: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                  <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="password" className="text-right text-zinc-400">Owner Password</Label><Input id="password" type="password" value={newTenant.password} onChange={(e) => setNewTenant({ ...newTenant, password: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
               </div><DialogFooter><Button type="submit" className="bg-cyan-500 hover:bg-cyan-600 text-white">Create Tenant</Button></DialogFooter></form>
             </DialogContent>
           </Dialog>
@@ -218,42 +254,43 @@ export default function TenantManagementPage() {
         <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 border-b border-zinc-800">
-                <div className="relative w-full sm:max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                  <Input
-                    placeholder="Search by name or email..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-10 h-9 bg-zinc-800 border-zinc-700"
-                  />
-                </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={(table.getColumn("fullName")?.getFilterValue() as string) ?? ""}
+                  onChange={(event) => table.getColumn("fullName")?.setFilterValue(event.target.value)}
+                  className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+                />
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-              <DataTable columns={columns} data={filteredTenants} />
+              <DataTable columns={columns} table={table} />
             </CardContent>
+            <CardFooter className="p-2 border-t border-zinc-800">
+              <DataTablePagination table={table} />
+            </CardFooter>
           </Card>
         </motion.div>
 
         {/* Edit Tenant Modal */}
         {selectedTenant && <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700 text-white">
-            <DialogHeader><DialogTitle className="text-cyan-400">Edit Tenant</DialogTitle><DialogDescription className="text-zinc-400">Update the details for {selectedTenant.fullName}.</DialogDescription></DialogHeader>
+            <DialogHeader><DialogTitle className="text-cyan-400">Edit Tenant</DialogTitle><DialogDescription className="text-zinc-400">Update the details for {selectedTenant.name}.</DialogDescription></DialogHeader>
             <form onSubmit={handleUpdateTenant}><div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-fullName" className="text-right text-zinc-400">Full Name</Label><Input id="edit-fullName" value={editTenant.fullName} onChange={(e) => setEditTenant({ ...editTenant, fullName: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
-                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-email" className="text-right text-zinc-400">Email</Label><Input id="edit-email" type="email" value={editTenant.email} onChange={(e) => setEditTenant({ ...editTenant, email: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
-                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-phone" className="text-right text-zinc-400">Phone</Label><Input id="edit-phone" value={editTenant.phone} onChange={(e) => setEditTenant({ ...editTenant, phone: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right text-zinc-400">Tenant Name</Label><Input id="edit-name" value={editTenant.name} onChange={(e) => setEditTenant({ ...editTenant, name: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
             </div><DialogFooter><Button type="submit" className="bg-cyan-500 hover:bg-cyan-600 text-white">Save Changes</Button></DialogFooter></form>
           </DialogContent>
         </Dialog>}
 
         {/* Suspend/Activate Alert */}
         {selectedTenant && <AlertDialog open={isSuspendAlertOpen} onOpenChange={setIsSuspendAlertOpen}>
-            <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white"><AlertDialogHeader><AlertDialogTitle className="text-amber-400">Confirm Status Change</AlertDialogTitle><AlertDialogDescription className="text-zinc-400">Are you sure you want to {selectedTenant.status === 'Active' ? 'suspend' : 'activate'} {selectedTenant.fullName}?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel><AlertDialogAction onClick={handleToggleSuspend} className={selectedTenant.status === 'Active' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'}>{selectedTenant.status === 'Active' ? 'Suspend' : 'Activate'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+            <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white"><AlertDialogHeader><AlertDialogTitle className="text-amber-400">Confirm Status Change</AlertDialogTitle><AlertDialogDescription className="text-zinc-400">Are you sure you want to {selectedTenant.status === 'Active' ? 'suspend' : 'activate'} {selectedTenant.name}?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel><AlertDialogAction onClick={handleToggleSuspend} className={selectedTenant.status === 'Active' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'}>{selectedTenant.status === 'Active' ? 'Suspend' : 'Activate'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
         </AlertDialog>}
 
         {/* Delete Alert */}
         {selectedTenant && <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-            <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white"><AlertDialogHeader><AlertDialogTitle className="text-red-500">Confirm Deletion</AlertDialogTitle><AlertDialogDescription className="text-zinc-400">Are you sure you want to delete {selectedTenant.fullName}? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteTenant} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+            <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white"><AlertDialogHeader><AlertDialogTitle className="text-red-500">Confirm Deletion</AlertDialogTitle><AlertDialogDescription className="text-zinc-400">Are you sure you want to delete {selectedTenant.name}? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteTenant} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
         </AlertDialog>}
       </div>
     </div>
