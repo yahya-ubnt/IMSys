@@ -4,12 +4,12 @@ const hotspotUserSchema = new mongoose.Schema({
   officialName: { type: String, required: true },
   email: { type: String },
   location: { type: String },
-  hotspotName: { type: String, required: true, unique: true },
+  hotspotName: { type: String, required: true },
   hotspotPassword: { type: String, required: true },
   package: { type: mongoose.Schema.Types.ObjectId, ref: 'HotspotPlan', required: true },
   server: { type: String, required: true },
   profile: { type: String, required: true },
-  referenceNumber: { type: String, required: true, unique: true },
+  referenceNumber: { type: String, required: true },
   billAmount: { type: Number, required: true },
   installationFee: { type: Number, default: 0 },
   billingCycleValue: { type: Number, required: true },
@@ -24,6 +24,8 @@ const hotspotUserSchema = new mongoose.Schema({
 });
 
 hotspotUserSchema.index({ tenant: 1 });
+hotspotUserSchema.index({ tenant: 1, hotspotName: 1 }, { unique: true });
+hotspotUserSchema.index({ tenant: 1, referenceNumber: 1 }, { unique: true });
 
 const HotspotUser = mongoose.model('HotspotUser', hotspotUserSchema);
 

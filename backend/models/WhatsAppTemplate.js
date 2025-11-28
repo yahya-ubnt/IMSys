@@ -10,13 +10,11 @@ const whatsAppTemplateSchema = new mongoose.Schema({
     type: String,
     required: [true, 'A friendly template name is required.'],
     trim: true,
-    unique: true,
   },
   providerTemplateId: {
     type: String,
     required: [true, 'The official Provider Template ID (e.g., Twilio Content SID) is required.'],
     trim: true,
-    unique: true,
   },
   body: {
     type: String,
@@ -33,6 +31,8 @@ const whatsAppTemplateSchema = new mongoose.Schema({
   });
   
   whatsAppTemplateSchema.index({ tenant: 1 });
+  whatsAppTemplateSchema.index({ tenant: 1, templateName: 1 }, { unique: true });
+  whatsAppTemplateSchema.index({ tenant: 1, providerTemplateId: 1 }, { unique: true });
   
   const WhatsAppTemplate = mongoose.model('WhatsAppTemplate', whatsAppTemplateSchema);
   

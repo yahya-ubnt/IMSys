@@ -30,7 +30,6 @@ const MikrotikUserSchema = mongoose.Schema(
     username: {
       type: String,
       required: true,
-      unique: true, // The username for the Mikrotik service should be unique
     },
     pppoePassword: {
       type: String,
@@ -68,7 +67,6 @@ const MikrotikUserSchema = mongoose.Schema(
     mPesaRefNo: {
       type: String,
       required: true,
-      unique: true, // This must be unique for payment reconciliation
     },
     installationFee: {
       type: Number,
@@ -116,5 +114,7 @@ const MikrotikUserSchema = mongoose.Schema(
 );
 
 MikrotikUserSchema.index({ tenant: 1 });
+MikrotikUserSchema.index({ tenant: 1, username: 1 }, { unique: true });
+MikrotikUserSchema.index({ tenant: 1, mPesaRefNo: 1 }, { unique: true });
 
 module.exports = mongoose.model('MikrotikUser', MikrotikUserSchema);

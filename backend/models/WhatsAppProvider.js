@@ -43,7 +43,6 @@ const whatsAppProviderSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Provider name is required.'],
     trim: true,
-    unique: true,
   },
   providerType: {
     type: String,
@@ -79,6 +78,7 @@ whatsAppProviderSchema.pre('save', async function (next) {
   });
   
   whatsAppProviderSchema.index({ tenant: 1 });
+  whatsAppProviderSchema.index({ tenant: 1, name: 1 }, { unique: true });
   
   const WhatsAppProvider = mongoose.model('WhatsAppProvider', whatsAppProviderSchema);
   

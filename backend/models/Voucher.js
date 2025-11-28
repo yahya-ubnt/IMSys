@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const voucherSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
+  username: { type: String, required: true },
   password: { type: String },
   profile: { type: String, required: true },
   price: { type: Number, required: true },
@@ -24,6 +24,7 @@ const voucherSchema = new mongoose.Schema({
 });
 
 voucherSchema.index({ tenant: 1 });
+voucherSchema.index({ tenant: 1, username: 1 }, { unique: true });
 
 const Voucher = mongoose.model('Voucher', voucherSchema);
 

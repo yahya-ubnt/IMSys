@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const HotspotSessionSchema = new mongoose.Schema(
   {
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+    },
     macAddress: {
       type: String,
       required: true,
-      unique: true,
     },
     planId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -29,5 +33,7 @@ const HotspotSessionSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+HotspotSessionSchema.index({ tenant: 1, macAddress: 1 }, { unique: true });
 
 module.exports = mongoose.model('HotspotSession', HotspotSessionSchema);

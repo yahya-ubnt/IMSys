@@ -8,7 +8,7 @@ const leadSchema = new mongoose.Schema(
       ref: 'Tenant',
     },
     name: { type: String },
-    phoneNumber: { type: String, required: true, unique: true },
+    phoneNumber: { type: String, required: true },
     leadSource: {
       type: String,
       enum: [
@@ -68,6 +68,7 @@ const leadSchema = new mongoose.Schema(
   );
   
   leadSchema.index({ tenant: 1 });
+  leadSchema.index({ tenant: 1, phoneNumber: 1 }, { unique: true });
   
   const Lead = mongoose.model('Lead', leadSchema);
   

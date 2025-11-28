@@ -20,7 +20,6 @@ const deviceSchema = new mongoose.Schema(
     macAddress: {
       type: String,
       required: [true, 'Please provide a MAC address'],
-      unique: true,
     },
     deviceType: {
       type: String,
@@ -83,6 +82,7 @@ deviceSchema.pre('save', function (next) {
 });
 
 deviceSchema.index({ tenant: 1 });
+deviceSchema.index({ tenant: 1, macAddress: 1 }, { unique: true });
 
 const Device = mongoose.model('Device', deviceSchema);
 

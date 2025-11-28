@@ -15,7 +15,6 @@ const MikrotikRouterSchema = mongoose.Schema(
     ipAddress: {
       type: String,
       required: [true, 'Please add an IP address'],
-      unique: true,
       match: [/^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/, 'Please use a valid IP address'],
     },
     apiUsername: {
@@ -49,5 +48,6 @@ const MikrotikRouterSchema = mongoose.Schema(
 );
 
 MikrotikRouterSchema.index({ tenant: 1 });
+MikrotikRouterSchema.index({ tenant: 1, ipAddress: 1 }, { unique: true });
 
 module.exports = mongoose.model('MikrotikRouter', MikrotikRouterSchema);

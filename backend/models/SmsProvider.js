@@ -43,7 +43,6 @@ const smsProviderSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Provider name is required.'],
     trim: true,
-    unique: true,
   },
   providerType: {
     type: String,
@@ -80,6 +79,7 @@ smsProviderSchema.pre('save', async function (next) {
   });
   
   smsProviderSchema.index({ tenant: 1 });
+  smsProviderSchema.index({ tenant: 1, name: 1 }, { unique: true });
   
   const SmsProvider = mongoose.model('SmsProvider', smsProviderSchema);
   

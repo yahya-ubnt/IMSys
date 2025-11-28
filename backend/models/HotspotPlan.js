@@ -5,7 +5,6 @@ const hotspotPlanSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    unique: true
   },
   price: {
     type: Number,
@@ -67,6 +66,7 @@ const hotspotPlanSchema = new mongoose.Schema({
 });
 
 hotspotPlanSchema.index({ tenant: 1 });
+hotspotPlanSchema.index({ tenant: 1, name: 1 }, { unique: true });
 
 const HotspotPlan = mongoose.model('HotspotPlan', hotspotPlanSchema);
 

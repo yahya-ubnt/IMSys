@@ -5,7 +5,6 @@ const expenseTypeSchema = mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true,
     },
     description: {
       type: String,
@@ -22,6 +21,7 @@ const expenseTypeSchema = mongoose.Schema(
 );
 
 expenseTypeSchema.index({ tenant: 1 });
+expenseTypeSchema.index({ tenant: 1, name: 1 }, { unique: true });
 
 const ExpenseType = mongoose.model('ExpenseType', expenseTypeSchema);
 module.exports = ExpenseType;

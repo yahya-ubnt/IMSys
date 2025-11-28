@@ -11,7 +11,6 @@ const SmsTemplateSchema = mongoose.Schema(
       type: String,
       required: [true, 'Please add a template name'],
       trim: true,
-      unique: true
     },
     messageBody: {
       type: String,
@@ -24,5 +23,6 @@ const SmsTemplateSchema = mongoose.Schema(
 );
 
 SmsTemplateSchema.index({ tenant: 1 });
+SmsTemplateSchema.index({ tenant: 1, name: 1 }, { unique: true });
 
 module.exports = mongoose.model('SmsTemplate', SmsTemplateSchema);
