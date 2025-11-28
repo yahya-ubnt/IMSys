@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { composeAndSendWhatsApp } = require('../controllers/whatsappController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-// @route   POST /api/whatsapp/compose
-router.post('/compose', protect, isSuperAdminOrAdminTenant, composeAndSendWhatsApp);
+router.post('/compose', protect, isSuperAdminOrAdmin, composeAndSendWhatsApp);
 
-// Future route for logs
-// router.get('/logs', protect, isSuperAdminOrAdminTenant, getWhatsAppLogs);
+// router.get('/logs', protect, isSuperAdminOrAdmin, getWhatsAppLogs);
 
 module.exports = router;

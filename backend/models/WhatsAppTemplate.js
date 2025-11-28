@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const whatsAppTemplateSchema = new mongoose.Schema({
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'User',
+    ref: 'Tenant',
   },
   templateName: {
     type: String,
@@ -27,11 +27,14 @@ const whatsAppTemplateSchema = new mongoose.Schema({
   variables: [{
     type: String,
     trim: true,
-  }],
-}, {
-  timestamps: true,
-});
-
-const WhatsAppTemplate = mongoose.model('WhatsAppTemplate', whatsAppTemplateSchema);
-
-module.exports = WhatsAppTemplate;
+    }],
+  }, {
+    timestamps: true,
+  });
+  
+  whatsAppTemplateSchema.index({ tenant: 1 });
+  
+  const WhatsAppTemplate = mongoose.model('WhatsAppTemplate', whatsAppTemplateSchema);
+  
+  module.exports = WhatsAppTemplate;
+  

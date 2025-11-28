@@ -6,10 +6,7 @@ const SmsTemplate = require('../models/SmsTemplate');
 // @route   GET /api/smstemplates
 // @access  Private
 const getTemplates = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const templates = await SmsTemplate.find(query);
   res.json(templates);
@@ -19,10 +16,7 @@ const getTemplates = asyncHandler(async (req, res) => {
 // @route   GET /api/smstemplates/:id
 // @access  Private
 const getTemplateById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const template = await SmsTemplate.findOne(query);
 
@@ -45,7 +39,7 @@ const createTemplate = asyncHandler(async (req, res) => {
 
   const { name, messageBody } = req.body;
 
-  const templateExists = await SmsTemplate.findOne({ name, tenantOwner: req.user.tenantOwner });
+  const templateExists = await SmsTemplate.findOne({ name, tenant: req.user.tenant });
 
   if (templateExists) {
     res.status(400);
@@ -55,7 +49,7 @@ const createTemplate = asyncHandler(async (req, res) => {
   const template = await SmsTemplate.create({
     name,
     messageBody,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   if (template) {
@@ -72,7 +66,7 @@ const createTemplate = asyncHandler(async (req, res) => {
 const updateTemplate = asyncHandler(async (req, res) => {
   const { name, messageBody } = req.body;
 
-  const template = await SmsTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const template = await SmsTemplate.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (template) {
     template.name = name || template.name;
@@ -90,7 +84,7 @@ const updateTemplate = asyncHandler(async (req, res) => {
 // @route   DELETE /api/smstemplates/:id
 // @access  Private
 const deleteTemplate = asyncHandler(async (req, res) => {
-  const template = await SmsTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const template = await SmsTemplate.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (template) {
     await template.deleteOne();

@@ -16,14 +16,16 @@ const notificationSchema = new mongoose.Schema({
     enum: ['read', 'unread'],
     default: 'unread',
   },
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Tenant',
     required: true,
   },
 }, {
   timestamps: true,
 });
+
+notificationSchema.index({ tenant: 1 });
 
 const Notification = mongoose.model('Notification', notificationSchema);
 

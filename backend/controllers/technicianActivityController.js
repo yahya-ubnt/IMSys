@@ -51,7 +51,7 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
     configurationChanges: configurationChanges || undefined,
     unit: unit || undefined,
     building: building || undefined,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   res.status(201).json(activity);
@@ -63,10 +63,7 @@ const createTechnicianActivity = asyncHandler(async (req, res) => {
 const getTechnicianActivities = asyncHandler(async (req, res) => {
   const { technicianId, activityType, startDate, endDate, clientName, clientPhone } = req.query;
 
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (technicianId) {
     query.technician = technicianId;
@@ -102,10 +99,7 @@ const getTechnicianActivities = asyncHandler(async (req, res) => {
 // @route   GET /api/technician-activities/:id
 // @access  Private (Admin/Technician)
 const getTechnicianActivityById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const activity = await TechnicianActivity.findOne(query)
     .populate('unit', 'label')
@@ -125,7 +119,7 @@ const getTechnicianActivityById = asyncHandler(async (req, res) => {
 const updateTechnicianActivity = asyncHandler(async (req, res) => {
   const { technician, activityType, clientName, clientPhone, activityDate, description, installedEquipment, installationNotes, issueDescription, solutionProvided, partsReplaced, configurationChanges, unit, building, supportCategory } = req.body;
 
-  let activity = await TechnicianActivity.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let activity = await TechnicianActivity.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!activity) {
     res.status(404);
@@ -195,7 +189,7 @@ const updateTechnicianActivity = asyncHandler(async (req, res) => {
 // @route   DELETE /api/technician-activities/:id
 // @access  Private (Admin/Technician)
 const deleteTechnicianActivity = asyncHandler(async (req, res) => {
-  const activity = await TechnicianActivity.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const activity = await TechnicianActivity.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!activity) {
     res.status(404);

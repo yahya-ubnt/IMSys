@@ -17,7 +17,7 @@ const {
   updateTenantUser,
   deleteTenantUser,
 } = require('../controllers/userController');
-const { protect, isSuperAdmin, isAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdmin, isAdmin } = require('../middlewares/authMiddleware');
 
 // Apply rate limiting to the login route
 const loginLimiter = rateLimit({
@@ -40,9 +40,9 @@ router.post('/logout', logoutUser);
 // Authenticated user routes
 router.route('/profile').get(protect, getUserProfile);
 
-// ADMIN_TENANT routes for managing their own users
-router.route('/my-users').get(protect, isAdminTenant, getTenantUsers).post(
-  [protect, isAdminTenant],
+// ADMIN routes for managing their own users
+router.route('/my-users').get(protect, isAdmin, getTenantUsers).post(
+  [protect, isAdmin],
   [
     body('fullName', 'Full name is required').not().isEmpty(),
     body('email', 'Please include a valid email').isEmail(),
@@ -53,9 +53,9 @@ router.route('/my-users').get(protect, isAdminTenant, getTenantUsers).post(
 );
 router
     .route('/my-users/:id')
-    .get(protect, isAdminTenant, getTenantUserById)
-    .put(protect, isAdminTenant, updateTenantUser)
-    .delete(protect, isAdminTenant, deleteTenantUser);
+    .get(protect, isAdmin, getTenantUserById)
+    .put(protect, isAdmin, updateTenantUser)
+    .delete(protect, isAdmin, deleteTenantUser);
 
 // SUPER_ADMIN routes for managing all users
 router.route('/').get(protect, isSuperAdmin, getUsers).post(

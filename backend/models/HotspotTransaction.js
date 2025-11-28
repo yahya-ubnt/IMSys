@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const HotspotTransactionSchema = new mongoose.Schema(
   {
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+    },
     planId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'HotspotPlan',
@@ -29,5 +34,7 @@ const HotspotTransactionSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+HotspotTransactionSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('HotspotTransaction', HotspotTransactionSchema);

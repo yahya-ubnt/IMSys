@@ -9,13 +9,13 @@ const { decrypt } = require('../utils/crypto');
  * @param {string} options.subject - Email subject.
  * @param {string} options.text - Plain text body.
  * @param {string} options.html - HTML body.
- * @param {string} tenantOwner - The ID of the tenant to use for SMTP settings.
+ * @param {string} tenant - The ID of the tenant to use for SMTP settings.
  * @returns {Promise<object>} - Nodemailer message info.
  */
-const sendEmail = async ({ to, subject, text, html, tenantOwner }) => {
+const sendEmail = async ({ to, subject, text, html, tenant }) => {
   try {
     // Fetch the settings from the database for the specific tenant.
-    const settings = await ApplicationSettings.findOne({ tenantOwner }).select('+smtpSettings.pass');
+    const settings = await ApplicationSettings.findOne({ tenant }).select('+smtpSettings.pass');
 
     if (!settings || !settings.smtpSettings || !settings.smtpSettings.host) {
       throw new Error('SMTP settings are not configured for this tenant.');

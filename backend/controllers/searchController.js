@@ -14,13 +14,10 @@ const searchEntities = asyncHandler(async (req, res) => {
 
   const searchQuery = { $regex: query, $options: 'i' };
 
-  let userQuery = { $or: [{ username: searchQuery }, { officialName: searchQuery }] };
-  let deviceQuery = { deviceName: searchQuery };
+  const baseQuery = { tenant: req.user.tenant };
 
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    userQuery.tenantOwner = req.user.tenantOwner;
-    deviceQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const userQuery = { ...baseQuery, $or: [{ username: searchQuery }, { officialName: searchQuery }] };
+  const deviceQuery = { ...baseQuery, deviceName: searchQuery };
 
   // Perform searches in parallel
   const [users, devices] = await Promise.all([

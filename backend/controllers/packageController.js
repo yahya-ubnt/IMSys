@@ -14,7 +14,7 @@ const createPackage = asyncHandler(async (req, res) => {
   }
 
   // Check if Mikrotik Router exists and belongs to the user
-  const routerExists = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenantOwner: req.user.tenantOwner });
+  const routerExists = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenant: req.user.tenant });
   if (!routerExists) {
     res.status(404);
     throw new Error('Mikrotik Router not found');
@@ -40,7 +40,7 @@ const createPackage = asyncHandler(async (req, res) => {
     }
   }
 
-  const packageExists = await Package.findOne({ mikrotikRouter, serviceType, name, tenantOwner: req.user.tenantOwner });
+  const packageExists = await Package.findOne({ mikrotikRouter, serviceType, name, tenant: req.user.tenant });
 
   if (packageExists) {
     res.status(400);
@@ -55,7 +55,7 @@ const createPackage = asyncHandler(async (req, res) => {
     status,
     profile,
     rateLimit,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   if (newPackage) {
@@ -70,10 +70,7 @@ const createPackage = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages
 // @access  Private
 const getPackages = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const packages = await Package.find(query).populate('mikrotikRouter');
   res.status(200).json(packages);
@@ -83,10 +80,7 @@ const getPackages = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/packages/:id
 // @access  Private
 const getPackageById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const singlePackage = await Package.findOne(query).populate('mikrotikRouter');
 
@@ -104,7 +98,7 @@ const getPackageById = asyncHandler(async (req, res) => {
 const updatePackage = asyncHandler(async (req, res) => {
   const { mikrotikRouter, serviceType, name, price, status, profile, rateLimit } = req.body;
 
-  const packageToUpdate = await Package.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const packageToUpdate = await Package.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!packageToUpdate) {
     res.status(404);
@@ -113,7 +107,7 @@ const updatePackage = asyncHandler(async (req, res) => {
 
   // If router is being updated, check ownership of new router
   if (mikrotikRouter && mikrotikRouter.toString() !== packageToUpdate.mikrotikRouter.toString()) {
-    const routerExists = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenantOwner: req.user.tenantOwner });
+    const routerExists = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenant: req.user.tenant });
     if (!routerExists) {
       res.status(404);
       throw new Error('Mikrotik Router not found');
@@ -167,7 +161,7 @@ const updatePackage = asyncHandler(async (req, res) => {
 // @route   DELETE /api/mikrotik/packages/:id
 // @access  Private
 const deletePackage = asyncHandler(async (req, res) => {
-  const singlePackage = await Package.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const singlePackage = await Package.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!singlePackage) {
     res.status(404);

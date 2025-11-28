@@ -43,9 +43,9 @@ const ticketSchema = mongoose.Schema(
       enum: ["Low", "Medium", "High", "Urgent"],
       default: "Medium",
     },
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Tenant',
       required: true,
     },
     statusHistory: [
@@ -66,7 +66,7 @@ const ticketSchema = mongoose.Schema(
   }
 );
 
-
+ticketSchema.index({ tenant: 1 });
 
 const Ticket = mongoose.model('Ticket', ticketSchema);
 

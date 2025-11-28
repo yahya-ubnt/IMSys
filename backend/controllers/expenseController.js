@@ -24,6 +24,7 @@ const createExpense = asyncHandler(async (req, res) => {
     description: sanitizeString(description), // Sanitize description
     expenseDate,
     expenseBy: req.user._id,
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   res.status(201).json(expense);
@@ -33,14 +34,11 @@ const createExpense = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses
 // @access  Private
 const getExpenses = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.expenseBy = req.user._id;
-  }
+  const query = { tenant: req.user.tenant };
 
   const expenses = await Expense.find(query)
     .populate('expenseType', 'name')
-    .populate('expenseBy', 'name email');
+    .populate('expenseBy', 'fullName email'); // Keep expenseBy for auditing
   res.status(200).json(expenses);
 });
 
@@ -48,14 +46,11 @@ const getExpenses = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/:id
 // @access  Private
 const getExpenseById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.expenseBy = req.user._id;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const expense = await Expense.findOne(query)
     .populate('expenseType', 'name')
-    .populate('expenseBy', 'name email');
+    .populate('expenseBy', 'fullName email');
 
   if (!expense) {
     res.status(404);
@@ -71,7 +66,7 @@ const getExpenseById = asyncHandler(async (req, res) => {
 const updateExpense = asyncHandler(async (req, res) => {
   const { title, amount, expenseType, description, expenseDate } = req.body;
 
-  let expense = await Expense.findOne({ _id: req.params.id, expenseBy: req.user._id });
+  let expense = await Expense.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!expense) {
     res.status(404);
@@ -93,7 +88,7 @@ const updateExpense = asyncHandler(async (req, res) => {
 // @route   DELETE /api/expenses/:id
 // @access  Private
 const deleteExpense = asyncHandler(async (req, res) => {
-  const expense = await Expense.findOne({ _id: req.params.id, expenseBy: req.user._id });
+  const expense = await Expense.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!expense) {
     res.status(404);
@@ -109,10 +104,7 @@ const deleteExpense = asyncHandler(async (req, res) => {
 // @route   GET /api/expenses/monthly-total
 // @access  Private
 const getMonthlyExpenseTotal = asyncHandler(async (req, res) => {
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.expenseBy = new mongoose.Types.ObjectId(req.user._id);
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const startOfMonth = moment().startOf('month');
   const endOfMonth = moment().endOf('month');
@@ -148,10 +140,7 @@ const getYearlyMonthlyExpenseTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.expenseBy = new mongoose.Types.ObjectId(req.user._id);
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const startOfYear = moment().year(parseInt(year)).startOf('year');
   const endOfYear = moment().year(parseInt(year)).endOf('year');
@@ -201,10 +190,7 @@ const getDailyExpenseTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year and month.');
   }
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.expenseBy = new mongoose.Types.ObjectId(req.user._id);
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const startDate = moment(`${year}-${month}-01`).startOf('month');
   const endDate = moment(startDate).endOf('month');
@@ -242,10 +228,7 @@ const getDailyExpenseTotals = asyncHandler(async (req, res) => {
 });
 
 const getExpenseStats = asyncHandler(async (req, res) => {
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.expenseBy = new mongoose.Types.ObjectId(req.user._id);
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const today = moment();
   const startOfToday = today.clone().startOf('day');

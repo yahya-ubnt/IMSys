@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const TechnicianActivitySchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     technician: {
       type: String,
@@ -64,8 +64,11 @@ const TechnicianActivitySchema = mongoose.Schema(
     },
   },
   {
-    timestamps: true,
-  }
-);
-
-module.exports = mongoose.model('TechnicianActivity', TechnicianActivitySchema);
+        timestamps: true,
+      }
+    );
+    
+    TechnicianActivitySchema.index({ tenant: 1 });
+    
+    module.exports = mongoose.model('TechnicianActivity', TechnicianActivitySchema);
+    

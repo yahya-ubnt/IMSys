@@ -18,19 +18,22 @@ const whatsAppLogSchema = new mongoose.Schema({
   providerResponse: {
     type: mongoose.Schema.Types.Mixed,
   },
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Tenant',
     required: true,
   },
   // To store the actual values used to populate the template
   variablesUsed: {
     type: mongoose.Schema.Types.Mixed,
-  },
-}, {
-  timestamps: true,
-});
-
-const WhatsAppLog = mongoose.model('WhatsAppLog', whatsAppLogSchema);
-
-module.exports = WhatsAppLog;
+    },
+  }, {
+    timestamps: true,
+  });
+  
+  whatsAppLogSchema.index({ tenant: 1 });
+  
+  const WhatsAppLog = mongoose.model('WhatsAppLog', whatsAppLogSchema);
+  
+  module.exports = WhatsAppLog;
+  

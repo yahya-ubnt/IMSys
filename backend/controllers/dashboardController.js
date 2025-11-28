@@ -7,7 +7,7 @@ const MikrotikUser = require('../models/MikrotikUser');
 
 // @desc    Get collections summary (Today, Weekly, Monthly, Yearly)
 // @route   GET /api/dashboard/collections/summary
-// @access  Public
+// @access  Private
 const getCollectionsSummary = asyncHandler(async (req, res) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -36,10 +36,7 @@ const getCollectionsSummary = asyncHandler(async (req, res) => {
   endOfYear.setHours(23, 59, 59, 999);
 
   const getCollectionAmount = async (startDate, endDate) => {
-    let matchQuery = {};
-    if (!req.user.roles.includes('SUPER_ADMIN')) {
-      matchQuery.tenantOwner = req.user.tenantOwner;
-    }
+    const matchQuery = { tenant: req.user.tenant };
 
     matchQuery.transactionDate = {
       $gte: startDate,
@@ -81,10 +78,7 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
   const parsedYear = parseInt(year);
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   // Fetch monthly collections
   const monthlyCollections = await Transaction.aggregate([
@@ -154,7 +148,7 @@ const getMonthlyCollectionsAndExpenses = asyncHandler(async (req, res) => {
 
 // @desc    Get total expenses for the current month
 // @route   GET /api/dashboard/expenses/monthly-summary
-// @access  Public
+// @access  Private
 const getMonthlyExpenseSummary = asyncHandler(async (req, res) => {
   const today = new Date();
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -163,10 +157,7 @@ const getMonthlyExpenseSummary = asyncHandler(async (req, res) => {
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   endOfMonth.setHours(23, 59, 59, 999);
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   matchQuery.expenseDate = {
     $gte: startOfMonth,
@@ -190,16 +181,13 @@ const getMonthlyExpenseSummary = asyncHandler(async (req, res) => {
 
 // @desc    Get count of new subscriptions for the current month
 // @route   GET /api/dashboard/subscriptions/new
-// @access  Public
+// @access  Private
 const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
   const today = new Date();
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   query.createdAt = {
     $gte: startOfMonth,
@@ -213,12 +201,9 @@ const getNewSubscriptionsCount = asyncHandler(async (req, res) => {
 
 // @desc    Get total count of all users
 // @route   GET /api/dashboard/users/total
-// @access  Public
+// @access  Private
 const getTotalUsersCount = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const count = await MikrotikUser.countDocuments(query);
   res.json({ totalUsers: count });
@@ -226,13 +211,10 @@ const getTotalUsersCount = asyncHandler(async (req, res) => {
 
 // @desc    Get count of active users
 // @route   GET /api/dashboard/users/active
-// @access  Public
+// @access  Private
 const getActiveUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   query.expiryDate = { $gte: today };
   query.isSuspended = false;
@@ -243,13 +225,10 @@ const getActiveUsersCount = asyncHandler(async (req, res) => {
 
 // @desc    Get count of expired users
 // @route   GET /api/dashboard/users/expired
-// @access  Public
+// @access  Private
 const getExpiredUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   query.$or = [
     { expiryDate: { $lt: today } },

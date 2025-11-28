@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
-const User = require('../models/User');
+const Tenant = require('../models/Tenant');
 const ScheduledTask = require('../models/ScheduledTask');
 
 const defaultTasks = [
@@ -39,25 +39,25 @@ const backfillDefaultScheduledTasks = async () => {
   console.log('Connected to MongoDB.');
 
   try {
-    const adminTenants = await User.find({ roles: 'ADMIN_TENANT' });
-    console.log(`Found ${adminTenants.length} ADMIN_TENANT(s).`);
+    const tenants = await Tenant.find({});
+    console.log(`Found ${tenants.length} Tenant(s).`);
 
-    for (const tenant of adminTenants) {
-      console.log(`Processing tenant: ${tenant.fullName} (${tenant._id})`);
+    for (const tenant of tenants) {
+      console.log(`Processing tenant: ${tenant.name} (${tenant._id})`);
       for (const defaultTask of defaultTasks) {
         const existingTask = await ScheduledTask.findOne({
           name: defaultTask.name,
-          tenantOwner: tenant._id,
+          tenant: tenant._id,
         });
 
         if (!existingTask) {
           await ScheduledTask.create({
             ...defaultTask,
-            tenantOwner: tenant._id,
+            tenant: tenant._id,
           });
-          console.log(`  Created missing task: "${defaultTask.name}" for tenant ${tenant.fullName}`);
+          console.log(`  Created missing task: "${defaultTask.name}" for tenant ${tenant.name}`);
         } else {
-          console.log(`  Task "${defaultTask.name}" already exists for tenant ${tenant.fullName}. Skipping.`);
+          console.log(`  Task "${defaultTask.name}" already exists for tenant ${tenant.name}. Skipping.`);
         }
       }
     }

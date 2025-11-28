@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const SubscriptionSchema = new mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     mikrotikUser: {
       type: mongoose.Schema.Types.ObjectId,

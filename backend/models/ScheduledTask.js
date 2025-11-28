@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const ScheduledTaskSchema = new mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     name: {
       type: String,
@@ -45,6 +45,6 @@ const ScheduledTaskSchema = new mongoose.Schema(
   }
 );
 
-ScheduledTaskSchema.index({ name: 1, tenantOwner: 1 }, { unique: true });
+ScheduledTaskSchema.index({ name: 1, tenant: 1 }, { unique: true });
 
 module.exports = mongoose.model('ScheduledTask', ScheduledTaskSchema);

@@ -6,11 +6,11 @@ const {
   markAllAsRead,
   deleteNotification,
 } = require('../controllers/notificationController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/').get(protect, isSuperAdminOrAdminTenant, getNotifications);
-router.route('/:id/read').put(protect, isSuperAdminOrAdminTenant, markAsRead);
-router.route('/:id').delete(protect, isSuperAdminOrAdminTenant, deleteNotification);
-router.route('/read/all').put(protect, isSuperAdminOrAdminTenant, markAllAsRead);
+router.route('/').get(protect, isSuperAdminOrAdmin, getNotifications);
+router.route('/:id/read').put(protect, isSuperAdminOrAdmin, markAsRead);
+router.route('/:id').delete(protect, isSuperAdminOrAdmin, deleteNotification);
+router.route('/read/all').put(protect, isSuperAdminOrAdmin, markAllAsRead);
 
 module.exports = router;

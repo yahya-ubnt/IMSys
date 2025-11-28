@@ -15,9 +15,12 @@ import { Badge } from "@/components/ui/badge";
 // --- Interface Definition ---
 interface Tenant {
   _id: string;
-  fullName: string;
-  email: string;
-  phone: string;
+  name: string;
+  owner?: {
+    fullName: string;
+    email: string;
+    phone: string;
+  };
   status: 'Active' | 'Suspended';
   createdAt: string;
 }
@@ -28,21 +31,28 @@ export const getColumns = (
   onDelete: (tenant: Tenant) => void
 ): ColumnDef<Tenant>[] => [
   {
-    accessorKey: "fullName",
+    accessorKey: "name",
     header: ({ column }) => (
       <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
         Tenant Name
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => <div className="font-medium">{row.original.fullName}</div>,
+    cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
   },
   {
-    accessorKey: "email",
+    accessorFn: (row) => row.owner?.fullName,
+    id: "ownerName",
+    header: "Owner Name",
+  },
+  {
+    accessorFn: (row) => row.owner?.email,
+    id: "ownerEmail",
     header: "Email",
   },
   {
-    accessorKey: "phone",
+    accessorFn: (row) => row.owner?.phone,
+    id: "ownerPhone",
     header: "Phone",
   },
   {

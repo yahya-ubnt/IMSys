@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const SmsExpiryScheduleSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     name: {
       type: String,
@@ -44,5 +44,7 @@ const SmsExpiryScheduleSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+SmsExpiryScheduleSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('SmsExpirySchedule', SmsExpiryScheduleSchema);

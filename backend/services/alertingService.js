@@ -3,14 +3,14 @@ const ApplicationSettings = require('../models/ApplicationSettings'); // Import 
 const { sendEmail } = require('./emailService'); // Import sendEmail
 const io = require('../socket').getIO(); // Import the initialized socket.io instance
 
-const sendConsolidatedAlert = async (entities, status, tenantOwner, user = null, entityType = 'Device') => {
+const sendConsolidatedAlert = async (entities, status, tenant, user = null, entityType = 'Device') => {
   let message;
   if (!Array.isArray(entities) || entities.length === 0) {
     console.warn('sendConsolidatedAlert called with empty or invalid entities array.');
     return;
   }
 
-  if (!tenantOwner) {
+  if (!tenant) {
     console.error('Could not determine tenant for alert.');
     return;
   }
@@ -56,19 +56,19 @@ const sendConsolidatedAlert = async (entities, status, tenantOwner, user = null,
     const notification = new Notification({
       message,
       type: 'device_status',
-      tenantOwner: tenantOwner,
+      tenant: tenant,
     });
     await notification.save();
 
     // --- Begin Email Logic ---
     // This is a system-wide notification, send to admins
     try {
-      const settings = await ApplicationSettings.findOne({ tenantOwner: tenantOwner });
+      const settings = await ApplicationSettings.findOne({ tenant: tenant });
       if (settings && settings.adminNotificationEmails && settings.adminNotificationEmails.length > 0) {
         const subject = `System Alert: ${message}`;
         const text = message;
         settings.adminNotificationEmails.forEach(email => {
-          sendEmail({ to: email, subject, text, tenantOwner: tenantOwner }).catch(console.error);
+          sendEmail({ to: email, subject, text, tenant: tenant }).catch(console.error);
         });
       }
     } catch (emailError) {
@@ -77,8 +77,8 @@ const sendConsolidatedAlert = async (entities, status, tenantOwner, user = null,
     // --- End Email Logic ---
 
     // Emit a websocket event to the tenant's room
-    if (tenantOwner) {
-      io.to(tenantOwner.toString()).emit('new_notification', notification);
+    if (tenant) {
+      io.to(tenant.toString()).emit('new_notification', notification);
     }
   } catch (error) {
     console.error('Error saving notification:', error);

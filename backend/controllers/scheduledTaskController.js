@@ -6,10 +6,10 @@ const path = require('path');
 const eventEmitter = require('../events');
 
 // Helper to execute a script
-const executeScript = (scriptPath) => {
+const executeScript = (scriptPath, tenantId) => { // Pass tenantId to the script
   return new Promise((resolve, reject) => {
     const absoluteScriptPath = path.resolve(__dirname, '..', scriptPath);
-    const child = spawn('node', [absoluteScriptPath]);
+    const child = spawn('node', [absoluteScriptPath, tenantId]); // Pass tenantId as an argument
     
     let stdout = '';
     let stderr = '';
@@ -32,18 +32,8 @@ const executeScript = (scriptPath) => {
 // @route   GET /api/scheduled-tasks
 // @access  Private/Admin
 const getScheduledTasks = asyncHandler(async (req, res) => {
-  console.log('User in getScheduledTasks:', req.user);
-  let filter = {};
-  if (req.user.roles.includes('SUPER_ADMIN')) {
-    // Super Admin sees all tasks
-    filter = {};
-  } else {
-    // Admin Tenant sees only their own tasks
-    filter = { tenantOwner: req.user.tenantOwner };
-  }
-  console.log('Filter for tasks:', filter);
+  const filter = { tenant: req.user.tenant };
   const tasks = await ScheduledTask.find(filter).sort({ createdAt: 'desc' });
-  console.log('Tasks found:', tasks.length);
   res.status(200).json(tasks);
 });
 
@@ -64,7 +54,7 @@ const createScheduledTask = asyncHandler(async (req, res) => {
     scriptPath,
     schedule,
     isEnabled,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
   
   if (task.isEnabled) {
@@ -79,24 +69,18 @@ const createScheduledTask = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const updateScheduledTask = asyncHandler(async (req, res) => {
   const { name, description, scriptPath, schedule, isEnabled } = req.body;
-  const task = await ScheduledTask.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const task = await ScheduledTask.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
   }
 
-  // Role-based updates
-  if (req.user.roles.includes('SUPER_ADMIN')) {
-    // Super Admin can update all fields
-    task.name = name || task.name;
-    task.description = description || task.description;
-    task.scriptPath = scriptPath || task.scriptPath;
-    task.schedule = schedule || task.schedule;
-  } else {
-    // Tenant Admin can only update the schedule
-    task.schedule = schedule || task.schedule;
-  }
+  // Tenant admins can update their own tasks
+  task.name = name || task.name;
+  task.description = description || task.description;
+  task.scriptPath = scriptPath || task.scriptPath;
+  task.schedule = schedule || task.schedule;
 
   if (isEnabled !== undefined) {
     task.isEnabled = isEnabled;
@@ -113,7 +97,7 @@ const updateScheduledTask = asyncHandler(async (req, res) => {
 // @route   DELETE /api/scheduled-tasks/:id
 // @access  Private/Admin
 const deleteScheduledTask = asyncHandler(async (req, res) => {
-  const task = await ScheduledTask.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const task = await ScheduledTask.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!task) {
     res.status(404);
@@ -131,17 +115,17 @@ const deleteScheduledTask = asyncHandler(async (req, res) => {
 // @route   POST /api/scheduled-tasks/:id/run
 // @access  Private/Admin
 const runScheduledTask = asyncHandler(async (req, res) => {
-  const task = await ScheduledTask.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const task = await ScheduledTask.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
   }
 
-  console.log(`Manually running task: ${task.name}`);
+  console.log(`Manually running task: ${task.name} for tenant ${task.tenant}`);
   
   try {
-    const output = await executeScript(task.scriptPath);
+    const output = await executeScript(task.scriptPath, task.tenant.toString());
     task.lastRun = new Date();
     task.lastStatus = 'Success';
     task.logOutput = output;

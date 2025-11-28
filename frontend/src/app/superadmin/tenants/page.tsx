@@ -50,9 +50,10 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 interface Tenant {
   _id: string;
   name: string;
-  owner: {
+  owner?: {
     fullName: string;
     email: string;
+    phone: string;
   };
   status: 'Active' | 'Suspended';
   createdAt: string;
@@ -80,7 +81,7 @@ export default function TenantManagementPage() {
 
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [newTenant, setNewTenant] = useState({ fullName: '', tenantName: '', email: '', phone: '', password: '' });
-  const [editTenant, setEditTenant] = useState({ name: '' });
+  const [editTenant, setEditTenant] = useState({ name: '', fullName: '', email: '', phone: '' });
 
   // Table states
   const [sorting, setSorting] = useState<SortingState>([])
@@ -94,9 +95,9 @@ export default function TenantManagementPage() {
     setLoading(true);
     try {
       const [tenantsRes, statsRes, growthRes] = await Promise.all([
-        fetch('/api/super-admin/tenants'),
-        fetch('/api/super-admin/tenants/stats'),
-        fetch(`/api/super-admin/tenants/monthly-growth/${selectedYear}`)
+        fetch('/api/tenants'),
+        fetch('/api/tenants/stats'),
+        fetch(`/api/tenants/monthly-growth/${selectedYear}`)
       ]);
 
       if (!tenantsRes.ok) throw new Error('Failed to fetch tenants');
@@ -121,7 +122,7 @@ export default function TenantManagementPage() {
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/super-admin/tenants', {
+      const res = await fetch('/api/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTenant),
@@ -138,7 +139,12 @@ export default function TenantManagementPage() {
 
   const handleEditClick = (tenant: Tenant) => {
     setSelectedTenant(tenant);
-    setEditTenant({ name: tenant.name });
+    setEditTenant({
+      name: tenant.name,
+      fullName: tenant.owner?.fullName || '',
+      email: tenant.owner?.email || '',
+      phone: tenant.owner?.phone || '',
+    });
     setIsEditModalOpen(true);
   };
 
@@ -146,7 +152,7 @@ export default function TenantManagementPage() {
     e.preventDefault();
     if (!selectedTenant) return;
     try {
-      const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`, {
+      const res = await fetch(`/api/tenants/${selectedTenant._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editTenant),
@@ -166,7 +172,7 @@ export default function TenantManagementPage() {
     if (!selectedTenant) return;
     try {
       const newStatus = selectedTenant.status === 'Active' ? 'Suspended' : 'Active';
-      const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`,
+      const res = await fetch(`/api/tenants/${selectedTenant._id}`,
         { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
       if (!res.ok) throw new Error(await res.text());
       setIsSuspendAlertOpen(false);
@@ -182,7 +188,7 @@ export default function TenantManagementPage() {
   const handleDeleteTenant = async () => {
     if (!selectedTenant) return;
     try {
-      const res = await fetch(`/api/super-admin/tenants/${selectedTenant._id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/tenants/${selectedTenant._id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       setIsDeleteAlertOpen(false);
       fetchData(); // Refetch all data
@@ -190,6 +196,8 @@ export default function TenantManagementPage() {
   };
 
   const columns = useMemo(() => getColumns(handleEditClick, handleSuspendClick, handleDeleteClick), []);
+
+  const [globalFilter, setGlobalFilter] = useState('')
 
   const table = useReactTable({
     data: tenants,
@@ -201,10 +209,12 @@ export default function TenantManagementPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
       columnFilters,
       pagination,
+      globalFilter,
     },
   });
 
@@ -258,8 +268,8 @@ export default function TenantManagementPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input
                   placeholder="Search by name or email..."
-                  value={(table.getColumn("fullName")?.getFilterValue() as string) ?? ""}
-                  onChange={(event) => table.getColumn("fullName")?.setFilterValue(event.target.value)}
+                  value={globalFilter ?? ""}
+                  onChange={(event) => setGlobalFilter(event.target.value)}
                   className="pl-10 h-9 bg-zinc-800 border-zinc-700"
                 />
               </div>
@@ -279,6 +289,9 @@ export default function TenantManagementPage() {
             <DialogHeader><DialogTitle className="text-cyan-400">Edit Tenant</DialogTitle><DialogDescription className="text-zinc-400">Update the details for {selectedTenant.name}.</DialogDescription></DialogHeader>
             <form onSubmit={handleUpdateTenant}><div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-name" className="text-right text-zinc-400">Tenant Name</Label><Input id="edit-name" value={editTenant.name} onChange={(e) => setEditTenant({ ...editTenant, name: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-owner-name" className="text-right text-zinc-400">Owner Name</Label><Input id="edit-owner-name" value={editTenant.fullName} onChange={(e) => setEditTenant({ ...editTenant, fullName: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-owner-email" className="text-right text-zinc-400">Owner Email</Label><Input id="edit-owner-email" type="email" value={editTenant.email} onChange={(e) => setEditTenant({ ...editTenant, email: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
+                <div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="edit-owner-phone" className="text-right text-zinc-400">Owner Phone</Label><Input id="edit-owner-phone" value={editTenant.phone} onChange={(e) => setEditTenant({ ...editTenant, phone: e.target.value })} className="col-span-3 bg-zinc-800 border-zinc-600 text-white" required /></div>
             </div><DialogFooter><Button type="submit" className="bg-cyan-500 hover:bg-cyan-600 text-white">Save Changes</Button></DialogFooter></form>
           </DialogContent>
         </Dialog>}

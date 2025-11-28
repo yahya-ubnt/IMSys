@@ -34,10 +34,10 @@ const decrypt = (text) => {
 };
 
 const whatsAppProviderSchema = new mongoose.Schema({
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'User',
+    ref: 'Tenant',
   },
   name: {
     type: String,
@@ -69,15 +69,18 @@ const whatsAppProviderSchema = new mongoose.Schema({
 // Middleware to ensure only one provider is active at a time
 whatsAppProviderSchema.pre('save', async function (next) {
   if (this.isActive && this.isModified('isActive')) {
-    await this.constructor.updateMany({ _id: { $ne: this._id }, tenantOwner: this.tenantOwner, isActive: true }, { isActive: false });
+    await this.constructor.updateMany({ _id: { $ne: this._id }, tenant: this.tenant, isActive: true }, { isActive: false });
   }
-  const count = await this.constructor.countDocuments({ tenantOwner: this.tenantOwner });
+  const count = await this.constructor.countDocuments({ tenant: this.tenant });
   if (count === 0) {
       this.isActive = true;
-  }
-  next();
-});
-
-const WhatsAppProvider = mongoose.model('WhatsAppProvider', whatsAppProviderSchema);
-
-module.exports = WhatsAppProvider;
+    }
+    next();
+  });
+  
+  whatsAppProviderSchema.index({ tenant: 1 });
+  
+  const WhatsAppProvider = mongoose.model('WhatsAppProvider', whatsAppProviderSchema);
+  
+  module.exports = WhatsAppProvider;
+  

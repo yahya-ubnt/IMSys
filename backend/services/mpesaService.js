@@ -14,16 +14,16 @@ const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
 const { formatPhoneNumber } = require('../utils/formatters');
 
-const getTenantMpesaCredentials = async (tenantOwner) => {
-  const settings = await ApplicationSettings.findOne({ tenantOwner });
+const getTenantMpesaCredentials = async (tenant) => {
+  const settings = await ApplicationSettings.findOne({ tenant });
   if (!settings || !settings.mpesaPaybill || !settings.mpesaPaybill.consumerKey) {
-    throw new Error(`M-Pesa settings not configured for tenant ${tenantOwner}`);
+    throw new Error(`M-Pesa settings not configured for tenant ${tenant}`);
   }
   return settings.mpesaPaybill;
 };
 
-const getDarajaAxiosInstance = async (tenantOwner) => {
-  const credentials = await getTenantMpesaCredentials(tenantOwner);
+const getDarajaAxiosInstance = async (tenant) => {
+  const credentials = await getTenantMpesaCredentials(tenant);
   const auth = Buffer.from(`${credentials.consumerKey}:${credentials.consumerSecret}`).toString('base64');
   const url = (credentials.environment || 'sandbox') === 'production' 
     ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -45,9 +45,9 @@ const getDarajaAxiosInstance = async (tenantOwner) => {
   });
 };
 
-const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountReference, type = 'SUBSCRIPTION', planId = null) => {
-  const credentials = await getTenantMpesaCredentials(tenantOwner);
-  const darajaAxios = await getDarajaAxiosInstance(tenantOwner);
+const initiateStkPushService = async (tenant, amount, phoneNumber, accountReference, type = 'SUBSCRIPTION', planId = null) => {
+  const credentials = await getTenantMpesaCredentials(tenant);
+  const darajaAxios = await getDarajaAxiosInstance(tenant);
   
   const timestamp = moment().format('YYYYMMDDHHmmss');
   const password = Buffer.from(`${credentials.paybillNumber}${credentials.passkey}${timestamp}`).toString('base64');
@@ -73,7 +73,7 @@ const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountR
   const response = await darajaAxios.post('/mpesa/stkpush/v1/processrequest', stkPushPayload);
 
   await StkRequest.create({
-    tenantOwner,
+    tenant,
     checkoutRequestId: response.data.CheckoutRequestID,
     accountReference,
     type,
@@ -83,9 +83,9 @@ const initiateStkPushService = async (tenantOwner, amount, phoneNumber, accountR
   return response.data;
 };
 
-const registerCallbackURL = async (tenantOwner) => {
-  const credentials = await getTenantMpesaCredentials(tenantOwner);
-  const darajaAxios = await getDarajaAxiosInstance(tenantOwner);
+const registerCallbackURL = async (tenant) => {
+  const credentials = await getTenantMpesaCredentials(tenant);
+  const darajaAxios = await getDarajaAxiosInstance(tenant);
 
   const callbackUrl = credentials.callbackURL || DARAJA_CALLBACK_URL;
 
@@ -176,7 +176,7 @@ const processStkCallback = async (callbackData) => {
 
     const transAmount = metadata.Amount;
     const msisdn = metadata.PhoneNumber.toString();
-    const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenantOwner: stkRequest.tenantOwner });
+    const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenant: stkRequest.tenant });
 
     if (!user) {
       const alertMessage = `STK payment of KES ${transAmount} received for account '${stkRequest.accountReference}', but no user was found.`;
@@ -185,7 +185,7 @@ const processStkCallback = async (callbackData) => {
         transactionId: transId, 
         amount: transAmount, 
         referenceNumber: stkRequest.accountReference, 
-        tenantOwner: stkRequest.tenantOwner,
+        tenant: stkRequest.tenant,
         paymentDate: new Date() 
       });
       return;
@@ -201,7 +201,7 @@ const processStkCallback = async (callbackData) => {
       msisdn: msisdn,
       transactionDate: new Date(),
       paymentMethod: 'M-Pesa',
-      tenantOwner: user.tenantOwner,
+      tenant: user.tenant,
     });
   }
 
@@ -221,21 +221,21 @@ const processC2bCallback = async (callbackData) => {
 
   if (!settings) {
     const alertMessage = `C2B payment of KES ${TransAmount} received for paybill '${BusinessShortCode}', but no tenant is configured with this paybill.`;
-    // Since we don't know the tenant, we can't assign a tenantOwner to this alert.
+    // Since we don't know the tenant, we can't assign a tenant ID to this alert.
     // It will be a system-level alert.
     await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, paymentDate: new Date() });
     console.error(alertMessage);
     return;
   }
 
-  const tenantOwner = settings.tenantOwner;
+  const tenant = settings.tenant;
 
   // Find the user within the correct tenant
-  const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber, tenantOwner: tenantOwner });
+  const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber, tenant: tenant });
 
   if (!user) {
-    const alertMessage = `C2B payment of KES ${TransAmount} for account '${BillRefNumber}' received, but no user was found in tenant ${tenantOwner}.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenantOwner: tenantOwner, paymentDate: new Date() });
+    const alertMessage = `C2B payment of KES ${TransAmount} for account '${BillRefNumber}' received, but no user was found in tenant ${tenant}.`;
+    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenant: tenant, paymentDate: new Date() });
     console.error(alertMessage);
     return;
   }
@@ -251,7 +251,7 @@ const processC2bCallback = async (callbackData) => {
     balance: OrgAccountBalance,
     transactionDate: new Date(),
     paymentMethod: 'M-Pesa',
-    tenantOwner: user.tenantOwner,
+    tenant: user.tenant,
   });
 };
 

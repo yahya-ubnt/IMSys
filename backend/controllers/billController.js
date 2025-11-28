@@ -14,13 +14,13 @@ const createBill = asyncHandler(async (req, res) => {
     throw new Error('Please add all required fields: name, amount, dueDate, category');
   }
 
-  const tenantOwner = req.user.tenantOwner;
+  const tenant = req.user.tenant;
   const currentMonth = new Date().getMonth() + 1; // getMonth() is 0-indexed
   const currentYear = new Date().getFullYear();
 
   // Check if a bill with the same name and category already exists for the current month and user
   const existingBill = await Bill.findOne({
-    tenantOwner,
+    tenant,
     name,
     category,
     month: currentMonth,
@@ -38,7 +38,7 @@ const createBill = asyncHandler(async (req, res) => {
     dueDate,
     category,
     description: sanitizeString(description), // Sanitize description
-    tenantOwner,
+    tenant,
     month: currentMonth,
     year: currentYear,
     status: 'Not Paid', // Default status
@@ -51,10 +51,7 @@ const createBill = asyncHandler(async (req, res) => {
 // @route   GET /api/bills
 // @access  Private
 const getBills = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const queryMonth = req.query.month ? parseInt(req.query.month) : new Date().getMonth() + 1;
   const queryYear = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
@@ -71,10 +68,7 @@ const getBills = asyncHandler(async (req, res) => {
 // @route   GET /api/bills/:id
 // @access  Private
 const getBillById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const bill = await Bill.findOne(query).lean();
 
@@ -97,7 +91,7 @@ const updateBill = asyncHandler(async (req, res) => {
 
   const { name, amount, dueDate, status, paymentDate, method, transactionMessage, description } = req.body;
 
-  let bill = await Bill.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let bill = await Bill.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!bill) {
     res.status(404);
@@ -136,7 +130,7 @@ const updateBill = asyncHandler(async (req, res) => {
 // @route   DELETE /api/bills/:id
 // @access  Private
 const deleteBill = asyncHandler(async (req, res) => {
-  const bill = await Bill.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const bill = await Bill.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!bill) {
     res.status(404);

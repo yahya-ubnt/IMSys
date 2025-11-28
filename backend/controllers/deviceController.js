@@ -29,13 +29,13 @@ const createDevice = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Verify ownership of the router
-  const parentRouter = await MikrotikRouter.findOne({ _id: router, tenantOwner: req.user.tenantOwner });
+  const parentRouter = await MikrotikRouter.findOne({ _id: router, tenant: req.user.tenant });
   if (!parentRouter) {
     res.status(404);
     throw new Error('Router not found');
   }
 
-  const deviceExists = await Device.findOne({ macAddress, tenantOwner: req.user.tenantOwner });
+  const deviceExists = await Device.findOne({ macAddress, tenant: req.user.tenant });
 
   if (deviceExists) {
     res.status(400);
@@ -54,7 +54,7 @@ const createDevice = asyncHandler(async (req, res) => {
     loginPassword, // Will be encrypted by pre-save hook
     ssid: sanitizeString(ssid),
     wirelessPassword, // Will be encrypted by pre-save hook
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   const createdDevice = await device.save();
@@ -66,10 +66,7 @@ const createDevice = asyncHandler(async (req, res) => {
 // @access  Admin
 const getDevices = asyncHandler(async (req, res) => {
   const { deviceType } = req.query;
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (deviceType) {
     query.deviceType = deviceType;
@@ -85,10 +82,7 @@ const getDevices = asyncHandler(async (req, res) => {
 // @route   GET /api/devices/:id
 // @access  Admin
 const getDeviceById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const device = await Device.findOne(query).populate('router', 'name ipAddress');
 
@@ -96,10 +90,10 @@ const getDeviceById = asyncHandler(async (req, res) => {
     let responseDevice = device.toObject(); // Convert to plain object to add properties
 
     if (responseDevice.deviceType === 'Access' && responseDevice.ssid) {
-      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid, tenantOwner: device.tenantOwner });
+      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid, tenant: device.tenant });
       responseDevice.connectedStations = connectedStations;
     } else if (responseDevice.deviceType === 'Station' && responseDevice.ssid) {
-      const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid, tenantOwner: device.tenantOwner });
+      const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid, tenant: device.tenant });
       responseDevice.connectedAccessPoint = connectedAccessPoint;
     }
 
@@ -114,7 +108,7 @@ const getDeviceById = asyncHandler(async (req, res) => {
 // @route   PUT /api/devices/:id
 // @access  Admin
 const updateDevice = asyncHandler(async (req, res) => {
-  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const device = await Device.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!device) {
     res.status(404);
@@ -148,7 +142,7 @@ const updateDevice = asyncHandler(async (req, res) => {
 // @route   DELETE /api/devices/:id
 // @access  Admin
 const deleteDevice = asyncHandler(async (req, res) => {
-  const device = await Device.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const device = await Device.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (device) {
     // First, delete all associated downtime logs
@@ -166,10 +160,7 @@ const deleteDevice = asyncHandler(async (req, res) => {
 // @route   GET /api/devices/:id/downtime
 // @access  Admin
 const getDeviceDowntimeLogs = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const device = await Device.findOne(query);
 

@@ -31,12 +31,12 @@ async function checkUserOnlineStatus(user, client) {
     return isOnline;
 }
 
-async function performUserStatusCheck(tenantOwner) {
-    console.log(`[${new Date().toISOString()}] Performing bulk user status check for tenant ${tenantOwner}...`);
+async function performUserStatusCheck(tenant) {
+    console.log(`[${new Date().toISOString()}] Performing bulk user status check for tenant ${tenant}...`);
 
     try {
         // 1. Fetch all users for the tenant and group them by router
-        const allUsers = await MikrotikUser.find({ tenantOwner }).populate('mikrotikRouter').lean();
+        const allUsers = await MikrotikUser.find({ tenant }).populate('mikrotikRouter').lean();
         if (allUsers.length === 0) {
             console.log(`[${new Date().toISOString()}] No MikroTik users found for this tenant.`);
             return;
@@ -125,7 +125,7 @@ async function performUserStatusCheck(tenantOwner) {
 
                 // Send consolidated alert for users who came online
                 if (usersOnline.length > 0) {
-                    await sendConsolidatedAlert(usersOnline, 'ONLINE', tenantOwner, null, 'User');
+                    await sendConsolidatedAlert(usersOnline, 'ONLINE', tenant, null, 'User');
                 }
 
                 // 5. Retry for potentially offline users
@@ -159,7 +159,7 @@ async function performUserStatusCheck(tenantOwner) {
                         // Log downtime start
                         console.log(`[${new Date().toISOString()}] User ${user.username} went offline. Logging downtime.`);
                         const newDowntime = new UserDowntimeLog({
-                            tenantOwner: user.tenantOwner,
+                            tenant: user.tenant,
                             mikrotikUser: user._id,
                             downStartTime: new Date(),
                         });
@@ -170,7 +170,7 @@ async function performUserStatusCheck(tenantOwner) {
 
                 // Send consolidated alert for users who went offline
                 if (usersOffline.length > 0) {
-                    await sendConsolidatedAlert(usersOffline, 'OFFLINE', tenantOwner, null, 'User');
+                    await sendConsolidatedAlert(usersOffline, 'OFFLINE', tenant, null, 'User');
                 }
 
             } catch (error) {
@@ -183,7 +183,7 @@ async function performUserStatusCheck(tenantOwner) {
                         // Log downtime
                         console.log(`[${new Date().toISOString()}] User ${user.username} went offline. Logging downtime.`);
                         const newDowntime = new UserDowntimeLog({
-                            tenantOwner: user.tenantOwner,
+                            tenant: user.tenant,
                             mikrotikUser: user._id,
                             downStartTime: new Date(),
                         });
@@ -193,7 +193,7 @@ async function performUserStatusCheck(tenantOwner) {
                 }
                 // Send consolidated alert for users who went offline due to router unreachability
                 if (usersOfflineRouterUnreachable.length > 0) {
-                    await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', tenantOwner, null, 'User');
+                    await sendConsolidatedAlert(usersOfflineRouterUnreachable, 'OFFLINE (Router Unreachable)', tenant, null, 'User');
                 }
             } finally {
                 if (client.connected) {
@@ -202,7 +202,7 @@ async function performUserStatusCheck(tenantOwner) {
             }
         }
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] Error during bulk user status check for tenant ${tenantOwner}:`, error);
+        console.error(`[${new Date().toISOString()}] Error during bulk user status check for tenant ${tenant}:`, error);
     }
 }
 

@@ -17,11 +17,13 @@ const hotspotUserSchema = new mongoose.Schema({
   phoneNumber: { type: String, required: true },
   expiryDate: { type: Date, required: true },
   expiryTime: { type: String, required: true }, // Storing time as a string e.g., "23:59"
-  tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
   mikrotikRouter: { type: mongoose.Schema.Types.ObjectId, ref: 'MikrotikRouter', required: true },
 }, {
   timestamps: true,
 });
+
+hotspotUserSchema.index({ tenant: 1 });
 
 const HotspotUser = mongoose.model('HotspotUser', hotspotUserSchema);
 

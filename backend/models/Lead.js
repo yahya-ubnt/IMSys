@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const leadSchema = new mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     name: { type: String },
     phoneNumber: { type: String, required: true, unique: true },
@@ -64,9 +64,12 @@ const leadSchema = new mongoose.Schema(
       ref: 'MikrotikUser',
     },
   },
-  { timestamps: true }
-);
-
-const Lead = mongoose.model('Lead', leadSchema);
-
-module.exports = Lead;
+    { timestamps: true }
+  );
+  
+  leadSchema.index({ tenant: 1 });
+  
+  const Lead = mongoose.model('Lead', leadSchema);
+  
+  module.exports = Lead;
+  

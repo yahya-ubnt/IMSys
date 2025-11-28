@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const stkRequestSchema = new mongoose.Schema({
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Tenant',
     required: true,
   },
   checkoutRequestId: {
@@ -30,5 +30,7 @@ const stkRequestSchema = new mongoose.Schema({
     expires: '5m', // Automatically delete after 5 minutes
   },
 });
+
+stkRequestSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('StkRequest', stkRequestSchema);

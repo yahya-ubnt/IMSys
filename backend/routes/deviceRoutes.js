@@ -10,16 +10,21 @@ const {
   getDeviceDowntimeLogs,
 } = require('../controllers/deviceController');
 const { getMikrotikUsersByStation } = require('../controllers/mikrotikUserController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/').post([protect, isSuperAdminOrAdminTenant], [
-  body('router', 'Router ID is required').isMongoId(),
-  body('ipAddress', 'A valid IP address is required').isIP(),
-  body('macAddress', 'A valid MAC address is required').isMACAddress(),
-  body('deviceType', 'Device type is required').isIn(['Access', 'Station']),
-], createDevice).get(protect, isSuperAdminOrAdminTenant, getDevices);
-router.route('/:id').get(protect, isSuperAdminOrAdminTenant, getDeviceById).put(protect, isSuperAdminOrAdminTenant, updateDevice).delete(protect, isSuperAdminOrAdminTenant, deleteDevice);
-router.route('/:id/downtime').get(protect, isSuperAdminOrAdminTenant, getDeviceDowntimeLogs);
-router.route('/:stationId/users').get(protect, isSuperAdminOrAdminTenant, getMikrotikUsersByStation);
+router.route('/').post(
+  protect,
+  isSuperAdminOrAdmin,
+  [
+    body('router', 'Router ID is required').not().isEmpty(),
+    body('ipAddress', 'IP address is required').not().isEmpty(),
+    body('macAddress', 'MAC address is required').not().isEmpty(),
+    body('deviceType', 'Device type is required').isIn(['Access', 'Station']),
+  ],
+  createDevice
+).get(protect, isSuperAdminOrAdmin, getDevices);
+router.route('/:id').get(protect, isSuperAdminOrAdmin, getDeviceById).put(protect, isSuperAdminOrAdmin, updateDevice).delete(protect, isSuperAdminOrAdmin, deleteDevice);
+router.route('/:id/downtime').get(protect, isSuperAdminOrAdmin, getDeviceDowntimeLogs);
+router.route('/:stationId/users').get(protect, isSuperAdminOrAdmin, getMikrotikUsersByStation);
 
 module.exports = router;

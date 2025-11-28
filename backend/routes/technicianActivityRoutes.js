@@ -8,10 +8,11 @@ const {
   updateTechnicianActivity,
   deleteTechnicianActivity,
 } = require('../controllers/technicianActivityController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 router.route('/').post(
-  [protect, isSuperAdminOrAdminTenant],
+  protect,
+  isSuperAdminOrAdmin,
   [
     body('technician', 'Technician is required').not().isEmpty(),
     body('activityType', 'Activity type is required').isIn(['Installation', 'Support']),
@@ -29,11 +30,11 @@ router.route('/').post(
     body('building', 'Building ID is required for Building Issue support').if(body('supportCategory').equals('Building Issue')).isMongoId(),
   ],
   createTechnicianActivity
-).get(protect, isSuperAdminOrAdminTenant, getTechnicianActivities);
+).get(protect, isSuperAdminOrAdmin, getTechnicianActivities);
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getTechnicianActivityById)
-  .put(protect, isSuperAdminOrAdminTenant, updateTechnicianActivity)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteTechnicianActivity);
+  .get(protect, isSuperAdminOrAdmin, getTechnicianActivityById)
+  .put(protect, isSuperAdminOrAdmin, updateTechnicianActivity)
+  .delete(protect, isSuperAdminOrAdmin, deleteTechnicianActivity);
 
 module.exports = router;

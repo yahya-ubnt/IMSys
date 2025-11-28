@@ -13,7 +13,7 @@ const hotspotPlanSchema = new mongoose.Schema({
   },
   tenant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // Refers to the ADMIN_TENANT user
+    ref: 'Tenant', // Refers to the Tenant
     required: true,
   },
   mikrotikRouter: {
@@ -65,6 +65,8 @@ const hotspotPlanSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+hotspotPlanSchema.index({ tenant: 1 });
 
 const HotspotPlan = mongoose.model('HotspotPlan', hotspotPlanSchema);
 

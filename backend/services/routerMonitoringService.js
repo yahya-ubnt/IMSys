@@ -76,11 +76,11 @@ async function checkRouter(router) {
     console.log(`[${new Date().toISOString()}] Updated status for router ${router.name}.`);
 }
 
-async function performRouterStatusCheck(tenantOwner) {
-    console.log(`[${new Date().toISOString()}] Performing router status check for tenant ${tenantOwner}...`);
+async function performRouterStatusCheck(tenant) {
+    console.log(`[${new Date().toISOString()}] Performing router status check for tenant ${tenant}...`);
 
     try {
-        const routers = await MikrotikRouter.find({ tenantOwner });
+        const routers = await MikrotikRouter.find({ tenant });
 
         if (routers.length === 0) {
             console.log(`[${new Date().toISOString()}] No MikroTik routers found in the database for this tenant.`);
@@ -90,7 +90,7 @@ async function performRouterStatusCheck(tenantOwner) {
         await Promise.all(routers.map(checkRouter));
 
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] Error during router status check for tenant ${tenantOwner}:`, error);
+        console.error(`[${new Date().toISOString()}] Error during router status check for tenant ${tenant}:`, error);
     }
 }
 

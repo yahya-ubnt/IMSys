@@ -28,7 +28,7 @@ export default function DashboardPage() {
       try {
         const [summaryRes, monthlyRes] = await Promise.all([
           fetch('/api/dashboard/collections/summary'),
-          fetch(`/api/dashboard/collections-and-expenses/monthly?year=${selectedYear}`)
+          fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`)
         ]);
 
         if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.statusText}`);

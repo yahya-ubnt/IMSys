@@ -26,18 +26,18 @@ const executeSmsDriver = async (providerType, credentials, phoneNumber, message)
   }
 };
 
-exports.sendSMS = async (tenantOwner, phoneNumber, message) => {
+exports.sendSMS = async (tenant, phoneNumber, message) => {
   try {
-    if (!tenantOwner) {
-      console.error('Error: A tenantOwner ID must be provided to sendSMS.');
+    if (!tenant) {
+      console.error('Error: A tenant ID must be provided to sendSMS.');
       return { success: false, message: 'Tenant context is missing.' };
     }
 
     // 1. Find the active SMS provider for the specific tenant from the database
-    const activeProvider = await SmsProvider.findOne({ tenantOwner, isActive: true });
+    const activeProvider = await SmsProvider.findOne({ tenant, isActive: true });
 
     if (!activeProvider) {
-      console.error(`No active SMS provider is configured for tenant ${tenantOwner}.`);
+      console.error(`No active SMS provider is configured for tenant ${tenant}.`);
       return { success: false, message: 'SMS service is not configured for this tenant. No active provider found.' };
     }
 
@@ -67,13 +67,13 @@ exports.sendSMS = async (tenantOwner, phoneNumber, message) => {
 
 exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data = {}) => {
   try {
-    const tenantOwner = data.tenantOwner;
-    if (!tenantOwner) {
-        console.error(`Error sending acknowledgement for ${triggerType}: tenantOwner was not provided in the data object.`);
+    const tenant = data.tenant;
+    if (!tenant) {
+        console.error(`Error sending acknowledgement for ${triggerType}: tenant was not provided in the data object.`);
         return { success: false, message: 'Cannot send acknowledgement SMS without a tenant context.' };
     }
 
-    const acknowledgement = await SmsAcknowledgement.findOne({ triggerType, tenantOwner, status: 'Active' }).populate('smsTemplate');
+    const acknowledgement = await SmsAcknowledgement.findOne({ triggerType, tenant, status: 'Active' }).populate('smsTemplate');
 
     if (!acknowledgement || !acknowledgement.smsTemplate) {
       console.log(`No active acknowledgement mapping found for trigger type: ${triggerType}`);
@@ -90,7 +90,7 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
       }
     }
 
-    const smsResult = await exports.sendSMS(tenantOwner, recipientPhoneNumber, messageBody);
+    const smsResult = await exports.sendSMS(tenant, recipientPhoneNumber, messageBody);
 
     await SmsLog.create({
       mobileNumber: recipientPhoneNumber,
@@ -98,7 +98,7 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
       messageType: 'Acknowledgement',
       smsStatus: smsResult.success ? 'Success' : 'Failed',
       providerResponse: smsResult.message,
-      tenantOwner: tenantOwner, // Associate log with the tenant
+      tenant: tenant, // Associate log with the tenant
     });
 
     return { success: smsResult.success, message: smsResult.message };

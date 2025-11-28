@@ -13,7 +13,7 @@ const BillSchema = mongoose.Schema(
     description: { type: String },
     month: { type: Number, required: true, min: 1, max: 12 }, // Month (1-12)
     year: { type: Number, required: true },
-    tenantOwner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Link to the user who owns the bill
+    tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true }, // Link to the user who owns the bill
   },
   {
     timestamps: true,
@@ -21,6 +21,6 @@ const BillSchema = mongoose.Schema(
 );
 
 // Add a unique compound index to prevent duplicate bills for the same user, name, category, month, and year
-BillSchema.index({ tenantOwner: 1, name: 1, category: 1, month: 1, year: 1 }, { unique: true });
+BillSchema.index({ tenant: 1, name: 1, category: 1, month: 1, year: 1 }, { unique: true });
 
 module.exports = mongoose.model('Bill', BillSchema);

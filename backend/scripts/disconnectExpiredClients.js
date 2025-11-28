@@ -33,7 +33,7 @@ async function disconnectExpiredClients() {
         console.log(`[${new Date().toISOString()}] Searching for expired and unsuspended clients for this tenant...`);
 
         const cursor = MikrotikUser.find({
-            tenantOwner: tenantId,
+            tenant: tenantId,
             expiryDate: { $lte: currentDate },
             isSuspended: false,
         }).populate('mikrotikRouter').cursor(); // Use a cursor for scalability

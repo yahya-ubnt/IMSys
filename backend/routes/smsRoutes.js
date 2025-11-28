@@ -7,22 +7,26 @@ const {
   getSentSmsLog,
   exportSmsLogs,
 } = require('../controllers/smsController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/triggers').get(protect, isSuperAdminOrAdminTenant, getSmsTriggers);
-router.route('/compose').post(
-  [protect, isSuperAdminOrAdminTenant],
+router.route('/triggers').get(protect, isSuperAdminOrAdmin, getSmsTriggers);
+
+router.post(
+  '/compose',
+  protect,
+  isSuperAdminOrAdmin,
   [
     body('message', 'Message body is required').not().isEmpty(),
-    body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotikGroup', 'location', 'unregistered']),
+    body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotik', 'location', 'unregistered']),
     body('userIds', 'User IDs must be an array of valid Mongo IDs').if(body('sendToType').equals('users')).isArray().custom(value => value.every(item => typeof item === 'string' && item.match(/^[0-9a-fA-F]{24}$/))),
-    body('mikrotikRouterId', 'Mikrotik Router ID must be a valid Mongo ID').if(body('sendToType').equals('mikrotikGroup')).isMongoId(),
-    body('buildingId', 'Building ID must be a valid Mongo ID').if(body('sendToType').equals('location')).isMongoId(),
+    body('mikrotikRouterIds', 'Mikrotik Router IDs must be an array').if(body('sendToType').equals('mikrotik')).isArray(),
+    body('apartmentHouseNumbers', 'Apartment/House Numbers must be an array').if(body('sendToType').equals('location')).isArray(),
     body('unregisteredMobileNumber', 'Mobile number must be valid').if(body('sendToType').equals('unregistered')).matches(/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/),
   ],
   composeAndSendSms
 );
-router.route('/log').get(protect, isSuperAdminOrAdminTenant, getSentSmsLog);
-router.route('/log/export').get(protect, isSuperAdminOrAdminTenant, exportSmsLogs);
+
+router.route('/log').get(protect, isSuperAdminOrAdmin, getSentSmsLog);
+router.route('/log/export').get(protect, isSuperAdminOrAdmin, exportSmsLogs);
 
 module.exports = router;

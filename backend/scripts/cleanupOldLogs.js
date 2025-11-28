@@ -10,7 +10,7 @@ const TrafficLog = require('../models/TrafficLog');
 const UserDowntimeLog = require('../models/UserDowntimeLog');
 
 // A helper function to perform the cleanup for a specific model
-const cleanupModel = async (model, modelName, daysToKeep, tenantOwner) => {
+const cleanupModel = async (model, modelName, daysToKeep, tenant) => {
   try {
     if (!daysToKeep || daysToKeep <= 0) {
       console.log(`[${new Date().toISOString()}] Skipping cleanup for ${modelName} - invalid retention period.`);
@@ -20,21 +20,21 @@ const cleanupModel = async (model, modelName, daysToKeep, tenantOwner) => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-    console.log(`[${new Date().toISOString()}] Deleting ${modelName} records for tenant ${tenantOwner} older than ${cutoffDate.toLocaleDateString()}...`);
+    console.log(`[${new Date().toISOString()}] Deleting ${modelName} records for tenant ${tenant} older than ${cutoffDate.toLocaleDateString()}...`);
 
     const result = await model.deleteMany({
-      tenantOwner,
+      tenant,
       createdAt: { $lt: cutoffDate },
     });
 
-    console.log(`[${new Date().toISOString()}] Success! Deleted ${result.deletedCount} records from ${modelName} for tenant ${tenantOwner}.`);
+    console.log(`[${new Date().toISOString()}] Success! Deleted ${result.deletedCount} records from ${modelName} for tenant ${tenant}.`);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error cleaning up ${modelName} for tenant ${tenantOwner}:`, error);
+    console.error(`[${new Date().toISOString()}] Error cleaning up ${modelName} for tenant ${tenant}:`, error);
   }
 };
 
 // A special helper for TrafficLog which is linked via user, not directly to the tenant
-const cleanupTrafficLog = async (daysToKeep, tenantOwner) => {
+const cleanupTrafficLog = async (daysToKeep, tenant) => {
   const modelName = 'TrafficLog';
   try {
     if (!daysToKeep || daysToKeep <= 0) {
@@ -45,24 +45,24 @@ const cleanupTrafficLog = async (daysToKeep, tenantOwner) => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-    console.log(`[${new Date().toISOString()}] Finding users for tenant ${tenantOwner} to clean up ${modelName}...`);
-    const usersOfTenant = await MikrotikUser.find({ tenantOwner }).select('_id');
+    console.log(`[${new Date().toISOString()}] Finding users for tenant ${tenant} to clean up ${modelName}...`);
+    const usersOfTenant = await MikrotikUser.find({ tenant }).select('_id');
     if (usersOfTenant.length === 0) {
-      console.log(`[${new Date().toISOString()}] No users found for tenant ${tenantOwner}, skipping ${modelName} cleanup.`);
+      console.log(`[${new Date().toISOString()}] No users found for tenant ${tenant}, skipping ${modelName} cleanup.`);
       return;
     }
     const userIds = usersOfTenant.map(u => u._id);
 
-    console.log(`[${new Date().toISOString()}] Deleting ${modelName} records for tenant ${tenantOwner} older than ${cutoffDate.toLocaleDateString()}...`);
+    console.log(`[${new Date().toISOString()}] Deleting ${modelName} records for tenant ${tenant} older than ${cutoffDate.toLocaleDateString()}...`);
 
     const result = await TrafficLog.deleteMany({
       user: { $in: userIds },
       createdAt: { $lt: cutoffDate },
     });
 
-    console.log(`[${new Date().toISOString()}] Success! Deleted ${result.deletedCount} records from ${modelName} for tenant ${tenantOwner}.`);
+    console.log(`[${new Date().toISOString()}] Success! Deleted ${result.deletedCount} records from ${modelName} for tenant ${tenant}.`);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error cleaning up ${modelName} for tenant ${tenantOwner}:`, error);
+    console.error(`[${new Date().toISOString()}] Error cleaning up ${modelName} for tenant ${tenant}:`, error);
   }
 };
 
@@ -80,7 +80,7 @@ const cleanupOldLogs = async () => {
     console.log(`[${new Date().toISOString()}] Connected to MongoDB.`);
 
     // Get retention periods from application settings
-    const settings = await ApplicationSettings.findOne({ tenantOwner: tenantId });
+    const settings = await ApplicationSettings.findOne({ tenant: tenantId });
 
     const retentionPeriods = {
       SmsLog: settings?.logRetentionDays?.sms || 180,

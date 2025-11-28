@@ -12,26 +12,29 @@ const {
   getDailyExpenseTotals,
   getExpenseStats,
 } = require('../controllers/expenseController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/stats').get(protect, isSuperAdminOrAdminTenant, getExpenseStats);
-router.route('/monthly-total').get(protect, isSuperAdminOrAdminTenant, getMonthlyExpenseTotal);
-router.route('/yearly-monthly-totals').get(protect, isSuperAdminOrAdminTenant, getYearlyMonthlyExpenseTotals);
-router.route('/daily-expense-totals').get(protect, isSuperAdminOrAdminTenant, getDailyExpenseTotals);
+router.route('/stats').get(protect, isSuperAdminOrAdmin, getExpenseStats);
+router.route('/monthly-total').get(protect, isSuperAdminOrAdmin, getMonthlyExpenseTotal);
+router.route('/yearly-monthly-totals').get(protect, isSuperAdminOrAdmin, getYearlyMonthlyExpenseTotals);
+router.route('/daily-expense-totals').get(protect, isSuperAdminOrAdmin, getDailyExpenseTotals);
+
 router.route('/').post(
-  [protect, isSuperAdminOrAdminTenant],
+  protect,
+  isSuperAdminOrAdmin,
   [
     body('title', 'Title is required').not().isEmpty(),
     body('amount', 'Amount must be a number').isNumeric(),
-    body('expenseType', 'Expense Type ID is required and must be a valid Mongo ID').isMongoId(),
-    body('expenseDate', 'Expense Date is required and must be a valid date').isISO8601().toDate(),
+    body('expenseType', 'Expense type is required').not().isEmpty(),
+    body('expenseDate', 'Expense date is required').isISO8601(),
   ],
   createExpense
-).get(protect, isSuperAdminOrAdminTenant, getExpenses);
+).get(protect, isSuperAdminOrAdmin, getExpenses);
+
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getExpenseById)
-  .put(protect, isSuperAdminOrAdminTenant, updateExpense)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteExpense);
+  .get(protect, isSuperAdminOrAdmin, getExpenseById)
+  .put(protect, isSuperAdminOrAdmin, updateExpense)
+  .delete(protect, isSuperAdminOrAdmin, deleteExpense);
 
 module.exports = router;

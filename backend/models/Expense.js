@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const expenseSchema = mongoose.Schema(
   {
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'Tenant',
+    },
     title: {
       type: String,
       required: true,
@@ -32,6 +37,8 @@ const expenseSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+expenseSchema.index({ tenant: 1 });
 
 const Expense = mongoose.model('Expense', expenseSchema);
 module.exports = Expense;

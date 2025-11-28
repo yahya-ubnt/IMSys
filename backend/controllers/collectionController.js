@@ -7,10 +7,7 @@ moment.tz.setDefault('Africa/Nairobi');
 // @route   GET /api/collections
 // @access  Private
 const getCollections = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
   const collections = await Transaction.find(query).sort({ transactionDate: -1 });
   res.json(collections);
 });
@@ -24,10 +21,7 @@ const getCollectionStats = asyncHandler(async (req, res) => {
   const startOfMonth = moment().startOf('month');
   const startOfYear = moment().startOf('year');
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const stats = await Transaction.aggregate([
     { $match: matchQuery }, 
@@ -74,10 +68,7 @@ const getMonthlyCollectionTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const monthlyTotals = await Transaction.aggregate([
     { $match: matchQuery },
@@ -130,10 +121,7 @@ const getDailyCollectionTotals = asyncHandler(async (req, res) => {
   const endDate = moment(startDate).endOf('month');
   const daysInMonth = endDate.date();
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const dailyTotals = await Transaction.aggregate([
     { $match: matchQuery },

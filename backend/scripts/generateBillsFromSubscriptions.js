@@ -36,7 +36,7 @@ const generateBillsFromSubscriptions = async () => {
 
   try {
     const cursor = Subscription.find({
-      tenantOwner: tenantId,
+      tenant: tenantId,
       status: 'Active',
     }).populate('mikrotikUser').cursor();
 
@@ -73,7 +73,7 @@ const generateBillsFromSubscriptions = async () => {
         // Create the debit transaction
         await WalletTransaction.create({
           mikrotikUser: user._id,
-          tenantOwner: user.tenantOwner,
+          tenant: user.tenant,
           transactionId: `DEBIT-${Date.now()}-${user.username}`,
           type: 'Debit',
           amount: debitAmount,

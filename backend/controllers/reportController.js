@@ -16,10 +16,10 @@ const getLocationReport = asyncHandler(async (req, res) => {
     throw new Error('Please provide start date, end date, and an apartment/house number.');
   }
 
-  let query = { apartment_house_number: apartment_house_number };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { 
+    apartment_house_number: apartment_house_number,
+    tenant: req.user.tenant 
+  };
 
   query.createdAt = {
     $gte: new Date(startDate),
@@ -57,10 +57,7 @@ const getLocationReport = asyncHandler(async (req, res) => {
 // @route   GET /api/reports/mpesa-alerts
 // @access  Private
 const getMpesaAlerts = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const alerts = await MpesaAlert.find(query).sort({ createdAt: -1 });
   res.status(200).json(alerts);
@@ -70,10 +67,7 @@ const getMpesaAlerts = asyncHandler(async (req, res) => {
 // @route   DELETE /api/reports/mpesa-alerts/:id
 // @access  Private
 const deleteMpesaAlert = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const alert = await MpesaAlert.findOne(query);
 
@@ -97,10 +91,7 @@ const getMpesaReport = asyncHandler(async (req, res) => {
 
   const { startDate, endDate } = req.body;
 
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   query.transactionDate = {
     $gte: new Date(startDate),

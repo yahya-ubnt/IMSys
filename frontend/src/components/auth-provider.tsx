@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useMemo } from "react"
 
 interface User {
   name: string
@@ -9,14 +9,20 @@ interface User {
   roles: string[]
   loginMethod: string
   avatar?: string
+  tenant?: {
+    _id: string;
+    name: string;
+  };
 }
 
 interface AuthContextType {
   user: User | null
-  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[] }) => void
+  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: any }) => void
   logout: () => Promise<void>
   isLoading: boolean
   isLoggingOut: boolean
+  isSuperAdmin: boolean
+  isAdmin: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -36,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: data.fullName,
             email: data.email,
             roles: data.roles,
+            tenant: data.tenant, // Add tenant to the user object
             loginMethod: 'email', // Assuming email login
           };
           setUser(user);
@@ -53,10 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[] }) => {
+  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: any }) => {
     console.log("User data in login:", userData)
     const { fullName, ...rest } = userData
-    const user: User = { ...rest, name: fullName, roles: userData.roles, loginMethod: 'email' }
+    const user: User = { ...rest, name: fullName, roles: userData.roles, tenant: userData.tenant, loginMethod: 'email' }
     setIsLoggingOut(false)
     setUser(user)
   }
@@ -73,7 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ user, login, logout, isLoading, isLoggingOut }}>{children}</AuthContext.Provider>
+  const isSuperAdmin = useMemo(() => user?.roles.includes('SUPER_ADMIN') ?? false, [user]);
+  const isAdmin = useMemo(() => user?.roles.includes('ADMIN') ?? false, [user]);
+
+  return <AuthContext.Provider value={{ user, login, logout, isLoading, isLoggingOut, isSuperAdmin, isAdmin }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

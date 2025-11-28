@@ -34,10 +34,10 @@ const decrypt = (text) => {
 };
 
 const smsProviderSchema = new mongoose.Schema({
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'User',
+    ref: 'Tenant',
   },
   name: {
     type: String,
@@ -69,16 +69,19 @@ const smsProviderSchema = new mongoose.Schema({
 // Middleware to ensure only one provider is active at a time
 smsProviderSchema.pre('save', async function (next) {
   if (this.isActive && this.isModified('isActive')) {
-    await this.constructor.updateMany({ _id: { $ne: this._id }, tenantOwner: this.tenantOwner, isActive: true }, { isActive: false });
+    await this.constructor.updateMany({ _id: { $ne: this._id }, tenant: this.tenant, isActive: true }, { isActive: false });
   }
   // Ensure at least one provider is active if it's the only one
-  const count = await this.constructor.countDocuments({ tenantOwner: this.tenantOwner });
+  const count = await this.constructor.countDocuments({ tenant: this.tenant });
   if (count === 0) {
       this.isActive = true;
-  }
-  next();
-});
-
-const SmsProvider = mongoose.model('SmsProvider', smsProviderSchema);
-
-module.exports = SmsProvider;
+    }
+    next();
+  });
+  
+  smsProviderSchema.index({ tenant: 1 });
+  
+  const SmsProvider = mongoose.model('SmsProvider', smsProviderSchema);
+  
+  module.exports = SmsProvider;
+  

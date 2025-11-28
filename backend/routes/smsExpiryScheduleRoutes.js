@@ -8,7 +8,7 @@ const {
   updateSchedule,
   deleteSchedule,
 } = require('../controllers/smsExpiryScheduleController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 const scheduleValidation = [
   body('name', 'Name is required').not().isEmpty(),
@@ -19,19 +19,21 @@ const scheduleValidation = [
   body('status', 'Invalid status').optional().isIn(['Active', 'Inactive']),
 ];
 
-router.route('/').get(protect, isSuperAdminOrAdminTenant, getSchedules).post(
-  [protect, isSuperAdminOrAdminTenant],
+router.route('/').get(protect, isSuperAdminOrAdmin, getSchedules).post(
+  protect,
+  isSuperAdminOrAdmin,
   scheduleValidation,
   createSchedule
 );
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getScheduleById)
+  .get(protect, isSuperAdminOrAdmin, getScheduleById)
   .put(
-    [protect, isSuperAdminOrAdminTenant],
+    protect,
+    isSuperAdminOrAdmin,
     scheduleValidation,
     updateSchedule
   )
-  .delete(protect, isSuperAdminOrAdminTenant, deleteSchedule);
+  .delete(protect, isSuperAdminOrAdmin, deleteSchedule);
 
 module.exports = router;

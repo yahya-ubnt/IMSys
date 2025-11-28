@@ -6,10 +6,7 @@ const WhatsAppProvider = require('../models/WhatsAppProvider');
 // @route   GET /api/settings/whatsapp-providers
 // @access  Private (Admin)
 const getWhatsAppProviders = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const providers = await WhatsAppProvider.find(query).sort({ createdAt: -1 });
   const sanitizedProviders = providers.map(p => {
@@ -36,7 +33,7 @@ const createWhatsAppProvider = asyncHandler(async (req, res) => {
     providerType,
     credentials,
     isActive,
-    tenantOwner: req.user.tenantOwner,
+    tenant: req.user.tenant,
   });
 
   const createdProvider = await provider.save();
@@ -51,7 +48,7 @@ const createWhatsAppProvider = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const updateWhatsAppProvider = asyncHandler(async (req, res) => {
   const { name, providerType, credentials, isActive } = req.body;
-  const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (provider) {
     provider.name = name || provider.name;
@@ -77,7 +74,7 @@ const updateWhatsAppProvider = asyncHandler(async (req, res) => {
 // @route   DELETE /api/settings/whatsapp-providers/:id
 // @access  Private (Admin)
 const deleteWhatsAppProvider = asyncHandler(async (req, res) => {
-  const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (provider) {
     await provider.deleteOne();
@@ -92,7 +89,7 @@ const deleteWhatsAppProvider = asyncHandler(async (req, res) => {
 // @route   POST /api/settings/whatsapp-providers/:id/set-active
 // @access  Private (Admin)
 const setActiveWhatsAppProvider = asyncHandler(async (req, res) => {
-    const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+    const provider = await WhatsAppProvider.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
     if (provider) {
         provider.isActive = true;

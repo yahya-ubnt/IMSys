@@ -12,7 +12,7 @@ const connectToRouter = asyncHandler(async (req, res, next) => {
   }
 
   // Check for ownership
-  if (router.tenantOwner.toString() !== req.user.tenantOwner.toString()) {
+  if (router.tenant.toString() !== req.user.tenant.toString()) {
     res.status(401);
     throw new Error('Not authorized to access this router');
   }

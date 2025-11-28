@@ -25,7 +25,7 @@ const loginUser = asyncHandler(async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       roles: user.roles,
-      tenantOwner: user.tenantOwner,
+      tenant: user.tenant, // Use tenant instead of tenantOwner
     });
   } else {
     res.status(401);
@@ -58,7 +58,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       fullName: user.fullName,
       email: user.email,
       roles: user.roles,
-      tenantOwner: user.tenantOwner,
+      tenant: user.tenant, // Use tenant instead of tenantOwner
     });
   } else {
     res.status(404);
@@ -92,7 +92,7 @@ const getUserById = asyncHandler(async (req, res) => {
 // @route   POST /api/users
 // @access  Private/SuperAdmin
 const createUser = asyncHandler(async (req, res) => {
-  const { fullName, email, password, phone, roles } = req.body;
+  const { fullName, email, password, phone, roles, tenant } = req.body; // tenant must be provided
 
   const userExists = await User.findOne({ email });
 
@@ -107,11 +107,8 @@ const createUser = asyncHandler(async (req, res) => {
     password,
     phone,
     roles,
+    tenant, // Assign tenant from request body
   });
-
-  if (roles.includes('ADMIN_TENANT')) {
-      user.tenantOwner = user._id;
-  }
 
   const createdUser = await user.save();
 
@@ -165,17 +162,17 @@ const deleteUser = asyncHandler(async (req, res) => {
 
 // @desc    Get all users within a tenant's account
 // @route   GET /api/users/my-users
-// @access  Private/AdminTenant
+// @access  Private/Admin
 const getTenantUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({ tenantOwner: req.user.tenantOwner });
+    const users = await User.find({ tenant: req.user.tenant });
     res.json(users);
 });
 
 // @desc    Create a new user within a tenant's account
 // @route   POST /api/users/my-users
-// @access  Private/AdminTenant
+// @access  Private/Admin
 const createTenantUser = asyncHandler(async (req, res) => {
-    const { fullName, email, password, phone } = req.body;
+    const { fullName, email, password, phone, roles } = req.body;
 
     const userExists = await User.findOne({ email });
 
@@ -189,8 +186,8 @@ const createTenantUser = asyncHandler(async (req, res) => {
         email,
         password,
         phone,
-        roles: ['USER'],
-        tenantOwner: req.user.tenantOwner,
+        roles: roles || ['USER'], // Default to USER role if not provided
+        tenant: req.user.tenant, // Assign tenant from the logged-in admin
     });
 
     res.status(201).json(user);
@@ -198,9 +195,9 @@ const createTenantUser = asyncHandler(async (req, res) => {
 
 // @desc    Get a single user by ID within a tenant's account
 // @route   GET /api/users/my-users/:id
-// @access  Private/AdminTenant
+// @access  Private/Admin
 const getTenantUserById = asyncHandler(async (req, res) => {
-    const user = await User.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner }).select('-password');
+    const user = await User.findOne({ _id: req.params.id, tenant: req.user.tenant }).select('-password');
 
     if (user) {
         res.json(user);
@@ -213,11 +210,11 @@ const getTenantUserById = asyncHandler(async (req, res) => {
 
 // @desc    Update a user within a tenant's account
 // @route   PUT /api/users/my-users/:id
-// @access  Private/AdminTenant
+// @access  Private/Admin
 const updateTenantUser = asyncHandler(async (req, res) => {
-    const { fullName, email, password, phone } = req.body;
+    const { fullName, email, password, phone, roles } = req.body;
 
-    const user = await User.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+    const user = await User.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
     if (user) {
         user.fullName = fullName || user.fullName;
@@ -226,6 +223,9 @@ const updateTenantUser = asyncHandler(async (req, res) => {
             user.password = password;
         }
         user.phone = phone || user.phone;
+        if (roles) {
+            user.roles = roles;
+        }
 
         const updatedUser = await user.save();
         res.json(updatedUser);
@@ -238,9 +238,9 @@ const updateTenantUser = asyncHandler(async (req, res) => {
 
 // @desc    Delete a user within a tenant's account
 // @route   DELETE /api/users/my-users/:id
-// @access  Private/AdminTenant
+// @access  Private/Admin
 const deleteTenantUser = asyncHandler(async (req, res) => {
-    const user = await User.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+    const user = await User.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
     if (user) {
         await user.deleteOne();

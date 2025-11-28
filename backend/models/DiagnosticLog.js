@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const diagnosticLogSchema = new mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     mikrotikUser: {
       type: mongoose.Schema.Types.ObjectId,
@@ -30,13 +30,16 @@ const diagnosticLogSchema = new mongoose.Schema(
     ],
     finalConclusion: {
       type: String,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const DiagnosticLog = mongoose.model('DiagnosticLog', diagnosticLogSchema);
-
-module.exports = DiagnosticLog;
+        },
+      },
+      {
+        timestamps: true,
+      }
+    );
+    
+    diagnosticLogSchema.index({ tenant: 1 });
+    
+    const DiagnosticLog = mongoose.model('DiagnosticLog', diagnosticLogSchema);
+    
+    module.exports = DiagnosticLog;
+    

@@ -10,66 +10,53 @@ const {
   getWalletTransactionById, 
   createWalletTransaction 
 } = require('../controllers/paymentController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-// @route   POST /api/payments/daraja-callback
-// @desc    Public callback URL for Daraja API
-router.route('/daraja-callback').post(handleDarajaCallback);
-
-// @route   POST /api/payments/initiate-stk
-// @desc    Private route to initiate an STK push for a logged-in user
-router.route('/initiate-stk').post(
-  [protect, isSuperAdminOrAdminTenant],
+// M-Pesa STK Push
+router.post(
+  '/stk-push',
+  protect,
+  isSuperAdminOrAdmin,
   [
-    body('amount', 'Amount is required and must be a number').isNumeric(),
-    body('phoneNumber', 'Phone number is required and must be valid').matches(/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/),
+    body('amount', 'Amount is required').isNumeric(),
+    body('phoneNumber', 'Phone number is required').isMobilePhone('en-KE'),
     body('accountReference', 'Account reference is required').not().isEmpty(),
   ],
   initiateStkPush
 );
 
-// @route   POST /api/payments/cash
-// @desc    Private route to record a cash payment
-router.route('/cash').post(
-  [protect, isSuperAdminOrAdminTenant],
+// M-Pesa C2B & STK Callbacks
+router.post('/daraja-callback', handleDarajaCallback);
+
+// Cash Payments
+router.post(
+  '/cash',
+  protect,
+  isSuperAdminOrAdmin,
   [
-    body('userId', 'User ID is required and must be a valid Mongo ID').isMongoId(),
-    body('amount', 'Amount is required and must be a number').isNumeric(),
+    body('userId', 'User ID is required').not().isEmpty(),
+    body('amount', 'Amount is required').isNumeric(),
     body('transactionId', 'Transaction ID is required').not().isEmpty(),
   ],
   createCashPayment
 );
 
-// @route   GET /api/payments/transactions
-// @desc    Private route to fetch all transactions
-router.route('/transactions').get(protect, isSuperAdminOrAdminTenant, getTransactions);
-
-// Wallet Routes
-// @route   GET /api/payments/wallet
-// @desc    Private route to fetch all wallet transactions
-router.route('/wallet').get(protect, isSuperAdminOrAdminTenant, getWalletTransactions);
-
-// @route   GET /api/payments/wallet/user/:id
-// @desc    Private route to fetch all wallet transactions for a specific user
-router.route('/wallet/user/:id').get(protect, isSuperAdminOrAdminTenant, getWalletTransactions);
-
-// @route   POST /api/payments/wallet
-// @desc    Private route to create a manual wallet transaction
-router.route('/wallet').post(
-  [protect, isSuperAdminOrAdminTenant],
+// Wallet Transactions
+router.route('/transactions').get(protect, isSuperAdminOrAdmin, getTransactions);
+router.route('/wallet').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
+router.route('/wallet/user/:id').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
+router.post(
+  '/wallet',
+  protect,
+  isSuperAdminOrAdmin,
   [
-    body('userId', 'User ID is required and must be a valid Mongo ID').isMongoId(),
+    body('userId', 'User ID is required').not().isEmpty(),
     body('type', 'Transaction type is required').isIn(['Credit', 'Debit', 'Adjustment']),
-    body('amount', 'Amount is required and must be a number').isNumeric(),
+    body('amount', 'Amount is required').isNumeric(),
     body('source', 'Source is required').not().isEmpty(),
-    body('comment', 'Comment must be a string').optional().isString(),
-    body('transactionId', 'Transaction ID must be a string').optional().isString(),
   ],
   createWalletTransaction
 );
-
-// @route   GET /api/payments/wallet/:id
-// @desc    Private route to fetch a single wallet transaction by ID
-router.route('/wallet/:id').get(protect, isSuperAdminOrAdminTenant, getWalletTransactionById);
+router.route('/wallet/:id').get(protect, isSuperAdminOrAdmin, getWalletTransactionById);
 
 module.exports = router;

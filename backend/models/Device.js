@@ -3,10 +3,10 @@ const { encrypt } = require('../utils/crypto');
 
 const deviceSchema = new mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     router: {
       type: mongoose.Schema.Types.ObjectId,
@@ -81,6 +81,8 @@ deviceSchema.pre('save', function (next) {
   }
   next();
 });
+
+deviceSchema.index({ tenant: 1 });
 
 const Device = mongoose.model('Device', deviceSchema);
 

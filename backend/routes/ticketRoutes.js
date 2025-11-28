@@ -10,29 +10,29 @@ const {
   getMonthlyTicketTotals, // Import new function
   deleteTicket,
 } = require('../controllers/ticketController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-// Routes for /api/tickets
-router.route('/')
-  .post(protect, isSuperAdminOrAdminTenant, createTicket)
-  .get(protect, isSuperAdminOrAdminTenant, getTickets);
+router
+  .route('/')
+  .post(protect, isSuperAdminOrAdmin, createTicket)
+  .get(protect, isSuperAdminOrAdmin, getTickets);
 
-// Routes for /api/tickets/stats
-router.route('/stats')
-  .get(protect, isSuperAdminOrAdminTenant, getTicketStats);
+router
+    .route('/stats')
+    .get(protect, isSuperAdminOrAdmin, getTicketStats);
 
-// Routes for /api/tickets/monthly-totals
-router.route('/monthly-totals')
-  .get(protect, isSuperAdminOrAdminTenant, getMonthlyTicketTotals);
+router
+    .route('/monthly-totals')
+    .get(protect, isSuperAdminOrAdmin, getMonthlyTicketTotals);
 
-// Routes for /api/tickets/:id
-router.route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getTicketById)
-  .put(protect, isSuperAdminOrAdminTenant, updateTicket)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteTicket);
+router
+  .route('/:id')
+  .get(protect, isSuperAdminOrAdmin, getTicketById)
+  .put(protect, isSuperAdminOrAdmin, updateTicket)
+  .delete(protect, isSuperAdminOrAdmin, deleteTicket);
 
-// Route for /api/tickets/:id/notes
-router.route('/:id/notes')
-  .post(protect, isSuperAdminOrAdminTenant, addNoteToTicket);
+router
+    .route('/:id/notes')
+    .post(protect, isSuperAdminOrAdmin, addNoteToTicket);
 
 module.exports = router;

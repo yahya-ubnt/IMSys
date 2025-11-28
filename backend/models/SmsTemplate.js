@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const SmsTemplateSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     name: {
       type: String,
@@ -22,5 +22,7 @@ const SmsTemplateSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+SmsTemplateSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('SmsTemplate', SmsTemplateSchema);

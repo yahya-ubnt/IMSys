@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
-const User = require('../models/User');
+const Tenant = require('../models/Tenant');
 const MikrotikUser = require('../models/MikrotikUser');
 const SmsExpirySchedule = require('../models/SmsExpirySchedule');
 const NotificationLog = require('../models/NotificationLog');
@@ -14,10 +14,10 @@ const sendExpiryNotifications = async () => {
   
   try {
     await connectDB();
-    const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+    const tenants = await Tenant.find({ status: 'active' });
 
     for (const tenant of tenants) {
-      const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenantOwner: tenant._id })
+      const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenant: tenant._id })
         .populate('smsTemplate')
         .populate('whatsAppTemplate');
 
@@ -40,7 +40,7 @@ const sendExpiryNotifications = async () => {
         }
 
         const query = {
-          tenantOwner: tenant._id,
+          tenant: tenant._id,
           expiryDate: timing === 'Before' ? { $gte: today, $lte: searchWindow } : { $gte: searchWindow, $lte: today },
         };
 
@@ -82,13 +82,13 @@ const sendExpiryNotifications = async () => {
                 '3': templateData.expiry_date,
                 '4': templateData.days_remaining.toString(),
               };
-              const whatsappResult = await sendWhatsAppMessage(user.tenantOwner, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
+              const whatsappResult = await sendWhatsAppMessage(user.tenant, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
               await WhatsAppLog.create({
                 mobileNumber: user.mobileNumber,
                 message: `WhatsApp template sent: ${whatsAppTemplate.name}`,
                 status: whatsappResult.success ? 'Success' : 'Failed',
                 providerResponse: whatsappResult.message,
-                tenantOwner: user.tenantOwner,
+                tenant: user.tenant,
               });
             } else {
               let personalizedMessage = smsTemplate.messageBody;
@@ -96,20 +96,20 @@ const sendExpiryNotifications = async () => {
                   const placeholder = new RegExp(`{{${key}}}`, 'g');
                   personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
               }
-              const smsResult = await sendSMS(user.tenantOwner, user.mobileNumber, personalizedMessage);
+              const smsResult = await sendSMS(user.tenant, user.mobileNumber, personalizedMessage);
               await SmsLog.create({
                 mobileNumber: user.mobileNumber,
                 message: personalizedMessage,
                 messageType: 'Expiry Alert',
                 smsStatus: smsResult.success ? 'Success' : 'Failed',
                 providerResponse: smsResult.message,
-                tenantOwner: user.tenantOwner,
+                tenant: user.tenant,
               });
             }
 
             // 5. Log that the notification was sent to prevent duplicates
             await NotificationLog.create({
-              tenantOwner: user.tenantOwner,
+              tenant: user.tenant,
               mikrotikUser: user._id,
               smsExpirySchedule: schedule._id,
             });

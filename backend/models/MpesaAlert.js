@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const MpesaAlertSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     message: {
       type: String,
@@ -33,5 +33,7 @@ const MpesaAlertSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+MpesaAlertSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('MpesaAlert', MpesaAlertSchema);

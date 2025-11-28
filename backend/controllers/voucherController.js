@@ -40,7 +40,7 @@ exports.generateVouchers = async (req, res) => {
       return res.status(404).json({ message: 'Mikrotik router not found' });
     }
 
-    const tenantId = req.user.tenantOwner || req.user._id;
+    const tenantId = req.user.tenant;
     const batchId = crypto.randomBytes(8).toString('hex');
     const createdVouchers = [];
 
@@ -115,7 +115,7 @@ exports.generateVouchers = async (req, res) => {
 // @access  Private/Admin
 exports.getVouchers = async (req, res) => {
   try {
-    const vouchers = await Voucher.find({ tenant: req.user.tenantOwner || req.user._id }).sort({ createdAt: -1 });
+    const vouchers = await Voucher.find({ tenant: req.user.tenant }).sort({ createdAt: -1 });
     res.json(vouchers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -128,7 +128,7 @@ exports.getVouchers = async (req, res) => {
 exports.deleteVoucherBatch = async (req, res) => {
   try {
     const { batchId } = req.params;
-    const tenantId = req.user.tenantOwner || req.user._id;
+    const tenantId = req.user.tenant;
 
     const vouchers = await Voucher.find({ batch: batchId, tenant: tenantId }).populate('mikrotikRouter');
 

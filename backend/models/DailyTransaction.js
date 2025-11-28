@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const dailyTransactionSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     date: {
       type: Date,
@@ -68,6 +68,8 @@ const dailyTransactionSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+dailyTransactionSchema.index({ tenant: 1 });
 
 const DailyTransaction = mongoose.model('DailyTransaction', dailyTransactionSchema);
 

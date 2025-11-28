@@ -49,7 +49,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('User IDs are required for sending to users');
       }
-      const mikrotikUsersForSms = await MikrotikUser.find({ _id: { $in: userIds }, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      const mikrotikUsersForSms = await MikrotikUser.find({ _id: { $in: userIds }, tenant: req.user.tenant }).select('mobileNumber');
       recipientPhoneNumbers = mikrotikUsersForSms.map(user => user.mobileNumber).filter(Boolean);
       break;
 
@@ -58,7 +58,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Mikrotik Router IDs are required for sending to Mikrotik group');
       }
-      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: { $in: mikrotikRouterIds }, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      const mikrotikUsers = await MikrotikUser.find({ mikrotikRouter: { $in: mikrotikRouterIds }, tenant: req.user.tenant }).select('mobileNumber');
       recipientPhoneNumbers = mikrotikUsers.map(user => user.mobileNumber).filter(Boolean);
       break;
 
@@ -67,7 +67,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
         res.status(400);
         throw new Error('Apartment/House Numbers are required for sending to location');
       }
-      const usersInLocation = await MikrotikUser.find({ apartment_house_number: { $in: apartmentHouseNumbers }, tenantOwner: req.user.tenantOwner }).select('mobileNumber');
+      const usersInLocation = await MikrotikUser.find({ apartment_house_number: { $in: apartmentHouseNumbers }, tenant: req.user.tenant }).select('mobileNumber');
       recipientPhoneNumbers = usersInLocation.map(user => user.mobileNumber).filter(Boolean);
       break;
 
@@ -97,11 +97,11 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
       message: message,
       messageType: messageType,
       smsStatus: 'Pending',
-      tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+      tenant: req.user.tenant, // Associate with the logged-in user's tenant
     });
 
     try {
-      const gatewayResponse = await sendSMS(req.user.tenantOwner, phoneNumber, message);
+      const gatewayResponse = await sendSMS(req.user.tenant, phoneNumber, message);
 
       // Update the log with the gateway's response
       log.smsStatus = gatewayResponse.success ? 'Success' : 'Failed';
@@ -129,10 +129,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
   const pageSize = Number(req.query.limit) || 25;
   const page = Number(req.query.page) || 1;
 
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (req.query.search) {
     const searchRegex = { $regex: req.query.search, $options: 'i' };
@@ -159,7 +156,6 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
 
   const count = await SmsLog.countDocuments(query);
   const logs = await SmsLog.find(query)
-    .populate('tenantOwner', 'fullName email')
     .limit(pageSize)
     .skip(pageSize * (page - 1))
     .sort({ createdAt: -1 });
@@ -193,10 +189,7 @@ const getSentSmsLog = asyncHandler(async (req, res) => {
 // @route   GET /api/sms/log/export
 // @access  Private
 const exportSmsLogs = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (req.query.search) {
     const searchRegex = { $regex: req.query.search, $options: 'i' };
@@ -221,14 +214,13 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     };
   }
 
-  const logs = await SmsLog.find(query).populate('tenantOwner', 'fullName email').sort({ createdAt: -1 }).lean();
+  const logs = await SmsLog.find(query).sort({ createdAt: -1 }).lean();
 
   const data = logs.map(log => ({
     'Mobile Number': log.mobileNumber,
     'Message': log.message,
     'Message Type': log.messageType,
     'SMS Status': log.smsStatus,
-    'Sent By': log.tenantOwner ? log.tenantOwner.fullName : 'N/A',
     'Date & Time': log.createdAt.toLocaleString(),
   }));
 
@@ -251,8 +243,8 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
     doc.moveDown();
 
     const tableTop = doc.y;
-    const headers = ['Date & Time', 'Mobile Number', 'Message', 'Status', 'Sent By'];
-    const columnWidths = [120, 90, 300, 60, 100];
+    const headers = ['Date & Time', 'Mobile Number', 'Message', 'Status'];
+    const columnWidths = [120, 100, 360, 80];
     const rowHeight = 30;
 
     const drawHeaders = (y) => {
@@ -280,7 +272,6 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
         row['Mobile Number'],
         row['Message'],
         row['SMS Status'],
-        row['Sent By']
       ];
 
       rowData.forEach((cell, i) => {

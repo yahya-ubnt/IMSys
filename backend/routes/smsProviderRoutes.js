@@ -9,13 +9,14 @@ const {
   deleteSmsProvider,
   setActiveSmsProvider,
 } = require('../controllers/smsProviderController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware'); // Assuming you have admin middleware
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware'); // Assuming you have admin middleware
 
 // All these routes should be protected and restricted to admins.
 router.route('/')
-  .get(protect, isSuperAdminOrAdminTenant, getSmsProviders)
+  .get(protect, isSuperAdminOrAdmin, getSmsProviders)
   .post(
-    [protect, isSuperAdminOrAdminTenant],
+    protect,
+    isSuperAdminOrAdmin,
     [
       body('name', 'Provider name is required').not().isEmpty(),
       body('providerType', 'Invalid provider type').isIn(['celcom', 'africastalking', 'twilio', 'generic_http']),
@@ -25,11 +26,11 @@ router.route('/')
   );
 
 router.route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getSmsProviderById)
-  .put(protect, isSuperAdminOrAdminTenant, updateSmsProvider)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteSmsProvider);
+  .get(protect, isSuperAdminOrAdmin, getSmsProviderById)
+  .put(protect, isSuperAdminOrAdmin, updateSmsProvider)
+  .delete(protect, isSuperAdminOrAdmin, deleteSmsProvider);
 
 router.route('/:id/set-active')
-    .post(protect, isSuperAdminOrAdminTenant, setActiveSmsProvider);
+    .post(protect, isSuperAdminOrAdmin, setActiveSmsProvider);
 
 module.exports = router;

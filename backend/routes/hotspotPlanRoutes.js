@@ -8,19 +8,19 @@ const {
   updateHotspotPlan,
   deleteHotspotPlan,
 } = require('../controllers/hotspotPlanController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 router.route('/public/plans').get(getPublicHotspotPlans);
 
 router
   .route('/')
-  .post(protect, isSuperAdminOrAdminTenant, createHotspotPlan)
-  .get(protect, isSuperAdminOrAdminTenant, getHotspotPlans);
+  .post(protect, isSuperAdminOrAdmin, createHotspotPlan)
+  .get(protect, isSuperAdminOrAdmin, getHotspotPlans);
 
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getHotspotPlanById)
-  .put(protect, isSuperAdminOrAdminTenant, updateHotspotPlan)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteHotspotPlan);
+  .get(protect, isSuperAdminOrAdmin, getHotspotPlanById)
+  .put(protect, isSuperAdminOrAdmin, updateHotspotPlan)
+  .delete(protect, isSuperAdminOrAdmin, deleteHotspotPlan);
 
 module.exports = router;

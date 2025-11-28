@@ -27,7 +27,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     phoneNumber,
     newBalance,
     transactionCost,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   const createdTransaction = await dailyTransaction.save();
@@ -40,10 +40,7 @@ const createTransaction = asyncHandler(async (req, res) => {
 const getTransactions = asyncHandler(async (req, res) => {
   const { startDate, endDate, method, label, search } = req.query;
 
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (startDate) {
     query.date = { ...query.date, $gte: new Date(startDate) };
@@ -79,10 +76,7 @@ const getTransactions = asyncHandler(async (req, res) => {
 // @route   GET /api/daily-transactions/:id
 // @access  Private
 const getTransactionById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const dailyTransaction = await Transaction.findOne(query);
 
@@ -100,7 +94,7 @@ const getTransactionById = asyncHandler(async (req, res) => {
 const updateTransaction = asyncHandler(async (req, res) => {
   const { date, amount, method, transactionMessage, description, label, transactionId, transactionDate, transactionTime, receiverEntity, phoneNumber, newBalance, transactionCost } = req.body;
 
-  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (dailyTransaction) {
     dailyTransaction.date = date || dailyTransaction.date;
@@ -129,7 +123,7 @@ const updateTransaction = asyncHandler(async (req, res) => {
 // @route   DELETE /api/daily-transactions/:id
 // @access  Private
 const deleteTransaction = asyncHandler(async (req, res) => {
-  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const dailyTransaction = await Transaction.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (dailyTransaction) {
     await dailyTransaction.deleteOne();
@@ -150,10 +144,7 @@ const getTransactionStats = asyncHandler(async (req, res) => {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const startOfYear = new Date(today.getFullYear(), 0, 1);
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const todayStats = await Transaction.aggregate([
     { $match: { date: { $gte: startOfToday }, ...matchQuery } },
@@ -194,10 +185,7 @@ const getMonthlyTransactionTotals = asyncHandler(async (req, res) => {
     throw new Error('Please provide a year.');
   }
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   matchQuery.date = {
     $gte: new Date(parseInt(year), 0, 1),

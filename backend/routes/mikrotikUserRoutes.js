@@ -17,19 +17,20 @@ const {
   getDelayedPayments,
   getUserPaymentStats,
 } = require('../controllers/mikrotikUserController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 const diagnosticRoutes = require('./diagnosticRoutes');
 
 // More specific routes should come before more general ones
-router.route('/clients-for-sms').get(protect, isSuperAdminOrAdminTenant, getMikrotikClientsForSms);
-router.route('/delayed-payments').get(protect, isSuperAdminOrAdminTenant, getDelayedPayments);
+router.route('/clients-for-sms').get(protect, isSuperAdminOrAdmin, getMikrotikClientsForSms);
+router.route('/delayed-payments').get(protect, isSuperAdminOrAdmin, getDelayedPayments);
 
-router.route('/stats/monthly-new-subscribers').get(protect, isSuperAdminOrAdminTenant, getMonthlyNewSubscribers);
-router.route('/stats/monthly-paid-subscribers').get(protect, isSuperAdminOrAdminTenant, getMonthlyPaidSubscribers);
-router.route('/stats/monthly-total-subscribers/:year').get(protect, isSuperAdminOrAdminTenant, getMonthlyTotalSubscribers);
+router.route('/stats/monthly-new-subscribers').get(protect, isSuperAdminOrAdmin, getMonthlyNewSubscribers);
+router.route('/stats/monthly-paid-subscribers').get(protect, isSuperAdminOrAdmin, getMonthlyPaidSubscribers);
+router.route('/stats/monthly-total-subscribers/:year').get(protect, isSuperAdminOrAdmin, getMonthlyTotalSubscribers);
 
-router.route('/').get(protect, isSuperAdminOrAdminTenant, getMikrotikUsers).post(
-  [protect, isSuperAdminOrAdminTenant],
+router.route('/').get(protect, isSuperAdminOrAdmin, getMikrotikUsers).post(
+  protect,
+  isSuperAdminOrAdmin,
   [
     body('mikrotikRouter', 'Mikrotik Router ID is required').isMongoId(),
     body('serviceType', 'Service type is required').isIn(['pppoe', 'static']),
@@ -45,18 +46,18 @@ router.route('/').get(protect, isSuperAdminOrAdminTenant, getMikrotikUsers).post
 );
 
 // Mount diagnostic routes before all other /:id routes to ensure it's matched first.
-router.use('/:userId/diagnostics', protect, isSuperAdminOrAdminTenant, diagnosticRoutes);
+router.use('/:userId/diagnostics', protect, isSuperAdminOrAdmin, diagnosticRoutes);
 
-router.route('/:id/status').get(protect, isSuperAdminOrAdminTenant, getMikrotikUserStatus);
-router.route('/:id/traffic').get(protect, isSuperAdminOrAdminTenant, getMikrotikUserTraffic);
-router.route('/:id/payment-stats').get(protect, isSuperAdminOrAdminTenant, getUserPaymentStats);
-router.route('/:userId/downtime-logs').get(protect, isSuperAdminOrAdminTenant, getDowntimeLogs);
+router.route('/:id/status').get(protect, isSuperAdminOrAdmin, getMikrotikUserStatus);
+router.route('/:id/traffic').get(protect, isSuperAdminOrAdmin, getMikrotikUserTraffic);
+router.route('/:id/payment-stats').get(protect, isSuperAdminOrAdmin, getUserPaymentStats);
+router.route('/:userId/downtime-logs').get(protect, isSuperAdminOrAdmin, getDowntimeLogs);
 
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getMikrotikUserById)
-  .put(protect, isSuperAdminOrAdminTenant, updateMikrotikUser)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteMikrotikUser);
+  .get(protect, isSuperAdminOrAdmin, getMikrotikUserById)
+  .put(protect, isSuperAdminOrAdmin, updateMikrotikUser)
+  .delete(protect, isSuperAdminOrAdmin, deleteMikrotikUser);
 
 
 module.exports = router;

@@ -12,14 +12,14 @@ const getHotspotTransactions = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 15;
   const searchTerm = req.query.searchTerm || '';
 
-  const query = searchTerm
-    ? {
-        $or: [
-          { phoneNumber: { $regex: searchTerm, $options: 'i' } },
-          { macAddress: { $regex: searchTerm, $options: 'i' } },
-        ],
-      }
-    : {};
+  const query = { tenant: req.user.tenant };
+
+  if (searchTerm) {
+    query.$or = [
+      { phoneNumber: { $regex: searchTerm, $options: 'i' } },
+      { macAddress: { $regex: searchTerm, $options: 'i' } },
+    ];
+  }
 
   const count = await HotspotTransaction.countDocuments(query);
   const transactions = await HotspotTransaction.find(query)
@@ -61,7 +61,7 @@ const initiateStkPush = asyncHandler(async (req, res) => {
     phoneNumber,
     macAddress,
     amount: plan.price,
-    tenantOwner: plan.tenant,
+    tenant: plan.tenant,
   });
 
   try {

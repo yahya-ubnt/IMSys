@@ -12,12 +12,12 @@ const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
 
 // Helper function to generate a unique 6-digit number
-const generateUnique6DigitNumber = async (tenantOwner) => {
+const generateUnique6DigitNumber = async (tenant) => {
   let isUnique = false;
   let randomNumber;
   while (!isUnique) {
     randomNumber = Math.floor(100000 + Math.random() * 900000).toString();
-    const existingUser = await MikrotikUser.findOne({ mPesaRefNo: randomNumber, tenantOwner: tenantOwner });
+    const existingUser = await MikrotikUser.findOne({ mPesaRefNo: randomNumber, tenant: tenant });
     if (!existingUser) {
       isUnique = true;
     }
@@ -70,14 +70,14 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
   } = req.body;
 
   // Verify ownership of router
-  const router = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenantOwner: req.user.tenantOwner });
+  const router = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenant: req.user.tenant });
   if (!router) {
     res.status(401);
     throw new Error('Not authorized to use this router');
   }
 
   // Verify ownership of package
-  const selectedPackage = await Package.findOne({ _id: packageId, tenantOwner: req.user.tenantOwner });
+  const selectedPackage = await Package.findOne({ _id: packageId, tenant: req.user.tenant });
   if (!selectedPackage) {
     res.status(401);
     throw new Error('Not authorized to use this package');
@@ -109,18 +109,18 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
   // Handle mPesaRefNo generation if requested
   let finalMPesaRefNo = mPesaRefNo;
   if (mPesaRefNo === 'generate_6_digit_number') {
-    finalMPesaRefNo = await generateUnique6DigitNumber();
+    finalMPesaRefNo = await generateUnique6DigitNumber(req.user.tenant);
   } else if (mPesaRefNo === 'generate_6_letter_string') {
     finalMPesaRefNo = generateRandom6LetterString();
   }
 
-  const userExists = await MikrotikUser.findOne({ username, tenantOwner: req.user.tenantOwner });
+  const userExists = await MikrotikUser.findOne({ username, tenant: req.user.tenant });
   if (userExists) {
     res.status(400);
     throw new Error('A user with this username already exists');
   }
 
-  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo, tenantOwner: req.user.tenantOwner });
+  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo, tenant: req.user.tenant });
   if (mPesaRefNoExists) {
     res.status(400);
     throw new Error('M-Pesa Reference Number must be unique');
@@ -144,7 +144,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     mobileNumber,
     expiryDate,
     station,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   // If there is an installation fee, create an initial debit for it.
@@ -153,7 +153,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     mikrotikUser.walletBalance -= fee;
 
     await WalletTransaction.create({
-      tenantOwner: req.user.tenantOwner,
+      tenant: req.user.tenant,
       mikrotikUser: mikrotikUser._id,
       transactionId: `DEBIT-INSTALL-${Date.now()}-${mikrotikUser.username}`,
       type: 'Debit',
@@ -218,7 +218,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
               {
                   officialName: mikrotikUser.officialName,
                   mPesaRefNo: mikrotikUser.mPesaRefNo,
-                  tenantOwner: req.user.tenantOwner // Pass the tenant's user ID
+                  tenant: req.user.tenant // Pass the tenant's ID
               }
           );
       } catch (error) {
@@ -237,10 +237,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users
 // @access  Private
 const getMikrotikUsers = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const users = await MikrotikUser.find(query)
     .populate('mikrotikRouter')
@@ -253,10 +250,7 @@ const getMikrotikUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id
 // @access  Private
 const getMikrotikUserById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const user = await MikrotikUser.findOne(query)
     .populate('mikrotikRouter')
@@ -275,7 +269,7 @@ const getMikrotikUserById = asyncHandler(async (req, res) => {
 // @route   PUT /api/mikrotik/users/:id
 // @access  Private
 const updateMikrotikUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!user) {
     res.status(404);
@@ -411,7 +405,7 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/mikrotik/users/:id
 // @access  Private
 const deleteMikrotikUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!user) {
     res.status(404);
@@ -487,10 +481,7 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/clients-for-sms
 // @access  Private
 const getMikrotikClientsForSms = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const clients = await MikrotikUser.find(query).select('_id officialName mobileNumber expiryDate');
   res.status(200).json(clients);
@@ -500,10 +491,7 @@ const getMikrotikClientsForSms = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/stats/monthly-new-subscribers
 // @access  Private/Admin
 const getMonthlyNewSubscribers = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
@@ -523,10 +511,7 @@ const getMonthlyNewSubscribers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/stats/monthly-paid-subscribers
 // @access  Private/Admin
 const getMonthlyPaidSubscribers = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
@@ -549,10 +534,7 @@ const getMonthlyPaidSubscribers = asyncHandler(async (req, res) => {
 const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
   const { year } = req.params;
 
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const monthlyTotals = [];
 
@@ -577,10 +559,7 @@ const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id/status
 // @access  Private
 const getMikrotikUserStatus = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const user = await MikrotikUser.findOne(query).populate('mikrotikRouter').populate('package');
 
@@ -633,10 +612,7 @@ const getMikrotikUserStatus = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id/traffic
 // @access  Private
 const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const user = await MikrotikUser.findOne(query).populate('mikrotikRouter');
 
@@ -717,10 +693,7 @@ const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
 // @access  Private
 const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
   const { stationId } = req.params;
-  let query = { station: stationId };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { station: stationId, tenant: req.user.tenant };
 
   const users = await MikrotikUser.find(query)
     .populate('package')
@@ -732,10 +705,7 @@ const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:userId/downtime-logs
 // @access  Private/Admin
 const getDowntimeLogs = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.userId };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.userId, tenant: req.user.tenant };
 
   const mikrotikUser = await MikrotikUser.findOne(query);
   if (!mikrotikUser) {
@@ -767,10 +737,7 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let filter = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    filter.tenantOwner = req.user.tenantOwner;
-  }
+  const filter = { tenant: req.user.tenant };
 
   filter.expiryDate = { $lt: today };
 
@@ -806,10 +773,7 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
 const getUserPaymentStats = asyncHandler(async (req, res) => {
     try {
         const userId = req.params.id;
-        let userQuery = { _id: userId };
-        if (!req.user.roles.includes('SUPER_ADMIN')) {
-          userQuery.tenantOwner = req.user.tenantOwner;
-        }
+        const userQuery = { _id: userId, tenant: req.user.tenant };
 
         const user = await MikrotikUser.findOne(userQuery);
 
@@ -818,18 +782,12 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
             throw new Error('User not found');
         }
 
-        let settingsQuery = {};
-        if (!req.user.roles.includes('SUPER_ADMIN')) {
-          settingsQuery.tenantOwner = req.user.tenantOwner;
-        }
+        const settingsQuery = { tenant: req.user.tenant };
 
         const settings = await ApplicationSettings.findOne(settingsQuery);
         const gracePeriodDays = settings ? settings.paymentGracePeriodDays : 3;
 
-        let transactionQuery = { mikrotikUser: userId };
-        if (!req.user.roles.includes('SUPER_ADMIN')) {
-          transactionQuery.tenantOwner = req.user.tenantOwner;
-        }
+        const transactionQuery = { mikrotikUser: userId, tenant: req.user.tenant };
 
         const transactions = await WalletTransaction.find(transactionQuery).sort({ createdAt: 'asc' });
 

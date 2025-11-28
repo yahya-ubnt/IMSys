@@ -53,7 +53,7 @@ const createLead = asyncHandler(async (req, res) => {
       customerHasReceiver,
       receiverType,
       followUpDate,
-      tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+      tenant: req.user.tenant, // Associate with the logged-in user's tenant
     });
 
     res.status(201).json(lead);
@@ -68,10 +68,7 @@ const createLead = asyncHandler(async (req, res) => {
 // @access  Private
 const getAllLeads = asyncHandler(async (req, res) => {
   const { status, leadSource, broughtInBy, search } = req.query;
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (status) {
     query.status = status;
@@ -92,10 +89,7 @@ const getAllLeads = asyncHandler(async (req, res) => {
   const leads = await Lead.find(query).populate('desiredPackage');
 
   // Dashboard Stats
-  let statsQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    statsQuery.tenantOwner = req.user.tenantOwner;
-  }
+  const statsQuery = { tenant: req.user.tenant };
 
   const totalLeads = await Lead.countDocuments(statsQuery);
   const totalConvertedLeads = await Lead.countDocuments({ ...statsQuery, status: 'Converted' });
@@ -168,10 +162,7 @@ const getAllLeads = asyncHandler(async (req, res) => {
 // @route   GET /api/leads/:id
 // @access  Public
 const getLeadById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const lead = await Lead.findOne(query).populate('desiredPackage');
   if (lead) {
@@ -186,7 +177,7 @@ const getLeadById = asyncHandler(async (req, res) => {
 // @route   PUT /api/leads/:id
 // @access  Private/Admin
 const updateLead = asyncHandler(async (req, res) => {
-  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const lead = await Lead.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (lead) {
     lead.name = req.body.name || lead.name;
@@ -224,7 +215,7 @@ const updateLead = asyncHandler(async (req, res) => {
 // @route   DELETE /api/leads/:id
 // @access  Private/Admin
 const deleteLead = asyncHandler(async (req, res) => {
-  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const lead = await Lead.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (lead) {
     await lead.deleteOne();
@@ -241,7 +232,7 @@ const deleteLead = asyncHandler(async (req, res) => {
 // @access  Private
 const updateLeadStatus = asyncHandler(async (req, res) => {
   const { status, createMikrotikUser, mikrotikUsername, mikrotikPassword, mikrotikService, mikrotikRouter } = req.body;
-  const lead = await Lead.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const lead = await Lead.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (lead) {
     lead.status = status;
@@ -255,7 +246,7 @@ const updateLeadStatus = asyncHandler(async (req, res) => {
         service: mikrotikService,
         router: mikrotikRouter,
         comment: `Converted from lead ${lead.name}`,
-        tenantOwner: req.user.tenantOwner,
+        tenant: req.user.tenant,
       });
 
       const createdMikrotikUser = await mikrotikUser.save();

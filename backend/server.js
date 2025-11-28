@@ -92,6 +92,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
+const tenantRoutes = require('./routes/tenantRoutes');
 
 // Mount routes
 app.use('/api/dashboard', dashboardRoutes);
@@ -112,6 +113,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/tenants', tenantRoutes);
 
 
 // app.use('/api/providers', require('./routes/providerRoutes')); // Add provider routes

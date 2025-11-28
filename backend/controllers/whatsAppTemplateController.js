@@ -6,10 +6,7 @@ const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 // @route   GET /api/whatsapp-templates
 // @access  Private (Admin)
 const getWhatsAppTemplates = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const templates = await WhatsAppTemplate.find(query).sort({ createdAt: -1 });
   res.json(templates);
@@ -31,7 +28,7 @@ const createWhatsAppTemplate = asyncHandler(async (req, res) => {
     providerTemplateId,
     body,
     variables,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   const createdTemplate = await template.save();
@@ -42,10 +39,7 @@ const createWhatsAppTemplate = asyncHandler(async (req, res) => {
 // @route   GET /api/whatsapp-templates/:id
 // @access  Private (Admin)
 const getWhatsAppTemplateById = asyncHandler(async (req, res) => {
-    let query = { _id: req.params.id };
-    if (!req.user.roles.includes('SUPER_ADMIN')) {
-      query.tenantOwner = req.user.tenantOwner;
-    }
+    const query = { _id: req.params.id, tenant: req.user.tenant };
 
     const template = await WhatsAppTemplate.findOne(query);
     if (template) {
@@ -61,7 +55,7 @@ const getWhatsAppTemplateById = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const updateWhatsAppTemplate = asyncHandler(async (req, res) => {
   const { templateName, providerTemplateId, body, variables } = req.body;
-  const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (template) {
     template.templateName = templateName || template.templateName;
@@ -81,7 +75,7 @@ const updateWhatsAppTemplate = asyncHandler(async (req, res) => {
 // @route   DELETE /api/whatsapp-templates/:id
 // @access  Private (Admin)
 const deleteWhatsAppTemplate = asyncHandler(async (req, res) => {
-  const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const template = await WhatsAppTemplate.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (template) {
     await template.deleteOne();

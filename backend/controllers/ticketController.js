@@ -36,7 +36,7 @@ const createTicket = asyncHandler(async (req, res) => {
     issueType,
     description,
     priority: priority || 'Medium', // Default to Medium if not provided
-    tenantOwner: req.user.tenantOwner,
+    tenant: req.user.tenant,
     statusHistory: [{ status: 'New' }],
   });
 
@@ -62,10 +62,7 @@ const createTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets
 // @access  Admin
 const getTickets = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   if (req.query.status) {
     query.status = req.query.status;
@@ -84,10 +81,7 @@ const getTickets = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/:id
 // @access  Admin
 const getTicketById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const ticket = await Ticket.findOne(query);
 
@@ -105,7 +99,7 @@ const getTicketById = asyncHandler(async (req, res) => {
 const updateTicket = asyncHandler(async (req, res) => {
   const { status, notes, ...otherUpdates } = req.body;
 
-  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!ticket) {
     res.status(404);
@@ -150,7 +144,7 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
     throw new Error('Note content is required');
   }
 
-  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!ticket) {
     res.status(404);
@@ -168,10 +162,7 @@ const addNoteToTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets/stats
 // @access  Admin
 const getTicketStats = asyncHandler(async (req, res) => {
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   const stats = await Ticket.aggregate([
     { $match: matchQuery },
@@ -217,10 +208,7 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
     throw new Error('Year is required and must be a number');
   }
 
-  let matchQuery = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    matchQuery.tenantOwner = new mongoose.Types.ObjectId(req.user.tenantOwner);
-  }
+  const matchQuery = { tenant: req.user.tenant };
 
   matchQuery.createdAt = {
     $gte: new Date(year, 0, 1),
@@ -260,7 +248,7 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
 // @route   DELETE /api/tickets/:id
 // @access  Admin
 const deleteTicket = asyncHandler(async (req, res) => {
-  const ticket = await Ticket.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const ticket = await Ticket.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!ticket) {
     res.status(404);

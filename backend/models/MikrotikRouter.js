@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const MikrotikRouterSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     name: {
       type: String,
@@ -48,6 +48,6 @@ const MikrotikRouterSchema = mongoose.Schema(
   }
 );
 
-
+MikrotikRouterSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('MikrotikRouter', MikrotikRouterSchema);

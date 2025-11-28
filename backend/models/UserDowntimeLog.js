@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const userDowntimeLogSchema = new mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     mikrotikUser: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,6 +27,8 @@ const userDowntimeLogSchema = new mongoose.Schema(
     timestamps: true, // Adds createdAt and updatedAt
   }
 );
+
+userDowntimeLogSchema.index({ tenant: 1 });
 
 const UserDowntimeLog = mongoose.model('UserDowntimeLog', userDowntimeLogSchema);
 

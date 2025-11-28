@@ -8,10 +8,7 @@ const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeS
 // @route   GET /api/smsacknowledgements
 // @access  Private
 const getAcknowledgements = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
   const acknowledgements = await SmsAcknowledgement.find(query).populate('smsTemplate', 'name messageBody');
   res.json(acknowledgements);
@@ -21,10 +18,7 @@ const getAcknowledgements = asyncHandler(async (req, res) => {
 // @route   GET /api/smsacknowledgements/:id
 // @access  Private
 const getAcknowledgementById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
   const acknowledgement = await SmsAcknowledgement.findOne(query).populate('smsTemplate', 'name messageBody');
 
@@ -48,13 +42,13 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
   const { triggerType, description, smsTemplate, status } = req.body;
 
   // Verify ownership of smsTemplate
-  const template = await SmsTemplate.findOne({ _id: smsTemplate, tenantOwner: req.user.tenantOwner });
+  const template = await SmsTemplate.findOne({ _id: smsTemplate, tenant: req.user.tenant });
   if (!template) {
     res.status(401);
     throw new Error('Not authorized to use this SMS template');
   }
 
-  const mappingExists = await SmsAcknowledgement.findOne({ triggerType, tenantOwner: req.user.tenantOwner });
+  const mappingExists = await SmsAcknowledgement.findOne({ triggerType, tenant: req.user.tenant });
 
   if (mappingExists) {
     res.status(400);
@@ -67,7 +61,7 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
       description: sanitizeString(description), // Sanitize description
       smsTemplate,
       status,
-      tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+      tenant: req.user.tenant, // Associate with the logged-in user's tenant
     });
 
     if (acknowledgement) {
@@ -89,7 +83,7 @@ const createAcknowledgement = asyncHandler(async (req, res) => {
 const updateAcknowledgement = asyncHandler(async (req, res) => {
   const { triggerType, description, smsTemplate, status } = req.body;
 
-  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (acknowledgement) {
     acknowledgement.triggerType = triggerType || acknowledgement.triggerType;
@@ -109,7 +103,7 @@ const updateAcknowledgement = asyncHandler(async (req, res) => {
 // @route   DELETE /api/smsacknowledgements/:id
 // @access  Private
 const deleteAcknowledgement = asyncHandler(async (req, res) => {
-  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const acknowledgement = await SmsAcknowledgement.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (acknowledgement) {
     await acknowledgement.deleteOne();

@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const TransactionSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     transactionId: {
       type: String,
@@ -50,5 +50,7 @@ const TransactionSchema = mongoose.Schema(
     timestamps: true,
   }
 );
+
+TransactionSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('Transaction', TransactionSchema);

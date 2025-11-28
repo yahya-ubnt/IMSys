@@ -16,7 +16,7 @@ const createMikrotikRouter = asyncHandler(async (req, res) => {
     throw new Error('Please add all required fields');
   }
 
-  const routerExists = await MikrotikRouter.findOne({ ipAddress, tenantOwner: req.user.tenantOwner });
+  const routerExists = await MikrotikRouter.findOne({ ipAddress, tenant: req.user.tenant });
 
   if (routerExists) {
     res.status(400);
@@ -32,7 +32,7 @@ const createMikrotikRouter = asyncHandler(async (req, res) => {
     apiPassword: encryptedPassword, // Save the encrypted password
     apiPort,
     location,
-    tenantOwner: req.user.tenantOwner, // Associate with the logged-in user's tenant
+    tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
   if (router) {
@@ -54,11 +54,7 @@ const createMikrotikRouter = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/routers
 // @access  Private
 const getMikrotikRouters = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
-
+  const query = { tenant: req.user.tenant };
   const routers = await MikrotikRouter.find(query);
   res.status(200).json(routers);
 });
@@ -67,11 +63,7 @@ const getMikrotikRouters = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/routers/:id
 // @access  Private
 const getMikrotikRouterById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
-
+  const query = { _id: req.params.id, tenant: req.user.tenant };
   const router = await MikrotikRouter.findOne(query);
 
   if (router) {
@@ -88,7 +80,7 @@ const getMikrotikRouterById = asyncHandler(async (req, res) => {
 const updateMikrotikRouter = asyncHandler(async (req, res) => {
   const { name, ipAddress, apiUsername, apiPassword, apiPort, location } = req.body;
 
-  const router = await MikrotikRouter.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const router = await MikrotikRouter.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!router) {
     res.status(404);
@@ -122,7 +114,7 @@ const updateMikrotikRouter = asyncHandler(async (req, res) => {
 // @route   DELETE /api/mikrotik/routers/:id
 // @access  Private
 const deleteMikrotikRouter = asyncHandler(async (req, res) => {
-  const router = await MikrotikRouter.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const router = await MikrotikRouter.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!router) {
     res.status(404);
@@ -169,11 +161,7 @@ const testMikrotikConnection = asyncHandler(async (req, res) => {
 // @route GET /api/mikrotik-routers/:id/ppp-profiles
 // @access Private
 const getMikrotikPppProfiles = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
-
+  const query = { _id: req.params.id, tenant: req.user.tenant };
   const router = await MikrotikRouter.findOne(query);
 
   if (!router) {
@@ -206,11 +194,7 @@ const getMikrotikPppProfiles = asyncHandler(async (req, res) => {
 // @route GET /api/mikrotik/routers/:id/ppp-services
 // @access Private
 const getMikrotikPppServices = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
-
+  const query = { _id: req.params.id, tenant: req.user.tenant };
   const router = await MikrotikRouter.findOne(query);
 
   if (!router) {
@@ -226,11 +210,7 @@ const getMikrotikPppServices = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/routers/:id/status
 // @access  Private
 const getMikrotikRouterStatus = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
-
+  const query = { _id: req.params.id, tenant: req.user.tenant };
   const router = await MikrotikRouter.findOne(query);
 
   if (!router) {
@@ -259,7 +239,7 @@ const getMikrotikRouterStatus = asyncHandler(async (req, res) => {
 });
 
 const getHotspotServers = asyncHandler(async (req, res) => {
-  const router = await MikrotikRouter.findById(req.params.id);
+  const router = await MikrotikRouter.findOne({ _id: req.params.id, tenant: req.user.tenant });
   if (!router) {
     res.status(404);
     throw new Error('Router not found');
@@ -269,7 +249,7 @@ const getHotspotServers = asyncHandler(async (req, res) => {
 });
 
 const getHotspotProfiles = asyncHandler(async (req, res) => {
-  const router = await MikrotikRouter.findById(req.params.id);
+  const router = await MikrotikRouter.findOne({ _id: req.params.id, tenant: req.user.tenant });
   if (!router) {
     res.status(404);
     throw new Error('Router not found');

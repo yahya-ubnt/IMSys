@@ -13,7 +13,7 @@ const updateTrafficStats = async (tenantId) => {
 
   console.log(`Starting traffic stats update for tenant ${tenantId}...`);
   await connectDB();
-  const users = await MikrotikUser.find({ tenantOwner: tenantId }).populate('mikrotikRouter');
+  const users = await MikrotikUser.find({ tenant: tenantId }).populate('mikrotikRouter');
 
   for (const user of users) {
     if (!user.mikrotikRouter) {

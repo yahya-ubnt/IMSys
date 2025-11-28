@@ -10,16 +10,18 @@ const expenseTypeSchema = mongoose.Schema(
     description: {
       type: String,
     },
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
   },
   {
     timestamps: true,
   }
 );
+
+expenseTypeSchema.index({ tenant: 1 });
 
 const ExpenseType = mongoose.model('ExpenseType', expenseTypeSchema);
 module.exports = ExpenseType;

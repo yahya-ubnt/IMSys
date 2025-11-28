@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const WalletTransactionSchema = new mongoose.Schema({
-  tenantOwner: {
+  tenant: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Tenant',
     required: true,
   },
   mikrotikUser: {
@@ -44,5 +44,7 @@ const WalletTransactionSchema = new mongoose.Schema({
 }, {
   timestamps: true, // Adds createdAt and updatedAt
 });
+
+WalletTransactionSchema.index({ tenant: 1 });
 
 module.exports = mongoose.model('WalletTransaction', WalletTransactionSchema);

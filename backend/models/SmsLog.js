@@ -23,17 +23,20 @@ const smsLogSchema = mongoose.Schema(
     providerResponse: {
       type: Object,
     },
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Tenant',
       required: true,
     },
   },
   {
-    timestamps: true,
-  }
-);
-
-const SmsLog = mongoose.model('SmsLog', smsLogSchema);
-
-module.exports = SmsLog;
+        timestamps: true,
+      }
+    );
+    
+    smsLogSchema.index({ tenant: 1 });
+    
+    const SmsLog = mongoose.model('SmsLog', smsLogSchema);
+    
+    module.exports = SmsLog;
+    

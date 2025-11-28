@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 const SmsAcknowledgementSchema = mongoose.Schema(
   {
-    tenantOwner: {
+    tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: 'Tenant',
     },
     triggerType: {
       type: String,
@@ -33,6 +33,6 @@ const SmsAcknowledgementSchema = mongoose.Schema(
   }
 );
 
-SmsAcknowledgementSchema.index({ triggerType: 1, tenantOwner: 1 }, { unique: true });
+SmsAcknowledgementSchema.index({ triggerType: 1, tenant: 1 }, { unique: true });
 
 module.exports = mongoose.model('SmsAcknowledgement', SmsAcknowledgementSchema);

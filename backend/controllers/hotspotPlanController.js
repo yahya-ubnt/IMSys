@@ -25,7 +25,7 @@ exports.createHotspotPlan = async (req, res) => {
     const plan = new HotspotPlan({
       name,
       price,
-      tenant: req.user.tenantOwner || req.user._id,
+      tenant: req.user.tenant,
       mikrotikRouter,
       timeLimitValue,
       timeLimitUnit,
@@ -51,7 +51,7 @@ exports.createHotspotPlan = async (req, res) => {
 // @access  Private/Admin
 exports.getHotspotPlans = async (req, res) => {
   try {
-    const plans = await HotspotPlan.find({ tenant: req.user.tenantOwner || req.user._id }).populate('mikrotikRouter', 'name');
+    const plans = await HotspotPlan.find({ tenant: req.user.tenant }).populate('mikrotikRouter', 'name');
     res.json(plans);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -92,7 +92,7 @@ exports.getHotspotPlanById = async (req, res) => {
   try {
     const plan = await HotspotPlan.findById(req.params.id);
 
-    if (plan && (plan.tenant.toString() === (req.user.tenantOwner?.toString() || req.user._id.toString()))) {
+    if (plan && plan.tenant.toString() === req.user.tenant.toString()) {
       res.json(plan);
     } else {
       res.status(404).json({ message: 'Plan not found' });
@@ -109,7 +109,7 @@ exports.updateHotspotPlan = async (req, res) => {
   try {
     const plan = await HotspotPlan.findById(req.params.id);
 
-    if (plan && (plan.tenant.toString() === (req.user.tenantOwner?.toString() || req.user._id.toString()))) {
+    if (plan && plan.tenant.toString() === req.user.tenant.toString()) {
       const {
         name,
         price,
@@ -157,7 +157,7 @@ exports.deleteHotspotPlan = async (req, res) => {
   try {
     const plan = await HotspotPlan.findById(req.params.id);
 
-    if (plan && (plan.tenant.toString() === (req.user.tenantOwner?.toString() || req.user._id.toString()))) {
+    if (plan && plan.tenant.toString() === req.user.tenant.toString()) {
       await plan.deleteOne();
       res.json({ message: 'Plan removed' });
     } else {

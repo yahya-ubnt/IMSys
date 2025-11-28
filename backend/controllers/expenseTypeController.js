@@ -14,7 +14,7 @@ const createExpenseType = asyncHandler(async (req, res) => {
 
   const { name, description } = req.body;
 
-  const expenseTypeExists = await ExpenseType.findOne({ name, tenantOwner: req.user.tenantOwner });
+  const expenseTypeExists = await ExpenseType.findOne({ name, tenant: req.user.tenant });
 
   if (expenseTypeExists) {
     res.status(400);
@@ -24,7 +24,7 @@ const createExpenseType = asyncHandler(async (req, res) => {
   const expenseType = await ExpenseType.create({
     name,
     description: sanitizeString(description), // Sanitize description
-    tenantOwner: req.user.tenantOwner,
+    tenant: req.user.tenant,
   });
 
   res.status(201).json(expenseType);
@@ -34,12 +34,9 @@ const createExpenseType = asyncHandler(async (req, res) => {
 // @route   GET /api/expensetypes
 // @access  Private
 const getExpenseTypes = asyncHandler(async (req, res) => {
-  let query = {};
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { tenant: req.user.tenant };
 
-  const expenseTypes = await ExpenseType.find(query).populate('tenantOwner', 'name email');
+  const expenseTypes = await ExpenseType.find(query);
   res.status(200).json(expenseTypes);
 });
 
@@ -47,12 +44,9 @@ const getExpenseTypes = asyncHandler(async (req, res) => {
 // @route   GET /api/expensetypes/:id
 // @access  Private
 const getExpenseTypeById = asyncHandler(async (req, res) => {
-  let query = { _id: req.params.id };
-  if (!req.user.roles.includes('SUPER_ADMIN')) {
-    query.tenantOwner = req.user.tenantOwner;
-  }
+  const query = { _id: req.params.id, tenant: req.user.tenant };
 
-  const expenseType = await ExpenseType.findOne(query).populate('tenantOwner', 'name email');
+  const expenseType = await ExpenseType.findOne(query);
 
   if (!expenseType) {
     res.status(404);
@@ -68,7 +62,7 @@ const getExpenseTypeById = asyncHandler(async (req, res) => {
 const updateExpenseType = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
-  let expenseType = await ExpenseType.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  let expenseType = await ExpenseType.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!expenseType) {
     res.status(404);
@@ -87,7 +81,7 @@ const updateExpenseType = asyncHandler(async (req, res) => {
 // @route   DELETE /api/expensetypes/:id
 // @access  Private
 const deleteExpenseType = asyncHandler(async (req, res) => {
-  const expenseType = await ExpenseType.findOne({ _id: req.params.id, tenantOwner: req.user.tenantOwner });
+  const expenseType = await ExpenseType.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (!expenseType) {
     res.status(404);

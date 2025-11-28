@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const ScheduledTask = require('../models/ScheduledTask');
-const User = require('../models/User');
+const Tenant = require('../models/Tenant'); // Changed from User
 const cron = require('node-cron');
 const { spawn } = require('child_process');
 const path = require('path');
@@ -51,16 +51,16 @@ const executeTask = async (task) => {
     await taskDoc.save();
 
     try {
-        const output = await executeScript(path.join(__dirname, '..', task.scriptPath), task.tenantOwner);
+        const output = await executeScript(path.join(__dirname, '..', task.scriptPath), task.tenant);
         taskDoc.lastStatus = 'Success';
         taskDoc.logOutput = output;
         await taskDoc.save();
-        console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenantOwner} finished successfully.`);
+        console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenant} finished successfully.`);
     } catch (error) {
         taskDoc.lastStatus = 'Failed';
         taskDoc.logOutput = error.message;
         await taskDoc.save();
-        console.error(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenantOwner} failed: ${error.message}`);
+        console.error(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenant} failed: ${error.message}`);
     }
 };
 
@@ -104,7 +104,7 @@ const masterScheduler = async () => {
     console.log(`[${new Date().toISOString()}] Scheduler running monitoring jobs...`);
     
     try {
-      const tenants = await User.find({ roles: 'ADMIN_TENANT' });
+      const tenants = await Tenant.find({ status: 'active' }); // Find all active tenants
       for (const tenant of tenants) {
         performRouterStatusCheck(tenant._id);
         performUserStatusCheck(tenant._id);

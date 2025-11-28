@@ -8,22 +8,23 @@ const {
   updateAcknowledgement,
   deleteAcknowledgement,
 } = require('../controllers/smsAcknowledgementController');
-const { protect, isSuperAdminOrAdminTenant } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/').get(protect, isSuperAdminOrAdminTenant, getAcknowledgements).post(
-  [protect, isSuperAdminOrAdminTenant],
+router.route('/').get(protect, isSuperAdminOrAdmin, getAcknowledgements).post(
+  protect,
+  isSuperAdminOrAdmin,
   [
     body('triggerType', 'Trigger type is required').not().isEmpty(),
-    body('description', 'Description must be a string').optional().isString(),
-    body('smsTemplate', 'SMS Template ID is required and must be a valid Mongo ID').isMongoId(),
-    body('status', 'Invalid status').optional().isIn(['Active', 'Inactive']),
+    body('smsTemplate', 'SMS template is required').not().isEmpty(),
+    body('status', 'Status is required').isIn(['Active', 'Inactive']),
   ],
   createAcknowledgement
 );
+
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdminTenant, getAcknowledgementById)
-  .put(protect, isSuperAdminOrAdminTenant, updateAcknowledgement)
-  .delete(protect, isSuperAdminOrAdminTenant, deleteAcknowledgement);
+  .get(protect, isSuperAdminOrAdmin, getAcknowledgementById)
+  .put(protect, isSuperAdminOrAdmin, updateAcknowledgement)
+  .delete(protect, isSuperAdminOrAdmin, deleteAcknowledgement);
 
 module.exports = router;
