@@ -47,6 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(user);
         } else {
+          if (response.status !== 401 && response.status !== 403) {
+            console.error('Error checking auth status:', response.statusText);
+          }
           setUser(null);
         }
       } catch (error) {
@@ -61,7 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: any }) => {
-    console.log("User data in login:", userData)
     const { fullName, ...rest } = userData
     const user: User = { ...rest, name: fullName, roles: userData.roles, tenant: userData.tenant, loginMethod: 'email' }
     setIsLoggingOut(false)

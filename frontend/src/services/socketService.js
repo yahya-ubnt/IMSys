@@ -12,7 +12,7 @@ export const initializeSocket = () => {
   });
 
   socket.on('connect', () => {
-    console.log('Connected to WebSocket server');
+    // console.log('Connected to WebSocket server');
   });
 
   socket.on('disconnect', () => {
