@@ -22,6 +22,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     slogan: "MANAGEMENT SYSTEM",
     logoIcon: null,
   });
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -39,8 +40,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to fetch settings:", error);
       }
     };
-    fetchSettings();
-  }, []);
+    if (!isLoading && user) {
+      fetchSettings();
+    }
+  }, [isLoading, user]);
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings }}>

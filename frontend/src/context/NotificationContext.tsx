@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Notification } from '@/types/notification';
 import { useAuth } from '@/components/auth-provider';
-import { getSocket } from '../services/socketService';
+import { getSocket, initializeSocket } from '../services/socketService';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -17,6 +17,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { user, isLoading } = useAuth();
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -87,21 +88,24 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
   // Initial fetch and WebSocket listener
   useEffect(() => {
-    fetchNotifications();
+    if (!isLoading && user) {
+      fetchNotifications();
+      
+      initializeSocket();
+      const socket = getSocket();
 
-    const socket = getSocket();
+      const handleNewNotification = (newNotification: Notification) => {
+        setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
+        setUnreadCount(prevCount => prevCount + 1);
+      };
 
-    const handleNewNotification = (newNotification: Notification) => {
-      setNotifications(prevNotifications => [newNotification, ...prevNotifications]);
-      setUnreadCount(prevCount => prevCount + 1);
-    };
+      socket.on('new_notification', handleNewNotification);
 
-    socket.on('new_notification', handleNewNotification);
-
-    return () => {
-      socket.off('new_notification', handleNewNotification);
-    };
-  }, [fetchNotifications]);
+      return () => {
+        socket.off('new_notification', handleNewNotification);
+      };
+    }
+  }, [fetchNotifications, isLoading, user]);
 
   return (
     <NotificationContext.Provider value={{ notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification }}>
