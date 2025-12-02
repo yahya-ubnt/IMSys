@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Sun, Moon, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, HeartPulse, MessageCircle, Timer } from "lucide-react"
+import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Sun, Moon, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, HeartPulse, MessageCircle, Timer, FileSpreadsheet } from "lucide-react"
 
 import Image from "next/image"
 import { useTheme } from "next-themes"
@@ -217,6 +217,11 @@ const menuCategories: MenuCategory[] = [
     label: "Financials",
     items: [
       {
+        title: "Invoices",
+        icon: FileSpreadsheet,
+        url: "/invoices",
+      },
+      {
         title: "Transactions",
         icon: DollarSign,
         items: [
@@ -403,6 +408,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     
     } else if (pathname.startsWith("/transactions")) {
       setOpenMenu("Transactions")
+    } else if (pathname.startsWith("/invoices")) {
+      setOpenMenu("Financials")
     } else if (pathname.startsWith("/payments")) {
       setOpenMenu("Payments")
     } else if (pathname.startsWith("/bills")) {

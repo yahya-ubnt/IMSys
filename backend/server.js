@@ -45,6 +45,7 @@ const expenseTypeRoutes = require('./routes/expenseTypeRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const ticketRoutes = require('./routes/ticketRoutes'); // Import ticket routes
 const notificationRoutes = require('./routes/notificationRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes'); // Import invoice routes
 // const issueTypeRoutes = require('./routes/issueTypeRoutes'); // Import issue type routes
 
 
@@ -120,6 +121,7 @@ app.use('/api/tenants', tenantRoutes);
 
 app.use('/api/daily-transactions', dailyTransactionRoutes); // Add daily transaction routes
 app.use('/api/bills', billRoutes); // Add bill routes
+app.use('/api/invoices', invoiceRoutes); // Add invoice routes
 app.use('/api/technician-activities', technicianActivityRoutes);
 app.use('/api/settings', settingsRoutes); // ADDED // Add technician activity routes
 app.use('/api/settings/sms-providers', smsProviderRoutes); // Mount SMS provider routes
@@ -135,7 +137,6 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/expensetypes', expenseTypeRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/tickets', ticketRoutes); // Add ticket routes
-// app.use('/api/issue-types', issueTypeRoutes); // Add issue type routes
 
 
 

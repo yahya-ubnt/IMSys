@@ -9,6 +9,7 @@ const HotspotPlan = require('../models/HotspotPlan');
 const HotspotSession = require('../models/HotspotSession');
 const HotspotTransaction = require('../models/HotspotTransaction');
 const MikrotikRouter = require('../models/MikrotikRouter');
+const Invoice = require('../models/Invoice'); // Import Invoice model
 const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
@@ -104,6 +105,7 @@ const processStkCallback = async (callbackData) => {
 
   if (ResultCode !== 0) {
     console.error(`STK Push failed for ${CheckoutRequestID}: ${ResultDesc}`);
+    await StkRequest.deleteOne({ checkoutRequestId: CheckoutRequestID });
     return;
   }
 
@@ -113,6 +115,9 @@ const processStkCallback = async (callbackData) => {
   }, {});
 
   const transId = metadata.MpesaReceiptNumber;
+  const transAmount = metadata.Amount;
+  const msisdn = metadata.PhoneNumber.toString();
+
   const stkRequest = await StkRequest.findOne({ checkoutRequestId: CheckoutRequestID });
 
   if (!stkRequest) {
@@ -120,8 +125,47 @@ const processStkCallback = async (callbackData) => {
     return;
   }
 
+  const existingTransaction = await Transaction.findOne({ transactionId: transId });
+  if (existingTransaction) {
+    console.log(`Transaction ${transId} already processed.`);
+    await StkRequest.deleteOne({ _id: stkRequest._id });
+    return;
+  }
+
+  // --- INVOICE PAYMENT VIA STK PUSH ---
+  if (stkRequest.accountReference.startsWith('INV-')) {
+    const invoice = await Invoice.findOne({ 
+      invoiceNumber: stkRequest.accountReference, 
+      status: { $in: ['Unpaid', 'Overdue'] }, 
+      tenant: stkRequest.tenant 
+    }).populate('mikrotikUser');
+
+    if (!invoice) {
+      const alertMessage = `STK payment of KES ${transAmount} received for invoice '${stkRequest.accountReference}', but the invoice was not found or already paid.`;
+      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: stkRequest.accountReference, tenant: stkRequest.tenant, paymentDate: new Date() });
+      console.error(alertMessage);
+    } else {
+      invoice.status = 'Paid';
+      invoice.paidDate = new Date();
+      await invoice.save();
+
+      await processSubscriptionPayment(invoice.mikrotikUser._id, transAmount, 'M-Pesa (STK Invoice)', transId);
+
+      await Transaction.create({
+        transactionId: transId,
+        amount: transAmount,
+        referenceNumber: stkRequest.accountReference,
+        officialName: invoice.mikrotikUser.officialName,
+        msisdn: msisdn,
+        transactionDate: new Date(),
+        paymentMethod: 'M-Pesa (STK)',
+        tenant: stkRequest.tenant,
+        comment: `Payment for Invoice #${stkRequest.accountReference}`
+      });
+    }
+  }
   // --- HOTSPOT LOGIC ---
-  if (stkRequest.type === 'HOTSPOT') {
+  else if (stkRequest.type === 'HOTSPOT') {
     const hotspotTransaction = await HotspotTransaction.findOneAndUpdate(
       { macAddress: stkRequest.accountReference, status: 'pending' },
       { status: 'completed', transactionId: transId },
@@ -130,79 +174,49 @@ const processStkCallback = async (callbackData) => {
 
     if (!hotspotTransaction) {
       console.error(`Hotspot transaction not found for MAC address: ${stkRequest.accountReference}`);
-      return;
+    } else {
+      const plan = await HotspotPlan.findById(stkRequest.planId);
+      const router = await MikrotikRouter.findById(plan.mikrotikRouter);
+
+      let endTime;
+      const now = new Date();
+      switch (plan.timeLimitUnit) {
+        case 'minutes': endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 1000); break;
+        case 'hours': endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); break;
+        case 'days': endTime = new Date(now.getTime() + plan.timeLimitValue * 24 * 60 * 60 * 1000); break;
+        default: endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000);
+      }
+
+      await HotspotSession.findOneAndUpdate(
+        { macAddress: stkRequest.accountReference },
+        { planId: stkRequest.planId, startTime: now, endTime: endTime, dataUsage: 0 },
+        { upsert: true, new: true }
+      );
+
+      await addHotspotIpBinding(router, stkRequest.accountReference, plan.server);
     }
-
-    const plan = await HotspotPlan.findById(stkRequest.planId);
-    const router = await MikrotikRouter.findById(plan.mikrotikRouter);
-
-    let endTime;
-    const now = new Date();
-    switch (plan.timeLimitUnit) {
-      case 'minutes':
-        endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 1000);
-        break;
-      case 'hours':
-        endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000);
-        break;
-      case 'days':
-        endTime = new Date(now.getTime() + plan.timeLimitValue * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); // Default to hours
-    }
-
-    await HotspotSession.findOneAndUpdate(
-      { macAddress: stkRequest.accountReference },
-      {
-        planId: stkRequest.planId,
-        startTime: now,
-        endTime: endTime,
-        dataUsage: 0,
-      },
-      { upsert: true, new: true }
-    );
-
-    await addHotspotIpBinding(router, stkRequest.accountReference, plan.server);
-
   } 
-  // --- EXISTING SUBSCRIPTION LOGIC ---
+  // --- SUBSCRIPTION LOGIC ---
   else {
-    const existingTransaction = await Transaction.findOne({ transactionId: transId });
-    if (existingTransaction) {
-      console.log(`Transaction ${transId} already processed.`);
-      return;
-    }
-
-    const transAmount = metadata.Amount;
-    const msisdn = metadata.PhoneNumber.toString();
     const user = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenant: stkRequest.tenant });
 
     if (!user) {
       const alertMessage = `STK payment of KES ${transAmount} received for account '${stkRequest.accountReference}', but no user was found.`;
-      await MpesaAlert.create({ 
-        message: alertMessage, 
-        transactionId: transId, 
-        amount: transAmount, 
-        referenceNumber: stkRequest.accountReference, 
-        tenant: stkRequest.tenant,
-        paymentDate: new Date() 
+      await MpesaAlert.create({ message: alertMessage, transactionId: transId, amount: transAmount, referenceNumber: stkRequest.accountReference, tenant: stkRequest.tenant, paymentDate: new Date() });
+    } else {
+      await processSubscriptionPayment(user._id, transAmount, 'M-Pesa (STK)', transId);
+
+      await Transaction.create({
+        transactionId: transId,
+        amount: transAmount,
+        referenceNumber: user.username,
+        officialName: user.officialName,
+        msisdn: msisdn,
+        transactionDate: new Date(),
+        paymentMethod: 'M-Pesa (STK)',
+        tenant: user.tenant,
       });
-      return;
     }
-
-    await processSubscriptionPayment(user._id, transAmount, 'M-Pesa', transId);
-
-    await Transaction.create({
-      transactionId: transId,
-      amount: transAmount,
-      referenceNumber: user.username,
-      officialName: user.officialName,
-      msisdn: msisdn,
-      transactionDate: new Date(),
-      paymentMethod: 'M-Pesa',
-      tenant: user.tenant,
-    });
   }
 
   await StkRequest.deleteOne({ _id: stkRequest._id });
@@ -221,8 +235,6 @@ const processC2bCallback = async (callbackData) => {
 
   if (!settings) {
     const alertMessage = `C2B payment of KES ${TransAmount} received for paybill '${BusinessShortCode}', but no tenant is configured with this paybill.`;
-    // Since we don't know the tenant, we can't assign a tenant ID to this alert.
-    // It will be a system-level alert.
     await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, paymentDate: new Date() });
     console.error(alertMessage);
     return;
@@ -230,29 +242,72 @@ const processC2bCallback = async (callbackData) => {
 
   const tenant = settings.tenant;
 
-  // Find the user within the correct tenant
-  const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber, tenant: tenant });
+  // --- INVOICE PAYMENT LOGIC ---
+  if (BillRefNumber.startsWith('INV-')) {
+    const invoice = await Invoice.findOne({ 
+      invoiceNumber: BillRefNumber, 
+      status: { $in: ['Unpaid', 'Overdue'] }, 
+      tenant: tenant 
+    }).populate('mikrotikUser');
 
-  if (!user) {
-    const alertMessage = `C2B payment of KES ${TransAmount} for account '${BillRefNumber}' received, but no user was found in tenant ${tenant}.`;
-    await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenant: tenant, paymentDate: new Date() });
-    console.error(alertMessage);
-    return;
+    if (!invoice) {
+      const alertMessage = `Payment of KES ${TransAmount} received for invoice '${BillRefNumber}', but the invoice was not found, is already paid, or does not belong to this tenant.`;
+      await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenant: tenant, paymentDate: new Date() });
+      console.error(alertMessage);
+      return;
+    }
+
+    // Optional: Check if amount paid matches invoice amount. For now, we accept any payment.
+    
+    // Mark invoice as paid
+    invoice.status = 'Paid';
+    invoice.paidDate = new Date();
+    // We will create the transaction record below, so we can link it here later if needed.
+    await invoice.save();
+
+    // Process the payment against the user's wallet to clear the debt
+    await processSubscriptionPayment(invoice.mikrotikUser._id, TransAmount, 'M-Pesa (Invoice)', TransID);
+
+    // Create a standard transaction log
+    await Transaction.create({
+      transactionId: TransID,
+      amount: TransAmount,
+      referenceNumber: BillRefNumber,
+      officialName: `${FirstName} ${LastName}`.trim(),
+      msisdn: MSISDN,
+      balance: OrgAccountBalance,
+      transactionDate: new Date(),
+      paymentMethod: 'M-Pesa',
+      tenant: tenant,
+      comment: `Payment for Invoice #${BillRefNumber}`
+    });
+
+  } 
+  // --- SUBSCRIPTION PAYMENT LOGIC (Existing) ---
+  else {
+    const user = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber, tenant: tenant });
+
+    if (!user) {
+      const alertMessage = `C2B payment of KES ${TransAmount} for account '${BillRefNumber}' received, but no user was found in tenant ${tenant}.`;
+      await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenant: tenant, paymentDate: new Date() });
+      console.error(alertMessage);
+      return;
+    }
+
+    await processSubscriptionPayment(user._id, TransAmount, 'M-Pesa', TransID);
+
+    await Transaction.create({
+      transactionId: TransID,
+      amount: TransAmount,
+      referenceNumber: BillRefNumber,
+      officialName: `${FirstName} ${LastName}`.trim(),
+      msisdn: MSISDN,
+      balance: OrgAccountBalance,
+      transactionDate: new Date(),
+      paymentMethod: 'M-Pesa',
+      tenant: user.tenant,
+    });
   }
-
-  await processSubscriptionPayment(user._id, TransAmount, 'M-Pesa', TransID);
-
-  await Transaction.create({
-    transactionId: TransID,
-    amount: TransAmount,
-    referenceNumber: BillRefNumber,
-    officialName: `${FirstName} ${LastName}`.trim(),
-    msisdn: MSISDN,
-    balance: OrgAccountBalance,
-    transactionDate: new Date(),
-    paymentMethod: 'M-Pesa',
-    tenant: user.tenant,
-  });
 };
 
 module.exports = {
