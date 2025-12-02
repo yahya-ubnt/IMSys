@@ -14,7 +14,7 @@ const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware'
 
 // M-Pesa STK Push
 router.post(
-  '/stk-push',
+  '/initiate-stk',
   protect,
   isSuperAdminOrAdmin,
   [
