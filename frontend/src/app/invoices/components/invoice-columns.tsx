@@ -74,22 +74,24 @@ export const getInvoiceColumns = ({ onViewDetails }: GetInvoiceColumnsProps): Co
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       let variant: "default" | "secondary" | "destructive" | "outline" = "secondary"
+      let className = ""
       
       switch (status) {
         case "Paid":
-          variant = "default"
+          className = "bg-green-500 text-white" // Maintain green for Paid
           break;
         case "Unpaid":
-          variant = "outline"
+          className = "border-gray-400 text-gray-400" // Subtle grey for Unpaid
+          variant = "outline" // Use outline variant for border
           break;
         case "Overdue":
-          variant = "destructive"
+          variant = "destructive" // Keep destructive for Overdue
           break;
         default:
           variant = "secondary"
       }
       
-      return <Badge variant={variant} className="capitalize">{status}</Badge>
+      return <Badge variant={variant} className={`capitalize ${className}`}>{status}</Badge>
     },
   },
   {
