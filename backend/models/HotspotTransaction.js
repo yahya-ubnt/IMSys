@@ -29,6 +29,11 @@ const HotspotTransactionSchema = new mongoose.Schema(
       enum: ['pending', 'completed', 'failed'],
       default: 'pending',
     },
+    transactionId: {
+      type: String,
+      unique: true,
+      sparse: true, // Allows multiple documents to have a null value for this field
+    },
   },
   {
     timestamps: true,
