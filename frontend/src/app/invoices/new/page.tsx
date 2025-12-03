@@ -24,7 +24,7 @@ interface MikrotikUser {
 
 interface InvoiceItem {
   description: string;
-  amount: number;
+  amount: number | string; // Allow string for initial empty state
 }
 
 interface InvoiceFormData {
@@ -40,7 +40,7 @@ export default function NewInvoicePage() {
 
   const [formData, setFormData] = useState<InvoiceFormData>({
     mikrotikUserId: '',
-    items: [{ description: '', amount: 0 }],
+    items: [{ description: '', amount: '' }], // Changed default amount to empty string
   })
   const [isLoading, setIsLoading] = useState(false)
   const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([])
@@ -67,13 +67,13 @@ export default function NewInvoicePage() {
   const handleItemChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const newItems = [...formData.items];
     const field = e.target.name as keyof InvoiceItem;
-    const value = e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
+    const value = e.target.type === 'number' ? (e.target.value === '' ? '' : parseFloat(e.target.value)) : e.target.value;
     (newItems[index] as any)[field] = value;
     setFormData({ ...formData, items: newItems });
   };
 
   const addItem = () => {
-    setFormData({ ...formData, items: [...formData.items, { description: '', amount: 0 }] });
+    setFormData({ ...formData, items: [...formData.items, { description: '', amount: '' }] }); // Changed default amount to empty string
   };
 
   const removeItem = (index: number) => {
@@ -81,12 +81,12 @@ export default function NewInvoicePage() {
     setFormData({ ...formData, items: newItems });
   };
 
-  const totalAmount = formData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalAmount = formData.items.reduce((sum, item) => sum + (parseFloat(item.amount as string) || 0), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.mikrotikUserId || !formData.dueDate || totalAmount <= 0 || formData.items.some(i => !i.description)) {
-        toast({ title: 'Missing Fields', description: 'Please select a client, a due date, and ensure all items have a description and the total is greater than zero.', variant: 'destructive' })
+    if (!formData.mikrotikUserId || !formData.dueDate || totalAmount <= 0 || formData.items.some(i => !i.description || i.amount === '')) {
+        toast({ title: 'Missing Fields', description: 'Please select a client, a due date, and ensure all items have a description and amount, and the total is greater than zero.', variant: 'destructive' })
         return;
     }
     setIsLoading(true)
@@ -97,6 +97,7 @@ export default function NewInvoicePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             ...formData,
+            items: formData.items.map(item => ({ ...item, amount: parseFloat(item.amount as string) || 0 })),
             amount: totalAmount,
         }),
       });
@@ -162,15 +163,21 @@ export default function NewInvoicePage() {
                 </div>
 
                 <div className="space-y-4">
-                    <Label className="text-zinc-300">Invoice Items</Label>
+                    <div className="grid grid-cols-[1fr_auto_auto] gap-4">
+                        <Label className="text-zinc-300">Description *</Label>
+                        <Label className="text-zinc-300 text-right w-32">Amount *</Label>
+                        <div className="w-10"></div> {/* Placeholder for the button */}
+                    </div>
                     {formData.items.map((item, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                            <Input name="description" placeholder="Item description" value={item.description} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700 flex-grow" />
+                        <div key={index} className="grid grid-cols-[1fr_auto_auto] gap-4 items-center">
+                            <Input name="description" placeholder="Item description" value={item.description} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700" />
                             <Input name="amount" type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700 w-32" />
-                            {formData.items.length > 1 && (
+                            {formData.items.length > 1 ? (
                               <Button type="button" variant="destructive" size="icon" onClick={() => removeItem(index)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+                            ) : (
+                              <div className="w-10"></div> // Placeholder to maintain alignment
                             )}
                         </div>
                     ))}

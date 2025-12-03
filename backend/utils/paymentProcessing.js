@@ -32,8 +32,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   console.log(`[${new Date().toISOString()}] Wallet credited. New balance: ${user.walletBalance}`);
 
   await WalletTransaction.create({
-    tenantOwner: user.tenantOwner,
-    user: user.user,
+    tenant: user.tenant,
     mikrotikUser: user._id,
     transactionId: `WT-CREDIT-${Date.now()}`,
     type: 'Credit',
@@ -69,8 +68,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
     monthsExtended += 1;
 
     await WalletTransaction.create({
-      tenantOwner: user.tenantOwner,
-      user: user.user,
+      tenant: user.tenant,
       mikrotikUser: user._id,
       transactionId: `DEBIT-RENEW-${Date.now()}`,
       type: 'Debit',
@@ -101,8 +99,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
       user.walletBalance -= costOfFutureMonths;
 
       await WalletTransaction.create({
-        tenantOwner: user.tenantOwner,
-        user: user.user,
+        tenant: user.tenant,
         mikrotikUser: user._id,
         transactionId: `DEBIT-FUTURE-${Date.now()}`,
         type: 'Debit',
@@ -123,7 +120,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
 
   if (monthsExtended > 0) {
     console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username}.`);
-    await reconnectMikrotikUser(user._id, user.tenantOwner);
+    await reconnectMikrotikUser(user._id, user.tenant);
   }
 
   try {
@@ -136,7 +133,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
         amountPaid: amountPaid,
         walletBalance: user.walletBalance.toFixed(2),
         userId: user.user,
-        tenantOwner: user.tenantOwner, // Pass the tenantOwner
+        tenant: user.tenant, // Pass the tenant
       }
     );
     console.log(`[${new Date().toISOString()}] Payment acknowledgement SMS sent successfully.`);

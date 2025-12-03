@@ -155,7 +155,7 @@ const processStkCallback = async (callbackData) => {
         transactionId: transId,
         amount: transAmount,
         referenceNumber: stkRequest.accountReference,
-        officialName: invoice.mikrotikUser.officialName,
+        officialName: invoice.mikrotikUser.officialName, // Use name from DB
         msisdn: msisdn,
         transactionDate: new Date(),
         paymentMethod: 'M-Pesa (STK)',
@@ -209,8 +209,8 @@ const processStkCallback = async (callbackData) => {
       await Transaction.create({
         transactionId: transId,
         amount: transAmount,
-        referenceNumber: user.username,
-        officialName: user.officialName,
+        referenceNumber: stkRequest.accountReference, // Corrected from user.username
+        officialName: user.officialName, // Use name from DB
         msisdn: msisdn,
         transactionDate: new Date(),
         paymentMethod: 'M-Pesa (STK)',
@@ -256,13 +256,10 @@ const processC2bCallback = async (callbackData) => {
       console.error(alertMessage);
       return;
     }
-
-    // Optional: Check if amount paid matches invoice amount. For now, we accept any payment.
     
     // Mark invoice as paid
     invoice.status = 'Paid';
     invoice.paidDate = new Date();
-    // We will create the transaction record below, so we can link it here later if needed.
     await invoice.save();
 
     // Process the payment against the user's wallet to clear the debt
@@ -273,7 +270,7 @@ const processC2bCallback = async (callbackData) => {
       transactionId: TransID,
       amount: TransAmount,
       referenceNumber: BillRefNumber,
-      officialName: `${FirstName} ${LastName}`.trim(),
+      officialName: `${FirstName} ${LastName}`.trim(), // Use name from M-Pesa callback
       msisdn: MSISDN,
       balance: OrgAccountBalance,
       transactionDate: new Date(),
@@ -300,7 +297,7 @@ const processC2bCallback = async (callbackData) => {
       transactionId: TransID,
       amount: TransAmount,
       referenceNumber: BillRefNumber,
-      officialName: `${FirstName} ${LastName}`.trim(),
+      officialName: `${FirstName} ${LastName}`.trim(), // Use name from M-Pesa callback
       msisdn: MSISDN,
       balance: OrgAccountBalance,
       transactionDate: new Date(),

@@ -35,7 +35,6 @@ const TransactionSchema = mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['M-Pesa', 'Cash'],
     },
     balance: {
       type: Number,
