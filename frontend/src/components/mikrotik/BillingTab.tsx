@@ -70,7 +70,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ paymentStats, walletTransaction
         </CardHeader>
         <CardContent>
           {activeTable === 'mpesa' ? (
-            <div className="h-64 overflow-y-auto">
+            <div className="h-64 overflow-y-auto overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -91,7 +91,9 @@ const BillingTab: React.FC<BillingTabProps> = ({ paymentStats, walletTransaction
               </Table>
             </div>
           ) : (
-            <WalletTransactionTable data={walletTransactions} />
+            <div className="h-64 overflow-y-auto overflow-x-auto">
+              <WalletTransactionTable data={walletTransactions} />
+            </div>
           )}
         </CardContent>
       </Card>

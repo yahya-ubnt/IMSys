@@ -9,9 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface DiagnosticButtonProps {
   userId: string;
+  isIconOnly?: boolean;
 }
 
-export function DiagnosticButton({ userId }: DiagnosticButtonProps) {
+export function DiagnosticButton({ userId, isIconOnly = false }: DiagnosticButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -46,9 +47,18 @@ export function DiagnosticButton({ userId }: DiagnosticButtonProps) {
   };
 
   return (
-    <Button onClick={handleRunDiagnostic} disabled={isLoading} className="bg-green-600 text-white hover:bg-green-700 w-36">
-      {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-2" />}
-      {isLoading ? 'Running...' : 'Run Diagnostic'}
+    <Button 
+      onClick={handleRunDiagnostic} 
+      disabled={isLoading} 
+      size={isIconOnly ? "icon" : "default"}
+      className="bg-green-600 text-white hover:bg-green-700"
+    >
+      {isLoading ? (
+        <Loader2 className={`h-4 w-4 ${!isIconOnly ? 'mr-2' : ''} animate-spin`} />
+      ) : (
+        <PlayCircle className={`h-4 w-4 ${!isIconOnly ? 'mr-2' : ''}`} />
+      )}
+      {!isIconOnly && (isLoading ? 'Running...' : 'Run Diagnostic')}
     </Button>
   );
 }

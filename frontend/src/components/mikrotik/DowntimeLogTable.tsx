@@ -75,7 +75,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
     }
 
     return (
-      <div className="h-60 overflow-y-auto">
+      <div className="h-60 overflow-y-auto overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

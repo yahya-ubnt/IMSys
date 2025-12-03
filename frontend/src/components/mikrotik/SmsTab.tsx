@@ -81,7 +81,7 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData }) => {
           <CardTitle className="text-cyan-400">SMS History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-96 overflow-y-auto">
+          <div className="h-96 overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

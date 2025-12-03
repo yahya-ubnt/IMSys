@@ -155,8 +155,16 @@ export default function MikrotikUserDetailsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 mr-2" />Edit User</Button>
-                            <DiagnosticButton userId={userData._id} />
+                            {/* Mobile Buttons */}
+                            <div className="flex sm:hidden items-center gap-2">
+                                <Button variant="outline" size="icon" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-4 w-4" /></Button>
+                                <DiagnosticButton userId={userData._id} isIconOnly={true} />
+                            </div>
+                            {/* Desktop Buttons */}
+                            <div className="hidden sm:flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 mr-2" />Edit User</Button>
+                                <DiagnosticButton userId={userData._id} />
+                            </div>
                         </div>
                     </div>
 
@@ -171,7 +179,7 @@ export default function MikrotikUserDetailsPage() {
                             </CardHeader>
                             
                             <TabsPrimitive.Root value={activeTab} onValueChange={setActiveTab} defaultValue="overview" className="flex-1 flex flex-col">
-                                <TabsPrimitive.List className="relative flex w-full items-center justify-start p-2">
+                                <TabsPrimitive.List className="relative flex w-full items-center justify-start p-2 overflow-x-auto">
                                     {tabs.map((tab) => (
                                         <TabsPrimitive.Trigger key={tab.id} value={tab.id} className="relative px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white">
                                             {activeTab === tab.id && <motion.div layoutId="active-user-tab-indicator" className="absolute inset-0 bg-zinc-700/50 rounded-md" />}
