@@ -158,9 +158,14 @@ export default function SentSmsLogPage() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-                <FileDown className="mr-2 h-4 w-4" /> Export / Actions
-              </Button>
+              <div className="flex items-center">
+                <Button size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                  <FileDown className="h-4 w-4" />
+                </Button>
+                <Button className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                  <FileDown className="mr-2 h-4 w-4" /> Export / Actions
+                </Button>
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-zinc-800 text-white border-zinc-700">
               <DropdownMenuItem onClick={handleExportCsv}><Copy className="mr-2 h-4 w-4" /> Export as CSV</DropdownMenuItem>
@@ -214,7 +219,7 @@ const DataTableToolbar = (props: any) => {
         onChange={(e) => setSearchQuery(e.target.value)}
         className="h-9 bg-zinc-800 border-zinc-700 w-full sm:max-w-xs"
       />
-      <div className="flex items-center gap-2 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
         <Select value={messageTypeFilter} onValueChange={setMessageTypeFilter}>
           <SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 w-full"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-zinc-800 text-white border-zinc-700">
@@ -232,7 +237,7 @@ const DataTableToolbar = (props: any) => {
             <SelectItem value="Failed">Failed</SelectItem>
           </SelectContent>
         </Select>
-        <CalendarDateRangePicker date={dateRange} setDate={setDateRange} />
+        <CalendarDateRangePicker date={dateRange} setDate={setDateRange} className="w-full" />
       </div>
     </div>
   );
