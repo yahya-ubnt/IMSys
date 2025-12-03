@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { motion } from "framer-motion";
 import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
@@ -169,7 +168,7 @@ export default function MikrotikUserDetailsPage() {
                     </div>
 
                     {/* Main Content Card */}
-                    <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex-1 flex flex-col">
+                    <div className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex-1 flex flex-col">
                         <Card className="bg-transparent border-none flex-1 flex flex-col">
                             <CardHeader className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <HeaderStat icon={userData.isOnline ? Wifi : WifiOff} label="Status" value={userData.isOnline ? 'Online' : 'Offline'} color={userData.isOnline ? 'text-green-400' : 'text-red-400'} />
@@ -181,8 +180,7 @@ export default function MikrotikUserDetailsPage() {
                             <TabsPrimitive.Root value={activeTab} onValueChange={setActiveTab} defaultValue="overview" className="flex-1 flex flex-col">
                                 <TabsPrimitive.List className="relative flex w-full items-center justify-start p-2 overflow-x-auto">
                                     {tabs.map((tab) => (
-                                        <TabsPrimitive.Trigger key={tab.id} value={tab.id} className="relative px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white">
-                                            {activeTab === tab.id && <motion.div layoutId="active-user-tab-indicator" className="absolute inset-0 bg-zinc-700/50 rounded-md" />}
+                                        <TabsPrimitive.Trigger key={tab.id} value={tab.id} className="relative px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white data-[state=active]:bg-zinc-700/50 rounded-md">
                                             <span className="relative z-10 flex items-center"><tab.icon className="mr-2 h-4 w-4" />{tab.label}</span>
                                         </TabsPrimitive.Trigger>
                                     ))}
@@ -210,7 +208,7 @@ export default function MikrotikUserDetailsPage() {
                                 </CardContent>
                             </TabsPrimitive.Root>
                         </Card>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         </>
