@@ -40,10 +40,10 @@ export function Topbar() {
       backgroundColor: 'var(--sidebar)',
       borderColor: 'var(--sidebar-border)',
     }}>
-      <div className="flex h-16 items-center gap-4 px-4">
+      <div className="flex h-16 items-center justify-between gap-4 px-4">
         {/* Left side - Search */}
-        <div className="flex-1 hidden sm:flex items-center gap-4">
-          <div className="relative max-w-md flex-1">
+        <div className="flex items-center gap-4 w-full max-w-xs sm:w-auto sm:max-w-md sm:flex-1">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Search users, packages, devices..."
@@ -58,7 +58,7 @@ export function Topbar() {
         </div>
 
         {/* Right side - Icons */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2">
           {/* Theme Toggle */}
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" style={{ color: 'var(--muted-foreground)' }}>
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
