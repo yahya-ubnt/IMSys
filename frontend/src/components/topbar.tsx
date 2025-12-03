@@ -16,11 +16,16 @@ import { useAuth } from "@/components/auth-provider"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import NotificationBell from "./notifications/NotificationBell"
+import { SidebarTrigger } from "@/components/ui/sidebar" // Import SidebarTrigger
+import Image from "next/image" // Import Image
+import { useSettings } from "@/hooks/use-settings" // Import useSettings
+import { Wifi } from "lucide-react" // Import Wifi icon for default logo
 
 export function Topbar() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
+  const { settings } = useSettings() // Use settings for app name/logo
 
   const handleLogout = async () => {
     await logout()
@@ -41,9 +46,15 @@ export function Topbar() {
       borderColor: 'var(--sidebar-border)',
     }}>
       <div className="flex h-16 items-center justify-between gap-4 px-4">
-        {/* Left side - Search */}
-        <div className="flex items-center gap-4 w-full max-w-xs sm:w-auto sm:max-w-md sm:flex-1">
-          <div className="relative flex-1">
+        {/* Left Group: Hamburger (mobile) + Search (responsive) */}
+        <div className="flex items-center gap-2">
+          {/* Hamburger (mobile only) */}
+          <div className="md:hidden">
+            <SidebarTrigger />
+          </div>
+
+          {/* Search Bar (responsive width) */}
+          <div className="relative flex-1 w-full sm:w-auto sm:max-w-md sm:flex-1 ml-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Search users, packages, devices..."
@@ -57,7 +68,7 @@ export function Topbar() {
           </div>
         </div>
 
-        {/* Right side - Icons */}
+        {/* Right Group: Icons (profile, bell, theme) */}
         <div className="flex items-center gap-2">
           {/* Theme Toggle */}
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" style={{ color: 'var(--muted-foreground)' }}>
