@@ -242,13 +242,13 @@ export default function ComposeSmsPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-3">
                   <Label className="text-zinc-300">Recipient Group</Label>
-                  <div className="relative flex items-center justify-start p-1 bg-zinc-800/70 border border-zinc-700 rounded-lg space-x-1">
+                  <div className="relative flex flex-wrap items-center justify-start p-1 bg-zinc-800/70 border border-zinc-700 rounded-lg gap-2">
                       {TABS.map((tab) => (
                           <button
                               key={tab.id}
                               type="button"
                               onClick={() => setActiveTab(tab.id)}
-                              className={'relative rounded-md px-4 py-2 text-sm font-medium text-white transition focus-visible:outline-2 flex-1 text-center' + (activeTab === tab.id ? "" : " hover:text-white/60")}
+                              className={'relative rounded-md px-4 py-2 text-sm font-medium text-white transition focus-visible:outline-2 text-center' + (activeTab === tab.id ? "" : " hover:text-white/60")}
                               style={{ WebkitTapHighlightColor: "transparent" }}
                           >
                               {activeTab === tab.id && (
