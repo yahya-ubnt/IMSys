@@ -89,6 +89,7 @@ const sendExpiryNotifications = async () => {
                 status: whatsappResult.success ? 'Success' : 'Failed',
                 providerResponse: whatsappResult.message,
                 tenant: user.tenant,
+                mikrotikUser: user._id, // Associate with the user
               });
             } else {
               let personalizedMessage = smsTemplate.messageBody;
@@ -104,6 +105,7 @@ const sendExpiryNotifications = async () => {
                 smsStatus: smsResult.success ? 'Success' : 'Failed',
                 providerResponse: smsResult.message,
                 tenant: user.tenant,
+                mikrotikUser: user._id, // Associate with the user
               });
             }
 

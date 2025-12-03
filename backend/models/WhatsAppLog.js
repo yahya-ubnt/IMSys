@@ -23,6 +23,10 @@ const whatsAppLogSchema = new mongoose.Schema({
     ref: 'Tenant',
     required: true,
   },
+  mikrotikUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MikrotikUser',
+  },
   // To store the actual values used to populate the template
   variablesUsed: {
     type: mongoose.Schema.Types.Mixed,
@@ -32,6 +36,7 @@ const whatsAppLogSchema = new mongoose.Schema({
   });
   
   whatsAppLogSchema.index({ tenant: 1 });
+  whatsAppLogSchema.index({ mikrotikUser: 1 });
   
   const WhatsAppLog = mongoose.model('WhatsAppLog', whatsAppLogSchema);
   
