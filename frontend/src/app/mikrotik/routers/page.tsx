@@ -136,9 +136,16 @@ export default function MikrotikRoutersPage() {
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Mikrotik Routers</h1>
               <p className="text-sm text-zinc-400">Manage all your Mikrotik routers with ease.</p>
             </div>
-            <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-              <Link href="/mikrotik/routers/new"><Plus className="mr-2 h-4 w-4" />Add New Router</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Mobile: Icon-only button */}
+              <Button asChild size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Link href="/mikrotik/routers/new"><Plus className="h-4 w-4" /></Link>
+              </Button>
+              {/* Desktop: Full button */}
+              <Button asChild className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Link href="/mikrotik/routers/new"><Plus className="mr-2 h-4 w-4" />Add New Router</Link>
+              </Button>
+            </div>
           </div>
 
           <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
