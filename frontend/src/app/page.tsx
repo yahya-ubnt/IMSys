@@ -55,7 +55,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 p-4 sm:p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Dashboard</h1>
           <p className="text-sm text-zinc-400">An overview of your system's collections and expenses.</p>

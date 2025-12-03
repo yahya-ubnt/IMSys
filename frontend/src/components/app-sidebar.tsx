@@ -450,7 +450,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     : menuCategories;
 
   return (
-    <Sidebar collapsible="none" {...props} className="bg-zinc-900 border-r border-zinc-800 shadow-2xl">
+    <Sidebar collapsible="icon" {...props} className="bg-zinc-900 border-r border-zinc-800 shadow-2xl">
       <SidebarHeader className="border-b border-zinc-800 pb-4">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg transition-all duration-300 hover:scale-105">
