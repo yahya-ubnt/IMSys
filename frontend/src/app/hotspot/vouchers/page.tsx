@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns.tsx";
@@ -97,12 +97,16 @@ export default function VouchersPage() {
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Cash Vouchers</h1>
               <p className="text-sm text-zinc-400">Generate and manage hotspot cash vouchers.</p>
             </div>
-            <Link href="/hotspot/vouchers/new">
-              <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-                <Plus className="mr-2 h-4 w-4" />
-                Generate Vouchers
+            <div className="flex items-center gap-2">
+              {/* Mobile: Icon-only button */}
+              <Button asChild size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Link href="/hotspot/vouchers/new"><Plus className="h-4 w-4" /></Link>
               </Button>
-            </Link>
+              {/* Desktop: Full button */}
+              <Button asChild className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Link href="/hotspot/vouchers/new"><Plus className="mr-2 h-4 w-4" />Generate Vouchers</Link>
+              </Button>
+            </div>
           </div>
 
           <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
