@@ -7,6 +7,7 @@ const RouterOSAPI = require('node-routeros').RouterOSAPI;
 const { decrypt } = require('../utils/crypto'); // Import decrypt function
 const UserDowntimeLog = require('../models/UserDowntimeLog');
 const WalletTransaction = require('../models/WalletTransaction');
+const Transaction = require('../models/Transaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
@@ -782,88 +783,29 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
             throw new Error('User not found');
         }
 
-        const settingsQuery = { tenant: req.user.tenant };
+        // Query for M-Pesa transactions linked to this Mikrotik user
+        const mpesaTransactions = await Transaction.find({
+            mikrotikUser: userId,
+            tenant: req.user.tenant,
+            paymentMethod: { $regex: /M-Pesa/i } // Find all M-Pesa related payments
+        }).sort({ transactionDate: -1 });
 
-        const settings = await ApplicationSettings.findOne(settingsQuery);
-        const gracePeriodDays = settings ? settings.paymentGracePeriodDays : 3;
-
-        const transactionQuery = { mikrotikUser: userId, tenant: req.user.tenant };
-
-        const transactions = await WalletTransaction.find(transactionQuery).sort({ createdAt: 'asc' });
-
-        const debitTransactions = transactions.filter(t => t.type === 'Debit');
-        const creditTransactions = transactions.filter(t => t.type === 'Credit');
-
-        let onTimePayments = 0;
-        let latePayments = 0;
-        let totalDelayDays = 0;
-        const paymentHistory = [];
-
-        debitTransactions.forEach(debit => {
-            const dueDate = new Date(debit.createdAt);
-            const gracePeriodEndDate = new Date(dueDate);
-            gracePeriodEndDate.setDate(dueDate.getDate() + gracePeriodDays);
-
-            const payment = creditTransactions.find(credit => 
-                new Date(credit.createdAt) >= dueDate && credit.amount >= debit.amount
-            );
-
-            if (payment) {
-                const paidDate = new Date(payment.createdAt);
-                const delay = Math.max(0, (paidDate.getTime() - dueDate.getTime()) / (1000 * 3600 * 24));
-
-                if (paidDate <= gracePeriodEndDate) {
-                    onTimePayments++;
-                    paymentHistory.push({
-                        billId: debit._id,
-                        dueDate: debit.createdAt,
-                        paidDate: paidDate,
-                        amount: debit.amount,
-                        status: 'Paid (On-Time)',
-                        daysDelayed: 0,
-                    });
-                } else {
-                    latePayments++;
-                    totalDelayDays += delay;
-                    paymentHistory.push({
-                        billId: debit._id,
-                        dueDate: debit.createdAt,
-                        paidDate: paidDate,
-                        amount: debit.amount,
-                        status: 'Paid (Late)',
-                        daysDelayed: Math.round(delay),
-                    });
-                }
-            } else {
-                const today = new Date();
-                const daysDelayed = (today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24);
-                paymentHistory.push({
-                    billId: debit._id,
-                    dueDate: debit.createdAt,
-                    paidDate: null,
-                    amount: debit.amount,
-                    status: 'Pending',
-                    daysDelayed: Math.round(Math.max(0, daysDelayed)),
-                });
-            }
-        });
-
-        const totalPayments = onTimePayments + latePayments;
-        const lifetimeValue = creditTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+        // Calculate statistics
+        const totalSpentMpesa = mpesaTransactions.reduce((acc, curr) => acc + curr.amount, 0);
+        const totalMpesaTransactions = mpesaTransactions.length;
+        const lastMpesaPayment = totalMpesaTransactions > 0 ? mpesaTransactions[0] : null;
+        const averageMpesaTransaction = totalMpesaTransactions > 0 ? totalSpentMpesa / totalMpesaTransactions : 0;
 
         res.status(200).json({
-            userId: user._id,
-            name: user.officialName,
-            totalPayments,
-            onTimePayments,
-            latePayments,
-            onTimePaymentPercentage: totalPayments > 0 ? (onTimePayments / totalPayments) * 100 : 0,
-            averagePaymentDelay: latePayments > 0 ? totalDelayDays / latePayments : 0,
-            lifetimeValue,
-            paymentHistory,
+            totalSpentMpesa,
+            lastMpesaPaymentDate: lastMpesaPayment ? lastMpesaPayment.transactionDate : null,
+            lastMpesaPaymentAmount: lastMpesaPayment ? lastMpesaPayment.amount : null,
+            totalMpesaTransactions,
+            averageMpesaTransaction,
+            mpesaTransactionHistory: mpesaTransactions, // Send the full history
         });
     } catch (error) {
-        console.error(`Error fetching payment stats for user ${req.params.id}:`, error);
+        console.error(`Error fetching M-Pesa payment stats for user ${req.params.id}:`, error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });

@@ -22,6 +22,7 @@ import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
 
 // --- Interface Definitions ---
 interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
+interface PaymentStats { totalSpentMpesa: number; lastMpesaPaymentDate: string | null; totalMpesaTransactions: number; averageMpesaTransaction: number; mpesaTransactionHistory: MpesaTransaction[]; }
 
 // --- Sub-components ---
 const DetailItem = ({ icon: Icon, label, value, href, isPassword }: { icon: React.ElementType; label: string; value: string | number | undefined; href?: string; isPassword?: boolean }) => {
@@ -53,7 +54,7 @@ export default function MikrotikUserDetailsPage() {
     const { id } = params;
     const [userData, setUserData] = useState<MikrotikUser | null>(null);
     const [loading, setLoading] = useState(true);
-    const [mpesaTransactions, setMpesaTransactions] = useState<MpesaTransaction[]>([]);
+    const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
     const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
     const [activeTab, setActiveTab] = useState("overview");
     const { toast } = useToast();
@@ -76,17 +77,16 @@ export default function MikrotikUserDetailsPage() {
 
     useEffect(() => {
         if (!id) return;
-        const fetchMpesaTransactions = async () => {
+        const fetchPaymentStats = async () => {
             try {
-                const response = await fetch(`/api/payments/transactions?userId=${id}`);
-                if (!response.ok) throw new Error("Failed to fetch Mpesa transactions");
-                const data = await response.json();
-                setMpesaTransactions(data.transactions);
+                const response = await fetch(`/api/mikrotik/users/${id}/payment-stats`);
+                if (!response.ok) throw new Error("Failed to fetch payment stats");
+                setPaymentStats(await response.json());
             } catch (err) {
-                toast({ title: "Error", description: "Failed to load Mpesa transactions.", variant: "destructive" });
+                toast({ title: "Error", description: "Failed to load M-Pesa payment stats.", variant: "destructive" });
             }
         };
-        fetchMpesaTransactions();
+        fetchPaymentStats();
     }, [id, toast]);
 
     useEffect(() => {
@@ -175,7 +175,7 @@ export default function MikrotikUserDetailsPage() {
                                         </div>
                                     </TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="usage" className="h-full"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full"><MikrotikUserTrafficChart userId={userData._id} /><DowntimeLogTable userId={userData._id} /></div></TabsPrimitive.Content>
-                                    <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab mpesaTransactions={mpesaTransactions} walletTransactions={walletTransactions} /></TabsPrimitive.Content>
+                                    <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab paymentStats={paymentStats} walletTransactions={walletTransactions} /></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="diagnostics" className="h-full"><DiagnosticHistory userId={userData._id} /></TabsPrimitive.Content>
                                 </CardContent>
                             </TabsPrimitive.Root>

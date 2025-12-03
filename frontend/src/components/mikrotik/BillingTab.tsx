@@ -5,13 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MpesaTransaction } from '@/app/mikrotik/users/[id]/details/mpesa-columns';
 import { WalletTransaction } from '@/app/mikrotik/users/[id]/details/wallet-columns';
 import { format } from 'date-fns';
-import { DollarSign, Calendar, Hash, TrendingUp, Wallet } from 'lucide-react';
+import { DollarSign, Calendar, Hash, TrendingUp } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WalletTransactionTable } from './WalletTransactionTable';
 import { Button } from '@/components/ui/button';
 
+interface PaymentStats {
+  totalSpentMpesa: number;
+  lastMpesaPaymentDate: string | null;
+  totalMpesaTransactions: number;
+  averageMpesaTransaction: number;
+  mpesaTransactionHistory: MpesaTransaction[];
+}
+
 interface BillingTabProps {
-  mpesaTransactions: MpesaTransaction[];
+  paymentStats: PaymentStats | null;
   walletTransactions: WalletTransaction[];
 }
 
@@ -25,20 +33,18 @@ const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType; label
   </div>
 );
 
-const BillingTab: React.FC<BillingTabProps> = ({ mpesaTransactions, walletTransactions }) => {
+const BillingTab: React.FC<BillingTabProps> = ({ paymentStats, walletTransactions }) => {
   const [activeTable, setActiveTable] = useState('mpesa');
 
-  const totalSpent = mpesaTransactions.reduce((acc, tx) => acc + tx.amount, 0);
-  const lastPayment = mpesaTransactions.length > 0 ? new Date(mpesaTransactions[0].createdAt) : null;
-  const avgTransaction = mpesaTransactions.length > 0 ? totalSpent / mpesaTransactions.length : 0;
+  const mpesaHistory = paymentStats?.mpesaTransactionHistory ?? [];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Total Spent (M-Pesa)" value={`KES ${totalSpent.toLocaleString()}`} />
-        <StatCard icon={Calendar} label="Last M-Pesa Payment" value={lastPayment ? format(lastPayment, 'PP') : 'N/A'} />
-        <StatCard icon={Hash} label="Total M-Pesa Transactions" value={mpesaTransactions.length} />
-        <StatCard icon={TrendingUp} label="Avg. M-Pesa Transaction" value={`KES ${avgTransaction.toFixed(2)}`} />
+        <StatCard icon={DollarSign} label="Total Spent (M-Pesa)" value={`KES ${paymentStats?.totalSpentMpesa.toLocaleString() ?? '0'}`} />
+        <StatCard icon={Calendar} label="Last M-Pesa Payment" value={paymentStats?.lastMpesaPaymentDate ? format(new Date(paymentStats.lastMpesaPaymentDate), 'PP') : 'N/A'} />
+        <StatCard icon={Hash} label="Total M-Pesa Transactions" value={paymentStats?.totalMpesaTransactions ?? 0} />
+        <StatCard icon={TrendingUp} label="Avg. M-Pesa Transaction" value={`KES ${paymentStats?.averageMpesaTransaction.toFixed(2) ?? '0.00'}`} />
       </div>
       <Card className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
         <CardHeader>
@@ -74,10 +80,10 @@ const BillingTab: React.FC<BillingTabProps> = ({ mpesaTransactions, walletTransa
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mpesaTransactions.map((tx) => (
+                  {mpesaHistory.map((tx) => (
                     <TableRow key={tx._id}>
                       <TableCell className="font-semibold">{tx.transactionId}</TableCell>
-                      <TableCell>{format(new Date(tx.createdAt), 'PPpp')}</TableCell>
+                      <TableCell>{format(new Date(tx.transactionDate), 'PPpp')}</TableCell>
                       <TableCell className="text-right font-bold text-green-400">KES {tx.amount.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}

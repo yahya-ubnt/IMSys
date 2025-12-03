@@ -7,6 +7,10 @@ const TransactionSchema = mongoose.Schema(
       required: true,
       ref: 'Tenant',
     },
+    mikrotikUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MikrotikUser',
+    },
     transactionId: {
       type: String,
       required: true,
@@ -51,5 +55,6 @@ const TransactionSchema = mongoose.Schema(
 );
 
 TransactionSchema.index({ tenant: 1 });
+TransactionSchema.index({ mikrotikUser: 1 });
 
 module.exports = mongoose.model('Transaction', TransactionSchema);

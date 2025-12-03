@@ -160,6 +160,7 @@ const processStkCallback = async (callbackData) => {
         transactionDate: new Date(),
         paymentMethod: 'M-Pesa (STK)',
         tenant: stkRequest.tenant,
+        mikrotikUser: invoice.mikrotikUser._id,
         comment: `Payment for Invoice #${stkRequest.accountReference}`
       });
     }
@@ -215,6 +216,7 @@ const processStkCallback = async (callbackData) => {
         transactionDate: new Date(),
         paymentMethod: 'M-Pesa (STK)',
         tenant: user.tenant,
+        mikrotikUser: user._id,
       });
     }
   }
@@ -270,12 +272,13 @@ const processC2bCallback = async (callbackData) => {
       transactionId: TransID,
       amount: TransAmount,
       referenceNumber: BillRefNumber,
-      officialName: `${FirstName} ${LastName}`.trim(), // Use name from M-Pesa callback
+      officialName: `${FirstName} ${LastName}`.trim(),
       msisdn: MSISDN,
       balance: OrgAccountBalance,
       transactionDate: new Date(),
       paymentMethod: 'M-Pesa',
       tenant: tenant,
+      mikrotikUser: invoice.mikrotikUser._id,
       comment: `Payment for Invoice #${BillRefNumber}`
     });
 
@@ -297,12 +300,13 @@ const processC2bCallback = async (callbackData) => {
       transactionId: TransID,
       amount: TransAmount,
       referenceNumber: BillRefNumber,
-      officialName: `${FirstName} ${LastName}`.trim(), // Use name from M-Pesa callback
+      officialName: `${FirstName} ${LastName}`.trim(),
       msisdn: MSISDN,
       balance: OrgAccountBalance,
       transactionDate: new Date(),
       paymentMethod: 'M-Pesa',
       tenant: user.tenant,
+      mikrotikUser: user._id,
     });
   }
 };
