@@ -28,6 +28,10 @@ const smsLogSchema = mongoose.Schema(
       ref: 'Tenant',
       required: true,
     },
+    mikrotikUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MikrotikUser',
+    },
   },
   {
         timestamps: true,
@@ -35,6 +39,7 @@ const smsLogSchema = mongoose.Schema(
     );
     
     smsLogSchema.index({ tenant: 1 });
+    smsLogSchema.index({ mikrotikUser: 1 });
     
     const SmsLog = mongoose.model('SmsLog', smsLogSchema);
     

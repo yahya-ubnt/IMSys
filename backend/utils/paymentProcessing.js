@@ -134,6 +134,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
         walletBalance: user.walletBalance.toFixed(2),
         userId: user.user,
         tenant: user.tenant, // Pass the tenant
+        mikrotikUser: user._id, // Associate with the user
       }
     );
     console.log(`[${new Date().toISOString()}] Payment acknowledgement SMS sent successfully.`);

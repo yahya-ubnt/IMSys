@@ -99,6 +99,7 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
       smsStatus: smsResult.success ? 'Success' : 'Failed',
       providerResponse: smsResult.message,
       tenant: tenant, // Associate log with the tenant
+      mikrotikUser: data.mikrotikUser, // Associate log with the Mikrotik user
     });
 
     return { success: smsResult.success, message: smsResult.message };

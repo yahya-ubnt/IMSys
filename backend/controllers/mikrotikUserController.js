@@ -219,7 +219,8 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
               {
                   officialName: mikrotikUser.officialName,
                   mPesaRefNo: mikrotikUser.mPesaRefNo,
-                  tenant: req.user.tenant // Pass the tenant's ID
+                  tenant: req.user.tenant, // Pass the tenant's ID
+                  mikrotikUser: mikrotikUser._id // Associate with the user
               }
           );
       } catch (error) {

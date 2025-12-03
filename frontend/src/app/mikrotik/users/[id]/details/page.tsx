@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { motion } from "framer-motion";
-import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText } from "lucide-react";
+import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
 import { WalletTransaction } from "./wallet-columns";
@@ -17,12 +17,17 @@ import { differenceInDays, parseISO } from 'date-fns';
 import MikrotikUserTrafficChart from "@/components/MikrotikUserTrafficChart";
 import DowntimeLogTable from "@/components/mikrotik/DowntimeLogTable";
 import BillingTab from "@/components/mikrotik/BillingTab";
+import SmsTab from "@/components/mikrotik/SmsTab";
 import { DiagnosticButton } from "@/components/diagnostics/DiagnosticButton";
 import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
 
 // --- Interface Definitions ---
 interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
 interface PaymentStats { totalSpentMpesa: number; lastMpesaPaymentDate: string | null; totalMpesaTransactions: number; averageMpesaTransaction: number; mpesaTransactionHistory: MpesaTransaction[]; }
+interface SmsLog { _id: string; message: string; messageType: string; smsStatus: 'Success' | 'Failed' | 'Pending'; createdAt: string; }
+interface SmsStats { total: number; acknowledgement: number; expiry: number; composed: number; system: number; }
+interface SmsData { logs: SmsLog[]; stats: SmsStats; }
+
 
 // --- Sub-components ---
 const DetailItem = ({ icon: Icon, label, value, href, isPassword }: { icon: React.ElementType; label: string; value: string | number | undefined; href?: string; isPassword?: boolean }) => {
@@ -56,6 +61,7 @@ export default function MikrotikUserDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
     const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
+    const [smsData, setSmsData] = useState<SmsData | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
     const { toast } = useToast();
 
@@ -103,6 +109,20 @@ export default function MikrotikUserDetailsPage() {
         fetchWalletTransactions();
     }, [id, toast]);
 
+    useEffect(() => {
+        if (!id) return;
+        const fetchSmsData = async () => {
+            try {
+                const response = await fetch(`/api/sms/logs/user/${id}`);
+                if (!response.ok) throw new Error("Failed to fetch SMS logs");
+                setSmsData(await response.json());
+            } catch (err) {
+                toast({ title: "Error", description: "Failed to load SMS history.", variant: "destructive" });
+            }
+        };
+        fetchSmsData();
+    }, [id, toast]);
+
     const daysToExpire = useMemo(() => {
         if (!userData?.expiryDate) return { days: 0, label: 'Expired' };
         const days = differenceInDays(parseISO(userData.expiryDate), new Date());
@@ -116,6 +136,7 @@ export default function MikrotikUserDetailsPage() {
         { id: "overview", label: "Overview", icon: UserIcon },
         { id: "usage", label: "Live Usage", icon: BarChart2 },
         { id: "billing", label: "Billing", icon: FileText },
+        { id: "sms", label: "SMS", icon: MessageCircle },
         { id: "diagnostics", label: "Diagnostics", icon: ShieldCheck },
     ];
 
@@ -176,6 +197,7 @@ export default function MikrotikUserDetailsPage() {
                                     </TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="usage" className="h-full"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full"><MikrotikUserTrafficChart userId={userData._id} /><DowntimeLogTable userId={userData._id} /></div></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab paymentStats={paymentStats} walletTransactions={walletTransactions} /></TabsPrimitive.Content>
+                                    <TabsPrimitive.Content value="sms" className="h-full flex flex-col"><SmsTab smsData={smsData} /></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="diagnostics" className="h-full"><DiagnosticHistory userId={userData._id} /></TabsPrimitive.Content>
                                 </CardContent>
                             </TabsPrimitive.Root>
