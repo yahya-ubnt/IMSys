@@ -109,6 +109,7 @@ export const getInvoiceColumns = ({ onViewDetails }: GetInvoiceColumnsProps): Co
       
       return <Badge variant={variant} className={`capitalize ${className}`}>{status}</Badge>
     },
+    filterFn: 'equalsString',
   },
   {
     id: "actions",
