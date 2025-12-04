@@ -43,7 +43,7 @@ export function CalendarDateRangePicker({ className, date, setDate }: React.HTML
             defaultMonth={date?.from}
             selected={date}
             onSelect={setDate}
-            numberOfMonths={2}
+            numberOfMonths={1}
             className="bg-zinc-800 text-white"
           />
         </PopoverContent>
