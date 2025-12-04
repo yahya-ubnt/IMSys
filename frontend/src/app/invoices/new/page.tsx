@@ -163,21 +163,25 @@ export default function NewInvoicePage() {
                 </div>
 
                 <div className="space-y-4">
-                    <div className="grid grid-cols-[1fr_auto_auto] gap-4">
+                    <div className="hidden md:grid md:grid-cols-[1fr_128px_40px] gap-4">
                         <Label className="text-zinc-300">Description *</Label>
-                        <Label className="text-zinc-300 text-right w-32">Amount *</Label>
-                        <div className="w-10"></div> {/* Placeholder for the button */}
+                        <Label className="text-zinc-300 text-right">Amount *</Label>
+                        <div />
                     </div>
                     {formData.items.map((item, index) => (
-                        <div key={index} className="grid grid-cols-[1fr_auto_auto] gap-4 items-center">
-                            <Input name="description" placeholder="Item description" value={item.description} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700" />
-                            <Input name="amount" type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700 w-32" />
-                            {formData.items.length > 1 ? (
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_128px_40px] gap-4 items-end">
+                            <div>
+                                <Label className="text-zinc-300 md:hidden mb-2 block">Description *</Label>
+                                <Input name="description" placeholder="Item description" value={item.description} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700" />
+                            </div>
+                            <div>
+                                <Label className="text-zinc-300 md:hidden mb-2 block">Amount *</Label>
+                                <Input name="amount" type="number" placeholder="Amount" value={item.amount} onChange={(e) => handleItemChange(index, e)} className="bg-zinc-800 border-zinc-700" />
+                            </div>
+                            {formData.items.length > 1 && (
                               <Button type="button" variant="destructive" size="icon" onClick={() => removeItem(index)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            ) : (
-                              <div className="w-10"></div> // Placeholder to maintain alignment
                             )}
                         </div>
                     ))}

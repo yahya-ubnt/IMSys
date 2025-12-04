@@ -46,6 +46,22 @@ export const getInvoiceColumns = ({ onViewDetails }: GetInvoiceColumnsProps): Co
     header: "Date Issued",
     cell: ({ row }) => {
         return <span>{format(new Date(row.getValue("createdAt")), "PPP p")}</span>
+    },
+    filterFn: (row, columnId, filterValue) => {
+        const date = new Date(row.getValue(columnId));
+        const { from, to } = filterValue as { from?: Date, to?: Date };
+        if (from && !to) {
+            return date >= from;
+        } else if (!from && to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999); // Include the whole 'to' day
+            return date <= toDate;
+        } else if (from && to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999); // Include the whole 'to' day
+            return date >= from && date <= toDate;
+        }
+        return true;
     }
   },
   {

@@ -19,7 +19,7 @@ import { CalendarDateRangePicker } from "@/components/date-range-picker"
 
 // --- Toolbar Component ---
 const InvoicesDataTableToolbar = ({ table }: { table: any }) => {
-  const invoiceStatuses = ["Paid", "Unpaid", "Overdue", "Void"];
+  const invoiceStatuses = ["Paid", "Unpaid", "Overdue"];
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2 bg-zinc-800/50 rounded-lg mb-4">
