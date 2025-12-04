@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { DataTable } from "@/components/data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { columns } from "./columns"
 import { SmsAcknowledgementForm, SmsAcknowledgementFormData } from "./sms-acknowledgement-form"
 import { PlusCircle, CheckCircle, XCircle } from "lucide-react"
@@ -158,9 +159,16 @@ export default function SmsAcknowledgementsPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">SMS Acknowledgements</h1>
             <p className="text-sm text-zinc-400">Map system events to automated SMS templates.</p>
           </div>
-          <Button onClick={handleNewAcknowledgement} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Acknowledgement
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Mobile: Icon-only button */}
+            <Button onClick={handleNewAcknowledgement} size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+            {/* Desktop: Full button */}
+            <Button onClick={handleNewAcknowledgement} className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Acknowledgement
+            </Button>
+          </div>
         </div>
 
         <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
@@ -170,10 +178,11 @@ export default function SmsAcknowledgementsPage() {
               <StatCard title="Active" value={activeAcknowledgements} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Inactive" value={inactiveAcknowledgements} icon={XCircle} color="text-yellow-400" />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
                 <DataTable table={table} columns={columns({ handleEdit, handleDelete, triggerTypes })} />
               </div>
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </div>
