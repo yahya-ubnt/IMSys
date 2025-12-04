@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
+  ColumnFiltersState,
+  SortingState,
+  PaginationState,
   useReactTable,
   getCoreRowModel,
   getFilteredRowModel,
@@ -24,8 +27,41 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Expense, ExpenseType } from "@/types/expenses"
 import moment from "moment"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { DateRange } from "react-day-picker"
+import { CalendarDateRangePicker } from "@/components/date-range-picker"
 
 const EMPTY_EXPENSE: Partial<Expense> = { title: "", amount: 0, description: "", expenseDate: moment().format("YYYY-MM-DDTHH:mm") };
+
+// --- Toolbar Component ---
+const ExpensesDataTableToolbar = ({ table, expenseTypes }: { table: any, expenseTypes: ExpenseType[] }) => {
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2 bg-zinc-800/50 rounded-lg mb-4">
+      <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
+        <Select
+          value={(table.getColumn("expenseType")?.getFilterValue() as string) ?? "all"}
+          onValueChange={(value) => {
+            table.getColumn("expenseType")?.setFilterValue(value === "all" ? null : value)
+          }}
+        >
+          <SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+            <SelectItem value="all">All Types</SelectItem>
+            {expenseTypes.map(type => (
+              <SelectItem key={type._id} value={type.name}>{type.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <CalendarDateRangePicker
+          date={table.getColumn("expenseDate")?.getFilterValue() as DateRange}
+          setDate={(dateRange) => table.getColumn("expenseDate")?.setFilterValue(dateRange)}
+          className="w-full"
+        />
+      </div>
+    </div>
+  )
+}
 
 // --- MAIN COMPONENT ---
 export default function AllExpensesPage() {
@@ -41,6 +77,14 @@ export default function AllExpensesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+
+  // Table states
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
@@ -70,10 +114,18 @@ export default function AllExpensesPage() {
   const table = useReactTable({
     data,
     columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+    },
     meta: {
       handleEdit: (expense: Expense) => {
         setEditingExpense(expense);
@@ -111,11 +163,6 @@ export default function AllExpensesPage() {
     }
   };
 
-  const handleEdit = (expense: Expense) => {
-    setEditingExpense(expense);
-    setIsDialogOpen(true);
-  };
-
   const handleNew = () => {
     setEditingExpense(EMPTY_EXPENSE);
     setIsDialogOpen(true);
@@ -149,9 +196,14 @@ export default function AllExpensesPage() {
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">All Expenses</h1>
               <p className="text-sm text-zinc-400">Track and manage all your expenses.</p>
             </div>
-            <Button onClick={handleNew} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-              <PlusCircle className="mr-2 h-4 w-4" /> New Expense
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleNew} size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+              <Button onClick={handleNew} className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <PlusCircle className="mr-2 h-4 w-4" /> New Expense
+              </Button>
+            </div>
           </div>
 
           <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
@@ -163,6 +215,7 @@ export default function AllExpensesPage() {
                 <StatCard title="This Year's Expenses" value={stats.year} icon={CalendarCheck2} />
               </CardHeader>
               <CardContent className="p-4">
+                <ExpensesDataTableToolbar table={table} expenseTypes={expenseTypes} />
                 <div className="overflow-x-auto">
                   <DataTable table={table} columns={columns} />
                 </div>
@@ -178,7 +231,7 @@ export default function AllExpensesPage() {
                 <DialogDescription className="text-zinc-400">Record or update an expense.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="title" className="text-zinc-300">Expense Name</Label>
                     <Input id="title" placeholder="e.g., Router" value={editingExpense?.title || ''} onChange={(e) => setEditingExpense({ ...editingExpense, title: e.target.value })} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
