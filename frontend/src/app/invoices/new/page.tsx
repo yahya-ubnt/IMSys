@@ -120,17 +120,9 @@ export default function NewInvoicePage() {
       <Topbar />
       <main className="flex-1 p-6 space-y-6">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            {/* Mobile: Icon-only button */}
-            <Button variant="outline" size="icon" className="sm:hidden bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => router.push('/invoices')}>
-                <ArrowLeft className="h-4 w-4" />
-            </Button>
-            {/* Desktop: Full button */}
-            <Button variant="outline" className="hidden sm:flex bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => router.push('/invoices')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Invoices
-            </Button>
-          </div>
+          <Button variant="outline" size="icon" className="bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => router.push('/invoices')}>
+              <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Create Manual Invoice</h1>
             <p className="text-sm text-zinc-400">Create a one-off invoice for a customer.</p>

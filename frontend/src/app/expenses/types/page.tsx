@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ExpenseType } from "@/types/expenses"
-import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { SimpleDataTablePagination } from "@/components/ui/simple-data-table-pagination"
 
 const EMPTY_EXPENSE_TYPE: Partial<ExpenseType> = { name: "", description: "" };
 
@@ -148,9 +148,16 @@ export default function ExpenseTypesPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Expense Types</h1>
             <p className="text-sm text-zinc-400">Manage your expense categories.</p>
           </div>
-          <Button onClick={handleNew} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Expense Type
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Mobile: Icon-only button */}
+            <Button onClick={handleNew} size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+            {/* Desktop: Full button */}
+            <Button onClick={handleNew} className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Expense Type
+            </Button>
+          </div>
         </div>
 
         <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
@@ -162,7 +169,7 @@ export default function ExpenseTypesPage() {
               <div className="overflow-x-auto">
                 <DataTable table={table} columns={columns} />
               </div>
-              <DataTablePagination table={table} />
+              <SimpleDataTablePagination table={table} />
             </CardContent>
           </Card>
         </div>
