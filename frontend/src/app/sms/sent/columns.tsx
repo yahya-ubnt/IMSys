@@ -45,6 +45,21 @@ export const columns: ColumnDef<SmsLog>[] = [
   {
     accessorKey: "messageType",
     header: "Message Type",
+    cell: ({ row }) => {
+      const messageType = row.original.messageType;
+      let displayType = messageType;
+      if (messageType === 'Compose New Message') {
+        displayType = 'Compose';
+      } else if (messageType === 'Expiry Alert') {
+        displayType = 'Expiry';
+      }
+
+      return (
+        <div className="flex items-center">
+          <span>{displayType}</span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "createdAt",
