@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { DataTable } from "@/components/data-table"
-import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { SimpleDataTablePagination } from "@/components/ui/simple-data-table-pagination"
 import { columns } from "./columns"
 import { SmsAcknowledgementForm, SmsAcknowledgementFormData } from "./sms-acknowledgement-form"
 import { PlusCircle, CheckCircle, XCircle } from "lucide-react"
@@ -182,7 +182,7 @@ export default function SmsAcknowledgementsPage() {
               <div className="overflow-x-auto">
                 <DataTable table={table} columns={columns({ handleEdit, handleDelete, triggerTypes })} />
               </div>
-              <DataTablePagination table={table} />
+              <SimpleDataTablePagination table={table} />
             </CardContent>
           </Card>
         </div>
