@@ -93,6 +93,23 @@ export const getColumns = (
     cell: ({ row }) => `KES ${row.original.totalAmount?.toLocaleString() || 0}`,
   },
   {
+    accessorKey: "createdAt",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        className="text-white hover:bg-zinc-700"
+      >
+        Created At
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const date = row.original.createdAt;
+      return date ? new Date(date).toLocaleDateString() : "N/A";
+    },
+  },
+  {
     accessorKey: "followUpDate",
     header: "Follow-up Date",
     cell: ({ row }) => {

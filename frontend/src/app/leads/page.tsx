@@ -20,13 +20,59 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { getLeads, updateLeadStatus } from "@/lib/leadService"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users } from "lucide-react"
+import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users, Search } from "lucide-react"
 import { Topbar } from "@/components/topbar"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DateRange } from "react-day-picker"
+import { CalendarDateRangePicker } from "@/components/date-range-picker"
+
+// --- Toolbar Component ---
+const LeadsDataTableToolbar = ({ table }: { table: any }) => {
+  const leadStatuses = ['New', 'Contacted', 'Interested', 'Site Survey Scheduled', 'Converted', 'Not Interested', 'Future Prospect'];
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2 bg-zinc-800/50 rounded-lg">
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+        <Input
+          placeholder="Search name or phone..."
+          value={(table.getState().globalFilter as string) ?? ""}
+          onChange={(event) => table.setGlobalFilter(event.target.value)}
+          className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+        />
+      </div>
+      <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+        <Select
+          value={(table.getColumn("status")?.getFilterValue() as string) ?? "all"}
+          onValueChange={(value) => {
+            table.getColumn("status")?.setFilterValue(value === "all" ? null : value)
+          }}
+        >
+          <SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+            <SelectItem value="all">All Statuses</SelectItem>
+            {leadStatuses.map(status => (
+              <SelectItem key={status} value={status}>{status}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <CalendarDateRangePicker
+          date={table.getColumn("createdAt")?.getFilterValue() as DateRange}
+          setDate={(dateRange) => table.getColumn("createdAt")?.setFilterValue(dateRange)}
+          className="w-full"
+        />
+      </div>
+    </div>
+  )
+}
+
 
 // --- MAIN COMPONENT ---
 export default function LeadsPage() {
@@ -47,6 +93,7 @@ export default function LeadsPage() {
   // Table states
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [globalFilter, setGlobalFilter] = useState("")
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -106,6 +153,7 @@ export default function LeadsPage() {
     columns: getColumns((id) => setDeleteCandidateId(id), (lead) => setConvertCandidate(lead)),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -114,8 +162,15 @@ export default function LeadsPage() {
     state: {
       sorting,
       columnFilters,
+      globalFilter,
       pagination,
     },
+    globalFilterFn: (row, columnId, filterValue) => {
+      const lead = row.original as Lead;
+      const name = lead.name || '';
+      const phone = lead.phoneNumber || '';
+      return name.toLowerCase().includes(filterValue.toLowerCase()) || phone.toLowerCase().includes(filterValue.toLowerCase());
+    }
   })
 
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
@@ -132,12 +187,16 @@ export default function LeadsPage() {
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">All Leads</h1>
               <p className="text-sm text-zinc-400">Manage and track all your potential customers.</p>
             </div>
-            <Button asChild className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-              <Link href="/leads/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Lead
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Mobile: Icon-only button */}
+              <Button asChild size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Link href="/leads/new"><PlusCircle className="h-4 w-4" /></Link>
+              </Button>
+              {/* Desktop: Full button */}
+              <Button asChild className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+                <Link href="/leads/new"><PlusCircle className="mr-2 h-4 w-4" /> Add New Lead</Link>
+              </Button>
+            </div>
           </div>
 
           <div className="bg-zinc-900/50 backdrop-blur-lg rounded-xl">
@@ -181,6 +240,7 @@ export default function LeadsPage() {
                   />
                 </div>
                 <div className="p-4 mt-4">
+                  <LeadsDataTableToolbar table={table} />
                   <DataTable
                     table={table}
                     columns={getColumns((id) => setDeleteCandidateId(id), (lead) => setConvertCandidate(lead))}
