@@ -51,7 +51,7 @@ export default function MpesaTransactionsPage() {
   // Table states
   const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 15,
+    pageSize: 10,
   })
 
   const pagination = useMemo(
