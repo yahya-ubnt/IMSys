@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
-import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { SimpleDataTablePagination } from "@/components/ui/simple-data-table-pagination"
 import { columns } from "./columns"
 import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form"
 import { PlusCircle, FileText } from "lucide-react"
@@ -137,18 +137,28 @@ export default function SmsTemplatesPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">SMS Templates</h1>
             <p className="text-sm text-zinc-400">Create and manage reusable SMS message templates.</p>
           </div>
-          <Button onClick={handleNewTemplate} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Template
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Mobile: Icon-only button */}
+            <Button onClick={handleNewTemplate} size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+            {/* Desktop: Full button */}
+            <Button onClick={handleNewTemplate} className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <PlusCircle className="mr-2 h-4 w-4" /> New Template
+            </Button>
+          </div>
         </div>
 
         <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
+            <CardHeader className="p-4 border-b border-zinc-800">
+              <StatCard title="Total Templates" value={templates.length} icon={FileText} />
+            </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
                 <DataTable table={table} columns={columns({ handleEdit, handleDelete })} />
               </div>
-              <DataTablePagination table={table} />
+              <SimpleDataTablePagination table={table} />
             </CardContent>
           </Card>
         </div>
