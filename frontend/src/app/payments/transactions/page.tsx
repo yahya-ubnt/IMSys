@@ -8,6 +8,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  PaginationState,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Download, Search, DollarSign, TrendingUp, User } from "lucide-react"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 
 // --- TYPE DEFINITIONS ---
 export interface Transaction {
@@ -40,21 +42,31 @@ export default function MpesaTransactionsPage() {
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [stats, setStats] = useState({ totalVolume: 0, transactionCount: 0, averageTransaction: 0 });
-
-  // UI states
+  const [pageCount, setPageCount] = useState(0)
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-  const [page, setPage] = useState(1)
-  const pageSize = 15
-  const [totalPages, setTotalPages] = useState(1)
+  
+  // Table states
+  const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 15,
+  })
+
+  const pagination = useMemo(
+    () => ({
+      pageIndex,
+      pageSize,
+    }),
+    [pageIndex, pageSize]
+  )
 
   // --- DATA FETCHING ---
   const fetchTransactions = useCallback(async () => {
     try {
       const params = new URLSearchParams({
-        page: page.toString(),
+        page: (pageIndex + 1).toString(),
         limit: pageSize.toString(),
         ...(searchTerm && { searchTerm }),
         ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
@@ -66,28 +78,27 @@ export default function MpesaTransactionsPage() {
       
       const data = await response.json()
       setTransactions(data.transactions || [])
-      setTotalPages(data.pages || 1)
+      setPageCount(data.pages || 0)
       setStats(data.stats || { totalVolume: 0, transactionCount: 0, averageTransaction: 0 })
     } catch (error) {
       toast({ title: "Error", description: "Failed to load transactions.", variant: "destructive" })
     }
-  }, [page, pageSize, searchTerm, dateRange, toast])
+  }, [pageIndex, pageSize, searchTerm, dateRange, toast])
 
   useEffect(() => {
     fetchTransactions()
   }, [fetchTransactions])
 
-  const filteredTransactions = useMemo(() => {
-    return transactions;
-  }, [transactions]);
-
   const table = useReactTable({
-    data: filteredTransactions,
+    data: transactions,
     columns: getColumns(),
+    pageCount,
+    state: {
+      pagination,
+    },
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
   })
 
   // --- RENDER ---
@@ -100,13 +111,20 @@ export default function MpesaTransactionsPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Payment Transactions</h1>
             <p className="text-sm text-zinc-400">Review and manage all payment transactions.</p>
           </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <Download className="mr-2 h-4 w-4" /> Export Data
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Mobile: Icon-only button */}
+            <Button size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Download className="h-4 w-4" />
+            </Button>
+            {/* Desktop: Full button */}
+            <Button className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Download className="mr-2 h-4 w-4" /> Export Data
+            </Button>
+          </div>
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard title="Total Volume" value={`Ksh ${stats.totalVolume.toLocaleString()}`} icon={DollarSign} color="text-green-400" />
@@ -118,7 +136,7 @@ export default function MpesaTransactionsPage() {
               <div className="mt-4 overflow-x-auto">
                 <DataTable table={table} columns={getColumns()} />
               </div>
-              <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </motion.div>
@@ -157,17 +175,3 @@ const DataTableToolbar = (props: any) => {
     </div>
   );
 };
-
-const PaginationControls = ({ page, totalPages, onPageChange }: any) => (
-  <div className="flex items-center justify-end space-x-2 py-4 border-t border-zinc-800 mt-4">
-    <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}
-      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
-      Previous
-    </Button>
-    <span className="text-sm text-zinc-400">Page {page} of {totalPages}</span>
-    <Button variant="outline" size="sm" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
-      Next
-    </Button>
-  </div>
-);
