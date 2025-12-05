@@ -8,9 +8,9 @@ import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, List, AlertTriangle, Wrench, CheckCircle } from "lucide-react";
+import { PlusCircle, List, AlertTriangle, Wrench, CheckCircle, Wifi } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area, Legend } from 'recharts';
+import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area, Legend, PieChart, Pie, Cell } from 'recharts';
 import { DataTable } from '@/components/data-table';
 import { Ticket } from "@/types/ticket";
 import { getTickets, getTicketStats, getMonthlyTicketStats, updateTicket, deleteTicket } from "@/lib/ticketService";
@@ -25,7 +25,7 @@ export default function TicketsPage() {
 
   // Data states
   const [tickets, setTickets] = useState<Ticket[]>([])
-  const [stats, setStats] = useState({ total: 0, new: 0, inprogress: 0, resolved: 0 })
+  const [stats, setStats] = useState({ total: 0, new: 0, inprogress: 0, resolved: 0, open: 0, dispatched: 0, closed: 0 })
   const [monthlyStats, setMonthlyStats] = useState<Array<{ month: string; created: number; resolved: number; }>>([])
   
   // UI states
@@ -52,8 +52,8 @@ export default function TicketsPage() {
         getMonthlyTicketStats(selectedYear)
       ]);
       setTickets(ticketsData)
-      if (typeof statsData === 'object' && statsData !== null && 'total' in statsData && 'new' in statsData && 'inprogress' in statsData && 'resolved' in statsData) {
-        setStats(statsData as { total: number; new: number; inprogress: number; resolved: number; });
+      if (typeof statsData === 'object' && statsData !== null) {
+        setStats(prevStats => ({ ...prevStats, ...statsData }));
       }
       setMonthlyStats(monthlyStatsData)
     } catch (err) {
@@ -125,17 +125,15 @@ export default function TicketsPage() {
       <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
         <Topbar />
         <main className="flex-1 p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Tickets Dashboard</h1>
               <p className="text-sm text-zinc-400">Manage all client support tickets.</p>
             </div>
             <div className="flex items-center gap-2">
-              {/* Mobile: Icon-only button */}
               <Button asChild size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
                 <Link href="/tickets/new"><PlusCircle className="h-4 w-4" /></Link>
               </Button>
-              {/* Desktop: Full button */}
               <Button asChild className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
                 <Link href="/tickets/new"><PlusCircle className="mr-2 h-4 w-4" /> Create New Ticket</Link>
               </Button>
@@ -174,10 +172,7 @@ export default function TicketsPage() {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="bg-zinc-800/50 p-4 rounded-lg">
-                  <h3 className="text-sm font-semibold text-cyan-400 mb-2">Quick Actions</h3>
-                  <p className="text-xs text-zinc-400">Feature coming soon.</p>
-                </div>
+                <DonutChartCard total={stats.total} resolved={stats.resolved} closed={stats.closed} />
               </CardContent>
               <div className="p-4">
                 <h3 className="text-sm font-semibold text-cyan-400 mb-2">All Tickets</h3>
@@ -220,14 +215,55 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
+const DonutChartCard = ({ total, resolved, closed }: { total: number, resolved: number, closed: number }) => {
+    const active = total - resolved - closed;
+    const data = [
+        { name: 'Resolved', value: resolved },
+        { name: 'Active', value: active },
+        { name: 'Closed', value: closed },
+    ];
+    return (
+        <div className="bg-zinc-800/50 p-4 rounded-lg">
+            <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2"><Wifi size={16}/> Ticket Resolution Status</h3>
+            <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                    <defs>
+                        <linearGradient id="resolvedFill"><stop offset="0%" stopColor="#10b981" /><stop offset="100%" stopColor="#34d399" /></linearGradient>
+                        <linearGradient id="activeFill"><stop offset="0%" stopColor="#f59e0b" /><stop offset="100%" stopColor="#fbbf24" /></linearGradient>
+                        <linearGradient id="closedFill"><stop offset="0%" stopColor="#888" /><stop offset="100%" stopColor="#aaa" /></linearGradient>
+                    </defs>
+                    <Pie data={data} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} stroke="none">
+                        <Cell key="resolved" fill="url(#resolvedFill)" />
+                        <Cell key="active" fill="url(#activeFill)" />
+                        <Cell key="closed" fill="url(#closedFill)" />
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend iconSize={10} wrapperStyle={{ fontSize: '0.75rem' }} />
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="24" fontWeight="bold">{total}</text>
+                    <text x="50%" y="65%" textAnchor="middle" dominantBaseline="middle" fill="#aaa" fontSize="12">Total Tickets</text>
+                </PieChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
+    // Check if it's for the area chart or pie chart
+    if (payload[0].payload.created !== undefined) {
+      const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
+      return (
+        <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
+          <p className="font-bold">{monthName}</p>
+          <p className="text-cyan-400">{`Created: ${payload[0].value}`}</p>
+          <p className="text-green-400">{`Resolved: ${payload[1].value}`}</p>
+        </div>
+      );
+    }
+    // It's for the pie chart
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
-        <p className="font-bold">{monthName}</p>
-        <p className="text-cyan-400">{`Created: ${payload[0].value}`}</p>
-        <p className="text-green-400">{`Resolved: ${payload[1].value}`}</p>
+        <p>{`${payload[0].name}: ${payload[0].value}`}</p>
       </div>
     );
   }
