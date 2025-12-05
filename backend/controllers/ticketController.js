@@ -116,9 +116,9 @@ const updateTicket = asyncHandler(async (req, res) => {
       const smsMessage = `Dear ${ticket.clientName}, your ticket ${ticket.ticketRef} has been marked as FIXED. Thank you for your patience.`;
       try {
         await sendSms(ticket.clientPhone, smsMessage);
-        console.log(`SMS sent to ${ticket.clientPhone} for ticket ${ticketRef} status Fixed`);
+        console.log(`SMS sent to ${ticket.clientPhone} for ticket ${ticket.ticketRef} status Fixed`);
       } catch (smsError) {
-        console.error(`Failed to send SMS for ticket ${ticketRef} status Fixed: ${smsError.message}`);
+        console.error(`Failed to send SMS for ticket ${ticket.ticketRef} status Fixed: ${smsError.message}`);
       }
     }
   }
