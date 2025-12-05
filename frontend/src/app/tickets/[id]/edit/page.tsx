@@ -181,6 +181,8 @@ export default function EditTicketPage() {
     }
   };
 
+  const selectableStatuses: Ticket['status'][] = ["In Progress", "Dispatched", "Resolved", "Closed"];
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
@@ -255,12 +257,20 @@ export default function EditTicketPage() {
                     <Select name="status" value={formData.status} onValueChange={(value) => handleSelectChange('status', value)}>
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                        <SelectItem value="New" disabled={ticket?.status === 'New'}>New</SelectItem>
-                        <SelectItem value="Open" disabled={ticket?.status === 'Open'}>Opened</SelectItem>
-                        <SelectItem value="In Progress" disabled={ticket?.status === 'In Progress'}>In Progress</SelectItem>
-                        <SelectItem value="Dispatched" disabled={ticket?.status === 'Dispatched'}>Dispatched</SelectItem>
-                        <SelectItem value="Resolved" disabled={ticket?.status === 'Resolved'}>Resolved</SelectItem>
-                        <SelectItem value="Closed" disabled={ticket?.status === 'Closed'}>Closed</SelectItem>
+                        {ticket && (ticket.status === 'New' || ticket.status === 'Open') && (
+                          <SelectItem value={ticket.status} disabled>
+                            {ticket.status === 'Open' ? 'Opened' : 'New'}
+                          </SelectItem>
+                        )}
+                        {selectableStatuses.map((status) => (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            disabled={ticket?.status === status}
+                          >
+                            {status}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
