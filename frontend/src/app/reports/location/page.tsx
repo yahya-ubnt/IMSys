@@ -90,10 +90,10 @@ export default function LocationReportPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl"
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl"
         >
           <Card className="bg-transparent border-none text-white">
-            <CardHeader className="border-b border-zinc-800">
+            <CardHeader>
               <CardTitle className="text-cyan-400 flex items-center gap-2"><BarChart2 /> Report Filters</CardTitle>
               <CardDescription className="text-zinc-400">Select criteria to generate the revenue report.</CardDescription>
             </CardHeader>
@@ -127,10 +127,10 @@ export default function LocationReportPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl mt-6"
+              className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl mt-6"
             >
               <Card className="bg-transparent border-none text-white">
-                <CardHeader className="border-b border-zinc-800">
+                <CardHeader>
                   <CardTitle className="text-cyan-400">Report Results</CardTitle>
                   <CardDescription className="text-zinc-400">
                     Total revenue from {selectedApartmentHouseNumber} from {date?.from ? date.from.toLocaleDateString() : 'N/A'} to {date?.to ? date.to.toLocaleDateString() : 'N/A'} is KES {totalAmount.toLocaleString()}.

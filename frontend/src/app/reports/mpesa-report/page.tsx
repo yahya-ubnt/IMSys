@@ -123,15 +123,22 @@ export default function MpesaReportPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">M-Pesa Transaction Report</h1>
             <p className="text-sm text-zinc-400">Generate a report of all M-Pesa transactions within a date range.</p>
           </div>
-          <Button onClick={handleExport} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105" disabled={!showReport}>
-            <Download className="mr-2 h-4 w-4" /> Export Report
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Mobile: Icon-only button */}
+            <Button onClick={handleExport} size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105" disabled={!showReport}>
+              <Download className="h-4 w-4" />
+            </Button>
+            {/* Desktop: Full button */}
+            <Button onClick={handleExport} className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105" disabled={!showReport}>
+              <Download className="mr-2 h-4 w-4" /> Export Report
+            </Button>
+          </div>
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="border-b border-zinc-800">
+            <CardHeader>
               <CardTitle className="text-cyan-400">Report Filters</CardTitle>
               <CardDescription className="text-zinc-400">Select a date range to generate the report.</CardDescription>
             </CardHeader>
@@ -155,9 +162,9 @@ export default function MpesaReportPage() {
         <AnimatePresence>
           {showReport && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+              className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
               <Card className="bg-transparent border-none">
-                <CardHeader className="border-b border-zinc-800 flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-cyan-400">Report Results</CardTitle>
                     <CardDescription className="text-zinc-400">

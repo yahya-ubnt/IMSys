@@ -103,7 +103,7 @@ export default function HotspotTransactionsPage() {
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard title="Total Volume" value={`Ksh ${stats.totalVolume.toLocaleString()}`} icon={DollarSign} color="text-green-400" />
               <StatCard title="Transactions" value={stats.transactionCount.toLocaleString()} icon={TrendingUp} />
               <StatCard title="Avg. Transaction" value={`Ksh ${stats.averageTransaction.toLocaleString()}`} icon={Wifi} />
@@ -136,7 +136,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
 const DataTableToolbar = (props: any) => {
   const { searchTerm, setSearchTerm, dateRange, setDateRange } = props;
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg border border-zinc-700">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
       <div className="relative w-full sm:max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input
