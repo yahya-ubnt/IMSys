@@ -8,7 +8,7 @@ import {
   StyledTabsTrigger,
 } from "@/components/ui/StyledTabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Settings, CreditCard, MessageSquare, MessageCircle, Bell } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
 import SmsSettingsPage from "./sms/page"
@@ -39,23 +39,29 @@ export default function MainSettingsPage() {
         </div>
 
         {/* Mobile Dropdown */}
-        <div className="sm:hidden space-y-2">
-          <Label>Navigate to</Label>
-          <Select value={activeTab} onValueChange={setActiveTab}>
-            <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
-              <SelectValue placeholder="Select a setting" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-              {tabs.map((tab) => (
-                <SelectItem key={tab.id} value={tab.id}>
-                  <div className="flex items-center">
-                    {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
-                    {tab.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="sm:hidden">
+          <Card className="bg-zinc-900/50 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-base text-blue-500">Navigation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
+                  <SelectValue placeholder="Select a setting" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                  {tabs.map((tab) => (
+                    <SelectItem key={tab.id} value={tab.id}>
+                      <div className="flex items-center">
+                        {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+                        {tab.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Desktop Tabs */}
