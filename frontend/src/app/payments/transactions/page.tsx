@@ -9,6 +9,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   PaginationState,
+  ColumnDef,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -101,6 +102,43 @@ export default function MpesaTransactionsPage() {
     manualPagination: true,
   })
 
+  const handleExport = () => {
+    if (!transactions || transactions.length === 0) {
+      toast({ title: 'No Data', description: 'There is no data to export.', variant: 'destructive' });
+      return;
+    }
+
+    const columns = getColumns();
+    const exportableColumns = columns.filter(c => (c as ColumnDef<Transaction>).accessorKey);
+
+    const csvHeader = exportableColumns.map(c => c.header as string).join(',');
+
+    const csvRows = transactions.map(row => {
+      return exportableColumns.map(col => {
+        const cellValue = row[col.accessorKey as keyof Transaction];
+        // Handle potential commas in string values
+        if (typeof cellValue === 'string' && cellValue.includes(',')) {
+          return `"${cellValue}"`;
+        }
+        return cellValue;
+      }).join(',');
+    });
+
+    const csvContent = [csvHeader, ...csvRows].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const startDate = dateRange?.from?.toISOString().split('T')[0] || 'start';
+    const endDate = dateRange?.to?.toISOString().split('T')[0] || 'end';
+    link.setAttribute('download', `transactions_report_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // --- RENDER ---
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
@@ -113,11 +151,11 @@ export default function MpesaTransactionsPage() {
           </div>
           <div className="flex items-center gap-2">
             {/* Mobile: Icon-only button */}
-            <Button size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+            <Button onClick={handleExport} size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
               <Download className="h-4 w-4" />
             </Button>
             {/* Desktop: Full button */}
-            <Button className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+            <Button onClick={handleExport} className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
               <Download className="mr-2 h-4 w-4" /> Export Data
             </Button>
           </div>
@@ -126,7 +164,7 @@ export default function MpesaTransactionsPage() {
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard title="Total Volume" value={`Ksh ${stats.totalVolume.toLocaleString()}`} icon={DollarSign} color="text-green-400" />
               <StatCard title="Transactions" value={stats.transactionCount.toLocaleString()} icon={TrendingUp} />
               <StatCard title="Avg. Transaction" value={`Ksh ${stats.averageTransaction.toLocaleString()}`} icon={User} />
@@ -159,7 +197,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
 const DataTableToolbar = (props: any) => {
   const { searchTerm, setSearchTerm, dateRange, setDateRange } = props;
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg border border-zinc-700">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
       <div className="relative w-full sm:max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input
