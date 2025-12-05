@@ -6,8 +6,9 @@ const {
   getTicketById,
   updateTicket,
   addNoteToTicket,
-  getTicketStats, // Import new function
-  getMonthlyTicketTotals, // Import new function
+  getTicketStats,
+  getMonthlyTicketTotals,
+  getMonthlyTicketStats, // Import new function
   deleteTicket,
 } = require('../controllers/ticketController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
@@ -24,6 +25,10 @@ router
 router
     .route('/monthly-totals')
     .get(protect, isSuperAdminOrAdmin, getMonthlyTicketTotals);
+
+router
+    .route('/monthly-stats')
+    .get(protect, isSuperAdminOrAdmin, getMonthlyTicketStats);
 
 router
   .route('/:id')

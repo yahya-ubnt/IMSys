@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PlusCircle, List, AlertTriangle, Wrench, CheckCircle } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area } from 'recharts';
+import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area, Legend } from 'recharts';
 import { DataTable } from '@/components/data-table';
 import { Ticket } from "@/types/ticket";
-import { getTickets, getTicketStats, getMonthlyTicketTotals, updateTicket, deleteTicket, getTicketById } from "@/lib/ticketService";
+import { getTickets, getTicketStats, getMonthlyTicketStats, updateTicket, deleteTicket } from "@/lib/ticketService";
 import { getTicketColumns } from "./components/ticket-columns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, getFilteredRowModel, ColumnFiltersState, SortingState, PaginationState } from "@tanstack/react-table";
@@ -23,11 +23,10 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination"
 export default function TicketsPage() {
   const { toast } = useToast()
 
-
   // Data states
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [stats, setStats] = useState({ total: 0, new: 0, inprogress: 0, resolved: 0 })
-  const [monthlyTotals, setMonthlyTotals] = useState<Array<{ month: string; count: number }>>([])
+  const [monthlyStats, setMonthlyStats] = useState<Array<{ month: string; created: number; resolved: number; }>>([])
   
   // UI states
   const [loading, setLoading] = useState(true)
@@ -47,16 +46,16 @@ export default function TicketsPage() {
   const fetchAllData = useCallback(async () => {
     setLoading(true)
     try {
-      const [ticketsData, statsData, monthlyTotalsData] = await Promise.all([
+      const [ticketsData, statsData, monthlyStatsData] = await Promise.all([
         getTickets(),
         getTicketStats(),
-        getMonthlyTicketTotals(selectedYear)
+        getMonthlyTicketStats(selectedYear)
       ]);
       setTickets(ticketsData)
       if (typeof statsData === 'object' && statsData !== null && 'total' in statsData && 'new' in statsData && 'inprogress' in statsData && 'resolved' in statsData) {
         setStats(statsData as { total: number; new: number; inprogress: number; resolved: number; });
       }
-      setMonthlyTotals(monthlyTotalsData)
+      setMonthlyStats(monthlyStatsData)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to fetch ticket data."
       setError(msg)
@@ -154,12 +153,17 @@ export default function TicketsPage() {
                     </Select>
                   </div>
                   <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart data={monthlyTotals} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                      <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/><stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/></linearGradient></defs>
+                    <AreaChart data={monthlyStats} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="createdFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/><stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/></linearGradient>
+                        <linearGradient id="resolvedFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#34d399" stopOpacity={0.8}/><stop offset="95%" stopColor="#34d399" stopOpacity={0}/></linearGradient>
+                      </defs>
                       <XAxis dataKey="month" tickFormatter={m => new Date(2000, m - 1).toLocaleString('default', { month: 'short' })} style={{ fontSize: '0.75rem' }} stroke="#888" />
                       <YAxis style={{ fontSize: '0.75rem' }} stroke="#888" />
                       <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-                      <Area type="monotone" dataKey="total" stroke="#22d3ee" fill="url(#chartFill)" />
+                      <Legend />
+                      <Area type="monotone" dataKey="created" name="Created" stroke="#22d3ee" fill="url(#createdFill)" />
+                      <Area type="monotone" dataKey="resolved" name="Resolved" stroke="#34d399" fill="url(#resolvedFill)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -215,7 +219,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
         <p className="font-bold">{monthName}</p>
-        <p>{`Tickets: ${payload[0].value}`}</p>
+        <p className="text-cyan-400">{`Created: ${payload[0].value}`}</p>
+        <p className="text-green-400">{`Resolved: ${payload[1].value}`}</p>
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { Ticket } from '@/types/ticket';
+import { Ticket, TicketFormData } from '@/types/ticket';
 
 async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {
@@ -16,7 +16,7 @@ async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
 }
 
 // Create a new ticket
-export const createTicket = async (ticketData: Ticket) => {
+export const createTicket = async (ticketData: Partial<TicketFormData>) => {
   return fetchApi('/api/tickets', {
     method: 'POST',
     body: JSON.stringify(ticketData),
@@ -50,7 +50,7 @@ export const addNoteToTicket = async (id: string, content: string) => {
   });
 };
 
-// Delete a ticket (if needed, not explicitly in spec but common)
+// Delete a ticket
 export const deleteTicket = async (id: string) => {
   return fetchApi(`/api/tickets/${id}`, {
     method: 'DELETE',
@@ -64,9 +64,9 @@ export const getTicketStats = async () => {
   });
 };
 
-// Get monthly ticket totals
-export const getMonthlyTicketTotals = async (year: string) => {
-  return fetchApi<{ month: string; count: number; }[]>(`/api/tickets/monthly-totals?year=${year}`, {
+// Get monthly created vs resolved ticket stats
+export const getMonthlyTicketStats = async (year: string) => {
+  return fetchApi<{ month: string; created: number; resolved: number; }[]>(`/api/tickets/monthly-stats?year=${year}`, {
     method: 'GET',
   });
 };

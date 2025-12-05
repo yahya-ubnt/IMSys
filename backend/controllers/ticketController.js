@@ -244,6 +244,84 @@ const getMonthlyTicketTotals = asyncHandler(async (req, res) => {
   res.status(200).json(fullMonthlyTotals);
 });
 
+// @desc    Get monthly ticket stats (created vs resolved)
+// @route   GET /api/tickets/monthly-stats
+// @access  Admin
+const getMonthlyTicketStats = asyncHandler(async (req, res) => {
+  const year = parseInt(req.query.year);
+
+  if (isNaN(year)) {
+    res.status(400);
+    throw new Error('Year is required and must be a number');
+  }
+
+  const tenantId = req.user.tenant;
+
+  // 1. Get created tickets per month
+  const createdTickets = await Ticket.aggregate([
+    {
+      $match: {
+        tenant: tenantId,
+        createdAt: {
+          $gte: new Date(year, 0, 1),
+          $lt: new Date(year + 1, 0, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { month: { $month: '$createdAt' } },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // 2. Get resolved tickets per month
+  const resolvedTickets = await Ticket.aggregate([
+    {
+      $match: {
+        tenant: tenantId,
+        'statusHistory.status': 'Resolved',
+        'statusHistory.timestamp': {
+          $gte: new Date(year, 0, 1),
+          $lt: new Date(year + 1, 0, 1),
+        },
+      },
+    },
+    { $unwind: '$statusHistory' },
+    {
+      $match: {
+        'statusHistory.status': 'Resolved',
+        'statusHistory.timestamp': {
+          $gte: new Date(year, 0, 1),
+          $lt: new Date(year + 1, 0, 1),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { month: { $month: '$statusHistory.timestamp' } },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // 3. Combine results
+  const combinedStats = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    const createdData = createdTickets.find(item => item._id.month === month);
+    const resolvedData = resolvedTickets.find(item => item._id.month === month);
+    return {
+      month,
+      created: createdData ? createdData.count : 0,
+      resolved: resolvedData ? resolvedData.count : 0,
+    };
+  });
+
+  res.status(200).json(combinedStats);
+});
+
+
 // @desc    Delete a ticket
 // @route   DELETE /api/tickets/:id
 // @access  Admin
@@ -268,5 +346,6 @@ module.exports = {
   addNoteToTicket,
   getTicketStats,
   getMonthlyTicketTotals,
+  getMonthlyTicketStats,
   deleteTicket,
 };
