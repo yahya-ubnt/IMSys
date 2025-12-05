@@ -8,6 +8,7 @@ import {
   StyledTabsTrigger,
 } from "@/components/ui/StyledTabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { Settings, CreditCard, MessageSquare, MessageCircle, Bell } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
 import SmsSettingsPage from "./sms/page"
@@ -38,7 +39,8 @@ export default function MainSettingsPage() {
         </div>
 
         {/* Mobile Dropdown */}
-        <div className="sm:hidden">
+        <div className="sm:hidden space-y-2">
+          <Label>Navigate to</Label>
           <Select value={activeTab} onValueChange={setActiveTab}>
             <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
               <SelectValue placeholder="Select a setting" />
