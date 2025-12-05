@@ -35,7 +35,7 @@ export const getTicketById = async (id: string) => {
 };
 
 // Update a ticket
-export const updateTicket = async (id: string, ticketData: Ticket) => {
+export const updateTicket = async (id: string, ticketData: Partial<Ticket>) => {
   return fetchApi(`/api/tickets/${id}`, {
     method: 'PUT',
     body: JSON.stringify(ticketData),

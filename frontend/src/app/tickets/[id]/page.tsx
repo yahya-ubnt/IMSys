@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { getTicketById, deleteTicket } from '@/lib/ticketService';
+import { getTicketById, deleteTicket, updateTicket } from '@/lib/ticketService';
 import { Ticket } from '@/types/ticket';
 import { Topbar } from '@/components/topbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -38,6 +38,17 @@ export default function TicketDetailsPage() {
       try {
         const data = await getTicketById(id as string);
         setTicket(data);
+
+        // If ticket status is 'New', update it to 'Open'
+        if (data.status === 'New') {
+          try {
+            const updatedTicket = await updateTicket(id as string, { status: 'Open' });
+            setTicket(updatedTicket); // Update local state with the full updated ticket
+          } catch (updateError) {
+            console.error("Failed to update ticket status:", updateError);
+            // Optional: show a toast that status update failed but continue with old data
+          }
+        }
       } catch (err: unknown) {
         const errorMessage = (err instanceof Error) ? err.message : 'Failed to fetch ticket details.';
         setError(errorMessage);
