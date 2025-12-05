@@ -8,7 +8,7 @@ import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, List, AlertTriangle, Wrench, CheckCircle, Wifi } from "lucide-react";
+import { PlusCircle, List, AlertTriangle, Wrench, CheckCircle, PieChart as PieChartIcon } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ResponsiveContainer, AreaChart, XAxis, YAxis, Tooltip, Area, Legend, PieChart, Pie, Cell } from 'recharts';
 import { DataTable } from '@/components/data-table';
@@ -224,7 +224,7 @@ const DonutChartCard = ({ total, resolved, closed }: { total: number, resolved: 
     ];
     return (
         <div className="bg-zinc-800/50 p-4 rounded-lg">
-            <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2"><Wifi size={16}/> Ticket Resolution Status</h3>
+            <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2"><PieChartIcon size={16}/> Ticket Resolution Status</h3>
             <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                     <defs>

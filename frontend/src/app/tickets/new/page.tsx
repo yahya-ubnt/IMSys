@@ -104,15 +104,14 @@ export default function NewTicketPage() {
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
       <main className="flex-1 p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.push('/tickets')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Create New Ticket</h1>
             <p className="text-sm text-zinc-400">Log a new client support ticket.</p>
           </div>
-          <Button variant="outline" onClick={() => router.push('/tickets')} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tickets
-          </Button>
         </div>
 
         <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-4xl mx-auto">
