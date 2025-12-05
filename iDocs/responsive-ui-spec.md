@@ -86,7 +86,7 @@ The following is a more comprehensive checklist of pages and sections that shoul
 #### Core Management
 - [ ] `/leads` (Table)
 - [ ] `/leads/new` (Form)
-- [ ] `/tickets` (Table)
+- [x] `/tickets` (Table)
 - [ ] `/tickets/new` (Form)
 - [ ] `/technician-activities/installations` (Table)
 - [ ] `/technician-activities/support` (Table)

@@ -13,7 +13,7 @@ interface TicketToolbarProps<TData> {
 export function TicketToolbar<TData>({ table }: TicketToolbarProps<TData>) {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button size="sm" className={!table.getColumn('status')?.getFilterValue() ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue(undefined)}>All</Button>
         <Button size="sm" className={table.getColumn('status')?.getFilterValue() === 'New' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue('New')}>New</Button>
         <Button size="sm" className={table.getColumn('status')?.getFilterValue() === 'Open' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue('Open')}>Opened</Button>
