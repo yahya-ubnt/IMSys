@@ -26,7 +26,7 @@ export default function TicketsPage() {
 
   // Data states
   const [tickets, setTickets] = useState<Ticket[]>([])
-  const [stats, setStats] = useState({ total: 0, new: 0, inprogress: 0, fixed: 0 })
+  const [stats, setStats] = useState({ total: 0, new: 0, inprogress: 0, resolved: 0 })
   const [monthlyTotals, setMonthlyTotals] = useState<Array<{ month: string; count: number }>>([])
   
   // UI states
@@ -53,8 +53,8 @@ export default function TicketsPage() {
         getMonthlyTicketTotals(selectedYear)
       ]);
       setTickets(ticketsData)
-      if (typeof statsData === 'object' && statsData !== null && 'total' in statsData && 'new' in statsData && 'inprogress' in statsData && 'fixed' in statsData) {
-        setStats(statsData as { total: number; new: number; inprogress: number; fixed: number; });
+      if (typeof statsData === 'object' && statsData !== null && 'total' in statsData && 'new' in statsData && 'inprogress' in statsData && 'resolved' in statsData) {
+        setStats(statsData as { total: number; new: number; inprogress: number; resolved: number; });
       }
       setMonthlyTotals(monthlyTotalsData)
     } catch (err) {
@@ -73,9 +73,7 @@ export default function TicketsPage() {
   // --- EVENT HANDLERS ---
   const handleUpdateStatus = async (id: string, status: Ticket['status']) => {
     try {
-      const existingTicket = await getTicketById(id)
-      const updatedTicket: Ticket = { ...existingTicket, status: status }
-      await updateTicket(id, updatedTicket)
+      await updateTicket(id, { status })
       toast({ title: "Status Updated", description: `Ticket status changed to ${status}.` })
       fetchAllData()
     } catch (err) {
@@ -144,7 +142,7 @@ export default function TicketsPage() {
                 <StatCard title="Total Tickets" value={stats.total || 0} icon={List} />
                 <StatCard title="New" value={stats.new || 0} icon={AlertTriangle} color="text-yellow-400" />
                 <StatCard title="In Progress" value={stats.inprogress || 0} icon={Wrench} color="text-orange-400" />
-                <StatCard title="Resolved" value={stats.fixed || 0} icon={CheckCircle} color="text-green-400" />
+                <StatCard title="Resolved" value={stats.resolved || 0} icon={CheckCircle} color="text-green-400" />
               </CardHeader>
               <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 bg-zinc-800/50 p-4 rounded-lg">

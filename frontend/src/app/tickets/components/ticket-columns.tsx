@@ -88,7 +88,7 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
         case 'Dispatched':
           statusColor = 'bg-purple-500/20 text-purple-400 border-purple-500/30';
           break;
-        case 'Fixed':
+        case 'Resolved':
           statusColor = 'bg-green-500/20 text-green-400 border-green-500/30';
           break;
         case 'Closed':
@@ -168,9 +168,11 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
               <Link href={`/tickets/${ticket._id}/edit`}>Edit</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-zinc-700" />
-            <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'Fixed')}>
-              Mark as Fixed
-            </DropdownMenuItem>
+            {ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
+              <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'Resolved')}>
+                Mark as Resolved
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => onDeleteTicket(ticket._id)} className="text-red-400 focus:text-red-400 focus:bg-red-500/20">
               Delete
             </DropdownMenuItem>

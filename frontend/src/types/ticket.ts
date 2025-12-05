@@ -8,7 +8,7 @@ export interface Ticket {
   clientAccountId?: string;
   issueType: string;
   description: string;
-  status: 'New' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
+  status: 'New' | 'Open' | 'In Progress' | 'Dispatched' | 'Resolved' | 'Closed';
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   ticketRef: string;
   createdBy: User;
@@ -34,6 +34,6 @@ export interface TicketFormData {
   clientAccountId: string;
   issueType: string;
   description: string;
-  status: 'New' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
+  status: 'New' | 'Open' | 'In Progress' | 'Dispatched' | 'Resolved' | 'Closed';
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
 }

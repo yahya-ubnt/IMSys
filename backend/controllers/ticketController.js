@@ -111,14 +111,14 @@ const updateTicket = asyncHandler(async (req, res) => {
     ticket.statusHistory.push({ status });
     ticket.status = status;
 
-    // Send SMS notification if status is "Fixed"
-    if (status === 'Fixed') {
-      const smsMessage = `Dear ${ticket.clientName}, your ticket ${ticket.ticketRef} has been marked as FIXED. Thank you for your patience.`;
+    // Send SMS notification if status is "Resolved"
+    if (status === 'Resolved') {
+      const smsMessage = `Dear ${ticket.clientName}, your ticket ${ticket.ticketRef} has been marked as RESOLVED. Thank you for your patience.`;
       try {
         await sendSms(ticket.clientPhone, smsMessage);
-        console.log(`SMS sent to ${ticket.clientPhone} for ticket ${ticket.ticketRef} status Fixed`);
+        console.log(`SMS sent to ${ticket.clientPhone} for ticket ${ticket.ticketRef} status Resolved`);
       } catch (smsError) {
-        console.error(`Failed to send SMS for ticket ${ticket.ticketRef} status Fixed: ${smsError.message}`);
+        console.error(`Failed to send SMS for ticket ${ticket.ticketRef} status Resolved: ${smsError.message}`);
       }
     }
   }
@@ -179,7 +179,7 @@ const getTicketStats = asyncHandler(async (req, res) => {
     total: 0,
     new: 0,
     inprogress: 0,
-    fixed: 0,
+    resolved: 0,
     open: 0,
     dispatched: 0,
     closed: 0,
