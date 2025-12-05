@@ -37,7 +37,7 @@ StyledTabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 const StyledTabsContent = TabsPrimitive.Content;
 
 interface StyledTabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
-  tabs: { id: string; label: string; icon?: React.ElementType }[];
+  tabs?: { id: string; label: string; icon?: React.ElementType }[];
 }
 
 const StyledTabs = React.forwardRef<
@@ -50,14 +50,16 @@ const StyledTabs = React.forwardRef<
       className={cn('w-full', className)}
       {...props}
     >
-      <StyledTabsList>
-        {tabs.map((tab) => (
-          <StyledTabsTrigger key={tab.id} value={tab.id}>
-            {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
-            {tab.label}
-          </StyledTabsTrigger>
-        ))}
-      </StyledTabsList>
+      {tabs && (
+        <StyledTabsList>
+          {tabs.map((tab) => (
+            <StyledTabsTrigger key={tab.id} value={tab.id}>
+              {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+              {tab.label}
+            </StyledTabsTrigger>
+          ))}
+        </StyledTabsList>
+      )}
       {children}
     </TabsPrimitive.Root>
   );

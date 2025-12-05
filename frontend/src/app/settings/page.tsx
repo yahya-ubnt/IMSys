@@ -4,14 +4,16 @@ import { useState } from "react"
 import { Topbar } from "@/components/topbar"
 import {
   StyledTabs,
-  StyledTabsContent,
+  StyledTabsList,
+  StyledTabsTrigger,
 } from "@/components/ui/StyledTabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Settings, CreditCard, MessageSquare, MessageCircle, Bell } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
 import SmsSettingsPage from "./sms/page"
 import WhatsAppSettingsPage from "./whatsapp/page"
 import GeneralSettingsForm from "./general/page"
-import EmailSettingsPage from "./email/page" // Import the new page
+import EmailSettingsPage from "./email/page"
 
 export default function MainSettingsPage() {
   const [activeTab, setActiveTab] = useState("general")
@@ -21,7 +23,7 @@ export default function MainSettingsPage() {
     { id: "mpesa", label: "M-Pesa", icon: CreditCard },
     { id: "sms", label: "SMS", icon: MessageSquare },
     { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
-    { id: "email", label: "Email", icon: Bell }, // Add new tab
+    { id: "email", label: "Email", icon: Bell },
   ]
 
   return (
@@ -34,48 +36,58 @@ export default function MainSettingsPage() {
             Manage your application's configuration and payment integrations.
           </p>
         </div>
-        <StyledTabs
-          tabs={tabs}
-          value={activeTab}
-          onValueChange={setActiveTab}
-        >
-          <StyledTabsContent value="general" className="mt-4">
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
-                <GeneralSettingsForm />
-              </div>
-            </div>
-          </StyledTabsContent>
-          <StyledTabsContent value="mpesa" className="mt-4">
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
-                <MpesaSettingsPage />
-              </div>
-            </div>
-          </StyledTabsContent>
-          <StyledTabsContent value="sms" className="mt-4">
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
-                <SmsSettingsPage />
-              </div>
-            </div>
-          </StyledTabsContent>
-          <StyledTabsContent value="whatsapp" className="mt-4">
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
-                <WhatsAppSettingsPage />
-              </div>
-            </div>
-          </StyledTabsContent>
-          {/* Add content for the new tab */}
-          <StyledTabsContent value="email" className="mt-4">
-            <div className="flex justify-center">
-              <div className="w-full max-w-3xl">
-                <EmailSettingsPage />
-              </div>
-            </div>
-          </StyledTabsContent>
-        </StyledTabs>
+
+        {/* Mobile Dropdown */}
+        <div className="sm:hidden">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
+              <SelectValue placeholder="Select a setting" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+              {tabs.map((tab) => (
+                <SelectItem key={tab.id} value={tab.id}>
+                  <div className="flex items-center">
+                    {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+                    {tab.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop Tabs */}
+        <div className="hidden sm:block">
+          <StyledTabs value={activeTab} onValueChange={setActiveTab}>
+            <StyledTabsList>
+              {tabs.map((tab) => (
+                <StyledTabsTrigger key={tab.id} value={tab.id}>
+                  {tab.icon && <tab.icon className="w-4 h-4 mr-2" />}
+                  {tab.label}
+                </StyledTabsTrigger>
+              ))}
+            </StyledTabsList>
+          </StyledTabs>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-4">
+          {activeTab === 'general' && (
+            <div className="flex justify-center"><div className="w-full max-w-3xl"><GeneralSettingsForm /></div></div>
+          )}
+          {activeTab === 'mpesa' && (
+            <div className="flex justify-center"><div className="w-full max-w-3xl"><MpesaSettingsPage /></div></div>
+          )}
+          {activeTab === 'sms' && (
+            <div className="flex justify-center"><div className="w-full max-w-3xl"><SmsSettingsPage /></div></div>
+          )}
+          {activeTab === 'whatsapp' && (
+            <div className="flex justify-center"><div className="w-full max-w-3xl"><WhatsAppSettingsPage /></div></div>
+          )}
+          {activeTab === 'email' && (
+            <div className="flex justify-center"><div className="w-full max-w-3xl"><EmailSettingsPage /></div></div>
+          )}
+        </div>
       </div>
     </div>
   )
