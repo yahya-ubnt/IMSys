@@ -255,11 +255,12 @@ export default function EditTicketPage() {
                     <Select name="status" value={formData.status} onValueChange={(value) => handleSelectChange('status', value)}>
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                        <SelectItem value="New">New</SelectItem>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Resolved">Resolved</SelectItem>
-                        <SelectItem value="Closed">Closed</SelectItem>
+                        <SelectItem value="New" disabled={ticket?.status === 'New'}>New</SelectItem>
+                        <SelectItem value="Open" disabled={ticket?.status === 'Open'}>Opened</SelectItem>
+                        <SelectItem value="In Progress" disabled={ticket?.status === 'In Progress'}>In Progress</SelectItem>
+                        <SelectItem value="Dispatched" disabled={ticket?.status === 'Dispatched'}>Dispatched</SelectItem>
+                        <SelectItem value="Resolved" disabled={ticket?.status === 'Resolved'}>Resolved</SelectItem>
+                        <SelectItem value="Closed" disabled={ticket?.status === 'Closed'}>Closed</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
