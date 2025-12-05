@@ -168,11 +168,22 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
               <Link href={`/tickets/${ticket._id}/edit`}>Edit</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-zinc-700" />
+            {ticket.status === 'Open' && (
+              <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'In Progress')}>
+                Mark as In Progress
+              </DropdownMenuItem>
+            )}
             {ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
               <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'Resolved')}>
                 Mark as Resolved
               </DropdownMenuItem>
             )}
+            {ticket.status !== 'Closed' && (
+              <DropdownMenuItem onClick={() => onUpdateStatus(ticket._id, 'Closed')}>
+                Close Ticket
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator className="bg-zinc-700" />
             <DropdownMenuItem onClick={() => onDeleteTicket(ticket._id)} className="text-red-400 focus:text-red-400 focus:bg-red-500/20">
               Delete
             </DropdownMenuItem>
