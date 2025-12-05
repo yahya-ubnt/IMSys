@@ -97,7 +97,7 @@ export const getTicketColumns = ({ onUpdateStatus, onDeleteTicket }: TicketColum
         default:
           statusColor = 'bg-gray-500/20 text-gray-400 border-gray-500/30';
       }
-      return <Badge variant="outline" className={`capitalize ${statusColor}`}>{status}</Badge>;
+      return <Badge variant="outline" className={`capitalize ${statusColor}`}>{status === 'Open' ? 'Opened' : status}</Badge>;
     },
   },
   {
