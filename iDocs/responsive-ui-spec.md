@@ -119,9 +119,9 @@ The following is a more comprehensive checklist of pages and sections that shoul
 
 #### Reports
 - [ ] `/reports/delayed-payments` (Table)
-- [ ] `/reports/location` (Table / Map)
+- [x] `/reports/location` (Table / Map)
 - [ ] `/reports/mpesa-alert` (Table)
-- [ ] `/reports/mpesa-report` (Table)
+- [x] `/reports/mpesa-report` (Table)
 
 #### Administration
 - [ ] `/settings` (Forms)

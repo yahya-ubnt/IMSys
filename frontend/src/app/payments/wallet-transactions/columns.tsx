@@ -21,6 +21,7 @@ export const getColumns = (): ColumnDef<WalletTransaction>[] => [
   {
     accessorKey: 'type',
     header: 'Type',
+    filterFn: 'equalsString',
   },
   {
     accessorKey: 'amount',
@@ -56,6 +57,22 @@ export const getColumns = (): ColumnDef<WalletTransaction>[] => [
     cell: ({ row }) => {
       return new Date(row.getValue('createdAt')).toLocaleString();
     },
+    filterFn: (row, columnId, filterValue) => {
+        const date = new Date(row.getValue(columnId));
+        const { from, to } = filterValue as { from?: Date, to?: Date };
+        if (from && !to) {
+            return date >= from;
+        } else if (!from && to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999); // Include the whole 'to' day
+            return date <= toDate;
+        } else if (from && to) {
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999); // Include the whole 'to' day
+            return date >= from && date <= toDate;
+        }
+        return true;
+    }
   },
   {
     accessorKey: 'comment',

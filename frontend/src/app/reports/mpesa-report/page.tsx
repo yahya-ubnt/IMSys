@@ -7,6 +7,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  ColumnDef,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -79,6 +80,39 @@ export default function MpesaReportPage() {
     }
   }
 
+  const handleExport = () => {
+    if (!reportData || reportData.length === 0) {
+      toast({ title: 'No Data', description: 'There is no data to export.', variant: 'destructive' });
+      return;
+    }
+
+    const exportableColumns = columns.filter(c => (c as ColumnDef<MpesaTransaction>).accessorKey);
+
+    const csvHeader = exportableColumns.map(c => c.header as string).join(',');
+
+    const csvRows = reportData.map(row => {
+      return exportableColumns.map(col => {
+        const cellValue = row[col.accessorKey as keyof MpesaTransaction];
+        if (typeof cellValue === 'string' && cellValue.includes(',')) {
+          return `"${cellValue}"`;
+        }
+        return cellValue;
+      }).join(',');
+    });
+
+    const csvContent = [csvHeader, ...csvRows].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `mpesa_report_${startDate}_to_${endDate}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // --- RENDER ---
   return (
     <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
@@ -89,7 +123,7 @@ export default function MpesaReportPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">M-Pesa Transaction Report</h1>
             <p className="text-sm text-zinc-400">Generate a report of all M-Pesa transactions within a date range.</p>
           </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105" disabled={!showReport}>
+          <Button onClick={handleExport} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105" disabled={!showReport}>
             <Download className="mr-2 h-4 w-4" /> Export Report
           </Button>
         </div>

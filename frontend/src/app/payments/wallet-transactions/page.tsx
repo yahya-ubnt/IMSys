@@ -8,9 +8,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  PaginationState,
+  ColumnFiltersState,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/data-table"
@@ -18,8 +20,9 @@ import { getColumns } from "./columns"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
-import { Download, Search } from "lucide-react"
+import { Download, Search, TrendingUp } from "lucide-react"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // --- TYPE DEFINITIONS ---
 export interface WalletTransaction {
@@ -42,26 +45,38 @@ export default function WalletTransactionsPage() {
   // Data states
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
-  // UI states
+  const [pageCount, setPageCount] = useState(0)
 
-  // Filter states
+  // Filter and table states
   const [searchTerm, setSearchTerm] = useState("")
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
-  const [page, setPage] = useState(1)
-  const pageSize = 15
-  const [totalPages, setTotalPages] = useState(1)
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+
+  const pagination = useMemo(
+    () => ({
+      pageIndex,
+      pageSize,
+    }),
+    [pageIndex, pageSize]
+  )
 
   // --- DATA FETCHING ---
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true)
     try {
+      const typeFilter = columnFilters.find(f => f.id === 'type')?.value
+      const dateFilter = columnFilters.find(f => f.id === 'createdAt')?.value as DateRange | undefined
+
       const params = new URLSearchParams({
-        page: page.toString(),
+        page: (pageIndex + 1).toString(),
         limit: pageSize.toString(),
         ...(searchTerm && { searchTerm }),
-        ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
-        ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
+        ...(typeFilter && { type: typeFilter as string }),
+        ...(dateFilter?.from && { startDate: dateFilter.from.toISOString() }),
+        ...(dateFilter?.to && { endDate: dateFilter.to.toISOString() }),
       })
 
       const response = await fetch(`/api/payments/wallet?${params.toString()}`)
@@ -69,13 +84,13 @@ export default function WalletTransactionsPage() {
       
       const data = await response.json()
       setTransactions(data.transactions || [])
-      setTotalPages(data.pages || 1)
+      setPageCount(data.pages || 1)
     } catch (error) {
       toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
-  }, [page, pageSize, searchTerm, dateRange, toast])
+  }, [pageIndex, pageSize, searchTerm, columnFilters, toast])
 
   useEffect(() => {
     fetchTransactions()
@@ -84,10 +99,16 @@ export default function WalletTransactionsPage() {
   const table = useReactTable({
     data: transactions,
     columns: getColumns(),
+    pageCount,
+    state: {
+      pagination,
+      columnFilters,
+    },
+    onPaginationChange: setPagination,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    manualFiltering: true,
   })
 
   // --- RENDER ---
@@ -100,24 +121,28 @@ export default function WalletTransactionsPage() {
             <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Wallet Transactions</h1>
             <p className="text-sm text-zinc-400">Review all credit, debit, and adjustment wallet transactions.</p>
           </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
-            <Download className="mr-2 h-4 w-4" /> Export Data
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="icon" className="sm:hidden bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button className="hidden sm:flex bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Download className="mr-2 h-4 w-4" /> Export Data
+            </Button>
+          </div>
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl">
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 border-b border-zinc-800">
-                <CardTitle className="text-cyan-400">Transaction Log</CardTitle>
-                <CardDescription className="text-zinc-400">A detailed list of all wallet activities.</CardDescription>
+                <StatCard title="Total Transactions" value={table.getRowCount()} icon={TrendingUp} />
             </CardHeader>
             <CardContent className="p-4">
-              <DataTableToolbar {...{ searchTerm, setSearchTerm, dateRange, setDateRange }} />
+              <DataTableToolbar table={table} searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
               <div className="mt-4 overflow-x-auto">
                 <DataTable table={table} columns={getColumns()} />
               </div>
-              <PaginationControls page={page} totalPages={totalPages} onPageChange={setPage} />
+              <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </motion.div>
@@ -127,10 +152,20 @@ export default function WalletTransactionsPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const DataTableToolbar = (props: any) => {
-  const { searchTerm, setSearchTerm, dateRange, setDateRange } = props;
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
+    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
+    <div>
+      <p className="text-xs text-zinc-400">{title}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    </div>
+  </div>
+);
+
+const DataTableToolbar = ({ table, searchTerm, setSearchTerm }: { table: any, searchTerm: string, setSearchTerm: (value: string) => void }) => {
+  const transactionTypes = ['Credit', 'Debit', 'Adjustment'];
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg border border-zinc-700">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
       <div className="relative w-full sm:max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input
@@ -140,23 +175,29 @@ const DataTableToolbar = (props: any) => {
           className="pl-10 h-9 bg-zinc-800 border-zinc-700 w-full"
         />
       </div>
-      <div className="w-full sm:w-auto">
-        <CalendarDateRangePicker date={dateRange} setDate={setDateRange} />
+      <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+        <Select
+          value={(table.getColumn("type")?.getFilterValue() as string) ?? "all"}
+          onValueChange={(value) => {
+            table.getColumn("type")?.setFilterValue(value === "all" ? null : value)
+          }}
+        >
+          <SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+            <SelectItem value="all">All Types</SelectItem>
+            {transactionTypes.map(type => (
+              <SelectItem key={type} value={type}>{type}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <CalendarDateRangePicker
+          date={table.getColumn("createdAt")?.getFilterValue() as DateRange}
+          setDate={(date) => table.getColumn("createdAt")?.setFilterValue(date)}
+          className="w-full"
+        />
       </div>
     </div>
   );
 };
-
-const PaginationControls = ({ page, totalPages, onPageChange }: any) => (
-  <div className="flex items-center justify-end space-x-2 py-4 border-t border-zinc-800 mt-4">
-    <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}
-      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
-      Previous
-    </Button>
-    <span className="text-sm text-zinc-400">Page {page} of {totalPages}</span>
-    <Button variant="outline" size="sm" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-      className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 disabled:opacity-50">
-      Next
-    </Button>
-  </div>
-);

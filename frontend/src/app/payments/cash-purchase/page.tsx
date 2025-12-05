@@ -109,7 +109,7 @@ export default function CashPurchasePage() {
         </div>
 
         <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="bg-zinc-900/50 backdrop-blur-lg border border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl max-w-2xl mx-auto">
+          className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl max-w-2xl mx-auto">
           <Card className="bg-transparent border-none">
             <AnimatePresence mode="wait">
               {!selectedUser ? (
@@ -144,9 +144,14 @@ export default function CashPurchasePage() {
                         <CardTitle className="text-cyan-400 flex items-center gap-2"><DollarSign className="w-5 h-5" /> Record Payment</CardTitle>
                         <CardDescription className="text-zinc-400">For {selectedUser.officialName}</CardDescription>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedUser(null)} className="bg-transparent border-zinc-700 hover:bg-zinc-800">
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Change User
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" className="sm:hidden bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => setSelectedUser(null)}>
+                          <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="hidden sm:flex bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => setSelectedUser(null)}>
+                          <ArrowLeft className="mr-2 h-4 w-4" /> Change User
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>

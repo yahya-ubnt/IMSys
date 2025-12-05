@@ -98,7 +98,7 @@ export default function LocationReportPage() {
               <CardDescription className="text-zinc-400">Select criteria to generate the revenue report.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                 <div className="space-y-1">
                   <Label htmlFor="date-range">Date Range</Label>
                   <CalendarDateRangePicker date={date} setDate={setDate} />
@@ -114,10 +114,10 @@ export default function LocationReportPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <Button onClick={handleGenerateReport} disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:scale-100 md:col-span-2 lg:col-span-1">
+                  {loading ? 'Generating...' : 'Generate Report'}
+                </Button>
               </div>
-              <Button onClick={handleGenerateReport} disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:scale-100">
-                {loading ? 'Generating...' : 'Generate Report'}
-              </Button>
             </CardContent>
           </Card>
         </motion.div>
