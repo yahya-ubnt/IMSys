@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { getColumns, getMikrotikUserStatus } from "./columns";
 import { Input } from "@/components/ui/input";
-import { Search, Users, CheckCircle, Clock, Wifi, BarChart2 } from "lucide-react";
+import { Search, Users, CheckCircle, Clock, Wifi, BarChart2, UserPlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Topbar } from "@/components/topbar";
@@ -57,6 +57,7 @@ export default function MikrotikUsersPage() {
   const { toast } = useToast();
   
   const [monthlyTotalSubscribers, setMonthlyTotalSubscribers] = useState([]);
+  const [newThisMonth, setNewThisMonth] = useState(0);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
@@ -90,11 +91,24 @@ export default function MikrotikUsersPage() {
     }
   }, []);
 
+  const fetchNewThisMonth = useCallback(async () => {
+    try {
+      const response = await fetch('/api/dashboard/subscriptions/new');
+      if (response.ok) {
+        const data = await response.json();
+        setNewThisMonth(data.newSubscriptions);
+      }
+    } catch (err) {
+      console.error('Failed to fetch new subscriptions count:', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (isLoggingOut) { setLoading(false); return; }
     fetchUsers();
     fetchMonthlyTotalSubscribers(selectedYear);
-  }, [isLoggingOut, selectedYear, fetchUsers, fetchMonthlyTotalSubscribers]);
+    fetchNewThisMonth();
+  }, [isLoggingOut, selectedYear, fetchUsers, fetchMonthlyTotalSubscribers, fetchNewThisMonth]);
 
   const handleDeleteUser = async () => {
     if (!deleteCandidateId) return;
@@ -162,10 +176,11 @@ export default function MikrotikUsersPage() {
 
           <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
             <Card className="bg-transparent border-none">
-              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard title="Total Users" value={totalUsers} icon={Users} />
                 <StatCard title="Active Users" value={activeUsers} icon={CheckCircle} color="text-green-400" />
                 <StatCard title="Expired Users" value={expiredUsers} icon={Clock} color="text-yellow-400" />
+                <StatCard title="New This Month" value={newThisMonth} icon={UserPlus} color="text-blue-400" />
               </CardHeader>
               <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <ChartCard title="Subscriber Trends" selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyTotalSubscribers} />
