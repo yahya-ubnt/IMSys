@@ -140,7 +140,7 @@ const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
   return (
     <div className="bg-zinc-800/50 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Trends</h3>
+        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Collections vs. Expenses</h3>
         <Select value={selectedYear} onValueChange={onYearChange}>
           <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
