@@ -43,7 +43,7 @@ const createDailyTransaction = asyncHandler(async (req, res) => {
 // @route   GET /api/daily-transactions
 // @access  Private
 const getDailyTransactions = asyncHandler(async (req, res) => {
-  const { startDate, endDate, method, label, search, category } = req.query;
+  const { startDate, endDate, method, label, search, category, page = 1, limit = 10 } = req.query;
 
   const query = { tenant: req.user.tenant };
 
@@ -76,8 +76,14 @@ const getDailyTransactions = asyncHandler(async (req, res) => {
     ];
   }
 
-  const dailyTransactions = await DailyTransaction.find(query).sort({ date: -1 });
-  res.json(dailyTransactions);
+  const transactions = await DailyTransaction.find(query)
+    .sort({ date: -1 })
+    .limit(parseInt(limit))
+    .skip((page - 1) * limit);
+
+  const count = await DailyTransaction.countDocuments(query);
+
+  res.json({ transactions, pages: Math.ceil(count / limit), count });
 });
 
 // @desc    Get single daily transaction by ID

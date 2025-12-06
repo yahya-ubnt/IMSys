@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Topbar } from "@/components/topbar";
 import { Button } from '@/components/ui/button';
 import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Users, CheckCircle, Clock, UserPlus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
@@ -20,6 +21,13 @@ interface UserSummary {
   activeUsers: number;
   expiredUsers: number;
   newSubscriptions: number;
+}
+interface Transaction {
+  _id: string;
+  transactionDate: string;
+  officialName: string;
+  amount: number;
+  transactionId: string;
 }
 
 // --- Main Page Component ---
@@ -96,8 +104,9 @@ export default function DashboardPage() {
               <StatCard title="Expired Users" value={userSummary?.expiredUsers || 0} icon={Clock} color="text-yellow-400" />
               <StatCard title="New This Month" value={userSummary?.newSubscriptions || 0} icon={UserPlus} color="text-blue-400" />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-6">
               <FinancialChartCard />
+              <RecentTransactions />
             </CardContent>
           </Card>
         </motion.div>
@@ -231,6 +240,48 @@ const FinancialChartCard = () => {
     </div>
   );
 };
+
+const RecentTransactions = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const res = await fetch('/api/payments/transactions?limit=5');
+        const data = await res.json();
+        setTransactions(data.transactions);
+      } catch (error) {
+        console.error("Failed to fetch recent transactions", error);
+      }
+    };
+    fetchTransactions();
+  }, []);
+
+  return (
+    <div className="bg-zinc-800/50 p-4 rounded-lg">
+      <h3 className="text-sm font-semibold text-cyan-400 mb-2">Recent Transactions</h3>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>M-Pesa Ref</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((t) => (
+            <TableRow key={t._id}>
+              <TableCell>{new Date(t.transactionDate).toLocaleDateString()}</TableCell>
+              <TableCell>{t.officialName}</TableCell>
+              <TableCell>KES {t.amount.toLocaleString()}</TableCell>
+              <TableCell>{t.transactionId}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
