@@ -159,8 +159,8 @@ const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
           <Legend />
-          <Bar dataKey="collections" fill="#22d3ee" name="Collections" barSize={20} />
-          <Bar dataKey="expenses" fill="#f97316" name="Expenses" barSize={20} />
+          <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={10} />
+          <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={10} />
         </BarChart>
       </ResponsiveContainer>
     </div>
