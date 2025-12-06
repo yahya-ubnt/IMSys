@@ -239,6 +239,66 @@ const getExpiredUsersCount = asyncHandler(async (req, res) => {
   res.json({ expiredUsers: count });
 });
 
+const getExpensesSummary = asyncHandler(async (req, res) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - today.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const startOfYear = new Date(today.getFullYear(), 0, 1);
+  startOfYear.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date(today);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const endOfYear = new Date(today.getFullYear(), 11, 31);
+  endOfYear.setHours(23, 59, 59, 999);
+
+  const getExpenseAmount = async (startDate, endDate) => {
+    const matchQuery = { tenant: req.user.tenant };
+
+    matchQuery.expenseDate = {
+      $gte: startDate,
+      $lte: endDate,
+    };
+
+    const result = await Expense.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' },
+        },
+      },
+    ]);
+    return result.length > 0 ? result[0].totalAmount : 0;
+  };
+
+  const todayExpense = await getExpenseAmount(today, endOfToday);
+  const weeklyExpense = await getExpenseAmount(startOfWeek, endOfWeek);
+  const monthlyExpense = await getExpenseAmount(startOfMonth, endOfMonth);
+  const yearlyExpense = await getExpenseAmount(startOfYear, endOfYear);
+
+  res.json({
+    today: todayExpense,
+    weekly: weeklyExpense,
+    monthly: monthlyExpense,
+    yearly: yearlyExpense,
+  });
+});
+
 module.exports = {
   getCollectionsSummary,
   getMonthlyCollectionsAndExpenses,
@@ -247,4 +307,5 @@ module.exports = {
   getTotalUsersCount,
   getActiveUsersCount,
   getExpiredUsersCount,
+  getExpensesSummary,
 };

@@ -8,6 +8,7 @@ const {
   getTotalUsersCount,
   getActiveUsersCount,
   getExpiredUsersCount,
+  getExpensesSummary,
 } = require('../controllers/dashboardController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
@@ -25,6 +26,7 @@ router.route('/collections-expenses/monthly').get(
 );
 
 // Expenses
+router.route('/expenses/summary').get(protect, isSuperAdminOrAdmin, getExpensesSummary);
 router.route('/expenses/monthly-summary').get(protect, isSuperAdminOrAdmin, getMonthlyExpenseSummary);
 
 // Users/Subscriptions

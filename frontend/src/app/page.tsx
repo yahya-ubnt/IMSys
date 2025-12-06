@@ -11,6 +11,7 @@ import { useAuth } from '@/components/auth-provider';
 
 // --- Interface Definitions ---
 interface CollectionsSummary { today: number; weekly: number; monthly: number; yearly: number; }
+interface ExpenseSummary { today: number; weekly: number; monthly: number; yearly: number; }
 interface MonthlyDataPoint { month: string; collections: number; expenses: number; }
 interface UserSummary {
   totalUsers: number;
@@ -22,6 +23,7 @@ interface UserSummary {
 // --- Main Page Component ---
 export default function DashboardPage() {
   const [summary, setSummary] = useState<CollectionsSummary | null>(null);
+  const [expenseSummary, setExpenseSummary] = useState<ExpenseSummary | null>(null);
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -33,8 +35,9 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const [summaryRes, monthlyRes, totalUsersRes, activeUsersRes, expiredUsersRes, newSubsRes] = await Promise.all([
+        const [summaryRes, expenseSummaryRes, monthlyRes, totalUsersRes, activeUsersRes, expiredUsersRes, newSubsRes] = await Promise.all([
           fetch('/api/dashboard/collections/summary'),
+          fetch('/api/dashboard/expenses/summary'),
           fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`),
           fetch('/api/dashboard/users/total'),
           fetch('/api/dashboard/users/active'),
@@ -43,6 +46,7 @@ export default function DashboardPage() {
         ]);
 
         if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.statusText}`);
+        if (!expenseSummaryRes.ok) throw new Error(`Failed to fetch expense summary: ${expenseSummaryRes.statusText}`);
         if (!monthlyRes.ok) throw new Error(`Failed to fetch monthly data: ${monthlyRes.statusText}`);
         if (!totalUsersRes.ok) throw new Error(`Failed to fetch total users: ${totalUsersRes.statusText}`);
         if (!activeUsersRes.ok) throw new Error(`Failed to fetch active users: ${activeUsersRes.statusText}`);
@@ -50,6 +54,7 @@ export default function DashboardPage() {
         if (!newSubsRes.ok) throw new Error(`Failed to fetch new subscriptions: ${newSubsRes.statusText}`);
 
         const summaryData = await summaryRes.json();
+        const expenseSummaryData = await expenseSummaryRes.json();
         const monthlyData = await monthlyRes.json();
         const totalUsersData = await totalUsersRes.json();
         const activeUsersData = await activeUsersRes.json();
@@ -57,6 +62,7 @@ export default function DashboardPage() {
         const newSubsData = await newSubsRes.json();
 
         setSummary(summaryData);
+        setExpenseSummary(expenseSummaryData);
         setMonthlyData(monthlyData);
         setUserSummary({
           totalUsers: totalUsersData.totalUsers,
@@ -96,6 +102,12 @@ export default function DashboardPage() {
               <StatCard title="This Week" value={summary?.weekly || 0} icon={TrendingUp} prefix="KES " color="text-blue-400" />
               <StatCard title="This Month" value={summary?.monthly || 0} icon={Calendar} prefix="KES " color="text-yellow-400" />
               <StatCard title="This Year" value={summary?.yearly || 0} icon={Globe} prefix="KES " color="text-purple-400" />
+            </CardHeader>
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
+              <StatCard title="Today's Expenses" value={expenseSummary?.today || 0} icon={DollarSign} prefix="KES " color="text-red-400" />
+              <StatCard title="This Week's Expenses" value={expenseSummary?.weekly || 0} icon={TrendingUp} prefix="KES " color="text-orange-400" />
+              <StatCard title="This Month's Expenses" value={expenseSummary?.monthly || 0} icon={Calendar} prefix="KES " color="text-pink-400" />
+              <StatCard title="This Year's Expenses" value={expenseSummary?.yearly || 0} icon={Globe} prefix="KES " color="text-indigo-400" />
             </CardHeader>
             <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
               <StatCard title="Total Users" value={userSummary?.totalUsers || 0} icon={Users} />
