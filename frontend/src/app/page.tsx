@@ -120,8 +120,8 @@ export default function DashboardPage() {
               <StatCard title="New This Month" value={userSummary?.newSubscriptions || 0} icon={UserPlus} color="text-blue-400" />
             </CardHeader>
             <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <MonthlyChartCard selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyData} />
               <DailyChartCard years={years} />
+              <MonthlyChartCard selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyData} />
             </CardContent>
           </Card>
         </motion.div>
@@ -227,8 +227,8 @@ const DailyChartCard = ({ years }: { years: string[] }) => {
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
           <Legend />
-          <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={10} />
-          <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={10} />
+          <Bar dataKey="collections" fill="#3b82f6" name="Collections" barSize={10} />
+          <Bar dataKey="expenses" fill="#f97316" name="Expenses" barSize={10} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -239,7 +239,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-3 rounded-md text-xs border border-zinc-700 shadow-lg">
-        <p className="font-bold text-sm mb-2">{payload[0].dataKey === 'value' ? payload[0].payload.name : label}</p>
+        <p className="font-bold text-sm mb-2">{label}</p>
         {payload.map((pld: any, i: number) => (
           <div key={i} style={{ color: pld.fill }}>
             {pld.name}: KES {pld.value.toLocaleString()}
