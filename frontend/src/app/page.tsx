@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import Image from 'next/image';
 import { Topbar } from "@/components/topbar";
 import { Button } from '@/components/ui/button';
 import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Users, CheckCircle, Clock, UserPlus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
@@ -271,9 +270,7 @@ const RecentTransactions = () => {
 const TransactionCard = ({ transaction }: { transaction: Transaction }) => {
   return (
     <div className="flex items-center gap-4 p-3 bg-zinc-900/50 rounded-lg">
-      <div className="w-10 h-10 flex-shrink-0">
-        <Image src="/mpesa-logo.svg" alt="M-Pesa Logo" width={40} height={40} />
-      </div>
+      <img src="/mpesa-logo.svg" alt="M-Pesa Logo" className="w-10 h-10" />
       <div className="flex-grow">
         <p className="font-semibold">{transaction.officialName}</p>
         <p className="text-xs text-zinc-400">{new Date(transaction.transactionDate).toLocaleString()}</p>
