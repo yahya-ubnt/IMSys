@@ -62,19 +62,24 @@ const createTicket = asyncHandler(async (req, res) => {
 // @route   GET /api/tickets
 // @access  Admin
 const getTickets = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status, issueType } = req.query;
   const query = { tenant: req.user.tenant };
 
-  if (req.query.status) {
-    query.status = req.query.status;
+  if (status) {
+    query.status = status;
   }
-  if (req.query.issueType) {
-    query.issueType = req.query.issueType;
+  if (issueType) {
+    query.issueType = issueType;
   }
 
   const tickets = await Ticket.find(query)
-    .sort({ createdAt: -1 }); // Sort by newest first
+    .sort({ createdAt: -1 }) // Sort by newest first
+    .limit(parseInt(limit))
+    .skip((page - 1) * parseInt(limit));
 
-  res.status(200).json(tickets);
+  const count = await Ticket.countDocuments(query);
+
+  res.status(200).json({ tickets, pages: Math.ceil(count / limit), count });
 });
 
 // @desc    Get single ticket by ID
