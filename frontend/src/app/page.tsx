@@ -5,7 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Topbar } from "@/components/topbar";
-import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Users, CheckCircle, Clock, UserPlus } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Users, CheckCircle, Clock, UserPlus, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from '@/components/auth-provider';
 
@@ -26,23 +27,8 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<CollectionsSummary | null>(null);
   const [expenseSummary, setExpenseSummary] = useState<ExpenseSummary | null>(null);
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
-  const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchMonthlyData = async () => {
-      try {
-        const res = await fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`);
-        if (!res.ok) throw new Error(`Failed to fetch monthly data: ${res.statusText}`);
-        setMonthlyData(await res.json());
-      } catch (err) {
-        setError((err instanceof Error) ? err.message : 'Failed to fetch monthly data');
-      }
-    };
-    fetchMonthlyData();
-  }, [selectedYear]);
 
   useEffect(() => {
     const fetchSummaries = async () => {
@@ -84,10 +70,7 @@ export default function DashboardPage() {
     fetchSummaries();
   }, []);
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
-
-  if (loading && !monthlyData.length) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading dashboard...</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading dashboard...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
 
   return (
@@ -102,16 +85,10 @@ export default function DashboardPage() {
         <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
-              <StatCard title="Today's Collection" value={summary?.today || 0} icon={DollarSign} prefix="KES " color="text-green-400" />
-              <StatCard title="This Week" value={summary?.weekly || 0} icon={TrendingUp} prefix="KES " color="text-blue-400" />
-              <StatCard title="This Month" value={summary?.monthly || 0} icon={Calendar} prefix="KES " color="text-yellow-400" />
-              <StatCard title="This Year" value={summary?.yearly || 0} icon={Globe} prefix="KES " color="text-purple-400" />
-            </CardHeader>
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
-              <StatCard title="Today's Expenses" value={expenseSummary?.today || 0} icon={DollarSign} prefix="KES " color="text-red-400" />
-              <StatCard title="This Week's Expenses" value={expenseSummary?.weekly || 0} icon={TrendingUp} prefix="KES " color="text-orange-400" />
-              <StatCard title="This Month's Expenses" value={expenseSummary?.monthly || 0} icon={Calendar} prefix="KES " color="text-pink-400" />
-              <StatCard title="This Year's Expenses" value={expenseSummary?.yearly || 0} icon={Globe} prefix="KES " color="text-indigo-400" />
+              <FinancialStatCard title="Today's Summary" collections={summary?.today || 0} expenses={expenseSummary?.today || 0} icon={DollarSign} />
+              <FinancialStatCard title="This Week's Summary" collections={summary?.weekly || 0} expenses={expenseSummary?.weekly || 0} icon={TrendingUp} />
+              <FinancialStatCard title="This Month's Summary" collections={summary?.monthly || 0} expenses={expenseSummary?.monthly || 0} icon={Calendar} />
+              <FinancialStatCard title="This Year's Summary" collections={summary?.yearly || 0} expenses={expenseSummary?.yearly || 0} icon={Globe} />
             </CardHeader>
             <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
               <StatCard title="Total Users" value={userSummary?.totalUsers || 0} icon={Users} />
@@ -119,9 +96,8 @@ export default function DashboardPage() {
               <StatCard title="Expired Users" value={userSummary?.expiredUsers || 0} icon={Clock} color="text-yellow-400" />
               <StatCard title="New This Month" value={userSummary?.newSubscriptions || 0} icon={UserPlus} color="text-blue-400" />
             </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <DailyChartCard years={years} />
-              <MonthlyChartCard selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyData} />
+            <CardContent className="p-4">
+              <FinancialChartCard />
             </CardContent>
           </Card>
         </motion.div>
@@ -132,29 +108,113 @@ export default function DashboardPage() {
 
 // --- Sub-components ---
 const StatCard = ({ title, value, icon: Icon, prefix, color = "text-cyan-400" }: { title: string; value: number; icon: React.ElementType; prefix?: string, color?: string }) => (
-  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
-    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
-    <div>
-      <p className="text-xs text-zinc-400">{title}</p>
-      <p className={`text-xl font-bold ${color}`}>{prefix || ''}{value.toLocaleString()}</p>
+    <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
+      <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
+      <div>
+        <p className="text-xs text-zinc-400">{title}</p>
+        <p className={`text-xl font-bold ${color}`}>{prefix || ''}{value.toLocaleString()}</p>
+      </div>
     </div>
-  </div>
-);
+  );
 
-const MonthlyChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
+const FinancialStatCard = ({ title, collections, expenses, icon: Icon }: { title: string; collections: number; expenses: number; icon: React.ElementType; }) => {
+  const net = collections - expenses;
+  const netColor = net >= 0 ? 'text-green-400' : 'text-red-400';
+
+  return (
+    <div className="bg-zinc-800/50 p-4 rounded-lg flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-zinc-700 rounded-md text-cyan-400"><Icon className="h-5 w-5" /></div>
+          <p className="text-sm font-semibold text-zinc-400">{title}</p>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-green-400">
+              <ArrowUpCircle size={16} />
+              <span>Collections</span>
+            </div>
+            <span className="font-mono">KES {collections.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-red-400">
+              <ArrowDownCircle size={16} />
+              <span>Expenses</span>
+            </div>
+            <span className="font-mono">KES {expenses.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+      <div className={`mt-3 pt-2 border-t border-zinc-700 flex items-center justify-between text-base font-bold ${netColor}`}>
+        <div className="flex items-center gap-2">
+            <DollarSign size={16} />
+            <span>Net</span>
+        </div>
+        <span className="font-mono">KES {net.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+};
+
+const FinancialChartCard = () => {
+  const [view, setView] = useState<'monthly' | 'daily'>('daily');
+  const [data, setData] = useState<(MonthlyDataPoint | DailyDataPoint)[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        let url = '';
+        if (view === 'monthly') {
+          url = `/api/dashboard/collections-expenses/monthly?year=${selectedYear}`;
+        } else {
+          url = `/api/dashboard/collections-expenses/daily?year=${selectedYear}&month=${selectedMonth}`;
+        }
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch data: ${res.statusText}`);
+        setData(await res.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, [view, selectedYear, selectedMonth]);
+
+  const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
+  const months = [
+    { value: "1", label: "January" }, { value: "2", label: "February" }, { value: "3", label: "March" },
+    { value: "4", label: "April" }, { value: "5", label: "May" }, { value: "6", label: "June" },
+    { value: "7", label: "July" }, { value: "8", label: "August" }, { value: "9", label: "September" },
+    { value: "10", label: "October" }, { value: "11", label: "November" }, { value: "12", label: "December" }
+  ];
+
   return (
     <div className="bg-zinc-800/50 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Collections vs. Expenses</h3>
-        <Select value={selectedYear} onValueChange={onYearChange}>
-          <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-          <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setView('daily')} size="sm" className={view === 'daily' ? 'bg-cyan-500 text-white hover:bg-cyan-600' : 'bg-zinc-700'}>Daily</Button>
+          <Button onClick={() => setView('monthly')} size="sm" className={view === 'monthly' ? 'bg-cyan-500 text-white hover:bg-cyan-600' : 'bg-zinc-700'}>Monthly</Button>
+        </div>
+        <div className="flex gap-2">
+          {view === 'daily' && (
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="month" tickFormatter={m => m.substring(0, 3)} style={{ fontSize: '0.75rem' }} stroke="#888" />
+          <XAxis dataKey={view === 'monthly' ? 'month' : 'day'} tickFormatter={view === 'monthly' ? (m => m.substring(0, 3)) : undefined} style={{ fontSize: '0.75rem' }} stroke="#888" />
           <YAxis 
             style={{ fontSize: '0.75rem' }} 
             stroke="#888" 
@@ -166,69 +226,6 @@ const MonthlyChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
           <Legend />
           <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={10} />
           <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={10} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-const DailyChartCard = ({ years }: { years: string[] }) => {
-  const [dailyData, setDailyData] = useState<DailyDataPoint[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
-
-  useEffect(() => {
-    const fetchDailyData = async () => {
-      try {
-        const res = await fetch(`/api/dashboard/collections-expenses/daily?year=${selectedYear}&month=${selectedMonth}`);
-        if (!res.ok) throw new Error(`Failed to fetch daily data: ${res.statusText}`);
-        setDailyData(await res.json());
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchDailyData();
-  }, [selectedYear, selectedMonth]);
-
-  const months = [
-    { value: "1", label: "January" }, { value: "2", label: "February" }, { value: "3", label: "March" },
-    { value: "4", label: "April" }, { value: "5", label: "May" }, { value: "6", label: "June" },
-    { value: "7", label: "July" }, { value: "8", label: "August" }, { value: "9", label: "September" },
-    { value: "10", label: "October" }, { value: "11", label: "November" }, { value: "12", label: "December" }
-  ];
-
-  return (
-    <div className="bg-zinc-800/50 p-4 rounded-lg">
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Daily Collections vs. Expenses</h3>
-        <div className="flex gap-2">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-              {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={dailyData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="day" style={{ fontSize: '0.75rem' }} stroke="#888" />
-          <YAxis 
-            style={{ fontSize: '0.75rem' }} 
-            stroke="#888" 
-            tickCount={8}
-            tickFormatter={val => `KES ${val.toLocaleString()}`}
-            allowDecimals={false}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-          <Legend />
-          <Bar dataKey="collections" fill="#3b82f6" name="Collections" barSize={10} />
-          <Bar dataKey="expenses" fill="#f97316" name="Expenses" barSize={10} />
         </BarChart>
       </ResponsiveContainer>
     </div>
