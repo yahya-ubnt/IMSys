@@ -5,17 +5,24 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Topbar } from "@/components/topbar";
-import { DollarSign, TrendingUp, Calendar, Globe, BarChart2 } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Users, CheckCircle, Clock, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from '@/components/auth-provider';
 
 // --- Interface Definitions ---
 interface CollectionsSummary { today: number; weekly: number; monthly: number; yearly: number; }
 interface MonthlyDataPoint { month: string; collections: number; expenses: number; }
+interface UserSummary {
+  totalUsers: number;
+  activeUsers: number;
+  expiredUsers: number;
+  newSubscriptions: number;
+}
 
 // --- Main Page Component ---
 export default function DashboardPage() {
   const [summary, setSummary] = useState<CollectionsSummary | null>(null);
+  const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [loading, setLoading] = useState<boolean>(true);
@@ -26,16 +33,37 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const [summaryRes, monthlyRes] = await Promise.all([
+        const [summaryRes, monthlyRes, totalUsersRes, activeUsersRes, expiredUsersRes, newSubsRes] = await Promise.all([
           fetch('/api/dashboard/collections/summary'),
-          fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`)
+          fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`),
+          fetch('/api/dashboard/users/total'),
+          fetch('/api/dashboard/users/active'),
+          fetch('/api/dashboard/users/expired'),
+          fetch('/api/dashboard/subscriptions/new')
         ]);
 
         if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.statusText}`);
         if (!monthlyRes.ok) throw new Error(`Failed to fetch monthly data: ${monthlyRes.statusText}`);
+        if (!totalUsersRes.ok) throw new Error(`Failed to fetch total users: ${totalUsersRes.statusText}`);
+        if (!activeUsersRes.ok) throw new Error(`Failed to fetch active users: ${activeUsersRes.statusText}`);
+        if (!expiredUsersRes.ok) throw new Error(`Failed to fetch expired users: ${expiredUsersRes.statusText}`);
+        if (!newSubsRes.ok) throw new Error(`Failed to fetch new subscriptions: ${newSubsRes.statusText}`);
 
-        setSummary(await summaryRes.json());
-        setMonthlyData(await monthlyRes.json());
+        const summaryData = await summaryRes.json();
+        const monthlyData = await monthlyRes.json();
+        const totalUsersData = await totalUsersRes.json();
+        const activeUsersData = await activeUsersRes.json();
+        const expiredUsersData = await expiredUsersRes.json();
+        const newSubsData = await newSubsRes.json();
+
+        setSummary(summaryData);
+        setMonthlyData(monthlyData);
+        setUserSummary({
+          totalUsers: totalUsersData.totalUsers,
+          activeUsers: activeUsersData.activeUsers,
+          expiredUsers: expiredUsersData.expiredUsers,
+          newSubscriptions: newSubsData.newSubscriptions
+        });
 
       } catch (err: unknown) {
         setError((err instanceof Error) ? err.message : 'Failed to fetch dashboard data');
@@ -64,10 +92,16 @@ export default function DashboardPage() {
         <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
-              <StatCard title="Today's Collection" value={summary?.today || 0} icon={DollarSign} />
-              <StatCard title="This Week" value={summary?.weekly || 0} icon={TrendingUp} />
-              <StatCard title="This Month" value={summary?.monthly || 0} icon={Calendar} />
-              <StatCard title="This Year" value={summary?.yearly || 0} icon={Globe} />
+              <StatCard title="Today's Collection" value={summary?.today || 0} icon={DollarSign} prefix="KES " />
+              <StatCard title="This Week" value={summary?.weekly || 0} icon={TrendingUp} prefix="KES " />
+              <StatCard title="This Month" value={summary?.monthly || 0} icon={Calendar} prefix="KES " />
+              <StatCard title="This Year" value={summary?.yearly || 0} icon={Globe} prefix="KES " />
+            </CardHeader>
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
+              <StatCard title="Total Users" value={userSummary?.totalUsers || 0} icon={Users} />
+              <StatCard title="Active Users" value={userSummary?.activeUsers || 0} icon={CheckCircle} />
+              <StatCard title="Expired Users" value={userSummary?.expiredUsers || 0} icon={Clock} />
+              <StatCard title="New This Month" value={userSummary?.newSubscriptions || 0} icon={UserPlus} />
             </CardHeader>
             <CardContent className="p-4">
               <ChartCard selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyData} />
@@ -80,12 +114,12 @@ export default function DashboardPage() {
 }
 
 // --- Sub-components ---
-const StatCard = ({ title, value, icon: Icon }: { title: string; value: number; icon: React.ElementType; }) => (
+const StatCard = ({ title, value, icon: Icon, prefix }: { title: string; value: number; icon: React.ElementType; prefix?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className="p-2 bg-zinc-700 rounded-md text-cyan-400"><Icon className="h-5 w-5" /></div>
     <div>
       <p className="text-xs text-zinc-400">{title}</p>
-      <p className="text-xl font-bold text-white">KES {value.toLocaleString()}</p>
+      <p className="text-xl font-bold text-white">{prefix || ''}{value.toLocaleString()}</p>
     </div>
   </div>
 );
@@ -124,7 +158,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div key={i} style={{ color: pld.stroke }}>
             {pld.name}: KES {pld.value.toLocaleString()}
           </div>
-        ))}"
+        ))}
       </div>
     );
   }
