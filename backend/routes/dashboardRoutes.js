@@ -3,6 +3,7 @@ const { query } = require('express-validator');
 const {
   getCollectionsSummary,
   getMonthlyCollectionsAndExpenses,
+  getDailyCollectionsAndExpenses,
   getMonthlyExpenseSummary,
   getNewSubscriptionsCount,
   getTotalUsersCount,
@@ -23,6 +24,15 @@ router.route('/collections-expenses/monthly').get(
     query('year', 'Year is required').not().isEmpty(),
   ],
   getMonthlyCollectionsAndExpenses
+);
+router.route('/collections-expenses/daily').get(
+  protect,
+  isSuperAdminOrAdmin,
+  [
+    query('year', 'Year is required').not().isEmpty(),
+    query('month', 'Month is required').not().isEmpty(),
+  ],
+  getDailyCollectionsAndExpenses
 );
 
 // Expenses

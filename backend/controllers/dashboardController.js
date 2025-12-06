@@ -299,9 +299,74 @@ const getExpensesSummary = asyncHandler(async (req, res) => {
   });
 });
 
+const getDailyCollectionsAndExpenses = asyncHandler(async (req, res) => {
+  const { year, month } = req.query;
+  const parsedYear = parseInt(year);
+  const parsedMonth = parseInt(month);
+
+  const matchQuery = { tenant: req.user.tenant };
+
+  const dailyCollections = await Transaction.aggregate([
+    { $match: matchQuery },
+    {
+      $match: {
+        $expr: {
+          $and: [
+            { $eq: [{ $year: '$transactionDate' }, parsedYear] },
+            { $eq: [{ $month: '$transactionDate' }, parsedMonth] },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $dayOfMonth: '$transactionDate' },
+        totalAmount: { $sum: '$amount' },
+      },
+    },
+    { $project: { _id: 0, day: '$_id', amount: '$totalAmount' } },
+  ]);
+
+  const dailyExpenses = await Expense.aggregate([
+    { $match: matchQuery },
+    {
+      $match: {
+        $expr: {
+          $and: [
+            { $eq: [{ $year: '$expenseDate' }, parsedYear] },
+            { $eq: [{ $month: '$expenseDate' }, parsedMonth] },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { $dayOfMonth: '$expenseDate' },
+        totalAmount: { $sum: '$amount' },
+      },
+    },
+    { $project: { _id: 0, day: '$_id', amount: '$totalAmount' } },
+  ]);
+
+  const daysInMonth = new Date(parsedYear, parsedMonth, 0).getDate();
+  const formattedData = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const collectionData = dailyCollections.find(item => item.day === day);
+    const expenseData = dailyExpenses.find(item => item.day === day);
+    return {
+      day: day.toString(),
+      collections: collectionData ? collectionData.amount : 0,
+      expenses: expenseData ? expenseData.amount : 0,
+    };
+  });
+
+  res.json(formattedData);
+});
+
 module.exports = {
   getCollectionsSummary,
   getMonthlyCollectionsAndExpenses,
+  getDailyCollectionsAndExpenses,
   getMonthlyExpenseSummary,
   getNewSubscriptionsCount,
   getTotalUsersCount,

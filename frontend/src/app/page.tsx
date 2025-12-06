@@ -13,6 +13,7 @@ import { useAuth } from '@/components/auth-provider';
 interface CollectionsSummary { today: number; weekly: number; monthly: number; yearly: number; }
 interface ExpenseSummary { today: number; weekly: number; monthly: number; yearly: number; }
 interface MonthlyDataPoint { month: string; collections: number; expenses: number; }
+interface DailyDataPoint { day: string; collections: number; expenses: number; }
 interface UserSummary {
   totalUsers: number;
   activeUsers: number;
@@ -31,45 +32,48 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchMonthlyData = async () => {
+      try {
+        const res = await fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`);
+        if (!res.ok) throw new Error(`Failed to fetch monthly data: ${res.statusText}`);
+        setMonthlyData(await res.json());
+      } catch (err) {
+        setError((err instanceof Error) ? err.message : 'Failed to fetch monthly data');
+      }
+    };
+    fetchMonthlyData();
+  }, [selectedYear]);
+
+  useEffect(() => {
+    const fetchSummaries = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [summaryRes, expenseSummaryRes, monthlyRes, totalUsersRes, activeUsersRes, expiredUsersRes, newSubsRes] = await Promise.all([
+        const [summaryRes, expenseSummaryRes, userSummaryRes] = await Promise.all([
           fetch('/api/dashboard/collections/summary'),
           fetch('/api/dashboard/expenses/summary'),
-          fetch(`/api/dashboard/collections-expenses/monthly?year=${selectedYear}`),
-          fetch('/api/dashboard/users/total'),
-          fetch('/api/dashboard/users/active'),
-          fetch('/api/dashboard/users/expired'),
-          fetch('/api/dashboard/subscriptions/new')
+          Promise.all([
+            fetch('/api/dashboard/users/total'),
+            fetch('/api/dashboard/users/active'),
+            fetch('/api/dashboard/users/expired'),
+            fetch('/api/dashboard/subscriptions/new')
+          ]).then(async (responses) => {
+            const [total, active, expired, newSubs] = await Promise.all(responses.map(res => res.json()));
+            return {
+              totalUsers: total.totalUsers,
+              activeUsers: active.activeUsers,
+              expiredUsers: expired.expiredUsers,
+              newSubscriptions: newSubs.newSubscriptions
+            };
+          })
         ]);
 
         if (!summaryRes.ok) throw new Error(`Failed to fetch summary: ${summaryRes.statusText}`);
         if (!expenseSummaryRes.ok) throw new Error(`Failed to fetch expense summary: ${expenseSummaryRes.statusText}`);
-        if (!monthlyRes.ok) throw new Error(`Failed to fetch monthly data: ${monthlyRes.statusText}`);
-        if (!totalUsersRes.ok) throw new Error(`Failed to fetch total users: ${totalUsersRes.statusText}`);
-        if (!activeUsersRes.ok) throw new Error(`Failed to fetch active users: ${activeUsersRes.statusText}`);
-        if (!expiredUsersRes.ok) throw new Error(`Failed to fetch expired users: ${expiredUsersRes.statusText}`);
-        if (!newSubsRes.ok) throw new Error(`Failed to fetch new subscriptions: ${newSubsRes.statusText}`);
 
-        const summaryData = await summaryRes.json();
-        const expenseSummaryData = await expenseSummaryRes.json();
-        const monthlyData = await monthlyRes.json();
-        const totalUsersData = await totalUsersRes.json();
-        const activeUsersData = await activeUsersRes.json();
-        const expiredUsersData = await expiredUsersRes.json();
-        const newSubsData = await newSubsRes.json();
-
-        setSummary(summaryData);
-        setExpenseSummary(expenseSummaryData);
-        setMonthlyData(monthlyData);
-        setUserSummary({
-          totalUsers: totalUsersData.totalUsers,
-          activeUsers: activeUsersData.activeUsers,
-          expiredUsers: expiredUsersData.expiredUsers,
-          newSubscriptions: newSubsData.newSubscriptions
-        });
+        setSummary(await summaryRes.json());
+        setExpenseSummary(await expenseSummaryRes.json());
+        setUserSummary(userSummaryRes);
 
       } catch (err: unknown) {
         setError((err instanceof Error) ? err.message : 'Failed to fetch dashboard data');
@@ -77,13 +81,13 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
-    fetchDashboardData();
-  }, [selectedYear]);
+    fetchSummaries();
+  }, []);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading dashboard...</div>;
+  if (loading && !monthlyData.length) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading dashboard...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
 
   return (
@@ -115,8 +119,9 @@ export default function DashboardPage() {
               <StatCard title="Expired Users" value={userSummary?.expiredUsers || 0} icon={Clock} color="text-yellow-400" />
               <StatCard title="New This Month" value={userSummary?.newSubscriptions || 0} icon={UserPlus} color="text-blue-400" />
             </CardHeader>
-            <CardContent className="p-4">
-              <ChartCard selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyData} />
+            <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <MonthlyChartCard selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyData} />
+              <DailyChartCard years={years} />
             </CardContent>
           </Card>
         </motion.div>
@@ -136,7 +141,7 @@ const StatCard = ({ title, value, icon: Icon, prefix, color = "text-cyan-400" }:
   </div>
 );
 
-const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
+const MonthlyChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
   return (
     <div className="bg-zinc-800/50 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-2">
@@ -167,11 +172,74 @@ const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
   );
 };
 
+const DailyChartCard = ({ years }: { years: string[] }) => {
+  const [dailyData, setDailyData] = useState<DailyDataPoint[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
+
+  useEffect(() => {
+    const fetchDailyData = async () => {
+      try {
+        const res = await fetch(`/api/dashboard/collections-expenses/daily?year=${selectedYear}&month=${selectedMonth}`);
+        if (!res.ok) throw new Error(`Failed to fetch daily data: ${res.statusText}`);
+        setDailyData(await res.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchDailyData();
+  }, [selectedYear, selectedMonth]);
+
+  const months = [
+    { value: "1", label: "January" }, { value: "2", label: "February" }, { value: "3", label: "March" },
+    { value: "4", label: "April" }, { value: "5", label: "May" }, { value: "6", label: "June" },
+    { value: "7", label: "July" }, { value: "8", label: "August" }, { value: "9", label: "September" },
+    { value: "10", label: "October" }, { value: "11", label: "November" }, { value: "12", label: "December" }
+  ];
+
+  return (
+    <div className="bg-zinc-800/50 p-4 rounded-lg">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Daily Collections vs. Expenses</h3>
+        <div className="flex gap-2">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+              {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={dailyData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+          <XAxis dataKey="day" style={{ fontSize: '0.75rem' }} stroke="#888" />
+          <YAxis 
+            style={{ fontSize: '0.75rem' }} 
+            stroke="#888" 
+            tickCount={8}
+            tickFormatter={val => `KES ${val.toLocaleString()}`}
+            allowDecimals={false}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
+          <Legend />
+          <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={10} />
+          <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={10} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-3 rounded-md text-xs border border-zinc-700 shadow-lg">
-        <p className="font-bold text-sm mb-2">{label}</p>
+        <p className="font-bold text-sm mb-2">{payload[0].dataKey === 'value' ? payload[0].payload.name : label}</p>
         {payload.map((pld: any, i: number) => (
           <div key={i} style={{ color: pld.fill }}>
             {pld.name}: KES {pld.value.toLocaleString()}
