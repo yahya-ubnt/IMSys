@@ -210,7 +210,7 @@ const FinancialChartCard = () => {
 
   return (
     <div className="bg-zinc-800/50 p-4 rounded-lg">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
         <div className="flex items-center gap-2">
           <Button onClick={() => setView('daily')} size="sm" className={view === 'daily' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'}>Daily</Button>
           <Button onClick={() => setView('monthly')} size="sm" className={view === 'monthly' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'}>Monthly</Button>
