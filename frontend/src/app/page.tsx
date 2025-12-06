@@ -193,8 +193,8 @@ const FinancialChartCard = () => {
     <div className="bg-zinc-800/50 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <Button onClick={() => setView('daily')} size="sm" className={view === 'daily' ? 'bg-cyan-500 text-white hover:bg-cyan-600' : 'bg-zinc-700'}>Daily</Button>
-          <Button onClick={() => setView('monthly')} size="sm" className={view === 'monthly' ? 'bg-cyan-500 text-white hover:bg-cyan-600' : 'bg-zinc-700'}>Monthly</Button>
+          <Button onClick={() => setView('daily')} size="sm" className={view === 'daily' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'}>Daily</Button>
+          <Button onClick={() => setView('monthly')} size="sm" className={view === 'monthly' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'}>Monthly</Button>
         </div>
         <div className="flex gap-2">
           {view === 'daily' && (
@@ -224,8 +224,8 @@ const FinancialChartCard = () => {
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
           <Legend />
-          <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={10} />
-          <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={10} />
+          <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={5} />
+          <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={5} />
         </BarChart>
       </ResponsiveContainer>
     </div>
