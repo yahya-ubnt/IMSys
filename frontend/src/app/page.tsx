@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Topbar } from "@/components/topbar";
@@ -147,11 +147,8 @@ const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
         </Select>
       </div>
       <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-          <defs>
-            <linearGradient id="colFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/><stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/></linearGradient>
-            <linearGradient id="expFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/><stop offset="95%" stopColor="#f97316" stopOpacity={0}/></linearGradient>
-          </defs>
+        <BarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
           <XAxis dataKey="month" tickFormatter={m => m.substring(0, 3)} style={{ fontSize: '0.75rem' }} stroke="#888" />
           <YAxis 
             style={{ fontSize: '0.75rem' }} 
@@ -161,9 +158,10 @@ const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
             allowDecimals={false}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-          <Area type="monotone" dataKey="collections" stroke="#22d3ee" fill="url(#colFill)" name="Collections" />
-          <Area type="monotone" dataKey="expenses" stroke="#f97316" fill="url(#expFill)" name="Expenses" />
-        </AreaChart>
+          <Legend />
+          <Bar dataKey="collections" fill="#22d3ee" name="Collections" barSize={20} />
+          <Bar dataKey="expenses" fill="#f97316" name="Expenses" barSize={20} />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );
@@ -175,7 +173,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-3 rounded-md text-xs border border-zinc-700 shadow-lg">
         <p className="font-bold text-sm mb-2">{label}</p>
         {payload.map((pld: any, i: number) => (
-          <div key={i} style={{ color: pld.stroke }}>
+          <div key={i} style={{ color: pld.fill }}>
             {pld.name}: KES {pld.value.toLocaleString()}
           </div>
         ))}
