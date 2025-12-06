@@ -136,30 +136,38 @@ const StatCard = ({ title, value, icon: Icon, prefix, color = "text-cyan-400" }:
   </div>
 );
 
-const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => (
-  <div className="bg-zinc-800/50 p-4 rounded-lg">
-    <div className="flex justify-between items-center mb-2">
-      <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Trends</h3>
-      <Select value={selectedYear} onValueChange={onYearChange}>
-        <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-        <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-      </Select>
+const ChartCard = ({ selectedYear, onYearChange, years, data }: any) => {
+  return (
+    <div className="bg-zinc-800/50 p-4 rounded-lg">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> Monthly Trends</h3>
+        <Select value={selectedYear} onValueChange={onYearChange}>
+          <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <ResponsiveContainer width="100%" height={300}>
+        <AreaChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+          <defs>
+            <linearGradient id="colFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/><stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/></linearGradient>
+            <linearGradient id="expFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/><stop offset="95%" stopColor="#f97316" stopOpacity={0}/></linearGradient>
+          </defs>
+          <XAxis dataKey="month" tickFormatter={m => m.substring(0, 3)} style={{ fontSize: '0.75rem' }} stroke="#888" />
+          <YAxis 
+            style={{ fontSize: '0.75rem' }} 
+            stroke="#888" 
+            tickCount={8}
+            tickFormatter={val => `KES ${val.toLocaleString()}`}
+            allowDecimals={false}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
+          <Area type="monotone" dataKey="collections" stroke="#22d3ee" fill="url(#colFill)" name="Collections" />
+          <Area type="monotone" dataKey="expenses" stroke="#f97316" fill="url(#expFill)" name="Expenses" />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
-    <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-        <defs>
-          <linearGradient id="colFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8}/><stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/></linearGradient>
-          <linearGradient id="expFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/><stop offset="95%" stopColor="#f97316" stopOpacity={0}/></linearGradient>
-        </defs>
-        <XAxis dataKey="month" tickFormatter={m => m.substring(0, 3)} style={{ fontSize: '0.75rem' }} stroke="#888" />
-        <YAxis style={{ fontSize: '0.75rem' }} stroke="#888" tickFormatter={val => `KES ${val/1000}k`} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-        <Area type="monotone" dataKey="collections" stroke="#22d3ee" fill="url(#colFill)" name="Collections" />
-        <Area type="monotone" dataKey="expenses" stroke="#f97316" fill="url(#expFill)" name="Expenses" />
-      </AreaChart>
-    </ResponsiveContainer>
-  </div>
-);
+  );
+};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
