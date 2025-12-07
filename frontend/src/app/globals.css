@@ -46,23 +46,23 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(98% 0.01 270); /* Very light blue-gray background */
-  --foreground: oklch(20% 0 0); /* Darker gray for text */
-  --card: oklch(100% 0 0); /* Pure white for cards */
-  --card-foreground: oklch(20% 0 0); /* Darker gray for card text */
-  --popover: oklch(100% 0 0); /* Pure white for popovers */
-  --popover-foreground: oklch(20% 0 0); /* Darker gray for popover text */
+  --background: oklch(95% 0 0); /* Greyish light background */
+  --foreground: oklch(20% 0 0); /* Dark gray for text */
+  --card: oklch(98% 0 0); /* Very light gray for cards */
+  --card-foreground: oklch(20% 0 0); /* Dark gray for card text */
+  --popover: oklch(98% 0 0); /* Very light gray for popovers */
+  --popover-foreground: oklch(20% 0 0); /* Dark gray for popover text */
   --primary: oklch(0.208 0.042 265.755); /* Keep original primary blue */
   --primary-foreground: oklch(0.984 0.003 247.858); /* Almost white for primary text */
-  --secondary: oklch(95% 0.01 270); /* Slightly darker blue-gray for secondary elements */
-  --secondary-foreground: oklch(20% 0 0); /* Darker gray for secondary text */
-  --muted: oklch(95% 0.01 270); /* Slightly darker blue-gray for muted elements */
+  --secondary: oklch(95% 0 0); /* Light gray for secondary elements */
+  --secondary-foreground: oklch(20% 0 0); /* Dark gray for secondary text */
+  --muted: oklch(90% 0 0); /* Medium light gray for muted elements */
   --muted-foreground: oklch(40% 0 0); /* Medium gray for muted text */
-  --accent: oklch(90% 0.01 270); /* Even darker blue-gray for accent elements */
-  --accent-foreground: oklch(20% 0 0); /* Darker gray for accent text */
+  --accent: oklch(85% 0 0); /* Medium gray for accent elements */
+  --accent-foreground: oklch(20% 0 0); /* Dark gray for accent text */
   --destructive: oklch(0.577 0.245 27.325); /* Keep original destructive red */
   --border: transparent; /* No borders in light mode */
-  --input: oklch(100% 0 0); /* White for input fields */
+  --input: oklch(98% 0 0); /* Very light gray for input fields */
   --ring: oklch(0.704 0.04 256.788); /* Keep original ring color */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -71,12 +71,12 @@
   --chart-5: oklch(0.769 0.188 70.08);
   --chart-collections: oklch(50% 0.15 150); /* Softer green for light theme */
   --chart-expenses: oklch(50% 0.15 25);   /* Softer red for light theme */
-  --sidebar: oklch(100% 0 0); /* Pure white for sidebar */
-  --sidebar-foreground: oklch(20% 0 0); /* Darker gray for sidebar text */
+  --sidebar: oklch(98% 0 0); /* Very light gray for sidebar */
+  --sidebar-foreground: oklch(20% 0 0); /* Dark gray for sidebar text */
   --sidebar-primary: oklch(0.208 0.042 265.755); /* Keep original sidebar primary blue */
   --sidebar-primary-foreground: oklch(0.984 0.003 247.858); /* Almost white for sidebar primary text */
-  --sidebar-accent: oklch(95% 0.01 270); /* Slightly darker blue-gray for sidebar accent */
-  --sidebar-accent-foreground: oklch(20% 0 0); /* Darker gray for sidebar accent text */
+  --sidebar-accent: oklch(95% 0 0); /* Light gray for sidebar accent */
+  --sidebar-accent-foreground: oklch(20% 0 0); /* Dark gray for sidebar accent text */
   --sidebar-border: transparent; /* No borders in light mode */
   --sidebar-ring: oklch(0.704 0.04 256.788); /* Keep original sidebar ring color */
 }

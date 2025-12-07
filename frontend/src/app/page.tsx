@@ -94,18 +94,18 @@ export default function DashboardPage() {
       <div className="flex-1 p-4 sm:p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Dashboard</h1>
-          <p className="text-sm text-zinc-400">An overview of your system's collections and expenses.</p>
+          <p className="text-sm text-muted-foreground">An overview of your system's collections and expenses.</p>
         </div>
 
         <motion.div layout className="bg-card backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border border-b-0">
               <FinancialStatCard title="Today's Summary" collections={summary?.today || 0} expenses={expenseSummary?.today || 0} icon={DollarSign} />
               <FinancialStatCard title="This Week's Summary" collections={summary?.weekly || 0} expenses={expenseSummary?.weekly || 0} icon={TrendingUp} />
               <FinancialStatCard title="This Month's Summary" collections={summary?.monthly || 0} expenses={expenseSummary?.monthly || 0} icon={Calendar} />
               <FinancialStatCard title="This Year's Summary" collections={summary?.yearly || 0} expenses={expenseSummary?.yearly || 0} icon={Globe} />
             </CardHeader>
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border border-b-0">
               <StatCard title="Total Users" value={userSummary?.totalUsers || 0} icon={Users} />
               <StatCard title="Active Users" value={userSummary?.activeUsers || 0} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Expired Users" value={userSummary?.expiredUsers || 0} icon={Clock} color="text-yellow-400" />
