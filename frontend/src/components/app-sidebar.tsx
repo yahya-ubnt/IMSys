@@ -450,7 +450,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     : menuCategories;
 
   return (
-    <Sidebar collapsible="icon" {...props} className="bg-sidebar border-r border-sidebar-border shadow-2xl">
+    <Sidebar collapsible="icon" {...props} className="bg-zinc-900 border-r border-sidebar-border shadow-2xl">
       <SidebarHeader className="border-b border-sidebar-border pb-4">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-600 text-sidebar-foreground shadow-lg transition-all duration-300 hover:scale-105">
@@ -647,7 +647,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               A
             </div>
             <div className="grid flex-1 leading-tight">
-              <div className="font-semibold text-sm text-foreground">Admin User</div>
+              <div className="font-semibold text-sm text-muted-foreground">Admin User</div>
               <div className="text-xs text-muted-foreground">Administrator</div>
             </div>
           </div>
