@@ -55,7 +55,7 @@ export function Topbar() {
 
           {/* Search Bar (responsive width) */}
           <div className="relative flex-1 w-full sm:w-auto sm:max-w-md sm:flex-1 ml-4">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search users, packages, devices..."
               className="pl-8 rounded-full"

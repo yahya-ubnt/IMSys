@@ -85,11 +85,11 @@ export default function DashboardPage() {
     fetchSummaries();
   }, []);
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading dashboard...</div>;
-  if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-background text-foreground">Loading dashboard...</div>;
+  if (error) return <div className="flex h-screen items-center justify-center bg-background text-red-400">{error}</div>;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Topbar />
       <div className="flex-1 p-4 sm:p-6 space-y-6">
         <div>
@@ -97,15 +97,15 @@ export default function DashboardPage() {
           <p className="text-sm text-zinc-400">An overview of your system's collections and expenses.</p>
         </div>
 
-        <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+        <motion.div layout className="bg-card backdrop-blur-lg border border-border shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border">
               <FinancialStatCard title="Today's Summary" collections={summary?.today || 0} expenses={expenseSummary?.today || 0} icon={DollarSign} />
               <FinancialStatCard title="This Week's Summary" collections={summary?.weekly || 0} expenses={expenseSummary?.weekly || 0} icon={TrendingUp} />
               <FinancialStatCard title="This Month's Summary" collections={summary?.monthly || 0} expenses={expenseSummary?.monthly || 0} icon={Calendar} />
               <FinancialStatCard title="This Year's Summary" collections={summary?.yearly || 0} expenses={expenseSummary?.yearly || 0} icon={Globe} />
             </CardHeader>
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-zinc-800">
+            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border">
               <StatCard title="Total Users" value={userSummary?.totalUsers || 0} icon={Users} />
               <StatCard title="Active Users" value={userSummary?.activeUsers || 0} icon={CheckCircle} color="text-green-400" />
               <StatCard title="Expired Users" value={userSummary?.expiredUsers || 0} icon={Clock} color="text-yellow-400" />
@@ -127,10 +127,10 @@ export default function DashboardPage() {
 
 // --- Sub-components ---
 const StatCard = ({ title, value, icon: Icon, prefix, color = "text-cyan-400" }: { title: string; value: number; icon: React.ElementType; prefix?: string, color?: string }) => (
-    <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
-      <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
+    <div className="bg-muted p-3 rounded-lg flex items-center gap-4">
+      <div className={`p-2 bg-accent rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
       <div>
-        <p className="text-xs text-zinc-400">{title}</p>
+        <p className="text-xs text-muted-foreground">{title}</p>
         <p className={`text-xl font-bold ${color}`}>{prefix || ''}{value.toLocaleString()}</p>
       </div>
     </div>
@@ -141,11 +141,11 @@ const FinancialStatCard = ({ title, collections, expenses, icon: Icon }: { title
   const netColor = net >= 0 ? 'text-green-400' : 'text-red-400';
 
   return (
-    <div className="bg-zinc-800/50 p-4 rounded-lg flex flex-col justify-between h-full">
+    <div className="bg-muted p-4 rounded-lg flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center gap-3 mb-3">
-          <div className="p-2 bg-zinc-700 rounded-md text-cyan-400"><Icon className="h-5 w-5" /></div>
-          <p className="text-sm font-semibold text-zinc-400">{title}</p>
+          <div className="p-2 bg-accent rounded-md text-cyan-400"><Icon className="h-5 w-5" /></div>
+          <p className="text-sm font-semibold text-muted-foreground">{title}</p>
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
@@ -164,7 +164,7 @@ const FinancialStatCard = ({ title, collections, expenses, icon: Icon }: { title
           </div>
         </div>
       </div>
-      <div className={`mt-3 pt-2 border-t border-zinc-700 flex items-center justify-between text-base font-bold ${netColor}`}>
+      <div className={`mt-3 pt-2 border-t border-border flex items-center justify-between text-base font-bold ${netColor}`}>
         <div className="flex items-center gap-2">
             <DollarSign size={16} />
             <span>Net</span>
@@ -209,24 +209,24 @@ const FinancialChartCard = () => {
   ];
 
   return (
-    <div className="bg-zinc-800/50 p-4 rounded-lg">
+    <div className="bg-card p-4 rounded-lg">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
         <div className="flex items-center gap-2">
-          <Button onClick={() => setView('daily')} size="sm" className={view === 'daily' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'}>Daily</Button>
-          <Button onClick={() => setView('monthly')} size="sm" className={view === 'monthly' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'}>Monthly</Button>
+          <Button onClick={() => setView('daily')} size="sm" className={view === 'daily' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-transparent border border-border text-muted-foreground hover:bg-accent'}>Daily</Button>
+          <Button onClick={() => setView('monthly')} size="sm" className={view === 'monthly' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-transparent border border-border text-muted-foreground hover:bg-accent'}>Monthly</Button>
         </div>
         <div className="flex gap-2">
           {view === 'daily' && (
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+              <SelectTrigger className="w-32 h-8 text-xs bg-accent border-border"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-popover text-popover-foreground border-border">
                 {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-32 h-8 text-xs bg-zinc-700 border-zinc-600"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-zinc-800 text-white border-zinc-700">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="w-32 h-8 text-xs bg-accent border-border"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-popover text-popover-foreground border-border">{years.map((y: string) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
           </Select>
         </div>
       </div>
@@ -267,7 +267,7 @@ const RecentTransactions = () => {
   }, []);
 
   return (
-    <div className="bg-zinc-800/50 p-4 rounded-lg">
+    <div className="bg-card p-4 rounded-lg">
       <h3 className="text-sm font-semibold text-cyan-400 mb-4">Recent Transactions</h3>
       <div className="space-y-3">
         {transactions.map((t) => (
@@ -280,15 +280,15 @@ const RecentTransactions = () => {
 
 const TransactionCard = ({ transaction }: { transaction: Transaction }) => {
   return (
-    <div className="flex items-center gap-4 p-3 bg-zinc-900/50 rounded-lg">
+    <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
       <img src="/mpesa-logo.svg" alt="M-Pesa Logo" className="w-10 h-10" />
       <div className="flex-grow">
         <p className="font-semibold">{transaction.officialName}</p>
-        <p className="text-xs text-zinc-400">{new Date(transaction.transactionDate).toLocaleString()}</p>
+        <p className="text-xs text-muted-foreground">{new Date(transaction.transactionDate).toLocaleString()}</p>
       </div>
       <div className="text-right">
         <p className="font-bold text-green-400">KES {transaction.amount.toLocaleString()}</p>
-        <p className="text-xs text-zinc-500 font-mono">{transaction.transactionId}</p>
+        <p className="text-xs text-muted-foreground font-mono">{transaction.transactionId}</p>
       </div>
     </div>
   )
@@ -310,7 +310,7 @@ const RecentTickets = () => {
   }, []);
 
   return (
-    <div className="bg-zinc-800/50 p-4 rounded-lg">
+    <div className="bg-card p-4 rounded-lg">
       <h3 className="text-sm font-semibold text-cyan-400 mb-4">Recent Tickets</h3>
       <div className="space-y-3">
         {tickets.map((t) => (
@@ -327,20 +327,20 @@ const TicketCard = ({ ticket }: { ticket: Ticket }) => {
     'In Progress': 'text-yellow-400',
     'Resolved': 'text-green-400',
     'Closed': 'text-zinc-500',
-  }[ticket.status] || 'text-white';
+  }[ticket.status] || 'text-foreground';
 
   return (
-    <div className="flex items-center gap-4 p-3 bg-zinc-900/50 rounded-lg">
-      <div className="p-2 bg-zinc-700 rounded-md text-cyan-400">
+    <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+      <div className="p-2 bg-accent rounded-md text-cyan-400">
         <TicketIcon className="h-6 w-6" />
       </div>
       <div className="flex-grow">
         <p className="font-semibold">{ticket.issueType}</p>
-        <p className="text-xs text-zinc-400">{ticket.clientName}</p>
+        <p className="text-xs text-muted-foreground">{ticket.clientName}</p>
       </div>
       <div className="text-right">
         <p className={`font-bold text-sm ${statusColor}`}>{ticket.status}</p>
-        <p className="text-xs text-zinc-500">{new Date(ticket.createdAt).toLocaleDateString()}</p>
+        <p className="text-xs text-muted-foreground">{new Date(ticket.createdAt).toLocaleDateString()}</p>
       </div>
     </div>
   )
@@ -349,7 +349,7 @@ const TicketCard = ({ ticket }: { ticket: Ticket }) => {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-3 rounded-md text-xs border border-zinc-700 shadow-lg">
+      <div className="bg-popover text-popover-foreground p-3 rounded-md text-xs border border-border shadow-lg">
         <p className="font-bold text-sm mb-2">{label}</p>
         {payload.map((pld: any, i: number) => (
           <div key={i} style={{ color: pld.fill }}>

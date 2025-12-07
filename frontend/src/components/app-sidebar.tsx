@@ -450,10 +450,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     : menuCategories;
 
   return (
-    <Sidebar collapsible="icon" {...props} className="bg-zinc-900 border-r border-zinc-800 shadow-2xl">
-      <SidebarHeader className="border-b border-zinc-800 pb-4">
+    <Sidebar collapsible="icon" {...props} className="bg-sidebar border-r border-sidebar-border shadow-2xl">
+      <SidebarHeader className="border-b border-sidebar-border pb-4">
         <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg transition-all duration-300 hover:scale-105">
+          <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-600 text-sidebar-foreground shadow-lg transition-all duration-300 hover:scale-105">
             {settings.logoIcon && settings.logoIcon.startsWith('/') ? (
               <Image src={settings.logoIcon} alt="Logo" width={20} height={20} className="size-5" />
             ) : (
@@ -464,7 +464,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <span className="truncate font-extrabold text-lg text-blue-400 tracking-wide">
               {settings.appName}
             </span>
-            <span className="truncate text-xs text-zinc-400 font-medium uppercase">{settings.slogan}</span>
+            <span className="truncate text-xs text-muted-foreground font-medium uppercase">{settings.slogan}</span>
           </div>
         </div>
       </SidebarHeader>
@@ -472,7 +472,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent className="py-4">
         {allMenuCategories.map((category) => (
           <SidebarGroup key={category.label}>
-            <SidebarGroupLabel className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-4 py-2 border-b border-zinc-800 mb-2">
+            <SidebarGroupLabel className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-4 py-2 border-b border-sidebar-border mb-2">
               {category.label}
             </SidebarGroupLabel>
             <SidebarMenu>
@@ -494,12 +494,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <SidebarMenuButton
                               asChild
                               className={`
-                                relative transition-all duration-300 hover:bg-zinc-800 rounded-lg mx-2
-                                ${hasActiveChild ? "bg-zinc-800 text-blue-400 font-semibold" : "text-zinc-300"}
+                                relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
+                                ${hasActiveChild ? "bg-sidebar-accent text-blue-400 font-semibold" : "text-muted-foreground"}
                               `}
                             >
                               <CollapsibleTrigger className="flex items-center w-full px-3 py-2">
-                                {item.icon && <item.icon className={`mr-3 size-5 ${hasActiveChild ? "text-blue-400" : "text-zinc-400"}`} />}
+                                {item.icon && <item.icon className={`mr-3 size-5 ${hasActiveChild ? "text-blue-400" : "text-muted-foreground"}`} />}
                                 <span className="flex-1 text-sm">{item.title}</span>
                                 <ChevronRight className={`ml-auto size-4 transition-transform duration-200 ${openMenu === item.title ? "rotate-90" : ""}`} />
                               </CollapsibleTrigger>
@@ -528,8 +528,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                           <SidebarMenuSubButton
                                             asChild
                                             className={`
-                                              relative transition-all duration-300 hover:bg-zinc-800 rounded-lg mx-2
-                                              ${hasActiveNestedChild ? "bg-zinc-800 text-blue-400 font-semibold" : "text-zinc-300"}
+                                              relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
+                                              ${hasActiveNestedChild ? "bg-sidebar-accent text-blue-400 font-semibold" : "text-muted-foreground"}
                                             `}
                                           >
                                             <CollapsibleTrigger className="flex items-center w-full px-3 py-2">
@@ -551,8 +551,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                                 <SidebarMenuSubButton
                                                   asChild
                                                   className={`
-                                                    relative transition-all duration-300 hover:bg-zinc-800 rounded-lg mx-2
-                                                    ${isNestedSubActive ? "bg-blue-700 text-white font-semibold" : "text-zinc-300"}
+                                                    relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
+                                                    ${isNestedSubActive ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"}
                                                   `}
                                                 >
                                                   <Link href={nestedSubItem.url || ''} className="flex items-center w-full px-3 py-2">
@@ -576,8 +576,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                   <SidebarMenuSubButton
                                     asChild
                                     className={`
-                                      relative transition-all duration-300 hover:bg-zinc-800 rounded-lg mx-2
-                                      ${isSubActive ? "bg-blue-700 text-white font-semibold" : "text-zinc-300"}
+                                      relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
+                                      ${isSubActive ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"}
                                     `}
                                   >
                                     <Link href={subItem.url || ''} className="flex items-center w-full px-3 py-2">
@@ -600,12 +600,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       asChild
                       tooltip={item.title}
                       className={`
-                        relative transition-all duration-300 hover:bg-zinc-800 rounded-lg mx-2
-                        ${isActive ? "bg-blue-700 text-white font-semibold shadow-md" : "text-zinc-300"}
+                        relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
+                        ${isActive ? "bg-primary text-primary-foreground font-semibold shadow-md" : "text-muted-foreground"}
                       `}
                     >
                       <Link href={item.url || ''} className="flex items-center w-full px-3 py-2">
-                        {item.icon && <item.icon className={`mr-3 size-5 ${isActive ? "text-white" : "text-zinc-400"}`} />}
+                        {item.icon && <item.icon className={`mr-3 size-5 ${isActive ? "text-white" : "text-muted-foreground"}`} />}
                         <span className="flex-1 text-sm">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -625,7 +625,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               variant="ghost"
               size="sm"
               onClick={toggleTheme}
-              className="w-full justify-start gap-2 hover:bg-zinc-800 text-zinc-300 transition-colors rounded-lg"
+              className="w-full justify-start gap-2 hover:bg-sidebar-accent text-muted-foreground transition-colors rounded-lg"
             >
               {theme === "dark" ? (
                 <>
@@ -642,13 +642,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 shadow-inner">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-sidebar-accent border border-zinc-700 shadow-inner">
             <div className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">
               A
             </div>
             <div className="grid flex-1 leading-tight">
-              <div className="font-semibold text-sm text-zinc-200">Admin User</div>
-              <div className="text-xs text-zinc-400">Administrator</div>
+              <div className="font-semibold text-sm text-foreground">Admin User</div>
+              <div className="text-xs text-muted-foreground">Administrator</div>
             </div>
           </div>
         </div>
