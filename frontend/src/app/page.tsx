@@ -232,11 +232,11 @@ const FinancialChartCard = () => {
       </div>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey={view === 'monthly' ? 'month' : 'day'} tickFormatter={view === 'monthly' ? (m => m.substring(0, 3)) : undefined} style={{ fontSize: '0.75rem' }} stroke="#888" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey={view === 'monthly' ? 'month' : 'day'} tickFormatter={view === 'monthly' ? (m => m.substring(0, 3)) : undefined} style={{ fontSize: '0.75rem' }} stroke="var(--muted-foreground)" />
           <YAxis 
             style={{ fontSize: '0.75rem' }} 
-            stroke="#888" 
+            stroke="var(--muted-foreground)" 
             tickCount={8}
             tickFormatter={val => `KES ${val.toLocaleString()}`}
             allowDecimals={false}
