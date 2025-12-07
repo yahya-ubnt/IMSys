@@ -495,11 +495,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               asChild
                               className={`
                                 relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
-                                ${hasActiveChild ? "bg-sidebar-accent text-blue-400 font-semibold" : "text-muted-foreground"}
+                                ${hasActiveChild ? "bg-sidebar-accent text-primary font-semibold" : "text-muted-foreground"}
                               `}
                             >
                               <CollapsibleTrigger className="flex items-center w-full px-3 py-2">
-                                {item.icon && <item.icon className={`mr-3 size-5 ${hasActiveChild ? "text-blue-400" : "text-muted-foreground"}`} />}
+                                {item.icon && <item.icon className={`mr-3 size-5 ${hasActiveChild ? "text-primary" : "text-muted-foreground"}`} />}
                                 <span className="flex-1 text-sm">{item.title}</span>
                                 <ChevronRight className={`ml-auto size-4 transition-transform duration-200 ${openMenu === item.title ? "rotate-90" : ""}`} />
                               </CollapsibleTrigger>
@@ -529,7 +529,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                             asChild
                                             className={`
                                               relative transition-all duration-300 hover:bg-sidebar-accent rounded-lg mx-2
-                                              ${hasActiveNestedChild ? "bg-sidebar-accent text-blue-400 font-semibold" : "text-muted-foreground"}
+                                              ${hasActiveNestedChild ? "bg-sidebar-accent text-primary font-semibold" : "text-muted-foreground"}
                                             `}
                                           >
                                             <CollapsibleTrigger className="flex items-center w-full px-3 py-2">
@@ -605,7 +605,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       `}
                     >
                       <Link href={item.url || ''} className="flex items-center w-full px-3 py-2">
-                        {item.icon && <item.icon className={`mr-3 size-5 ${isActive ? "text-white" : "text-muted-foreground"}`} />}
+                        {item.icon && <item.icon className={`mr-3 size-5 ${isActive ? "text-primary-foreground" : "text-muted-foreground"}`} />}
                         <span className="flex-1 text-sm">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -617,7 +617,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-zinc-800 pt-4">
+      <SidebarFooter className="border-t border-sidebar-border pt-4">
         <div className="p-2 space-y-2">
           {/* Theme Toggle */}
           <div className="flex items-center justify-center">
@@ -642,8 +642,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-sidebar-accent border border-zinc-700 shadow-inner">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-sidebar-accent border border-sidebar-border shadow-inner">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-blue-600 text-primary-foreground text-sm font-bold shadow-sm">
               A
             </div>
             <div className="grid flex-1 leading-tight">

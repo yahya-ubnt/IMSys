@@ -97,7 +97,7 @@ export default function DashboardPage() {
           <p className="text-sm text-zinc-400">An overview of your system's collections and expenses.</p>
         </div>
 
-        <motion.div layout className="bg-card backdrop-blur-lg border border-border shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+        <motion.div layout className="bg-card backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border">
               <FinancialStatCard title="Today's Summary" collections={summary?.today || 0} expenses={expenseSummary?.today || 0} icon={DollarSign} />
