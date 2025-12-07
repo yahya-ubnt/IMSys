@@ -70,11 +70,7 @@ export function Topbar() {
 
         {/* Right Group: Icons (profile, bell, theme) */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" style={{ color: 'var(--muted-foreground)' }}>
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+
 
           {/* Notifications */}
           <NotificationBell />

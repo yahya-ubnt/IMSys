@@ -619,27 +619,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter className="border-t border-sidebar-border pt-4">
         <div className="p-2 space-y-2">
-          {/* Theme Toggle */}
-          <div className="flex items-center justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="w-full justify-start gap-2 hover:bg-sidebar-accent text-muted-foreground transition-colors rounded-lg"
-            >
-              {theme === "dark" ? (
-                <>
-                  <Sun className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm">Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm">Dark Mode</span>
-                </>
-              )}
-            </Button>
-          </div>
+
 
           {/* User Profile */}
           <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-sidebar-accent border border-sidebar-border shadow-inner">
