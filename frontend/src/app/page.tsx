@@ -243,8 +243,8 @@ const FinancialChartCard = () => {
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
           <Legend />
-          <Bar dataKey="collections" fill="#22c55e" name="Collections" barSize={2} />
-          <Bar dataKey="expenses" fill="#ef4444" name="Expenses" barSize={2} />
+          <Bar dataKey="collections" fill="var(--chart-collections)" name="Collections" barSize={2} />
+          <Bar dataKey="expenses" fill="var(--chart-expenses)" name="Expenses" barSize={2} />
         </BarChart>
       </ResponsiveContainer>
     </div>
