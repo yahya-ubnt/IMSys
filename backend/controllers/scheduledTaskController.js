@@ -4,6 +4,7 @@ const ScheduledTask = require('../models/ScheduledTask');
 const { spawn } = require('child_process');
 const path = require('path');
 const eventEmitter = require('../events');
+const parser = require('cron-parser');
 
 // Helper to execute a script
 const executeScript = (scriptPath, tenantId) => { // Pass tenantId to the script
@@ -33,8 +34,26 @@ const executeScript = (scriptPath, tenantId) => { // Pass tenantId to the script
 // @access  Private/Admin
 const getScheduledTasks = asyncHandler(async (req, res) => {
   const filter = { tenant: req.user.tenant };
-  const tasks = await ScheduledTask.find(filter).sort({ createdAt: 'desc' });
-  res.status(200).json(tasks);
+  const tasks = await ScheduledTask.find(filter).sort({ createdAt: 'desc' }).lean();
+
+  const tasksWithNextRun = tasks.map(task => {
+    try {
+      const interval = parser.parseExpression(task.schedule);
+      return {
+        ...task,
+        nextRun: interval.next().toDate(),
+      };
+    } catch (err) {
+      // If the cron expression is invalid, just return the task without the nextRun property
+      return {
+        ...task,
+        nextRun: null,
+        error: 'Invalid cron expression',
+      };
+    }
+  });
+
+  res.status(200).json(tasksWithNextRun);
 });
 
 // @desc    Create a new scheduled task

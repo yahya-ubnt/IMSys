@@ -73,6 +73,7 @@ interface ScheduledTask {
     lastRun?: string;
     lastStatus?: 'Success' | 'Failed' | 'Pending' | 'Running';
     logOutput?: string;
+    nextRun?: string;
 }
 
 export default function ScheduledTasksPage() {
@@ -170,6 +171,11 @@ export default function ScheduledTasksPage() {
             header: "Last Run",
             cell: ({ row }) => row.original.lastRun ? new Date(row.original.lastRun).toLocaleString() : 'Never'
         },
+        { 
+            accessorKey: "nextRun", 
+            header: "Next Run",
+            cell: ({ row }) => row.original.nextRun ? new Date(row.original.nextRun).toLocaleString() : 'N/A'
+        },
         {
             id: "actions",
             cell: ({ row }) => (
@@ -207,6 +213,11 @@ export default function ScheduledTasksPage() {
             accessorKey: "lastRun", 
             header: "Last Run",
             cell: ({ row }) => row.original.lastRun ? new Date(row.original.lastRun).toLocaleString() : 'Never'
+        },
+        { 
+            accessorKey: "nextRun", 
+            header: "Next Run",
+            cell: ({ row }) => row.original.nextRun ? new Date(row.original.nextRun).toLocaleString() : 'N/A'
         },
         {
             id: "actions",
