@@ -34,6 +34,8 @@ export default function TicketsPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
+  const [pageCount, setPageCount] = useState(0)
+
   // Table states
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -46,12 +48,17 @@ export default function TicketsPage() {
   const fetchAllData = useCallback(async () => {
     setLoading(true)
     try {
-      const [ticketsData, statsData, monthlyStatsData] = await Promise.all([
-        getTickets(),
+      const params = new URLSearchParams();
+      params.append('page', (pagination.pageIndex + 1).toString());
+      params.append('limit', pagination.pageSize.toString());
+      
+      const [ticketsResponse, statsData, monthlyStatsData] = await Promise.all([
+        getTickets(params.toString()),
         getTicketStats(),
         getMonthlyTicketStats(selectedYear)
       ]);
-      setTickets(ticketsData)
+      setTickets(ticketsResponse.tickets)
+      setPageCount(ticketsResponse.pages)
       if (typeof statsData === 'object' && statsData !== null) {
         setStats(prevStats => ({ ...prevStats, ...statsData }));
       }
@@ -63,7 +70,7 @@ export default function TicketsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedYear, toast])
+  }, [selectedYear, toast, pagination])
 
   useEffect(() => {
     fetchAllData()
@@ -109,6 +116,8 @@ export default function TicketsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onPaginationChange: setPagination,
+    manualPagination: true,
+    pageCount,
     state: {
       sorting,
       columnFilters,

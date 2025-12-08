@@ -1,4 +1,4 @@
-import { Ticket, TicketFormData } from '@/types/ticket';
+import { Ticket, TicketFormData, TicketsResponse } from '@/types/ticket';
 
 async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {
@@ -26,7 +26,7 @@ export const createTicket = async (ticketData: Partial<TicketFormData>) => {
 // Get all tickets
 export const getTickets = async (params?: string) => {
   const url = params ? `/api/tickets?${params}` : '/api/tickets';
-  return fetchApi<Ticket[]>(url);
+  return fetchApi<TicketsResponse>(url);
 };
 
 // Get a single ticket by ID

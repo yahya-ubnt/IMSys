@@ -37,3 +37,9 @@ export interface TicketFormData {
   status: 'New' | 'Open' | 'In Progress' | 'Dispatched' | 'Resolved' | 'Closed';
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
 }
+
+export interface TicketsResponse {
+  tickets: Ticket[];
+  pages: number;
+  count: number;
+}
