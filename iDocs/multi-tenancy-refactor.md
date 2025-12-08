@@ -88,9 +88,7 @@ This document outlines the plan to refactor the application to use a dedicated `
 *   [x] `backend/scripts/backfillDefaultScheduledTasks.js`
 *   [x] `backend/scripts/cleanupOldLogs.js`
 *   [x] `backend/scripts/disconnectExpiredClients.js`
-*   [x] `backend/scripts/generateBillsFromSubscriptions.js`
 *   [x] `backend/scripts/masterScheduler.js`
-*   [x] `backend/scripts/seedBillingTask.js`
 *   [x] `backend/scripts/seedExpiryNotificationTask.js`
 *   [x] `backend/scripts/seedScheduledTasks.js`
 *   [x] `backend/scripts/seedSubscriptions.js`

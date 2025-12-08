@@ -2,13 +2,6 @@ const ScheduledTask = require('../models/ScheduledTask');
 
 const defaultTasks = [
   {
-    name: 'Automated Monthly Billing',
-    description: 'Generates monthly bills for all active subscriptions based on the new subscription model.',
-    scriptPath: 'scripts/generateBillsFromSubscriptions.js',
-    schedule: '5 0 * * *', // Every day at 12:05 AM
-    isEnabled: true,
-  },
-  {
     name: 'Automated Disconnection of Expired Users',
     description: 'Disconnects users from the network whose expiryDate has passed.',
     scriptPath: 'scripts/disconnectExpiredClients.js',

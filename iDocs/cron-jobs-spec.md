@@ -10,15 +10,7 @@ To document and track all automated, recurring tasks (cron jobs) that are essent
 
 This section details the cron jobs that are currently active on the production server.
 
-### 2.1. Automated Monthly Billing
-
--   **Task:** Generates a `Debit` transaction in each user's wallet for their monthly subscription fee based on their active subscription.
--   **Script:** `/home/mtk/Downloads/ISP MANAGEMENT SYs/backend/scripts/generateBillsFromSubscriptions.js`
--   **Schedule:** `5 0 * * *` (Every day at 12:05 AM)
--   **Purpose:** This is the core of the automated billing cycle. It reads from the Subscription model to ensure that every user is charged the correct, locked-in price for their service on time.
--   **Log File:** `/home/mtk/Downloads/ISP MANAGEMENT SYs/backend/logs/billing.log`
-
-### 2.2. Automated Disconnection of Expired Users
+### 2.1. Automated Disconnection of Expired Users
 
 -   **Task:** Disconnects users from the network whose `expiryDate` has passed.
 -   **Script:** `/home/mtk/Downloads/ISP MANAGEMENT SYs/backend/scripts/disconnectExpiredClients.js`

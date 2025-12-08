@@ -83,9 +83,9 @@ module.exports = mongoose.model('Invoice', invoiceSchema);
 
 ## 4. Backend Logic
 
-### 4.1. Invoice Generation (`generateBillsFromSubscriptions.js`)
+### 4.1. Invoice Generation
 
-The existing script will be modified:
+A script will be created to handle invoice generation.
 
 1.  When processing an active subscription, the script will **first** create a new `Invoice` document.
 2.  `invoiceNumber` will be generated sequentially (e.g., based on month and a counter).
