@@ -210,6 +210,8 @@ const reconnectMikrotikUser = async (userId, tenantId) => {
     client = await getMikrotikApiClient(router);
     if (!client) return false;
 
+    const comment = `Reconnected: Payment received. [${new Date().toISOString()}]`;
+
     if (user.serviceType === 'pppoe') {
       const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
       if (pppSecrets.length > 0) {
@@ -218,6 +220,7 @@ const reconnectMikrotikUser = async (userId, tenantId) => {
           `=.id=${secretId}`,
           '=disabled=no',
           `=profile=${user.package.profile}`,
+          `=comment=${comment}`,
         ]);
         console.log(`Successfully reconnected user ${user.username}`);
         return true;
@@ -236,6 +239,7 @@ const reconnectMikrotikUser = async (userId, tenantId) => {
           target: user.ipAddress,
           'max-limit': selectedPackage.rateLimit,
           disabled: 'no', // Enable the queue
+          comment: comment,
         };
 
         await client.write('/queue/simple/set', [`=.id=${queueId}`, ...formatUpdateArgs(updateArgs)]);

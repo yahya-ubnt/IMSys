@@ -85,7 +85,7 @@ async function disconnectExpiredClients() {
 
 
         const currentDate = new Date();
-
+        const comment = `Disconnected: Account expired. [${currentDate.toISOString()}]`;
 
 
 
@@ -240,25 +240,14 @@ async function disconnectExpiredClients() {
 
 
 
-                        // ii. Disable User Account
-
-
-                        await connection.write('/ppp/secret/set', ['=.id=' + secretId, '=disabled=yes']);
-
-
-                        console.log(`[${new Date().toISOString()}] Disabled user account for ${user.username}.`);
-
-
-
-
-
-                        // iii. Assign "Disconnect" Profile
-
-
-                        await connection.write('/ppp/secret/set', ['=.id=' + secretId, '=profile=Disconnect']);
-
-
-                        console.log(`[${new Date().toISOString()}] Assigned 'disconnect' profile to ${user.username}.`);
+                        // ii. Disable User Account, set profile, and add comment
+                        await connection.write('/ppp/secret/set', [
+                          `=.id=${secretId}`,
+                          '=disabled=yes',
+                          '=profile=Disconnect',
+                          `=comment=${comment}`
+                        ]);
+                        console.log(`[${new Date().toISOString()}] Disabled user, set profile, and added comment for ${user.username}.`);
 
 
                     } else {
@@ -282,13 +271,17 @@ async function disconnectExpiredClients() {
                         const queueId = simpleQueues[0]['.id'];
 
 
-                        const setQueueResponse = await connection.write('/queue/simple/set', [`=.id=${queueId}`, '=max-limit=1k/1k']);
+                        const setQueueResponse = await connection.write('/queue/simple/set', [
+                          `=.id=${queueId}`,
+                          '=max-limit=1k/1k',
+                          `=comment=${comment}`
+                        ]);
 
 
                         console.log(`[${new Date().toISOString()}] MikroTik API Response for static user ${user.username} (set max-limit):`, setQueueResponse);
 
 
-                        console.log(`[${new Date().toISOString()}] Set max-limit to 1k/1k for static user ${user.username}.`);
+                        console.log(`[${new Date().toISOString()}] Set max-limit to 1k/1k and added comment for static user ${user.username}.`);
 
 
                     } else {
