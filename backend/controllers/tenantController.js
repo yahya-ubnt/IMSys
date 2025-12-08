@@ -24,6 +24,7 @@ const WhatsAppProvider = require('../models/WhatsAppProvider');
 const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 const Device = require('../models/Device');
 const ScheduledTask = require('../models/ScheduledTask');
+const { createDefaultTasksForTenant } = require('../services/scheduledTaskService');
 
 // @desc    Get tenant stats
 // @route   GET /api/tenants/stats
@@ -128,6 +129,9 @@ const createTenant = asyncHandler(async (req, res) => {
     // Step 3: Update the tenant with the owner's ID
     newTenant.owner = adminUser._id;
     await newTenant.save();
+
+    // Step 4: Create the default scheduled tasks for the new tenant
+    await createDefaultTasksForTenant(newTenant._id);
 
     res.status(201).json({
       message: 'Tenant and Admin User created successfully.',
