@@ -366,12 +366,11 @@ const menuCategories: MenuCategory[] = [
             title: "Settings",
             url: "/settings",
           },
+          {
+            title: "Scheduled Tasks",
+            url: "/admin/scheduled-tasks",
+          },
         ],
-      },
-      {
-        title: "Scheduled Tasks",
-        url: "/admin/scheduled-tasks",
-        icon: Timer,
       },
     ],
   },
