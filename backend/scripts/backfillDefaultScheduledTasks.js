@@ -12,6 +12,13 @@ const defaultTasks = [
     isEnabled: true,
   },
   {
+    name: 'Disconnect Expired Hotspot Clients',
+    description: 'Disconnects expired hotspot users and sessions.',
+    scriptPath: 'scripts/disconnectExpiredHotspotUsers.js',
+    schedule: '* * * * *', // Every minute
+    isEnabled: true,
+  },
+  {
     name: 'Automated Database Log Cleanup',
     description: 'Archives or deletes old log records to maintain database performance.',
     scriptPath: 'scripts/cleanupOldLogs.js',
