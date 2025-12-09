@@ -95,6 +95,10 @@ const MikrotikUserSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isManuallyDisconnected: {
+      type: Boolean,
+      default: false,
+    },
     isOnline: {
       type: Boolean,
       default: false,

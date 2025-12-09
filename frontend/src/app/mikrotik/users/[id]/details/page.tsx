@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
@@ -20,9 +20,10 @@ import BillingTab from "@/components/mikrotik/BillingTab";
 import SmsTab from "@/components/mikrotik/SmsTab";
 import { DiagnosticButton } from "@/components/diagnostics/DiagnosticButton";
 import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
+import { ConnectDisconnectButtons } from "@/components/mikrotik/ConnectDisconnectButtons"; // Import the new component
 
 // --- Interface Definitions ---
-interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; }
+interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; isManuallyDisconnected?: boolean; }
 interface PaymentStats { totalSpentMpesa: number; lastMpesaPaymentDate: string | null; totalMpesaTransactions: number; averageMpesaTransaction: number; mpesaTransactionHistory: MpesaTransaction[]; }
 interface SmsLog { _id: string; message: string; messageType: string; smsStatus: 'Success' | 'Failed' | 'Pending'; createdAt: string; }
 interface SmsStats { total: number; acknowledgement: number; expiry: number; composed: number; system: number; }
@@ -65,21 +66,22 @@ export default function MikrotikUserDetailsPage() {
     const [activeTab, setActiveTab] = useState("overview");
     const { toast } = useToast();
 
+    const fetchUser = useCallback(async () => {
+        try {
+            const response = await fetch(`/api/mikrotik/users/${id}`);
+            if (!response.ok) throw new Error("Failed to fetch user details");
+            setUserData(await response.json());
+        } catch {
+            toast({ title: "Error", description: "Failed to load user data.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    }, [id, toast]);
+
     useEffect(() => {
         if (!id) return;
-        const fetchUser = async () => {
-            try {
-                const response = await fetch(`/api/mikrotik/users/${id}`);
-                if (!response.ok) throw new Error("Failed to fetch user details");
-                setUserData(await response.json());
-            } catch {
-                toast({ title: "Error", description: "Failed to load user data.", variant: "destructive" });
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchUser();
-    }, [id, toast]);
+    }, [id, fetchUser]);
 
     useEffect(() => {
         if (!id) return;
@@ -159,11 +161,13 @@ export default function MikrotikUserDetailsPage() {
                             <div className="flex sm:hidden items-center gap-2">
                                 <Button variant="outline" size="icon" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-4 w-4" /></Button>
                                 <DiagnosticButton userId={userData._id} isIconOnly={true} />
+                                <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} />
                             </div>
                             {/* Desktop Buttons */}
                             <div className="hidden sm:flex items-center gap-2">
                                 <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 mr-2" />Edit User</Button>
                                 <DiagnosticButton userId={userData._id} />
+                                <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} />
                             </div>
                         </div>
                     </div>

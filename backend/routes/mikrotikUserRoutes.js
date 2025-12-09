@@ -16,6 +16,8 @@ const {
   getDowntimeLogs,
   getDelayedPayments,
   getUserPaymentStats,
+  manualDisconnectUser,
+  manualConnectUser,
 } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 const diagnosticRoutes = require('./diagnosticRoutes');
@@ -52,6 +54,9 @@ router.route('/:id/status').get(protect, isSuperAdminOrAdmin, getMikrotikUserSta
 router.route('/:id/traffic').get(protect, isSuperAdminOrAdmin, getMikrotikUserTraffic);
 router.route('/:id/payment-stats').get(protect, isSuperAdminOrAdmin, getUserPaymentStats);
 router.route('/:userId/downtime-logs').get(protect, isSuperAdminOrAdmin, getDowntimeLogs);
+
+router.route('/:id/disconnect').post(protect, isSuperAdminOrAdmin, manualDisconnectUser);
+router.route('/:id/connect').post(protect, isSuperAdminOrAdmin, manualConnectUser);
 
 router
   .route('/:id')

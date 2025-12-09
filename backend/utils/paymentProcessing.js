@@ -119,8 +119,13 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   console.log(`[${new Date().toISOString()}] User saved to database. Final expiry: ${user.expiryDate}, final balance: ${user.walletBalance}`);
 
   if (monthsExtended > 0) {
-    console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username}.`);
-    await reconnectMikrotikUser(user._id, user.tenant);
+    // Check if the user was manually disconnected
+    if (user.isManuallyDisconnected) {
+      console.log(`[${new Date().toISOString()}] Skipping automatic reconnection for manually disconnected user ${user.username}.`);
+    } else {
+      console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username}.`);
+      await reconnectMikrotikUser(user._id, user.tenant);
+    }
   }
 
   try {

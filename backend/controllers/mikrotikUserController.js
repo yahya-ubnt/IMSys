@@ -11,6 +11,7 @@ const Transaction = require('../models/Transaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
+const { getMikrotikApiClient, reconnectMikrotikUser } = require('../utils/mikrotikUtils'); // Import getMikrotikApiClient
 
 // Helper function to generate a unique 6-digit number
 const generateUnique6DigitNumber = async (tenant) => {
@@ -479,6 +480,162 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Mikrotik User removed' });
 });
 
+// @desc    Manually disconnect a Mikrotik User
+// @route   POST /api/mikrotik/users/:id/disconnect
+// @access  Private/Admin
+const manualDisconnectUser = asyncHandler(async (req, res) => {
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant }).populate('mikrotikRouter').populate('package');
+
+  if (!user) {
+    res.status(404);
+    throw new Error('Mikrotik User not found');
+  }
+
+  const router = user.mikrotikRouter;
+  if (!router) {
+    res.status(404);
+    throw new Error('Associated Mikrotik Router not found');
+  }
+
+  let client;
+  try {
+    client = await getMikrotikApiClient(router);
+    if (!client) {
+      res.status(500);
+      throw new Error('Failed to connect to Mikrotik router');
+    }
+
+    if (user.serviceType === 'pppoe') {
+      const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+      if (pppSecrets.length > 0) {
+        const secretId = pppSecrets[0]['.id'];
+
+        // Terminate active session
+        const allActiveSessions = await client.write('/ppp/active/print');
+        const activeSessions = allActiveSessions.filter(session => session.name === user.username);
+        for (const session of activeSessions) {
+          await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
+        }
+
+        // Disable PPP secret and set profile to 'Disconnect'
+        await client.write('/ppp/secret/set', [
+          `=.id=${secretId}`,
+          '=disabled=yes',
+          '=profile=Disconnect',
+          `=comment=Manually disconnected by admin at ${new Date().toISOString()}`
+        ]);
+      } else {
+        console.warn(`PPP Secret for user ${user.username} not found on Mikrotik. Cannot disconnect.`);
+      }
+    } else if (user.serviceType === 'static') {
+      const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+      if (simpleQueues.length > 0) {
+        const queueId = simpleQueues[0]['.id'];
+        // Set max-limit to 1k/1k and disable the queue
+        await client.write('/queue/simple/set', [
+          `=.id=${queueId}`,
+          '=max-limit=1k/1k',
+          '=disabled=yes',
+          `=comment=Manually disconnected by admin at ${new Date().toISOString()}`
+        ]);
+      } else {
+        console.warn(`Simple Queue for static user ${user.username} not found on Mikrotik. Cannot disconnect.`);
+      }
+    }
+
+    user.isManuallyDisconnected = true;
+    user.isSuspended = true; // Also mark as suspended
+    await user.save();
+
+    res.status(200).json({ message: 'User disconnected successfully', user });
+  } catch (error) {
+    console.error(`Manual Disconnect Error for user ${user.username}: ${error.message}`);
+    res.status(500);
+    throw new Error(`Failed to disconnect user: ${error.message}`);
+  } finally {
+    if (client) {
+      client.close();
+    }
+  }
+});
+
+// @desc    Manually connect a Mikrotik User
+// @route   POST /api/mikrotik/users/:id/connect
+// @access  Private/Admin
+const manualConnectUser = asyncHandler(async (req, res) => {
+  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant }).populate('mikrotikRouter').populate('package');
+
+  if (!user) {
+    res.status(404);
+    throw new Error('Mikrotik User not found');
+  }
+
+  const router = user.mikrotikRouter;
+  if (!router) {
+    res.status(404);
+    throw new Error('Associated Mikrotik Router not found');
+  }
+
+  let client;
+  try {
+    client = await getMikrotikApiClient(router);
+    if (!client) {
+      res.status(500);
+      throw new Error('Failed to connect to Mikrotik router');
+    }
+
+    if (user.serviceType === 'pppoe') {
+      const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+      if (pppSecrets.length > 0) {
+        const secretId = pppSecrets[0]['.id'];
+        const selectedPackage = user.package;
+
+        // Enable PPP secret and set profile to the user's package profile
+        await client.write('/ppp/secret/set', [
+          `=.id=${secretId}`,
+          '=disabled=no',
+          `=profile=${selectedPackage.profile}`,
+          `=comment=Manually connected by admin at ${new Date().toISOString()}`
+        ]);
+      } else {
+        console.warn(`PPP Secret for user ${user.username} not found on Mikrotik. Cannot connect.`);
+      }
+    } else if (user.serviceType === 'static') {
+      const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+      if (simpleQueues.length > 0) {
+        const queueId = simpleQueues[0]['.id'];
+        const selectedPackage = user.package;
+
+        // Set max-limit to the user's package rate limit and enable the queue
+        await client.write('/queue/simple/set', [
+          `=.id=${queueId}`,
+          `=max-limit=${selectedPackage.rateLimit}`,
+          '=disabled=no',
+          `=comment=Manually connected by admin at ${new Date().toISOString()}`
+        ]);
+      } else {
+        console.warn(`Simple Queue for static user ${user.username} not found on Mikrotik. Cannot connect.`);
+      }
+    }
+
+    user.isManuallyDisconnected = false;
+    user.isSuspended = false; // Also mark as not suspended
+    await user.save();
+
+    res.status(200).json({ message: 'User connected successfully', user });
+  } catch (error) {
+    console.error(`Manual Connect Error for user ${user.username}: ${error.message}`);
+    res.status(500);
+    throw new Error(`Failed to connect user: ${error.message}`);
+  }
+  finally {
+    if (client) {
+      client.close();
+    }
+  }
+});
+
+
 // @desc    Get Mikrotik Clients (for SMS dropdowns)
 // @route   GET /api/mikrotik/users/clients-for-sms
 // @access  Private
@@ -827,4 +984,6 @@ module.exports = {
   getDelayedPayments,
   getUserPaymentStats,
   getMikrotikUsersByStation,
+  manualDisconnectUser,
+  manualConnectUser,
 };
