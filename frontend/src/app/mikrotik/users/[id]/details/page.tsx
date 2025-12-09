@@ -183,7 +183,7 @@ export default function MikrotikUserDetailsPage() {
                             </CardHeader>
                             
                             <TabsPrimitive.Root value={activeTab} onValueChange={setActiveTab} defaultValue="overview" className="flex-1 flex flex-col">
-                                <TabsPrimitive.List className="relative flex flex-col sm:flex-row w-full items-start sm:items-center justify-start p-2 sm:overflow-x-auto">
+                                <TabsPrimitive.List className="relative flex flex-col sm:flex-row w-full items-start sm:items-center justify-start p-2 sm:overflow-x-auto mb-4">
                                     {tabs.map((tab) => (
                                         <TabsPrimitive.Trigger key={tab.id} value={tab.id} className="relative w-full sm:w-auto px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white data-[state=active]:bg-zinc-700/50 rounded-md">
                                             <span className="relative z-10 flex items-center"><tab.icon className="mr-2 h-4 w-4" />{tab.label}</span>
