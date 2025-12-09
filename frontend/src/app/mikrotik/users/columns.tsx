@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { MikrotikUser } from "./page"; // Import from the page component
+import { calculateDaysRemaining } from "@/lib/utils"; // Import the new utility function
 
 // --- Interface Definition ---
 interface User {
@@ -33,16 +34,6 @@ export const getMikrotikUserStatus = (user: MikrotikUser) => {
     return { status: "Expired", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" };
   }
   return { status: "Active", color: "bg-green-500/20 text-green-400 border-green-500/30" };
-};
-
-const getRemainingDays = (expiryDateString: string): string => {
-  const expiryDate = new Date(expiryDateString);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const diffTime = expiryDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays).toString();
 };
 
 export const getColumns = (
@@ -103,7 +94,7 @@ export const getColumns = (
     {
       id: "remainingDays",
       header: "Days Left",
-      cell: ({ row }) => getRemainingDays(row.original.expiryDate),
+      cell: ({ row }) => calculateDaysRemaining(row.original.expiryDate).toString(),
     },
     {
       id: "accountStatus",

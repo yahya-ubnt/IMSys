@@ -32,7 +32,6 @@ export type SmsExpirySchedule = {
   messageBody: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
-  smsTemplate: { _id: string; name: string; };
 };
 
 export interface TriggerType {
@@ -46,8 +45,6 @@ export default function SmsExpiryPage() {
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
-  const [smsTemplates, setSmsTemplates] = useState<any[]>([])
-  const [whatsAppTemplates, setWhatsAppTemplates] = useState<any[]>([])
   const [triggerTypes, setTriggerTypes] = useState<TriggerType[]>([])
   
   // UI states
@@ -73,30 +70,20 @@ export default function SmsExpiryPage() {
     }
   }, [toast])
 
-  const fetchTemplatesAndTriggers = useCallback(async () => {
+  const fetchTriggers = useCallback(async () => {
     try {
-      const [smsRes, whatsappRes, triggersRes] = await Promise.all([
-        fetch("/api/smstemplates"),
-        fetch("/api/whatsapp-templates"),
-        fetch("/api/sms/triggers")
-      ]);
-      if (!smsRes.ok) throw new Error("Failed to fetch SMS templates");
-      if (!whatsappRes.ok) throw new Error("Failed to fetch WhatsApp templates");
+      const triggersRes = await fetch("/api/sms/triggers");
       if (!triggersRes.ok) throw new Error("Failed to fetch trigger types");
-      
-      setSmsTemplates(await smsRes.json());
-      setWhatsAppTemplates(await whatsappRes.json());
       setTriggerTypes(await triggersRes.json());
-
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load required data.", variant: "destructive" })
+      toast({ title: "Error", description: "Failed to load trigger types.", variant: "destructive" })
     }
   }, [toast]);
 
   useEffect(() => {
     fetchSchedules()
-    fetchTemplatesAndTriggers()
-  }, [fetchSchedules, fetchTemplatesAndTriggers])
+    fetchTriggers()
+  }, [fetchSchedules, fetchTriggers])
 
   // --- EVENT HANDLERS ---
   const handleNewSchedule = () => {
@@ -213,8 +200,6 @@ export default function SmsExpiryPage() {
               onSubmit={handleFormSubmit}
               initialData={selectedSchedule}
               onClose={() => setIsModalOpen(false)}
-              smsTemplates={smsTemplates}
-              whatsAppTemplates={whatsAppTemplates}
             />
           </DialogContent>
         </Dialog>

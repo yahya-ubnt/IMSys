@@ -12,7 +12,8 @@ import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, 
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
 import { WalletTransaction } from "./wallet-columns";
-import { differenceInDays, parseISO } from 'date-fns';
+import { calculateDaysRemaining } from '@/lib/utils'; // Import the new utility function
+// import { differenceInDays, parseISO } from 'date-fns'; // Removed as no longer needed
 import MikrotikUserTrafficChart from "@/components/MikrotikUserTrafficChart";
 import DowntimeLogTable from "@/components/mikrotik/DowntimeLogTable";
 import BillingTab from "@/components/mikrotik/BillingTab";
@@ -124,7 +125,7 @@ export default function MikrotikUserDetailsPage() {
 
     const daysToExpire = useMemo(() => {
         if (!userData?.expiryDate) return { days: 0, label: 'Expired' };
-        const days = differenceInDays(parseISO(userData.expiryDate), new Date());
+        const days = calculateDaysRemaining(userData.expiryDate);
         return { days, label: days > 0 ? `${days} days remaining` : 'Expired' };
     }, [userData?.expiryDate]);
 

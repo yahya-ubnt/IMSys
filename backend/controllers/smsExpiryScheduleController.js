@@ -1,8 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const SmsExpirySchedule = require('../models/SmsExpirySchedule');
-const SmsTemplate = require('../models/SmsTemplate');
-const WhatsAppTemplate = require('../models/WhatsAppTemplate');
 const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
 
 // @desc    Get all SMS expiry schedules
@@ -40,29 +38,7 @@ const createSchedule = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, days, timing, smsTemplate, status } = req.body;
-  let { whatsAppTemplate } = req.body;
-
-  // If whatsAppTemplate is an empty string or other falsy value, treat it as not provided.
-  if (!whatsAppTemplate) {
-    whatsAppTemplate = null;
-  }
-
-  // Verify ownership of smsTemplate
-  const smsTpl = await SmsTemplate.findOne({ _id: smsTemplate, tenant: req.user.tenant });
-  if (!smsTpl) {
-    res.status(401);
-    throw new Error('Not authorized to use this SMS template');
-  }
-
-  // Verify ownership of whatsAppTemplate if provided
-  if (whatsAppTemplate) {
-    const waTpl = await WhatsAppTemplate.findOne({ _id: whatsAppTemplate, tenant: req.user.tenant });
-    if (!waTpl) {
-      res.status(401);
-      throw new Error('Not authorized to use this WhatsApp template');
-    }
-  }
+  const { name, days, timing, messageBody, status } = req.body;
 
   const scheduleExists = await SmsExpirySchedule.findOne({ name, tenant: req.user.tenant });
 
@@ -75,8 +51,7 @@ const createSchedule = asyncHandler(async (req, res) => {
     name,
     days,
     timing,
-    smsTemplate,
-    whatsAppTemplate,
+    messageBody,
     status,
     tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
@@ -98,40 +73,16 @@ const updateSchedule = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
   
-  const { name, days, timing, smsTemplate, whatsAppTemplate, status } = req.body;
+  const { name, days, timing, messageBody, status } = req.body;
 
   const schedule = await SmsExpirySchedule.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (schedule) {
-    // Verify ownership of smsTemplate if it's being changed
-    if (smsTemplate && schedule.smsTemplate.toString() !== smsTemplate) {
-      const smsTpl = await SmsTemplate.findOne({ _id: smsTemplate, tenant: req.user.tenant });
-      if (!smsTpl) {
-        res.status(401);
-        throw new Error('Not authorized to use this SMS template');
-      }
-    }
-
-    // Verify ownership of whatsAppTemplate if it's being changed
-    if (whatsAppTemplate && schedule.whatsAppTemplate?.toString() !== whatsAppTemplate) {
-      const waTpl = await WhatsAppTemplate.findOne({ _id: whatsAppTemplate, tenant: req.user.tenant });
-      if (!waTpl) {
-        res.status(401);
-        throw new Error('Not authorized to use this WhatsApp template');
-      }
-    }
-
     schedule.name = name;
     schedule.days = days;
     schedule.timing = timing;
-    schedule.smsTemplate = smsTemplate;
+    schedule.messageBody = messageBody;
     schedule.status = status;
-
-    if (whatsAppTemplate && whatsAppTemplate.length > 0) {
-      schedule.whatsAppTemplate = whatsAppTemplate;
-    } else {
-      schedule.whatsAppTemplate = undefined; // Clear the field
-    }
 
     const updatedSchedule = await schedule.save();
     res.json(updatedSchedule);

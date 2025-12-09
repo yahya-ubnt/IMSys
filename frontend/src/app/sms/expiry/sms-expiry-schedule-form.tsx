@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -13,11 +14,10 @@ import type { SmsExpirySchedule } from "./page";
 // Define the schema for the form data using Zod
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  days: z.coerce.number().int().positive("Days must be a positive number"),
+  days: z.coerce.number().int().min(1).max(7, "Days must be between 1 and 7"),
   timing: z.enum(["Before", "After", "Not Applicable"]),
   status: z.enum(["Active", "Inactive"]),
-  smsTemplate: z.string().min(1, "An SMS template is required"),
-  whatsAppTemplate: z.string().optional(),
+  messageBody: z.string().min(10, "Message body must be at least 10 characters"),
 });
 
 export type SmsExpiryScheduleFormData = z.infer<typeof formSchema>;
@@ -26,22 +26,31 @@ interface SmsExpiryScheduleFormProps {
   onSubmit: (data: SmsExpiryScheduleFormData) => void;
   initialData?: SmsExpirySchedule | null;
   onClose: () => void;
-  smsTemplates: any[];
-  whatsAppTemplates: any[];
 }
 
-export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose, smsTemplates, whatsAppTemplates }: SmsExpiryScheduleFormProps) {
+const placeholders = [
+  { label: "Official Name", value: "{{officialName}}" },
+  { label: "MPESA Ref No.", value: "{{mPesaRefNo}}" },
+  { label: "Mobile Number", value: "{{mobileNumber}}" },
+  { label: "Wallet Balance", value: "{{walletBalance}}" },
+  { label: "Package Amount", value: "{{transaction_amount}}" },
+  { label: "Expiry Date", value: "{{expiryDate}}" },
+  { label: "Days Remaining", value: "{{daysRemaining}}" },
+];
+
+export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExpiryScheduleFormProps) {
   const form = useForm<SmsExpiryScheduleFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      days: 3,
+      days: 1,
       timing: "Before",
       status: "Active",
-      smsTemplate: "",
-      whatsAppTemplate: "",
+      messageBody: "",
     },
   });
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -50,13 +59,29 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose, smsTempl
         days: initialData.days,
         timing: initialData.timing,
         status: initialData.status,
-        // @ts-ignore
-        smsTemplate: initialData.smsTemplate?._id || initialData.smsTemplate,
-        // @ts-ignore
-        whatsAppTemplate: initialData.whatsAppTemplate?._id || initialData.whatsAppTemplate,
+        messageBody: initialData.messageBody,
       });
     }
   }, [initialData, form]);
+
+  const handlePlaceholderClick = (placeholder: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const newText = text.substring(0, start) + placeholder + text.substring(end);
+    
+    form.setValue("messageBody", newText, { shouldValidate: true });
+    
+    // Focus and set cursor position after the inserted placeholder
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPosition = start + placeholder.length;
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+    }, 0);
+  };
 
   return (
     <Form {...form}>
@@ -81,9 +106,18 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose, smsTempl
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Days</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} className="bg-zinc-800 border-zinc-700" />
-                </FormControl>
+                <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
+                  <FormControl>
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                    {[...Array(7)].map((_, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>{i + 1} Day(s)</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -113,48 +147,40 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose, smsTempl
         </div>
         <FormField
           control={form.control}
-          name="smsTemplate"
+          name="messageBody"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>SMS Template (Required Fallback)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue placeholder="Select an SMS template" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                  {smsTemplates.map(template => (
-                    <SelectItem key={template._id} value={template._id}>{template.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>Message Body</FormLabel>
+              <FormControl>
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Write your SMS message here. Use placeholders to personalize it."
+                  value={field.value}
+                  onChange={field.onChange}
+                  className="bg-zinc-800 border-zinc-700 min-h-[120px]"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="whatsAppTemplate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>WhatsApp Template (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue placeholder="Select a WhatsApp template (optional)" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                  {whatsAppTemplates.map(template => (
-                    <SelectItem key={template._id} value={template._id}>{template.templateName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div>
+          <FormLabel className="text-xs text-zinc-400">Insert Placeholder</FormLabel>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {placeholders.map(p => (
+              <Button
+                type="button"
+                key={p.value}
+                variant="outline"
+                size="sm"
+                onClick={() => handlePlaceholderClick(p.value)}
+                className="bg-zinc-700 border-zinc-600 text-xs h-7"
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
+        </div>
         <FormField
           control={form.control}
           name="status"

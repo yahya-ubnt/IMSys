@@ -14,8 +14,7 @@ const scheduleValidation = [
   body('name', 'Name is required').not().isEmpty(),
   body('days', 'Days must be a number').isNumeric(),
   body('timing', 'Invalid timing').isIn(['Before', 'After', 'Not Applicable']),
-  body('smsTemplate', 'SMS Template ID is required and must be a valid Mongo ID').isMongoId(),
-  body('whatsAppTemplate', 'WhatsApp Template ID must be a valid Mongo ID').optional({ checkFalsy: true }).isMongoId(),
+  body('messageBody', 'Message body is required').not().isEmpty(),
   body('status', 'Invalid status').optional().isIn(['Active', 'Inactive']),
 ];
 

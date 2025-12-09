@@ -5,27 +5,24 @@ const MikrotikUser = require('../models/MikrotikUser');
 const SmsExpirySchedule = require('../models/SmsExpirySchedule');
 const NotificationLog = require('../models/NotificationLog');
 const SmsLog = require('../models/SmsLog');
-const WhatsAppLog = require('../models/WhatsAppLog');
+const Package = require('../models/Package'); // Import the Package model
 const { sendSMS } = require('../services/smsService');
-const { sendWhatsAppMessage } = require('../services/whatsappService');
 
 const sendExpiryNotifications = async () => {
-  console.log('Running Robust Expiry Notification Job...');
+  console.log('Running Expiry Notification Job...');
   
   try {
     await connectDB();
     const tenants = await Tenant.find({ status: 'active' });
 
     for (const tenant of tenants) {
-      const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenant: tenant._id })
-        .populate('smsTemplate')
-        .populate('whatsAppTemplate');
+      const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenant: tenant._id });
 
       for (const schedule of activeSchedules) {
-        const { days, timing, smsTemplate, whatsAppTemplate } = schedule;
+        const { days, timing, messageBody } = schedule;
 
-        if (!smsTemplate) {
-          console.warn(`Skipping schedule "${schedule.name}" because its SMS template is missing.`);
+        if (!messageBody) {
+          console.warn(`Skipping schedule "${schedule.name}" because its message body is empty.`);
           continue;
         }
 
@@ -63,51 +60,43 @@ const sendExpiryNotifications = async () => {
             console.log(`Preparing to notify user ${user.username} for schedule "${schedule.name}".`);
 
             // 4. Dynamic message logic
-            const daysRemaining = Math.round((user.expiryDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-            const useWhatsApp = user.whatsappOptIn && whatsAppTemplate;
+            const now = new Date();
+            now.setHours(0, 0, 0, 0); // Normalize today to the beginning of the day
+            const expiry = new Date(user.expiryDate);
+            expiry.setHours(0, 0, 0, 0); // Normalize expiry date as well
+
+            const diffTime = expiry.getTime() - now.getTime();
+            
+            let daysRemaining = 0;
+            if (diffTime >= 0) { // Only calculate if not expired
+              daysRemaining = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            }
             
             const templateData = {
-                customer_name: user.officialName || 'Customer',
-                reference_number: user.mPesaRefNo || '',
-                customer_phone: user.mobileNumber || '',
+                officialName: user.officialName || 'Customer',
+                mPesaRefNo: user.mPesaRefNo || '',
+                mobileNumber: user.mobileNumber || '',
+                walletBalance: user.walletBalance ? user.walletBalance.toFixed(2) : '0.00',
                 transaction_amount: user.package ? user.package.price : '',
-                expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
-                days_remaining: daysRemaining,
+                expiryDate: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
+                daysRemaining: daysRemaining,
             };
 
-            if (useWhatsApp) {
-              const templateParameters = {
-                '1': templateData.customer_name,
-                '2': templateData.transaction_amount,
-                '3': templateData.expiry_date,
-                '4': templateData.days_remaining.toString(),
-              };
-              const whatsappResult = await sendWhatsAppMessage(user.tenant, user.mobileNumber, whatsAppTemplate.providerTemplateId, templateParameters);
-              await WhatsAppLog.create({
-                mobileNumber: user.mobileNumber,
-                message: `WhatsApp template sent: ${whatsAppTemplate.name}`,
-                status: whatsappResult.success ? 'Success' : 'Failed',
-                providerResponse: whatsappResult.message,
-                tenant: user.tenant,
-                mikrotikUser: user._id, // Associate with the user
-              });
-            } else {
-              let personalizedMessage = smsTemplate.messageBody;
-              for (const key in templateData) {
-                  const placeholder = new RegExp(`{{${key}}}`, 'g');
-                  personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
-              }
-              const smsResult = await sendSMS(user.tenant, user.mobileNumber, personalizedMessage);
-              await SmsLog.create({
-                mobileNumber: user.mobileNumber,
-                message: personalizedMessage,
-                messageType: 'Expiry Alert',
-                smsStatus: smsResult.success ? 'Success' : 'Failed',
-                providerResponse: smsResult.message,
-                tenant: user.tenant,
-                mikrotikUser: user._id, // Associate with the user
-              });
+            let personalizedMessage = messageBody;
+            for (const key in templateData) {
+                const placeholder = new RegExp(`{{${key}}}`, 'g');
+                personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
             }
+            const smsResult = await sendSMS(user.tenant, user.mobileNumber, personalizedMessage);
+            await SmsLog.create({
+              mobileNumber: user.mobileNumber,
+              message: personalizedMessage,
+              messageType: 'Expiry Alert',
+              smsStatus: smsResult.success ? 'Success' : 'Failed',
+              providerResponse: smsResult.message,
+              tenant: user.tenant,
+              mikrotikUser: user._id, // Associate with the user
+            });
 
             // 5. Log that the notification was sent to prevent duplicates
             await NotificationLog.create({
@@ -125,9 +114,9 @@ const sendExpiryNotifications = async () => {
         });
       }
     }
-    console.log('Robust Expiry Notification Job completed successfully.');
+    console.log('Expiry Notification Job completed successfully.');
   } catch (error) {
-    console.error('Error running Robust Expiry Notification Job:', error);
+    console.error('Error running Expiry Notification Job:', error);
   } finally {
     await mongoose.connection.close();
     console.log('Database connection closed.');

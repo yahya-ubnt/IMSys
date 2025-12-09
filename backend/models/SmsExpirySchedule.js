@@ -22,15 +22,9 @@ const SmsExpiryScheduleSchema = mongoose.Schema(
       enum: ['Before', 'After', 'Not Applicable'],
       default: 'Before',
     },
-    smsTemplate: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'SmsTemplate',
-      required: [true, 'An SMS template is required as a fallback.'],
-    },
-    whatsAppTemplate: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'WhatsAppTemplate',
-      required: false, // Optional: for the smart fallback
+    messageBody: {
+      type: String,
+      required: [true, 'Please add a message body for the schedule'],
     },
     status: {
       type: String,
