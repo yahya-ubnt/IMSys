@@ -15,7 +15,7 @@ const scheduledJobs = {};
 const executeScript = (scriptPath, tenantId) => {
   return new Promise((resolve, reject) => {
     const absoluteScriptPath = path.resolve(__dirname, scriptPath);
-    const child = spawn('node', [absoluteScriptPath, tenantId]);
+    const child = spawn('node', [absoluteScriptPath, tenantId], { env: process.env });
     
     let stdout = '';
     let stderr = '';
@@ -56,6 +56,11 @@ const executeTask = async (task) => {
         taskDoc.logOutput = output;
         await taskDoc.save();
         console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenant} finished successfully.`);
+        if (output) {
+          console.log(`--- Output for task '${task.name}' ---`);
+          console.log(output);
+          console.log(`--- End of output for task '${task.name}' ---`);
+        }
     } catch (error) {
         taskDoc.lastStatus = 'Failed';
         taskDoc.logOutput = error.message;
