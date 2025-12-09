@@ -27,10 +27,8 @@ const sendExpiryNotifications = async () => {
     }
 
     const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenant: tenant._id });
-    console.log(`Found ${activeSchedules.length} active schedules for tenant ${tenant.name}.`);
 
     for (const schedule of activeSchedules) {
-      console.log('Processing schedule:', JSON.stringify(schedule, null, 2));
       const { days, timing, messageBody } = schedule;
 
       if (!messageBody) {
@@ -53,11 +51,6 @@ const sendExpiryNotifications = async () => {
         expiryDate: timing === 'Before' ? { $gte: today, $lte: searchWindow } : { $gte: searchWindow, $lte: today },
       };
 
-      console.log('User query:', JSON.stringify(query, null, 2));
-      
-      const users = await MikrotikUser.find(query);
-      console.log(`Found ${users.length} users matching the criteria.`);
-
       const userCursor = MikrotikUser.find(query).populate('package').cursor();
 
       await userCursor.eachAsync(async (user) => {
@@ -70,7 +63,6 @@ const sendExpiryNotifications = async () => {
 
           // 3. If not already notified, proceed
           if (alreadyNotified) {
-            console.log(`User ${user.username} already notified for this schedule. Skipping.`);
             return; // Skip to next user
           }
 
