@@ -190,6 +190,7 @@ export default function MikrotikUserDetailsPage() {
                                         </TabsPrimitive.Trigger>
                                     ))}
                                 </TabsPrimitive.List>
+                                <hr className="border-zinc-700 mb-4" />
 
                                 <CardContent className="p-4 flex-1">
                                     <TabsPrimitive.Content value="overview" className="h-full">
