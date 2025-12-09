@@ -161,7 +161,7 @@ export default function MikrotikUserDetailsPage() {
                             <div className="flex sm:hidden items-center gap-2">
                                 <Button variant="outline" size="icon" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-4 w-4" /></Button>
                                 <DiagnosticButton userId={userData._id} isIconOnly={true} />
-                                <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} />
+                                <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} isIconOnly={true} />
                             </div>
                             {/* Desktop Buttons */}
                             <div className="hidden sm:flex items-center gap-2">
