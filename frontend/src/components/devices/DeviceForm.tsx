@@ -38,7 +38,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
 
-  const [routerId, setRouterId] = useState(initialData?.router?._id || "");
+  const [routerId, setRouterId] = useState(typeof initialData?.router === 'object' ? initialData?.router?._id || "" : initialData?.router || "");
   const [deviceType, setDeviceType] = useState<"Access" | "Station" | undefined>(initialData?.deviceType || undefined);
   const [deviceName, setDeviceName] = useState(initialData?.deviceName || "");
   const [deviceModel, setDeviceModel] = useState(initialData?.deviceModel || "");

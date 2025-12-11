@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Loader2, Plug, PlugZap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -33,17 +33,10 @@ export function ConnectDisconnectButtons({ userId, isManuallyDisconnected, onSta
         throw new Error(result.message || `Failed to ${action} user.`);
       }
 
-      toast({
-        title: 'Success',
-        description: `User ${action}ed successfully.`,
-      });
+      toast.success(`User ${action}ed successfully.`);
       onStatusChange(); // Refresh user data
     } catch (error: any) {
-      toast({
-        title: `Error ${action === 'connect' ? 'Connecting' : 'Disconnecting'} User`,
-        description: error.message || `Failed to ${action} user.`,
-        variant: 'destructive',
-      });
+      toast.error(`Error ${action === 'connect' ? 'Connecting' : 'Disconnecting'} User: ${error.message || `Failed to ${action} user.`}`);
     } finally {
       setIsLoading(false);
     }

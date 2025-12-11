@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'; // Added useMemo, useCallback
 import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table'; // Import DataTable
-import { ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
 
 import { Badge } from '@/components/ui/badge';
 
@@ -20,17 +20,6 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
   const [leases, setLeases] = useState<DhcpLease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchLeases = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/routers/${routerId}/dashboard/dhcp-leases`);
-      if (!response.ok) throw new Error('Failed to fetch DHCP leases');
-      const data = await response.json();
-      setLeases(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    }
-  }, [routerId]);
 
   const columns: ColumnDef<DhcpLease>[] = useMemo(
     () => [
@@ -55,7 +44,7 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => (
-          <Badge variant={row.original.status === 'bound' ? 'success' : 'secondary'}>
+          <Badge variant={row.original.status === 'bound' ? 'default' : 'secondary'}>
             {row.original.status}
           </Badge>
         ),
@@ -63,6 +52,23 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
     ],
     []
   );
+
+  const table = useReactTable({
+    data: leases,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const fetchLeases = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/routers/${routerId}/dashboard/dhcp-leases`);
+      if (!response.ok) throw new Error('Failed to fetch DHCP leases');
+      const data = await response.json();
+      setLeases(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  }, [routerId]);
 
   useEffect(() => {
     if (!routerId) return;
@@ -82,6 +88,7 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
 
   return (
     <DataTable
+      table={table}
       columns={columns}
       data={leases}
       filterColumn="address"
