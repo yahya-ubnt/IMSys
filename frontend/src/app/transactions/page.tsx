@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DataTable } from '@/components/data-table';
-
 import { Input } from '@/components/ui/input';
 import { Search, DollarSign, CheckCircle, XCircle } from 'lucide-react';
 import { Topbar } from '@/components/topbar';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, useReactTable, getCoreRowModel } from '@tanstack/react-table';
 
 // Define a placeholder interface for Transaction data
 interface Transaction {
@@ -64,6 +63,12 @@ export default function TransactionsPage() {
       return <span className={`capitalize ${colorClass}`}>{status}</span>;
     }},
   ];
+
+  const table = useReactTable({
+    data: filteredTransactions,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-950 to-black text-white">Loading transactions...</div>;
@@ -140,9 +145,8 @@ export default function TransactionsPage() {
               <p className="text-zinc-400">Loading transactions...</p>
             ) : (
               <DataTable
+                table={table}
                 columns={columns}
-                data={filteredTransactions}
-                filterColumn="description" // Example filter
                 className="text-sm [&_th]:bg-zinc-800 [&_th]:text-white [&_th]:font-semibold [&_td]:bg-zinc-900 [&_td]:text-white [&_td]:border-b [&_td]:border-zinc-700 [&_tr:last-child_td]:border-b-0 hover:[&_tr]:bg-zinc-800 transition-colors duration-200"
               />
             )}

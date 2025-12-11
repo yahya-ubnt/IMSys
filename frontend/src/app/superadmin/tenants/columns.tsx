@@ -60,7 +60,7 @@ export const getColumns = (
     header: "Status",
     cell: ({ row }) => {
       const tenant = row.original;
-      const variant = tenant.status === 'Active' ? 'success' : 'destructive';
+      const variant = tenant.status === 'Active' ? 'default' : 'destructive';
       return <Badge variant={variant}>{tenant.status}</Badge>;
     },
   },

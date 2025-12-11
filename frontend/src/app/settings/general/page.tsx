@@ -41,7 +41,7 @@ const companyInfoSchema = z.object({
 
 const billingSchema = z.object({
   currencySymbol: z.string().min(1, "Currency Symbol is required."),
-  paymentGracePeriodDays: z.coerce.number().int().min(0, "Grace period must be a positive number."),
+  paymentGracePeriodDays: z.number().int().min(0, "Grace period must be a positive number."),
   disconnectTime: z.enum(['expiry_time', 'end_of_day']),
   autoDisconnectUsers: z.boolean(),
   sendPaymentReminders: z.boolean(),
@@ -100,7 +100,7 @@ export default function GeneralSettingsForm() {
         });
         billingForm.reset({
           currencySymbol: data.currencySymbol,
-          paymentGracePeriodDays: data.paymentGracePeriodDays,
+          paymentGracePeriodDays: Number(data.paymentGracePeriodDays) || 0,
           disconnectTime: data.disconnectTime,
           autoDisconnectUsers: data.autoDisconnectUsers,
           sendPaymentReminders: data.sendPaymentReminders,
@@ -116,7 +116,7 @@ export default function GeneralSettingsForm() {
     try {
       const formData = new FormData();
       
-      (Object.keys(data) as Array<keyof typeof data>).forEach(key => {
+      Object.keys(data).forEach(key => {
         const value = data[key];
         if (value !== undefined && value !== null) {
           if (key === 'logoIcon' || key === 'favicon') {

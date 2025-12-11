@@ -41,11 +41,6 @@ export default function EmailSettingsPage() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "adminNotificationEmails" as const
-  });
-
   useEffect(() => {
     const fetchSettings = async () => {
       setIsLoading(true); // Set loading true before fetch
@@ -110,17 +105,29 @@ export default function EmailSettingsPage() {
   };
 
   const handleAddEmail = () => {
-    const newEmail = form.getValues("newEmailInput"); // A temporary field for the input
-    if (newEmail && !fields.some(field => field.value === newEmail)) {
+    const newEmail = form.getValues("newEmailInput");
+    if (newEmail) {
       const emailSchema = z.string().email();
       const validation = emailSchema.safeParse(newEmail);
       if (validation.success) {
-        append(newEmail);
-        form.setValue("newEmailInput", ""); // Clear the temporary input field
+        const currentEmails = form.getValues("adminNotificationEmails") || [];
+        if (!currentEmails.includes(newEmail)) {
+          form.setValue("adminNotificationEmails", [...currentEmails, newEmail]);
+          form.setValue("newEmailInput", "");
+        } else {
+          toast.error("Email already exists.");
+        }
       } else {
         toast.error("Please enter a valid email address.");
       }
     }
+  };
+
+  const handleRemoveEmail = (index: number) => {
+    const currentEmails = form.getValues("adminNotificationEmails") || [];
+    const newEmails = [...currentEmails];
+    newEmails.splice(index, 1);
+    form.setValue("adminNotificationEmails", newEmails);
   };
 
   if (isLoading) {
@@ -139,13 +146,13 @@ export default function EmailSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                {fields.map((field, index) => (
-                  <motion.div key={field.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between p-2 bg-zinc-800 rounded-md">
-                    <span className="text-sm">{field.value}</span>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                {form.watch("adminNotificationEmails")?.map((email, index) => (
+                  <motion.div key={index} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between p-2 bg-zinc-800 rounded-md">
+                    <span className="text-sm">{email}</span>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveEmail(index)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                   </motion.div>
                 ))}
-                {fields.length === 0 && <p className="text-sm text-zinc-400">No notification emails configured.</p>}
+                {form.watch("adminNotificationEmails")?.length === 0 && <p className="text-sm text-zinc-400">No notification emails configured.</p>}
               </div>
               <div className="flex items-center space-x-2">
                 <FormField

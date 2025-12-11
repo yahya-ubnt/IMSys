@@ -48,10 +48,10 @@ export const columns: ColumnDef<SmsLog>[] = [
     cell: ({ row }) => {
       const messageType = row.original.messageType;
       let displayType = messageType;
-      if (messageType === 'Compose New Message') {
-        displayType = 'Compose';
+      if (messageType === 'Manual') {
+        displayType = 'Manual';
       } else if (messageType === 'Expiry Alert') {
-        displayType = 'Expiry';
+        displayType = 'Expiry Alert';
       }
 
       return (

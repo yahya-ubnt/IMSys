@@ -21,7 +21,7 @@ router.route('/').post(
       'Field Sales',
       'Referral',
       'Website',
-      'WhatsApp/SMS',
+      
       'Manual Entry',
       'Manual',
     ]),

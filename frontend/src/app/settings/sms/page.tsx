@@ -18,17 +18,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { SmsProviderList } from "@/components/settings/sms-provider-list"
 import { SmsProviderForm } from "@/components/settings/sms-provider-form"
 import { getSmsProviders } from "@/services/settingsService"
+import { SmsProvider } from "@/types/sms"
 
 export default function SmsSettingsPage() {
-  const [providers, setProviders] = useState([])
-  const [editingProvider, setEditingProvider] = useState(null)
+  const [providers, setProviders] = useState<SmsProvider[]>([])
+  const [editingProvider, setEditingProvider] = useState<SmsProvider | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const { toast } = useToast()
-
+  
   useEffect(() => {
     fetchProviders()
   }, [])
@@ -38,15 +38,11 @@ export default function SmsSettingsPage() {
       const data = await getSmsProviders()
       setProviders(data)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch SMS providers.",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch SMS providers.")
     }
   }
 
-  const handleEdit = (provider) => {
+  const handleEdit = (provider: SmsProvider) => {
     setEditingProvider(provider)
     setIsFormOpen(true)
   }

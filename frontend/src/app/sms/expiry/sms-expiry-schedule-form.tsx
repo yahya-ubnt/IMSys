@@ -14,7 +14,7 @@ import type { SmsExpirySchedule } from "./page";
 // Define the schema for the form data using Zod
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  days: z.coerce.number().int().min(1).max(7, "Days must be between 1 and 7"),
+  days: z.number().int().min(1).max(7, "Days must be between 1 and 7"),
   timing: z.enum(["Before", "After", "Not Applicable"]),
   status: z.enum(["Active", "Inactive"]),
   messageBody: z.string().min(10, "Message body must be at least 10 characters"),
@@ -106,7 +106,7 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Days</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={String(field.value)}>
+                <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
                   <FormControl>
                     <SelectTrigger className="bg-zinc-800 border-zinc-700">
                       <SelectValue />

@@ -173,7 +173,7 @@ export default function EditLeadPage() {
                       <InputGroup label="Lead Source">
                         <Select name="leadSource" value={formData.leadSource} onValueChange={(v) => handleSelectChange('leadSource', v)}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{['Manual', 'Caretaker', 'Field Sales', 'Referral', 'Website', 'WhatsApp/SMS'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                          <SelectContent>{['Manual', 'Caretaker', 'Field Sales', 'Referral', 'Website'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                         </Select>
                       </InputGroup>
                       <InputGroup label="Brought In By"><Input name="broughtInBy" value={formData.broughtInBy} onChange={handleChange} placeholder="e.g., John Doe" /></InputGroup>

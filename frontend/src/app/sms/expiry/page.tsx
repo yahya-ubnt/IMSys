@@ -132,7 +132,7 @@ export default function SmsExpiryPage() {
 
   const table = useReactTable({
     data: schedules,
-    columns: columns({ handleEdit, handleDelete, triggerTypes }),
+    columns: columns({ handleEdit, handleDelete }),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -181,7 +181,7 @@ export default function SmsExpiryPage() {
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="overflow-x-auto">
-                <DataTable table={table} columns={columns({ handleEdit, handleDelete, triggerTypes })} />
+                <DataTable table={table} columns={columns({ handleEdit, handleDelete })} />
               </div>
               <DataTablePagination table={table} />
             </CardContent>

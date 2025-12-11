@@ -60,34 +60,3 @@ export const setActiveSmsProvider = async (id: string) => {
         method: 'POST',
     });
 };
-
-// WhatsApp Provider Settings
-export const getWhatsAppProviders = async () => {
-    return fetchApi('/api/settings/whatsapp-providers');
-};
-
-export const createWhatsAppProvider = async (providerData: any) => {
-    return fetchApi('/api/settings/whatsapp-providers', {
-        method: 'POST',
-        body: JSON.stringify(providerData),
-    });
-};
-
-export const updateWhatsAppProvider = async (id: string, providerData: any) => {
-    return fetchApi(`/api/settings/whatsapp-providers/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(providerData),
-    });
-};
-
-export const deleteWhatsAppProvider = async (id: string) => {
-    return fetchApi(`/api/settings/whatsapp-providers/${id}`, {
-        method: 'DELETE',
-    });
-};
-
-export const setActiveWhatsAppProvider = async (id: string) => {
-    return fetchApi(`/api/settings/whatsapp-providers/${id}/set-active`, {
-        method: 'POST',
-    });
-};

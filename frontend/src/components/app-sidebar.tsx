@@ -173,24 +173,7 @@ const menuCategories: MenuCategory[] = [
           },
         ],
       },
-      {
-        title: "WhatsApp",
-        icon: MessageCircle,
-        items: [
-          {
-            title: "Templates",
-            url: "/whatsapp/templates",
-          },
-          {
-            title: "Compose",
-            url: "/whatsapp/compose",
-          },
-          {
-            title: "Sent Log",
-            url: "/whatsapp/sent",
-          },
-        ],
-      },
+
     ],
   },
   {

@@ -16,7 +16,7 @@ const leadSchema = new mongoose.Schema(
         'Field Sales',
         'Referral',
         'Website',
-        'WhatsApp/SMS',
+        
         'Manual Entry',
         'Manual',
       ],

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/data-table';
 import { columns } from '../columns';
 import { PlusCircle } from 'lucide-react';
+import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
 
 
 export default function SupportActivitiesPage() {
@@ -62,6 +63,12 @@ export default function SupportActivitiesPage() {
     }
   };
 
+  const table = useReactTable({
+    data: activities,
+    columns: columns(handleDelete),
+    getCoreRowModel: getCoreRowModel(),
+  })
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -112,8 +119,8 @@ export default function SupportActivitiesPage() {
           <CardContent>
             {/* Filters can go here */}
             <DataTable
+              table={table}
               columns={columns(handleDelete)}
-              data={activities}
               onRowClick={(activity: TechnicianActivity) => {
                 router.push(`/technician-activities/${activity._id}`);
               }}

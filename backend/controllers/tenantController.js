@@ -19,9 +19,7 @@ const TechnicianActivity = require('../models/TechnicianActivity');
 const Ticket = require('../models/Ticket');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
-const WhatsAppLog = require('../models/WhatsAppLog');
-const WhatsAppProvider = require('../models/WhatsAppProvider');
-const WhatsAppTemplate = require('../models/WhatsAppTemplate');
+
 const Device = require('../models/Device');
 const ScheduledTask = require('../models/ScheduledTask');
 const { createDefaultTasksForTenant } = require('../services/scheduledTaskService');
@@ -222,10 +220,7 @@ const deleteTenant = asyncHandler(async (req, res) => {
     await Ticket.deleteMany({ tenant: tenantId });
     await Transaction.deleteMany({ tenant: tenantId });
     await WalletTransaction.deleteMany({ tenant: tenantId });
-    await WhatsAppLog.deleteMany({ tenant: tenantId });
-    await WhatsAppProvider.deleteMany({ tenant: tenantId });
-    await WhatsAppTemplate.deleteMany({ tenant: tenantId });
-    await Device.deleteMany({ tenant: tenantId });
+        await Device.deleteMany({ tenant: tenantId });
     await ScheduledTask.deleteMany({ tenant: tenantId });
     
     // Delete all users associated with this tenant

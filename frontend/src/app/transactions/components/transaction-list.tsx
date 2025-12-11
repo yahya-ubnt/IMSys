@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Search } from 'lucide-react';
+import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
 
 // --- Type Definitions & Interfaces ---
 interface TransactionService<T> {
@@ -50,7 +51,7 @@ export function TransactionList<T extends CommonTransaction>({
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const { isLoggingOut } = useAuth();
+  const { token, isLoggingOut } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,14 +62,17 @@ export function TransactionList<T extends CommonTransaction>({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      if (!token) {
+        return;
+      }
       const params = new URLSearchParams({ year: selectedYear });
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (category) params.append('category', category);
       
       const [transData, statsData, monthlyData] = await Promise.all([
-        transactionService.getTransactions(params.toString()),
-        transactionService.getStats(category),
-        transactionService.getMonthlyTotals(selectedYear, category),
+        transactionService.getTransactions(token, params.toString()),
+        transactionService.getStats(token, category),
+        transactionService.getMonthlyTotals(selectedYear, token, category),
       ]);
       
       setTransactions(transData);
@@ -79,7 +83,7 @@ export function TransactionList<T extends CommonTransaction>({
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, debouncedSearchTerm, category, transactionService]);
+  }, [selectedYear, debouncedSearchTerm, category, transactionService, token]);
 
   useEffect(() => {
     if (!isLoggingOut) fetchData();
@@ -87,7 +91,10 @@ export function TransactionList<T extends CommonTransaction>({
 
   const handleDeleteTransaction = async (transactionId: string) => {
     try {
-      await transactionService.deleteTransaction(transactionId);
+      if (!token) {
+        return;
+      }
+      await transactionService.deleteTransaction(transactionId, token);
       toast({ title: 'Transaction Deleted' });
       fetchData();
     } catch (error) {
@@ -96,6 +103,12 @@ export function TransactionList<T extends CommonTransaction>({
   };
 
   const columns = getTransactionColumns<T>(handleDeleteTransaction, category?.toLowerCase() || 'personal');
+
+  const table = useReactTable({
+    data: transactions,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
 
   if (loading && !transactions.length) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading transactions...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
@@ -128,7 +141,7 @@ export function TransactionList<T extends CommonTransaction>({
                 <DataTableToolbar searchTerm={searchTerm} onSearch={setSearchTerm} />
               </div>
               <div className="overflow-x-auto">
-                <DataTable columns={columns} data={transactions} filterColumn="transactionId" />
+                <DataTable table={table} columns={columns} />
               </div>
             </CardContent>
           </Card>

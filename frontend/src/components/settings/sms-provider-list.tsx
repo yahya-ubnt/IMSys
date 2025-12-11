@@ -17,40 +17,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Edit, Trash2, CheckCircle } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { setActiveSmsProvider, deleteSmsProvider } from "@/services/settingsService"
-import { useAuth } from "@/components/auth-provider"
+import { SmsProvider } from "@/types/sms"
 
-export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }) {
-  const { toast } = useToast()
-  // const { token } = useAuth() // Removed token from useAuth
-
-  const handleSetActive = async (id) => {
+export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }: { providers: SmsProvider[], onEdit: (provider: SmsProvider) => void, onDelete: () => void, onSetActive: () => void }) {
+  const handleSetActive = async (id: string) => {
     try {
       await setActiveSmsProvider(id)
-      toast({ title: "Success", description: "Provider set to active." })
+      toast.success("Provider set to active.")
       onSetActive()
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to set active provider.",
-        variant: "destructive",
-      })
+      toast.error("Failed to set active provider.")
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this provider?")) {
       try {
         await deleteSmsProvider(id)
-        toast({ title: "Success", description: "Provider deleted." })
+        toast.success("Provider deleted.")
         onDelete()
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete provider.",
-          variant: "destructive",
-        })
+        toast.error("Failed to delete provider.")
       }
     }
   }

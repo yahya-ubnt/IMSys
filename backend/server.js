@@ -25,16 +25,16 @@ const SmsExpirySchedule = require('./models/SmsExpirySchedule'); // Import SmsEx
 const User = require('./models/User'); // Import User model
 const SmsLog = require('./models/SmsLog'); // Import SmsLog model
 const { sendSMS } = require('./services/smsService'); // Import SMS service
-const { sendWhatsAppMessage } = require('./services/whatsappService'); // Import WhatsApp service
+
 
 
 const billRoutes = require('./routes/billRoutes'); // Import bill routes
 const technicianActivityRoutes = require('./routes/technicianActivityRoutes'); // Import technician activity routes
 const settingsRoutes = require('./routes/settingsRoutes'); // ADDED
 const smsProviderRoutes = require('./routes/smsProviderRoutes'); // Import SMS provider routes
-const whatsAppProviderRoutes = require('./routes/whatsAppProviderRoutes'); // Import WhatsApp provider routes
-const whatsAppTemplateRoutes = require('./routes/whatsAppTemplateRoutes'); // Import WhatsApp template routes
-const whatsappRoutes = require('./routes/whatsappRoutes'); // Import WhatsApp routes
+
+
+
 const smsTemplateRoutes = require('./routes/smsTemplateRoutes');
 const smsExpiryScheduleRoutes = require('./routes/smsExpiryScheduleRoutes');
 const smsAcknowledgementRoutes = require('./routes/smsAcknowledgementRoutes');
@@ -125,9 +125,7 @@ app.use('/api/invoices', invoiceRoutes); // Add invoice routes
 app.use('/api/technician-activities', technicianActivityRoutes);
 app.use('/api/settings', settingsRoutes); // ADDED // Add technician activity routes
 app.use('/api/settings/sms-providers', smsProviderRoutes); // Mount SMS provider routes
-app.use('/api/settings/whatsapp-providers', whatsAppProviderRoutes); // Mount WhatsApp provider routes
-app.use('/api/whatsapp-templates', whatsAppTemplateRoutes); // Mount WhatsApp template routes
-app.use('/api/whatsapp', whatsappRoutes); // Mount WhatsApp routes
+
 app.use('/api/smstemplates', smsTemplateRoutes);
 app.use('/api/smsexpiryschedules', smsExpiryScheduleRoutes);
 app.use('/api/smsacknowledgements', smsAcknowledgementRoutes);
@@ -297,7 +295,7 @@ app.use(errorHandler);
 //     for (const tenant of tenants) {
 //       const activeSchedules = await SmsExpirySchedule.find({ status: 'Active', tenantOwner: tenant._id })
 //         .populate('smsTemplate')
-//         .populate('whatsAppTemplate');
+// 
 //
 //       for (const schedule of activeSchedules) {
 //         const { days, timing, smsTemplate, whatsAppTemplate } = schedule;

@@ -17,6 +17,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null
+  token: string | null // Add token to the context
   login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: any }) => void
   logout: () => Promise<void>
   isLoading: boolean
@@ -29,12 +30,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [token, setToken] = useState<string | null>(null) // Add token state
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Get token from cookie
+        const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+        setToken(cookieToken || null);
+
         const response = await fetch('/api/users/profile');
         if (response.ok) {
           const data = await response.json();
@@ -85,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSuperAdmin = useMemo(() => user?.roles.includes('SUPER_ADMIN') ?? false, [user]);
   const isAdmin = useMemo(() => user?.roles.includes('ADMIN') ?? false, [user]);
 
-  return <AuthContext.Provider value={{ user, login, logout, isLoading, isLoggingOut, isSuperAdmin, isAdmin }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, token, login, logout, isLoading, isLoggingOut, isSuperAdmin, isAdmin }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

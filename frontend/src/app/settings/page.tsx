@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Settings, CreditCard, MessageSquare, MessageCircle, Bell } from "lucide-react"
 import MpesaSettingsPage from "./mpesa/page"
 import SmsSettingsPage from "./sms/page"
-import WhatsAppSettingsPage from "./whatsapp/page"
+
 import GeneralSettingsForm from "./general/page"
 import EmailSettingsPage from "./email/page"
 
@@ -23,7 +23,7 @@ export default function MainSettingsPage() {
     { id: "general", label: "General", icon: Settings },
     { id: "mpesa", label: "M-Pesa", icon: CreditCard },
     { id: "sms", label: "SMS", icon: MessageSquare },
-    { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+    
     { id: "email", label: "Email", icon: Bell },
   ]
 
@@ -89,9 +89,7 @@ export default function MainSettingsPage() {
           {activeTab === 'sms' && (
             <div className="flex justify-center"><div className="w-full max-w-3xl"><SmsSettingsPage /></div></div>
           )}
-          {activeTab === 'whatsapp' && (
-            <div className="flex justify-center"><div className="w-full max-w-3xl"><WhatsAppSettingsPage /></div></div>
-          )}
+          
           {activeTab === 'email' && (
             <div className="flex justify-center"><div className="w-full max-w-3xl"><EmailSettingsPage /></div></div>
           )}

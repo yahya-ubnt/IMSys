@@ -34,7 +34,7 @@ const formSchema = z.object({
     const requiredFields = ['consumerKey', 'consumerSecret', 'passkey'];
     if (data.configType === 'paybill') {
         requiredFields.forEach(field => {
-            if (!data.paybill[field]) {
+            if (!data.paybill[field as keyof typeof data.paybill]) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     path: ['paybill', field],
@@ -51,7 +51,7 @@ const formSchema = z.object({
         }
     } else if (data.configType === 'till') {
         requiredFields.forEach(field => {
-            if (!data.till[field]) {
+            if (!data.till[field as keyof typeof data.till]) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     path: ['till', field],
