@@ -25,7 +25,7 @@ import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { PppoeSecretForm, PppoeSecretFormValues } from './PppoeSecretForm';
 import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 
 interface Secret {
   '.id': string;
@@ -140,7 +140,7 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
         accessorKey: 'disabled',
         header: 'Status',
         cell: ({ row }) => (
-          <Badge variant={row.original.disabled === 'true' ? 'secondary' : 'success'}>
+          <Badge variant={row.original.disabled === 'true' ? 'secondary' : 'default'}>
             {row.original.disabled === 'true' ? 'Disabled' : 'Enabled'}
           </Badge>
         ),
@@ -176,6 +176,12 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
     ],
     []
   );
+
+  const table = useReactTable({
+    data: secrets,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   if (loading) {
     return <div className="text-center text-zinc-400">Loading PPPoE secrets...</div>;
@@ -220,13 +226,8 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
         </Dialog>
       </div>
       <DataTable
+        table={table}
         columns={columns}
-        data={secrets}
-        filterColumn="name"
-        paginationEnabled={false}
-        tableClassName="[&_tr]:border-zinc-800"
-        headerClassName="[&_th]:text-zinc-400"
-        rowClassName="hover:bg-zinc-800/50"
       />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>

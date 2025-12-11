@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 
 interface ActiveSession {
   '.id': string;
@@ -99,6 +99,12 @@ export function PppoeActiveTable({ routerId }: { routerId: string }) {
     [handleDisconnect]
   );
 
+  const table = useReactTable({
+    data: sessions,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   if (loading) {
     return <div className="text-center text-zinc-400">Loading active sessions...</div>;
   }
@@ -109,13 +115,8 @@ export function PppoeActiveTable({ routerId }: { routerId: string }) {
 
   return (
     <DataTable
+      table={table}
       columns={columns}
-      data={sessions}
-      filterColumn="name"
-      paginationEnabled={false}
-      tableClassName="[&_tr]:border-zinc-800"
-      headerClassName="[&_th]:text-zinc-400"
-      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }

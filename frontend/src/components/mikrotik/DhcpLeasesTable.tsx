@@ -90,12 +90,6 @@ export function DhcpLeasesTable({ routerId }: { routerId: string }) {
     <DataTable
       table={table}
       columns={columns}
-      data={leases}
-      filterColumn="address"
-      paginationEnabled={false}
-      tableClassName="[&_tr]:border-zinc-800"
-      headerClassName="[&_th]:text-zinc-400"
-      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }

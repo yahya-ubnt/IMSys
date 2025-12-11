@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge'; // Import Badge
 
 interface Interface {
@@ -46,7 +46,7 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
         accessorKey: 'running',
         header: 'Status',
         cell: ({ row }) => (
-          <Badge variant={row.original.running ? 'success' : 'secondary'}>
+          <Badge variant={row.original.running ? 'default' : 'secondary'}>
             {row.original.running ? 'Running' : 'Stopped'}
           </Badge>
         ),
@@ -64,6 +64,12 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
     ],
     []
   );
+
+  const table = useReactTable({
+    data: interfaces,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   useEffect(() => {
     if (!routerId) return;
@@ -103,13 +109,8 @@ export function InterfacesTable({ routerId }: { routerId: string }) {
 
   return (
     <DataTable
+      table={table}
       columns={columns}
-      data={interfaces}
-      filterColumn="name"
-      paginationEnabled={false}
-      tableClassName="[&_tr]:border-zinc-800"
-      headerClassName="[&_th]:text-zinc-400"
-      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }

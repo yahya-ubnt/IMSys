@@ -89,7 +89,7 @@ export default function DowntimeLogTable({ userId }: DowntimeLogTableProps) {
             {logs.map((log) => (
               <TableRow key={log._id}>
                 <TableCell>
-                  <Badge variant={log.downEndTime ? 'success' : 'destructive'}>
+                  <Badge variant={log.downEndTime ? 'default' : 'destructive'}>
                     {log.downEndTime ? 'Up' : 'Down'}
                   </Badge>
                 </TableCell>

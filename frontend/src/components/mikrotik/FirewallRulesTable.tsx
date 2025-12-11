@@ -3,9 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
-
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 interface FirewallRule {
   '.id': string;
   chain: 'input' | 'forward' | 'output';
@@ -58,6 +57,12 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
     []
   );
 
+  const table = useReactTable({
+    data: rules,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   useEffect(() => {
     if (!routerId) return;
 
@@ -88,13 +93,8 @@ export function FirewallRulesTable({ routerId }: { routerId: string }) {
 
   return (
     <DataTable
+      table={table}
       columns={columns}
-      data={rules}
-      filterColumn="chain"
-      paginationEnabled={false}
-      tableClassName="[&_tr]:border-zinc-800"
-      headerClassName="[&_th]:text-zinc-400"
-      rowClassName="hover:bg-zinc-800/50"
     />
   );
 }
