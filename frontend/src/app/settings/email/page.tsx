@@ -15,11 +15,11 @@ import { useAuth } from "@/components/auth-provider"
 
 // --- Zod Schema Definition ---
 const emailSettingsSchema = z.object({
-  adminNotificationEmails: z.array(z.string().email({ message: "Invalid email address." })).optional(),
+  adminNotificationEmails: z.array(z.string().email({ message: "Invalid email address." })),
   newEmailInput: z.string().optional(), // Add newEmailInput to schema
   smtpSettings: z.object({
     host: z.string().min(1, "Host is required."),
-    port: z.coerce.number().min(1, "Port is required."),
+    port: z.number().min(1, "Port is required."),
     user: z.string().min(1, "User is required."),
     pass: z.string().optional(), // Password is not required on every update
     from: z.string().email({ message: "Invalid 'From' email address." }),
@@ -43,7 +43,7 @@ export default function EmailSettingsPage() {
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "adminNotificationEmails"
+    name: "adminNotificationEmails" as const
   });
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function EmailSettingsPage() {
         const smtp = data.smtpSettings || {};
         const normalizedSmtp = {
           host: smtp.host || "",
-          port: smtp.port || 587,
+          port: Number(smtp.port) || 587,
           user: smtp.user || "",
           from: smtp.from || "",
           pass: "", // Always keep pass empty on load

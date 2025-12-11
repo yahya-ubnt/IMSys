@@ -5,20 +5,7 @@ import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// TODO: Move to a types file
-interface HotspotPlan {
-  _id: string;
-  name: string;
-  price: number;
-  timeLimitValue: number;
-  timeLimitUnit: string;
-  dataLimitValue: number;
-  dataLimitUnit: string;
-  mikrotikRouter: {
-    _id: string;
-    name: string;
-  };
-}
+import { HotspotPlan } from "@/types/hotspot";
 
 export const getColumns = (user: any, handleOpenForm: (plan: HotspotPlan) => void, setDeleteCandidateId: (id: string) => void): ColumnDef<HotspotPlan>[] => [
   {

@@ -20,25 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
-import { getColumns } from "./columns.tsx";
+import { getColumns } from "./columns";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { HotspotUserForm } from "./hotspot-user-form";
 import { Topbar } from "@/components/topbar";
 
-// TODO: Move to a types file
-interface HotspotUser {
-  _id: string;
-  officialName: string;
-  hotspotName: string;
-  profile: string;
-  server: string;
-  phoneNumber: string;
-  mikrotikRouter: {
-    _id: string;
-    name: string;
-  };
-}
+import { HotspotUser } from "@/types/hotspot";
 
 export default function HotspotUsersPage() {
   const [users, setUsers] = useState<HotspotUser[]>([]);

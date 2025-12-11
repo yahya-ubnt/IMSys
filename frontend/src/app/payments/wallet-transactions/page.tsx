@@ -74,7 +74,7 @@ export default function WalletTransactionsPage() {
         page: (pageIndex + 1).toString(),
         limit: pageSize.toString(),
         ...(searchTerm && { searchTerm }),
-        ...(typeFilter && { type: typeFilter as string }),
+        ...(typeFilter ? { type: typeFilter as string } : {}),
         ...(dateFilter?.from && { startDate: dateFilter.from.toISOString() }),
         ...(dateFilter?.to && { endDate: dateFilter.to.toISOString() }),
       })

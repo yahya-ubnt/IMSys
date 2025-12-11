@@ -36,6 +36,10 @@ export interface Transaction {
   balance?: number;
 }
 
+function isAccessorColumn(column: ColumnDef<Transaction>): column is ColumnDef<Transaction> & { accessorKey: string } {
+    return 'accessorKey' in column;
+}
+
 // --- MAIN COMPONENT ---
 export default function MpesaTransactionsPage() {
   const { toast } = useToast()
@@ -109,7 +113,7 @@ export default function MpesaTransactionsPage() {
     }
 
     const columns = getColumns();
-    const exportableColumns = columns.filter(c => (c as ColumnDef<Transaction>).accessorKey);
+    const exportableColumns = columns.filter(isAccessorColumn);
 
     const csvHeader = exportableColumns.map(c => c.header as string).join(',');
 

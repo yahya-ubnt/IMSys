@@ -24,7 +24,7 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function DelayedPaymentsPage() {
-  const [users, setUsers] = useState<MikrotikUser[]>([]);
+  const [users, setUsers] = useState<(MikrotikUser & { daysOverdue: number })[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();

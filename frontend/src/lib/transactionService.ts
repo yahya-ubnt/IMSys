@@ -2,9 +2,7 @@ import { Transaction } from '@/types/transaction';
 
 const API_BASE_URL = '/api/daily-transactions';
 
-interface FetchOptions extends RequestInit {}
-
-async function fetchApi<T>(url: string, options: FetchOptions = {}): Promise<T> {
+async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };

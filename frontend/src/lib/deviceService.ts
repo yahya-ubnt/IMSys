@@ -3,7 +3,7 @@
 // Define the types based on the specification
 export interface Device {
   _id: string; // Corresponds to device_id
-  router: { _id: string; name: string; }; // Corresponds to router_id
+  router: { _id: string; name: string; } | string; // Corresponds to router_id
   ipAddress: string;
   macAddress: string;
   deviceType: "Access" | "Station";
@@ -30,10 +30,11 @@ export interface DowntimeLog {
   durationSeconds?: number;
 }
 
-import { Device } from "@/types/device";
-import { MikrotikRouter } from "@/types/mikrotik-router";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+export interface MikrotikRouter {
+  _id: string;
+  name: string;
+  ipAddress: string;
+}
 
 // Fetch all devices
 export const getDevices = async (deviceType?: "Access" | "Station"): Promise<Device[]> => {

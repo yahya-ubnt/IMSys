@@ -21,7 +21,7 @@ const formatDate = (dateString?: string) => {
 };
 
 export const getColumns = (
-  onDelete?: (deviceId: string, event: React.MouseEvent) => void
+  onDelete?: (deviceId: string) => void
 ): ColumnDef<Device>[] => [
   {
     accessorKey: "deviceName",
@@ -69,7 +69,7 @@ export const getColumns = (
   {
     accessorKey: "router.name",
     header: "Router",
-    cell: ({ row }) => row.original.router?.name || 'N/A',
+    cell: ({ row }) => (typeof row.original.router === 'object' ? row.original.router.name : row.original.router) || 'N/A',
   },
   {
     accessorKey: "lastSeen",
@@ -96,7 +96,7 @@ export const getColumns = (
             {onDelete && (
               <DropdownMenuItem
                 className="text-red-400 focus:text-red-400 focus:bg-red-500/20"
-                onClick={(e) => onDelete(device._id, e)}
+                onClick={() => onDelete(device._id)}
               >
                 Delete Device
               </DropdownMenuItem>

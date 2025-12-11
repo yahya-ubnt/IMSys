@@ -20,16 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
-import { getColumns } from "./columns.tsx";
+import { getColumns } from "./columns";
 import { Topbar } from "@/components/topbar";
-
-// TODO: Move to a types file
-interface Voucher {
-  _id: string;
-  username: string;
-  profile: string;
-  price: number;
-}
+import { Voucher } from "@/types/voucher";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function VouchersPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
@@ -37,6 +31,7 @@ export default function VouchersPage() {
   const [error, setError] = useState<string | null>(null);
   const { user, isLoggingOut } = useAuth();
   const { toast } = useToast();
+  const [deleteCandidateBatchId, setDeleteCandidateBatchId] = useState<string | null>(null);
 
   // Table states
   const [sorting, setSorting] = useState<SortingState>([])
@@ -65,7 +60,26 @@ export default function VouchersPage() {
     fetchVouchers();
   }, [fetchVouchers, isLoggingOut]);
 
-  const columns = useMemo(() => getColumns(user), [user]);
+  const handleDeleteBatch = async () => {
+    if (!deleteCandidateBatchId) return;
+    try {
+      const response = await fetch(`/api/hotspot/vouchers/batch/${deleteCandidateBatchId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error((await response.json()).message || 'Failed to delete batch');
+      }
+      toast({ title: 'Batch Deleted', description: 'The voucher batch has been successfully deleted.' });
+      fetchVouchers();
+    } catch (error) {
+      toast({ title: 'Error', description: (error instanceof Error) ? error.message : 'An unexpected error occurred.', variant: 'destructive' });
+    }
+    finally {
+      setDeleteCandidateBatchId(null);
+    }
+  };
+
+  const columns = useMemo(() => getColumns(user, setDeleteCandidateBatchId), [user]);
 
   const table = useReactTable({
     data: vouchers,
@@ -121,6 +135,20 @@ export default function VouchersPage() {
           </div>
         </div>
       </div>
+      <AlertDialog open={!!deleteCandidateBatchId} onOpenChange={() => setDeleteCandidateBatchId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the entire batch of vouchers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteBatch}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

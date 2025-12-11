@@ -60,10 +60,18 @@ export default function EditLeadPage() {
         
         setFormData({
           ...lead,
+          currentIsp: lead.currentIsp || '',
+          notes: lead.notes || '',
+          broughtInBy: lead.broughtInBy || '',
+          broughtInByContact: lead.broughtInByContact || '',
+          customerHasRouter: lead.customerHasRouter || false,
+          customerHasReceiver: lead.customerHasReceiver || false,
+          routerType: lead.routerType || '',
+          receiverType: lead.receiverType || '',
           agreedInstallationFee: lead.agreedInstallationFee || '',
           agreedMonthlySubscription: lead.agreedMonthlySubscription || '',
           followUpDate: lead.followUpDate ? new Date(lead.followUpDate) : undefined,
-          desiredPackage: lead.desiredPackage?._id || lead.desiredPackage || '',
+          desiredPackage: lead.desiredPackage?._id || '',
         })
       } catch (error) {
         toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })

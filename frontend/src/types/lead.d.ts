@@ -15,6 +15,8 @@ export interface Lead {
   totalAmount?: number;
   customerHasRouter?: boolean;
   routerType?: string;
+  customerHasReceiver?: boolean;
+  receiverType?: string;
   followUpDate?: string;
   status: 'New' | 'Contacted' | 'Interested' | 'Site Survey Scheduled' | 'Converted' | 'Not Interested' | 'Future Prospect';
   statusHistory?: { status: string; changedBy: string; changedAt: string }[];
@@ -53,6 +55,8 @@ export interface LeadFormData {
   agreedMonthlySubscription?: number;
   customerHasRouter?: boolean;
   routerType?: string;
+  customerHasReceiver?: boolean;
+  receiverType?: string;
   followUpDate?: string;
 }
 

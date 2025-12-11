@@ -16,14 +16,10 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { getBuildings } from '@/lib/buildingService';
-import { Building } from '@/types/building';
 
 export default function AddNewSupportPage() {
   const router = useRouter();
   const { toast } = useToast();
-
-  const [buildings, setBuildings] = useState<Building[]>([]);
 
   interface SupportFormData {
     technician: string;
@@ -35,8 +31,7 @@ export default function AddNewSupportPage() {
     solutionProvided: string;
     partsReplaced: string;
     configurationChanges: string;
-    supportCategory: "Client Problem" | "Building Issue" | "";
-    building: string;
+    supportCategory: "Client Problem" | "";
     status: string;
     activityType: "Installation" | "Support";
   }
@@ -52,30 +47,16 @@ export default function AddNewSupportPage() {
     partsReplaced: '',
     configurationChanges: '',
     supportCategory: '',
-    building: '',
     status: 'Pending',
     activityType: 'Support',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchBuildings = async () => {
-      try {
-        const buildingsData = await getBuildings();
-        setBuildings(buildingsData);
-      } catch (error) {
-        console.error("Failed to fetch buildings", error);
-      }
-    };
-    fetchBuildings();
-  }, []);
-
   const handleSupportCategoryChange = (value: string) => {
     setFormData({
       ...formData,
-      supportCategory: value as "Client Problem" | "Building Issue" | "",
-      building: '',
+      supportCategory: value as "Client Problem" | "",
       clientName: '',
       clientPhone: '',
     });
@@ -151,7 +132,6 @@ export default function AddNewSupportPage() {
                       </SelectTrigger>
                       <SelectContent className="bg-zinc-800 text-white border-zinc-700 rounded-lg">
                         <SelectItem value="Client Problem" className="focus:bg-zinc-700 focus:text-white">Client Problem</SelectItem>
-                        <SelectItem value="Building Issue" className="focus:bg-zinc-700 focus:text-white">Building Issue</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -186,26 +166,6 @@ export default function AddNewSupportPage() {
                               required
                               className="bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:border-blue-500 focus:ring-blue-500 rounded-lg"
                             />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {formData.supportCategory === 'Building Issue' && (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="building" className="text-zinc-300">Building</Label>
-                            <Select onValueChange={(value) => setFormData({ ...formData, building: value })} value={formData.building}>
-                              <SelectTrigger className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700 rounded-lg">
-                                <SelectValue placeholder="Select a building" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-800 text-white border-zinc-700 rounded-lg">
-                                {buildings.map(building => (
-                                  <SelectItem key={building._id} value={building._id} className="focus:bg-zinc-700 focus:text-white">{building.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
                           </div>
                         </div>
                       </>

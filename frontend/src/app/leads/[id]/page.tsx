@@ -170,7 +170,7 @@ const BooleanItem = ({ value, label }: { value?: boolean, label: string }) => (
 
 const StatusTimeline = ({ history }: { history: Lead['statusHistory'] }) => (
   <div className="relative pl-4 border-l-2 border-zinc-700">
-    {history.map((item, index) => (
+    {history && history.map((item, index) => (
       <div key={index} className="relative mb-6 ml-6">
         <div className="absolute -left-[34px] top-1 flex items-center justify-center w-4 h-4 bg-zinc-700 rounded-full">
             <div className="w-2 h-2 bg-cyan-400 rounded-full" />

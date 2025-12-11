@@ -29,6 +29,10 @@ interface MpesaTransaction {
   'Date & Time': string;
 }
 
+function isAccessorColumn(column: ColumnDef<MpesaTransaction>): column is ColumnDef<MpesaTransaction> & { accessorKey: string } {
+    return 'accessorKey' in column;
+}
+
 // --- MAIN COMPONENT ---
 export default function MpesaReportPage() {
   const { toast } = useToast()
@@ -86,7 +90,7 @@ export default function MpesaReportPage() {
       return;
     }
 
-    const exportableColumns = columns.filter(c => (c as ColumnDef<MpesaTransaction>).accessorKey);
+    const exportableColumns = columns.filter(isAccessorColumn);
 
     const csvHeader = exportableColumns.map(c => c.header as string).join(',');
 

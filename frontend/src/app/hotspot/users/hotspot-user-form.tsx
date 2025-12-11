@@ -15,22 +15,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Save, Loader2 } from "lucide-react";
 
-interface HotspotUser {
-  _id: string;
-  officialName: string;
-  email: string;
-  location: string;
-  hotspotName: string;
-  hotspotPassword?: string;
-  phoneNumber: string;
-  referenceNumber: string;
-  billAmount: number;
-  installationFee: number;
-  billingCycleValue: number;
-  billingCycleUnit: string;
-  expiryDate: string;
-  expiryTime: string;
-}
+import { HotspotUser } from "@/types/hotspot";
 
 export type HotspotUserFormData = Omit<HotspotUser, '_id'>;
 
@@ -58,6 +43,12 @@ export function HotspotUserForm({ isOpen, onClose, onSubmit, initialData, isSubm
     billingCycleUnit: "months",
     expiryDate: "",
     expiryTime: "",
+    profile: "",
+    server: "",
+    mikrotikRouter: {
+      _id: "",
+      name: "",
+    },
   });
 
   useEffect(() => {
@@ -75,6 +66,9 @@ export function HotspotUserForm({ isOpen, onClose, onSubmit, initialData, isSubm
         billingCycleUnit: initialData.billingCycleUnit,
         expiryDate: new Date(initialData.expiryDate).toISOString().split('T')[0],
         expiryTime: initialData.expiryTime,
+        profile: initialData.profile,
+        server: initialData.server,
+        mikrotikRouter: initialData.mikrotikRouter,
       });
     }
   }, [initialData]);

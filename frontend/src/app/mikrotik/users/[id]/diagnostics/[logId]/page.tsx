@@ -1,7 +1,7 @@
 'use client';
 
 import * as Tabs from "@radix-ui/react-tabs";
-import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ShieldCheck, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info, ArrowLeft } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ShieldCheck, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info, ArrowLeft, Loader2 } from 'lucide-react';
 import { DiagnosticLog, DiagnosticStep } from '@/types/diagnostics';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,8 @@ const statusInfo = {
   Success: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10' },
   Failure: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
   Warning: { icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+  Info: { icon: Info, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  "In-Progress": { icon: Loader2, color: 'text-zinc-500', bg: 'bg-zinc-700/20' },
   Skipped: { icon: ChevronsRight, color: 'text-zinc-500', bg: 'bg-zinc-700/20' },
 };
 
@@ -129,7 +131,7 @@ const Card = ({ title, icon: Icon, children }: { title: string, icon: React.Elem
 
 // --- Summary Card ---
 const SummaryCard = ({ status, conclusion }: { status: string, conclusion: string }) => {
-  const { icon: StatusIcon, color, bg } = statusInfo[status] || statusInfo.Skipped;
+  const { icon: StatusIcon, color, bg } = statusInfo[status as keyof typeof statusInfo] || statusInfo.Skipped;
   return (
     <motion.div variants={{ hidden: { opacity: 0, y: -20 }, visible: { opacity: 1, y: 0 } }} className={cn("p-5 rounded-xl border flex items-start gap-4", bg, `border-${color.replace('text-','')}/30`)}>
       <StatusIcon className={cn("h-8 w-8 mt-1 flex-shrink-0", color)} />
@@ -144,7 +146,7 @@ const SummaryCard = ({ status, conclusion }: { status: string, conclusion: strin
 // --- Timeline Components ---
 const TimelineStep = ({ step, isLast }: { step: DiagnosticStep, isLast: boolean }) => {
   const { icon: StatusIcon, color } = statusInfo[step.status] || statusInfo.Skipped;
-  const StepIcon = stepIcons[step.stepName] || ListChecks;
+  const StepIcon = stepIcons[step.stepName as keyof typeof stepIcons] || ListChecks;
 
   return (
     <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }} className="flex items-start gap-4 pl-12 relative">
@@ -167,17 +169,22 @@ const AnalysisTabs = ({ analysisSteps }: { analysisSteps: DiagnosticStep[] }) =>
       {analysisSteps.map((step) => (
         <Tabs.Trigger key={step.stepName} value={step.stepName} className="relative px-4 py-3 text-sm font-medium text-zinc-400 transition-colors focus-visible:outline-none data-[state=active]:text-white data-[state=active]:border-b-2 border-cyan-400 -mb-0.5">
           <span className="relative z-10 flex items-center gap-2">
-            {React.createElement(stepIcons[step.stepName] || Users2, { className: "h-4 w-4" })} {step.stepName.replace('Neighbor Analysis ', '')}
+            {React.createElement(stepIcons[step.stepName as keyof typeof stepIcons] || Users2, { className: "h-4 w-4" })} {step.stepName.replace('Neighbor Analysis ', '')}
           </span>
         </Tabs.Trigger>
       ))}
     </Tabs.List>
     <div className="p-4">
-      {analysisSteps.map((step) => (
-        <Tabs.Content key={step.stepName} value={step.stepName}>
-          <NeighborTable neighbors={step.details?.neighbors || []} />
-        </Tabs.Content>
-      ))}
+      {analysisSteps.map((step) => {
+        const online = step.details?.onlineNeighbors?.map(n => ({ ...n, isOnline: true, accountStatus: 'Active', reason: '' })) || [];
+        const offline = step.details?.offlineNeighbors?.map(n => ({ ...n, isOnline: false, accountStatus: 'Unknown', reason: 'Device is offline' })) || [];
+        const neighbors = [...online, ...offline];
+        return (
+          <Tabs.Content key={step.stepName} value={step.stepName}>
+            <NeighborTable neighbors={neighbors} />
+          </Tabs.Content>
+        )
+      })}
     </div>
   </Tabs.Root>
 );

@@ -5,16 +5,7 @@ import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// TODO: Move to a types file
-interface Voucher {
-  _id: string;
-  username: string;
-  profile: string;
-  price: number;
-  batch: string;
-  createdAt: string;
-  password?: string;
-}
+import { Voucher } from "@/types/voucher";
 
 export const getColumns = (user: any, setDeleteCandidateBatchId: (id: string) => void): ColumnDef<Voucher>[] => [
   {

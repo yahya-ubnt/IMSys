@@ -162,7 +162,7 @@ export default function NewMikrotikUserPage() {
 
         const userData: Partial<NewMikrotikUserData> = {
             mikrotikRouter: mikrotikRouterId,
-            serviceType,
+            serviceType: serviceType === "" ? undefined : serviceType,
             package: packageId,
             username,
             officialName,

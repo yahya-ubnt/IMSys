@@ -209,3 +209,5 @@ export const MultiSelect = React.forwardRef<
     );
   }
 );
+
+MultiSelect.displayName = "MultiSelect";

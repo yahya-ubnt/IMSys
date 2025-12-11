@@ -52,7 +52,7 @@ export default function DevicesPage() {
   const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
-      const deviceType = columnFilters.find(f => f.id === 'deviceType')?.value as string | undefined;
+      const deviceType = columnFilters.find(f => f.id === 'deviceType')?.value as "Access" | "Station" | undefined;
       const data = await getDevices(deviceType);
       setDevices(data);
     } catch (err: unknown) {
@@ -60,14 +60,13 @@ export default function DevicesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [columnFilters]);
 
   useEffect(() => {
     fetchDevices();
   }, [fetchDevices]);
 
-  const handleDeleteDevice = async (deviceId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
+  const handleDeleteDevice = async (deviceId: string) => {
     if (!confirm("Are you sure you want to delete this device?")) {
       return;
     }
@@ -84,7 +83,7 @@ export default function DevicesPage() {
     }
   };
 
-  const columns = useMemo(() => getColumns(handleDeleteDevice), []);
+  const columns = useMemo(() => getColumns(handleDeleteDevice), [fetchDevices]);
 
   const table = useReactTable({
     data: devices,
@@ -164,7 +163,7 @@ export default function DevicesPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
                 if (deleteCandidateId) {
-                    handleDeleteDevice(deleteCandidateId, new MouseEvent('click'));
+                    handleDeleteDevice(deleteCandidateId);
                 }
             }}>Continue</AlertDialogAction>
           </AlertDialogFooter>

@@ -2,9 +2,7 @@ import { TechnicianActivity } from '@/types/technician-activity';
 
 const API_BASE_URL = '/api/technician-activities';
 
-interface FetchOptions extends RequestInit {}
-
-async function fetchApi<T>(url: string, options: FetchOptions = {}): Promise<T> {
+async function fetchApi<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
