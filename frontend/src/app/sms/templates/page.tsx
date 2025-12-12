@@ -24,14 +24,7 @@ import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form"
 import { PlusCircle, FileText } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { getSmsTemplates, createSmsTemplate, updateSmsTemplate, deleteSmsTemplate } from "@/lib/api/sms"
-
-// --- TYPE DEFINITIONS ---
-export type SmsTemplate = {
-  _id: string;
-  name: string;
-  messageBody: string;
-  createdAt: string;
-};
+import { SmsTemplate } from "@/types/sms"
 
 // --- MAIN COMPONENT ---
 export default function SmsTemplatesPage() {
@@ -85,7 +78,7 @@ export default function SmsTemplatesPage() {
     if (!window.confirm("Are you sure you want to delete this template?")) return;
     if (!user) return;
     try {
-      await deleteSmsTemplate(template._id)
+      await deleteSmsTemplate(template._id!)
       toast({ title: "Success", description: "Template deleted successfully." })
       fetchTemplates()
     } catch {
@@ -97,7 +90,7 @@ export default function SmsTemplatesPage() {
     if (!user) return;
     try {
       if (selectedTemplate) {
-        await updateSmsTemplate(selectedTemplate._id, data)
+        await updateSmsTemplate(selectedTemplate._id!, data)
       } else {
         await createSmsTemplate(data)
       }

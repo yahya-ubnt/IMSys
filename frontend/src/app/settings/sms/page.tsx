@@ -99,7 +99,7 @@ export default function SmsSettingsPage() {
           </DialogDescription>
         </DialogHeader>
         <SmsProviderForm
-          provider={editingProvider}
+          provider={editingProvider || undefined}
           onSuccess={onFormSuccess}
           onCancel={() => setIsFormOpen(false)}
         />

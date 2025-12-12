@@ -121,7 +121,7 @@ export function ResourceGraphCard({ routerId, resourceType, title }: ResourceGra
               stroke="none"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={index === 0 ? usedColor : '#3f3f46'} cornerRadius={index === 0 ? 5 : 0} />
+                <Cell key={`cell-${index}`} fill={index === 0 ? usedColor : '#3f3f46'} />
               ))}
             </Pie>
             <text x="50%" y="45%" textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="20" fontWeight="bold">

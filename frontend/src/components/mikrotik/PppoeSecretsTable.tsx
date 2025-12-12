@@ -33,7 +33,7 @@ interface Secret {
   service: string;
   profile: string;
   'remote-address': string;
-  disabled: 'true' | 'false';
+  disabled: 'yes' | 'no';
 }
 
 export function PppoeSecretsTable({ routerId }: { routerId: string }) {
@@ -140,8 +140,8 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
         accessorKey: 'disabled',
         header: 'Status',
         cell: ({ row }) => (
-          <Badge variant={row.original.disabled === 'true' ? 'secondary' : 'default'}>
-            {row.original.disabled === 'true' ? 'Disabled' : 'Enabled'}
+          <Badge variant={row.original.disabled === 'yes' ? 'secondary' : 'default'}>
+            {row.original.disabled === 'yes' ? 'Disabled' : 'Enabled'}
           </Badge>
         ),
       },
@@ -217,7 +217,7 @@ export function PppoeSecretsTable({ routerId }: { routerId: string }) {
                 password: '',
                 service: selectedSecret.service,
                 profile: selectedSecret.profile,
-                disabled: selectedSecret.disabled === 'true',
+                disabled: selectedSecret.disabled === 'yes',
               } : undefined}
               onSubmit={handleFormSubmit}
               isSubmitting={isSubmitting}

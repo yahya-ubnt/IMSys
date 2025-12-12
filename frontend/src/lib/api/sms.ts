@@ -1,15 +1,15 @@
-import { SmsTemplate, SmsExpirySchedule, SmsAcknowledgement } from '@/types/sms';
+import { SmsTemplate, SmsExpirySchedule, SmsAcknowledgement, SmsTemplateData } from '@/types/sms';
 import { fetchApi } from './utils';
 
 // SMS Template API functions
 export const getSmsTemplates = () => fetchApi('/api/smstemplates');
 
-export const createSmsTemplate = (data: SmsTemplate) => fetchApi('/api/smstemplates', {
+export const createSmsTemplate = (data: SmsTemplateData) => fetchApi('/api/smstemplates', {
     method: 'POST',
     body: JSON.stringify(data),
 });
 
-export const updateSmsTemplate = (id: string, data: SmsTemplate) => fetchApi(`/api/smstemplates/${id}`, {
+export const updateSmsTemplate = (id: string, data: SmsTemplateData) => fetchApi(`/api/smstemplates/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
 });

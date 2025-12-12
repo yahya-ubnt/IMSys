@@ -5,7 +5,7 @@ import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { QueueFormModal } from './QueueFormModal';
 import { DataTable } from '@/components/data-table';
-import { ColumnDef } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 
@@ -22,7 +22,7 @@ interface Queue {
   parent?: string;
   comment?: string;
   'limit-at'?: string;
-  disabled: 'true' | 'false';
+  disabled: 'yes' | 'no';
 }
 
 // Helper function to format rate
@@ -118,8 +118,8 @@ export function QueuesTable({ routerId }: { routerId: string }) {
         accessorKey: 'disabled',
         header: 'Status',
         cell: ({ row }) => (
-          <Badge variant={row.original.disabled === 'true' ? 'secondary' : 'success'}>
-            {row.original.disabled === 'true' ? 'Disabled' : 'Enabled'}
+          <Badge variant={row.original.disabled === 'yes' ? 'secondary' : 'default'}>
+            {row.original.disabled === 'yes' ? 'Disabled' : 'Enabled'}
           </Badge>
         ),
       },
@@ -141,6 +141,12 @@ export function QueuesTable({ routerId }: { routerId: string }) {
     [handleDeleteQueue, handleEditQueue]
   );
 
+  const table = useReactTable({
+    data: queues,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   if (loading) {
     return <div className="text-center text-zinc-400">Loading queues...</div>;
   }
@@ -161,13 +167,8 @@ export function QueuesTable({ routerId }: { routerId: string }) {
         </Button>
       </div>
       <DataTable
+        table={table}
         columns={columns}
-        data={queues}
-        filterColumn="name"
-        paginationEnabled={false}
-        tableClassName="[&_tr]:border-zinc-800"
-        headerClassName="[&_th]:text-zinc-400"
-        rowClassName="hover:bg-zinc-800/50"
       />
 
       <QueueFormModal

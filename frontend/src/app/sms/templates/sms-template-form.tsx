@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { SmsTemplate } from "./page"
+import { SmsTemplate } from "@/types/sms"
 
 export type SmsTemplateFormData = {
   name: string
-  messageBody: string
+  content: string
 }
 
 interface SmsTemplateFormProps {
@@ -19,13 +19,13 @@ interface SmsTemplateFormProps {
 }
 
 export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateFormProps) {
-  const [formData, setFormData] = useState<SmsTemplateFormData>({ name: "", messageBody: "" })
+  const [formData, setFormData] = useState<SmsTemplateFormData>({ name: "", content: "" })
 
   useEffect(() => {
     if (initialData) {
-      setFormData({ name: initialData.name, messageBody: initialData.messageBody })
+      setFormData({ name: initialData.name, content: initialData.content })
     } else {
-      setFormData({ name: "", messageBody: "" })
+      setFormData({ name: "", content: "" })
     }
   }, [initialData])
 
@@ -35,7 +35,7 @@ export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateF
   }
 
   const handleInsertVariable = (variable: string) => {
-    setFormData((prev) => ({ ...prev, messageBody: prev.messageBody + `{{${variable}}}` }))
+    setFormData((prev) => ({ ...prev, content: prev.content + `{{${variable}}}` }))
   }
 
   return (
@@ -51,11 +51,11 @@ export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateF
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="messageBody" className="text-zinc-300">Message Body</Label>
+        <Label htmlFor="content" className="text-zinc-300">Message Body</Label>
         <Textarea
-          id="messageBody"
-          value={formData.messageBody}
-          onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
+          id="content"
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
           rows={6}
           placeholder="Type your message here..."
           className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { createSmsProvider, updateSmsProvider } from "@/services/settingsService"
 import { useAuth } from "@/components/auth-provider"
 
@@ -23,7 +23,7 @@ const providerTypes = [
   { value: "generic_http", label: "Generic HTTP" },
 ]
 
-const providerFields = {
+const providerFields: Record<string, { name: string; label: string; type: string; }[]> = {
   celcom: [
     { name: "partnerID", label: "Partner ID", type: "text" },
     { name: "apiKey", label: "API Key", type: "password" },
@@ -44,12 +44,12 @@ const providerFields = {
     { name: "apiKey", label: "API Key", type: "password" },
     { name: "senderId", label: "Sender ID", type: "text" },
   ],
-}
+};
 
-export function SmsProviderForm({ provider, onSuccess, onCancel }) {
+import { SmsProvider } from "@/types/sms";
+export function SmsProviderForm({ provider, onSuccess, onCancel }: { provider?: SmsProvider; onSuccess: () => void; onCancel: () => void; }) {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
   const [selectedProviderType, setSelectedProviderType] = useState(provider?.providerType || "")
-  const { toast } = useToast()
   // const { token } = useAuth() // Removed token from useAuth
 
   useEffect(() => {
@@ -61,36 +61,34 @@ export function SmsProviderForm({ provider, onSuccess, onCancel }) {
     }
   }, [provider, setValue])
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: any) => {
     try {
       const payload = {
         name: data.name,
         providerType: data.providerType,
-        credentials: {},
+        credentials: {} as { [key: string]: any },
       }
       
-      providerFields[data.providerType].forEach(field => {
-        payload.credentials[field.name] = data[field.name]
-      })
+      if (data.providerType in providerFields) {
+        providerFields[data.providerType].forEach(field => {
+          payload.credentials[field.name] = data[field.name]
+        })
+      }
 
       if (provider) {
         await updateSmsProvider(provider._id, payload)
-        toast({ title: "Success", description: "Provider updated successfully." })
+        toast.success("Provider updated successfully.")
       } else {
         await createSmsProvider(payload)
-        toast({ title: "Success", description: "Provider created successfully." })
+        toast.success("Provider created successfully.")
       }
       onSuccess()
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred.",
-        variant: "destructive",
-      })
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred.")
     }
   }
 
-  const handleProviderTypeChange = (value) => {
+  const handleProviderTypeChange = (value: string) => {
     setValue("providerType", value)
     setSelectedProviderType(value)
   }

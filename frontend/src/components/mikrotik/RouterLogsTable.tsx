@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'; // Added useMemo
 import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table'; // Import DataTable
-import { ColumnDef } from '@tanstack/react-table'; // Import ColumnDef
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 import { RouterLog } from '@/types/mikrotik'; // Assuming RouterLog is correctly defined here
 
 interface RouterLogsTableProps {
@@ -33,6 +33,12 @@ export function RouterLogsTable({ id }: RouterLogsTableProps) {
     ],
     []
   );
+
+  const table = useReactTable({
+    data: logs,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -67,11 +73,8 @@ export function RouterLogsTable({ id }: RouterLogsTableProps) {
 
   return (
     <DataTable
+      table={table}
       columns={columns}
-      data={logs}
-      filterColumn="message" // Allow filtering by message
-      className="text-xl [&_td]:px-4 [&_th]:px-4 [&_td]:py-2 [&_th]:py-2" // Apply styling with larger font size and more padding
-      pageSizeOptions={[25, 50, 100, logs.length]} // Add page size options
     />
   );
 }

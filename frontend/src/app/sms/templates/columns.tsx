@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SmsTemplate } from "./page"
+import { SmsTemplate } from "@/types/sms"
 
 interface ColumnsProps {
   handleEdit: (template: SmsTemplate) => void;
@@ -28,10 +28,10 @@ export const columns = ({ handleEdit, handleDelete }: ColumnsProps): ColumnDef<S
     header: "Name",
   },
   {
-    accessorKey: "messageBody",
+    accessorKey: "content",
     header: "Message Body",
     cell: ({ row }) => {
-      const message = row.original.messageBody
+      const message = row.original.content
       return <div className="truncate max-w-xs">{message}</div>
     },
   },

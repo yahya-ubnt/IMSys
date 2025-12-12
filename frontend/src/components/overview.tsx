@@ -27,7 +27,7 @@ export function Overview() {
       }
 
       try {
-        const bills = await getBills(token);
+        const bills = await getBills();
 
         // Aggregate data by month
         const monthlyData: { [key: string]: { total: number; deals: number } } = {};

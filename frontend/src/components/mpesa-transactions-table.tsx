@@ -8,15 +8,22 @@ interface MpesaTransactionsTableProps {
   data: Transaction[];
 }
 
+import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
+
 export function MpesaTransactionsTable({ data }: MpesaTransactionsTableProps) {
   const columns = getColumns();
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
     <div className="w-full">
       <DataTable
+        table={table}
         columns={columns}
-        data={data}
-        filterColumn="referenceNumber" // or 'transactionId', 'officialName', etc.
       />
     </div>
   );
