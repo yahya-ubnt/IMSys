@@ -41,7 +41,6 @@ export default function WalletTransactionsPage() {
 
   // Data states
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [pageCount, setPageCount] = useState(0)
 
   // Filter and table states
@@ -62,7 +61,6 @@ export default function WalletTransactionsPage() {
 
   // --- DATA FETCHING ---
   const fetchTransactions = useCallback(async () => {
-    setIsLoading(true)
     try {
       const typeFilter = columnFilters.find(f => f.id === 'type')?.value
       const dateFilter = columnFilters.find(f => f.id === 'createdAt')?.value as DateRange | undefined
@@ -84,8 +82,6 @@ export default function WalletTransactionsPage() {
       setPageCount(data.pages || 1)
     } catch {
       toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" })
-    } finally {
-      setIsLoading(false)
     }
   }, [pageIndex, pageSize, searchTerm, columnFilters, toast])
 
