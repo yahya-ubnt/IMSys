@@ -45,7 +45,6 @@ interface HotspotPlanFormProps {
 }
 
 export function HotspotPlanForm({ isOpen, onClose, onSubmit, initialData, isSubmitting }: HotspotPlanFormProps) {
-  const { toast } = useToast();
   const [formData, setFormData] = useState<HotspotPlanFormData>({
     name: "",
     price: 0,

@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -66,7 +65,7 @@ export default function HotspotPlansPage() {
     fetchPlans();
   }, [fetchPlans, isLoggingOut]);
 
-  const handleFormSubmit = async (data: any) => {
+  const handleFormSubmit = async (data: Omit<HotspotPlan, '_id' | 'mikrotikRouter'>) => {
     setIsSubmitting(true);
     const method = editingPlan ? "PUT" : "POST";
     const url = editingPlan ? `/api/hotspot/plans/${editingPlan._id}` : "/api/hotspot/plans";

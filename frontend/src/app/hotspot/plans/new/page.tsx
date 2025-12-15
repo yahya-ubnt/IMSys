@@ -74,7 +74,7 @@ export default function NewHotspotPlanPage() {
                 const response = await fetch("/api/mikrotik/routers");
                 if (!response.ok) throw new Error("Failed to fetch routers");
                 setRouters(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load routers.", variant: "destructive" });
             } finally {
                 setRoutersLoading(false);
@@ -97,7 +97,7 @@ export default function NewHotspotPlanPage() {
                 if (!serversRes.ok) throw new Error("Failed to fetch Hotspot servers");
                 setHotspotProfiles(await profilesRes.json());
                 setHotspotServers(await serversRes.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load hotspot data.", variant: "destructive" });
             } finally {
                 setProfilesLoading(false);

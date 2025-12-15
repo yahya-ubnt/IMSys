@@ -58,7 +58,7 @@ const cronToTime = (cronString: string): string => {
         const displayMinute = minute < 10 ? `0${minute}` : minute;
 
         return `${displayHour}:${displayMinute} ${ampm}`;
-    } catch (_) {
+    } catch {
         return "Invalid Schedule";
     }
 };
@@ -92,7 +92,7 @@ export default function ScheduledTasksPage() {
             const response = await fetch('/api/scheduled-tasks');
             if (!response.ok) throw new Error('Failed to fetch tasks');
             setTasks(await response.json());
-        } catch (_) {
+        } catch {
             toast({ title: 'Error', description: 'Could not fetch scheduled tasks.', variant: 'destructive' });
         }
     }, [toast]);
@@ -113,7 +113,7 @@ export default function ScheduledTasksPage() {
             if (!response.ok) throw new Error('Failed to update task');
             fetchTasks(); // Refresh the list
             toast({ title: 'Success', description: `Task '${task.name}' has been ${!task.isEnabled ? 'enabled' : 'disabled'}.` });
-        } catch (_) {
+        } catch {
             toast({ title: 'Error', description: 'Could not update the task.', variant: 'destructive' });
         }
     };
@@ -125,7 +125,7 @@ export default function ScheduledTasksPage() {
             });
             if (!response.ok) throw new Error('Failed to run task');
             toast({ title: 'Success', description: 'Task execution has been triggered.' });
-        } catch (_) {
+        } catch {
             toast({ title: 'Error', description: 'Could not trigger the task.', variant: 'destructive' });
         }
     };
@@ -148,7 +148,7 @@ export default function ScheduledTasksPage() {
             cell: ({ row }) => {
                 try {
                     return cronstrue.toString(row.original.schedule);
-                } catch (_) {
+} catch {
                     return row.original.schedule;
                 }
             }
@@ -324,7 +324,7 @@ function TenantTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null,
                     setMinute(String(cronMinute).padStart(2, '0'));
                     setAmpm(newAmpm);
                 }
-            } catch (_) {
+            } catch {
                 console.error("Could not parse cron string:");
             }
         }
@@ -356,8 +356,8 @@ function TenantTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null,
             }
             toast({ title: 'Success', description: `Task schedule has been updated.` });
             onSave();
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message || 'Could not save the task.', variant: 'destructive' });
+        } catch (error) {
+            toast({ title: 'Error', description: (error as Error).message || 'Could not save the task.', variant: 'destructive' });
         }
     };
 
@@ -442,8 +442,8 @@ function SuperAdminTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | n
             if (!response.ok) throw new Error('Failed to save task');
             toast({ title: 'Success', description: `Task has been ${task?._id ? 'updated' : 'created'}.` });
             onSave();
-        } catch (_) {
-            toast({ title: 'Error', description: 'Could not save the task.', variant: 'destructive' });
+} catch (error) {
+            toast({ title: 'Error', description: (error as Error).message || 'Could not save the task.', variant: 'destructive' });
         }
     };
 

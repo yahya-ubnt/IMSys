@@ -70,7 +70,7 @@ export default function DeviceDetailsPage() {
         ]);
         setDevice(deviceData);
         setDowntimeLogs(logsData);
-      } catch (_) {
+      } catch {
         setError("Failed to load device details.");
       } finally {
         setLoading(false);
@@ -87,7 +87,7 @@ export default function DeviceDetailsPage() {
         const response = await fetch(`/api/devices/${id}/users`);
         if (!response.ok) throw new Error("Failed to fetch users");
         setUsers(await response.json());
-      } catch (_) {
+      } catch {
         toast({ title: "Error fetching users", variant: "destructive" });
       } finally {
         setUsersLoading(false);

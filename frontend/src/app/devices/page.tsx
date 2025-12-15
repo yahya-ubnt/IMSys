@@ -65,7 +65,7 @@ export default function DevicesPage() {
     fetchDevices();
   }, [fetchDevices]);
 
-  const handleDeleteDevice = async (deviceId: string) => {
+  const handleDeleteDevice = useCallback(async (deviceId: string) => {
     if (!confirm("Are you sure you want to delete this device?")) {
       return;
     }
@@ -80,7 +80,7 @@ export default function DevicesPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [fetchDevices, toast]);
 
   const columns = useMemo(() => getColumns(handleDeleteDevice), [handleDeleteDevice]);
 

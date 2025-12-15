@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 import { HotspotPlan } from "@/types/hotspot";
 
-export const getColumns = (user: any, handleOpenForm: (plan: HotspotPlan) => void, setDeleteCandidateId: (id: string) => void): ColumnDef<HotspotPlan>[] => [
+export const getColumns = (user: { roles: string[] } | null, handleOpenForm: (plan: HotspotPlan) => void, setDeleteCandidateId: (id: string) => void): ColumnDef<HotspotPlan>[] => [
   {
     accessorKey: "name",
     header: ({ column }) => {

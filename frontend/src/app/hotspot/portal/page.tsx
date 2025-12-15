@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Wifi, Zap, Users, Clock, Infinity, Ticket, UserCircle } from "lucide-react";
+import { Loader2, Wifi, Zap, Users, Clock, Infinity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Interface Definitions ---
@@ -52,8 +51,8 @@ export default function CaptivePortalPage() {
         if (response.ok) {
           setSettings(await response.json());
         }
-      } catch (error) {
-        console.error("Failed to fetch settings:", error);
+      } catch {
+        console.error("Failed to fetch settings:");
       }
     };
     fetchSettings();
@@ -77,7 +76,7 @@ export default function CaptivePortalPage() {
             setHasActiveSession(true);
           }
         }
-      } catch (error) {
+      } catch {
         // Ignore session check error and proceed to fetch plans
       }
 
@@ -85,7 +84,7 @@ export default function CaptivePortalPage() {
         const response = await fetch(`/api/hotspot/plans/public/plans?router_ip=${routerIp}`);
         if (!response.ok) throw new Error("Failed to fetch plans");
         setPlans(await response.json());
-      } catch (err) {
+      } catch {
         toast({ title: "Error", description: "Failed to load plans.", variant: "destructive" });
       } finally {
         setLoading(false);
@@ -137,7 +136,7 @@ export default function CaptivePortalPage() {
             clearInterval(pollInterval);
             setTimeout(() => window.location.reload(), 3000); // Reload to get internet access
           }
-        } catch (error) {
+        } catch {
           // Continue polling
         }
         pollCount++;
