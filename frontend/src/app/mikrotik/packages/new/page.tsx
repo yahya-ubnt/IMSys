@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -67,7 +66,7 @@ export default function NewPackagePage() {
                 const response = await fetch("/api/mikrotik/routers");
                 if (!response.ok) throw new Error("Failed to fetch routers");
                 setRouters(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load routers.", variant: "destructive" });
             } finally {
                 setRoutersLoading(false);
@@ -84,7 +83,7 @@ export default function NewPackagePage() {
                 const response = await fetch(`/api/mikrotik/routers/${mikrotikRouterId}/ppp-profiles`);
                 if (!response.ok) throw new Error("Failed to fetch PPP profiles");
                 setPppProfiles(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load PPP profiles.", variant: "destructive" });
             } finally {
                 setPppProfilesLoading(false);

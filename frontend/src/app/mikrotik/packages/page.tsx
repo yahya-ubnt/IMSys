@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,

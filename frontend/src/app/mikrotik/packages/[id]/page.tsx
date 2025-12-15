@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -90,8 +89,6 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
                 setStatus(data.status);
             } catch (err: unknown) {
                 setError((err instanceof Error) ? err.message : "Failed to load package data.");
-            } finally {
-                setLoading(false);
             }
         };
         if (id) fetchPackage();
@@ -108,7 +105,7 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
                 const response = await fetch(`/api/mikrotik/routers/${packageData.mikrotikRouter._id}/ppp-profiles`);
                 if (!response.ok) throw new Error("Failed to fetch PPP profiles");
                 setPppProfiles(await response.json());
-            } catch (err: unknown) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load PPP profiles.", variant: "destructive" });
             } finally {
                 setPppProfilesLoading(false);

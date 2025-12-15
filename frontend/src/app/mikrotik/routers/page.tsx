@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -12,7 +11,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
 } from "@tanstack/react-table";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
@@ -185,7 +184,7 @@ export default function MikrotikRoutersPage() {
 }
 
 // --- Sub-components ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -195,7 +194,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = ({ table }: { table: any }) => (
+const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<MikrotikRouter>> }) => (
   <div className="flex items-center justify-end">
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
