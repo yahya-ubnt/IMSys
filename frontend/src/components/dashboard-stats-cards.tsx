@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, TrendingUp, Calendar, Wallet } from "lucide-react"
 import { formatCurrency } from "@/lib/utils" // Assuming a utility for currency formatting

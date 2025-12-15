@@ -18,7 +18,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   token: string | null // Add token to the context
-  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: any }) => void
+  login: (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: { _id: string; name: string; } }) => void
   logout: () => Promise<void>
   isLoading: boolean
   isLoggingOut: boolean
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: any }) => {
+  const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: { _id: string; name: string; } }) => {
     const { fullName, ...rest } = userData
     const user: User = { ...rest, name: fullName, roles: userData.roles, tenant: userData.tenant, loginMethod: 'email' }
     setIsLoggingOut(false)
