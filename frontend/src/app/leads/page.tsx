@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -11,25 +10,24 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-} from "@tanstack/react-table"
-import { DataTable } from "@/components/data-table"
-import { DataTablePagination } from "@/components/ui/data-table-pagination"
-import { getColumns } from "./columns"
-import { Lead, DashboardStatsProps, MonthlyLeadData } from "@/types/lead"
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
-import { getLeads, updateLeadStatus } from "@/lib/leadService"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users, Search } from "lucide-react"
-import { Topbar } from "@/components/topbar"
-import Link from "next/link"
+} from "@tanstack/react-table";
+import { DataTable } from "@/components/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { getColumns } from "./columns";
+import { Lead, DashboardStatsProps, MonthlyLeadData } from "@/types/lead";
+import { useToast } from "@/hooks/use-toast";
+import { getLeads, updateLeadStatus } from "@/lib/leadService";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users, Search } from "lucide-react";
+import { Topbar } from "@/components/topbar";
+import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DateRange } from "react-day-picker"
-import { CalendarDateRangePicker } from "@/components/date-range-picker"
+import { DateRange } from "react-day-picker";
+import { CalendarDateRangePicker } from "@/components/date-range-picker";
 
 // --- Toolbar Component ---
 const LeadsDataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<Lead>> }) => {
@@ -323,8 +321,8 @@ const DonutChartCard = ({ total, converted }: { total: number, converted: number
     );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number }[]; label?: number }) => {
+  if (active && payload && payload.length && label) {
     const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">

@@ -8,9 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Phone, Calendar, Info, FileSignature, Router as RouterIcon, CheckCircle, XCircle, Package as PackageIcon, DollarSign, Users } from "lucide-react"
 import { format } from "date-fns"
-import { motion } from "framer-motion"
-import { Badge } from "@/components/ui/badge"
-import { Lead } from "@/types/lead"
+import { motion } from "framer-motion";
+import { Lead } from "@/types/lead";
 
 // --- MAIN COMPONENT ---
 export default function ViewLeadPage() {

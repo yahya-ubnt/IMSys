@@ -67,11 +67,13 @@ export default function NewInvoicePage() {
   const handleItemChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const newItems = [...formData.items];
     const field = e.target.name as keyof InvoiceItem;
-    let value: string | number = e.target.value;
-    if (e.target.type === 'number') {
-      value = e.target.value === '' ? '' : parseFloat(e.target.value);
+    
+    if (field === 'description') {
+      newItems[index].description = e.target.value;
+    } else if (field === 'amount') {
+      newItems[index].amount = e.target.value === '' ? '' : parseFloat(e.target.value);
     }
-    (newItems[index] as InvoiceItem)[field] = value;
+
     setFormData({ ...formData, items: newItems });
   };
 
