@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/components/auth-provider';
 import { Cpu, HardDrive, MemoryStick, Globe } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 

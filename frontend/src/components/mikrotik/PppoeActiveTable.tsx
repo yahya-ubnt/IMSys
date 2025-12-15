@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
-import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
 import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 

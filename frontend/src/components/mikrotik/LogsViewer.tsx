@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useAuth } from '@/components/auth-provider';
 
 import { Badge } from '@/components/ui/badge';
 
