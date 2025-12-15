@@ -71,7 +71,7 @@ export default function NewInvoicePage() {
     if (e.target.type === 'number') {
       value = e.target.value === '' ? '' : parseFloat(e.target.value);
     }
-    (newItems[index] as any)[field] = value;
+    (newItems[index] as InvoiceItem)[field] = value;
     setFormData({ ...formData, items: newItems });
   };
 

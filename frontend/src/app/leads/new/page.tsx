@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, UserPlus, CalendarIcon } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card";
+import { UserPlus, CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -50,7 +50,7 @@ export default function NewLeadPage() {
       try {
         const pkgs = await getPackages()
         setPackages(pkgs)
-      } catch (error) {
+      } catch {
         toast({ title: 'Error', description: 'Failed to fetch packages.', variant: 'destructive' })
       }
     }

@@ -26,13 +26,13 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, 
 import { List, UserPlus, CheckCircle, PlusCircle, BarChart2, Users, Search } from "lucide-react"
 import { Topbar } from "@/components/topbar"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DateRange } from "react-day-picker"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 
 // --- Toolbar Component ---
-const LeadsDataTableToolbar = ({ table }: { table: any }) => {
+const LeadsDataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<Lead>> }) => {
   const leadStatuses = ['New', 'Contacted', 'Interested', 'Site Survey Scheduled', 'Converted', 'Not Interested', 'Future Prospect'];
 
   return (
@@ -77,7 +77,6 @@ const LeadsDataTableToolbar = ({ table }: { table: any }) => {
 // --- MAIN COMPONENT ---
 export default function LeadsPage() {
   const { toast } = useToast()
-  const router = useRouter()
 
   // Data states
   const [leads, setLeads] = useState<Lead[]>([])
@@ -107,7 +106,7 @@ export default function LeadsPage() {
       setLeads(leads)
       setDashboardStats(dashboardStats)
       setChartData(chartData)
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to fetch leads.", variant: "destructive" })
     } finally {
       setIsLoading(false)
@@ -126,7 +125,7 @@ export default function LeadsPage() {
       if (!response.ok) throw new Error("Failed to delete lead")
       toast({ title: "Lead Deleted", description: "Lead has been successfully deleted." })
       fetchLeads()
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to delete lead.", variant: "destructive" })
     }
     finally {
@@ -140,7 +139,7 @@ export default function LeadsPage() {
       await updateLeadStatus(convertCandidate._id, "Converted", false)
       toast({ title: "Lead Converted", description: "Lead has been successfully converted." })
       fetchLeads()
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
     }
     finally {
@@ -285,7 +284,7 @@ export default function LeadsPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string, value: string | number, icon: React.ElementType, color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -327,7 +326,6 @@ const DonutChartCard = ({ total, converted }: { total: number, converted: number
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
-    const newLeads = payload.find((p: any) => p.dataKey === 'newLeads')?.value || 0;
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
         <p className="font-bold">{monthName || payload[0].name}</p>

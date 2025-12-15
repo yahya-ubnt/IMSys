@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, User, CalendarIcon, Save } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarIcon, Save } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -85,7 +85,7 @@ export default function EditLeadPage() {
       try {
         const pkgs = await getPackages()
         setPackages(pkgs)
-      } catch (error) {
+      } catch {
         toast({ title: 'Error', description: 'Failed to fetch packages.', variant: 'destructive' })
       }
     }
@@ -131,9 +131,6 @@ export default function EditLeadPage() {
       router.push('/leads')
     } catch (error) {
       toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })
-    }
-    finally {
-      setIsLoading(false)
     }
   }
 

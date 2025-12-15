@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, User, Phone, Calendar, Info, FileSignature, Router as RouterIcon, CheckCircle, XCircle, Package as PackageIcon, DollarSign, Users, Globe } from "lucide-react"
+import { ArrowLeft, Edit, Phone, Calendar, Info, FileSignature, Router as RouterIcon, CheckCircle, XCircle, Package as PackageIcon, DollarSign, Users } from "lucide-react"
 import { format } from "date-fns"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
@@ -30,7 +30,7 @@ export default function ViewLeadPage() {
         const response = await fetch(`/api/leads/${id}`)
         if (!response.ok) throw new Error('Failed to fetch lead')
         setLead(await response.json())
-      } catch (error) {
+      } catch {
         toast({ title: 'Error', description: 'Failed to fetch lead details.', variant: 'destructive' })
       } finally {
         setIsLoading(false)
