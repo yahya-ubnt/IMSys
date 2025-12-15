@@ -3,7 +3,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ShieldCheck, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info, Loader2 } from 'lucide-react';
 import { DiagnosticLog, DiagnosticStep } from '@/types/diagnostics';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';

@@ -1,11 +1,9 @@
 "use client"
 
 import { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@/components/auth-provider';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { History, CheckCircle } from "lucide-react";
-import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 

@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useAuth } from '@/components/auth-provider';
 import { Cpu, Gauge, HardDrive, Globe, Clock, Server, GitBranch } from 'lucide-react';
 
 interface SystemInfo {

@@ -14,7 +14,6 @@ interface ConnectDisconnectButtonsProps {
 }
 
 export function ConnectDisconnectButtons({ userId, isManuallyDisconnected, onStatusChange, isIconOnly = false }: ConnectDisconnectButtonsProps) {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAction = async (action: 'connect' | 'disconnect') => {
@@ -35,8 +34,8 @@ export function ConnectDisconnectButtons({ userId, isManuallyDisconnected, onSta
 
       toast.success(`User ${action}ed successfully.`);
       onStatusChange(); // Refresh user data
-    } catch (error: any) {
-      toast.error(`Error ${action === 'connect' ? 'Connecting' : 'Disconnecting'} User: ${error.message || `Failed to ${action} user.`}`);
+    } catch (error: unknown) {
+      toast.error(`Error ${action === 'connect' ? 'Connecting' : 'Disconnecting'} User: ${(error as Error).message || `Failed to ${action} user.`}`);
     } finally {
       setIsLoading(false);
     }
