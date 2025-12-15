@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Info } from 'lucide-react';
 import { Topbar } from "@/components/topbar"; // Import Topbar
-import { isToday, isYesterday, startOfDay } from 'date-fns'; // Import date-fns functions
+import { isToday, isYesterday } from 'date-fns'; // Import date-fns functions
 import { useNotifications } from '../../context/NotificationContext'; // Import useNotifications
 
 export default function NotificationsPage() {
