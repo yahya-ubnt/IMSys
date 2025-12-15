@@ -17,7 +17,7 @@ import { motion } from "framer-motion";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, Play, Eye, Pencil, Trash2, PlusCircle } from "lucide-react";
+import { MoreHorizontal, Play, Eye, Pencil, PlusCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +58,7 @@ const cronToTime = (cronString: string): string => {
         const displayMinute = minute < 10 ? `0${minute}` : minute;
 
         return `${displayHour}:${displayMinute} ${ampm}`;
-    } catch (e) {
+    } catch (_) {
         return "Invalid Schedule";
     }
 };
@@ -78,7 +78,6 @@ interface ScheduledTask {
 
 export default function ScheduledTasksPage() {
     const [tasks, setTasks] = useState<ScheduledTask[]>([]);
-    const [loading, setLoading] = useState(true);
     const { user } = useAuth();
     const { toast } = useToast();
 
@@ -90,14 +89,11 @@ export default function ScheduledTasksPage() {
 
     const fetchTasks = useCallback(async () => {
         try {
-            setLoading(true);
             const response = await fetch('/api/scheduled-tasks');
             if (!response.ok) throw new Error('Failed to fetch tasks');
             setTasks(await response.json());
-        } catch (error) {
+        } catch (_) {
             toast({ title: 'Error', description: 'Could not fetch scheduled tasks.', variant: 'destructive' });
-        } finally {
-            setLoading(false);
         }
     }, [toast]);
 
@@ -117,7 +113,7 @@ export default function ScheduledTasksPage() {
             if (!response.ok) throw new Error('Failed to update task');
             fetchTasks(); // Refresh the list
             toast({ title: 'Success', description: `Task '${task.name}' has been ${!task.isEnabled ? 'enabled' : 'disabled'}.` });
-        } catch (error) {
+        } catch (_) {
             toast({ title: 'Error', description: 'Could not update the task.', variant: 'destructive' });
         }
     };
@@ -129,7 +125,7 @@ export default function ScheduledTasksPage() {
             });
             if (!response.ok) throw new Error('Failed to run task');
             toast({ title: 'Success', description: 'Task execution has been triggered.' });
-        } catch (error) {
+        } catch (_) {
             toast({ title: 'Error', description: 'Could not trigger the task.', variant: 'destructive' });
         }
     };
@@ -152,7 +148,7 @@ export default function ScheduledTasksPage() {
             cell: ({ row }) => {
                 try {
                     return cronstrue.toString(row.original.schedule);
-                } catch (e) {
+                } catch (_) {
                     return row.original.schedule;
                 }
             }
@@ -328,8 +324,8 @@ function TenantTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null,
                     setMinute(String(cronMinute).padStart(2, '0'));
                     setAmpm(newAmpm);
                 }
-            } catch (e) {
-                console.error("Could not parse cron string:", e);
+            } catch (_) {
+                console.error("Could not parse cron string:");
             }
         }
     }, [task]);
@@ -446,7 +442,7 @@ function SuperAdminTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | n
             if (!response.ok) throw new Error('Failed to save task');
             toast({ title: 'Success', description: `Task has been ${task?._id ? 'updated' : 'created'}.` });
             onSave();
-        } catch (error) {
+        } catch (_) {
             toast({ title: 'Error', description: 'Could not save the task.', variant: 'destructive' });
         }
     };
