@@ -76,7 +76,7 @@ export default function NewHotspotUserPage() {
                 const response = await fetch("/api/mikrotik/routers");
                 if (!response.ok) throw new Error("Failed to fetch routers");
                 setRouters(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load routers.", variant: "destructive" });
             } finally {
                 setRoutersLoading(false);
@@ -93,7 +93,7 @@ export default function NewHotspotUserPage() {
                 const response = await fetch(`/api/hotspot/plans?router=${mikrotikRouterId}`);
                 if (!response.ok) throw new Error("Failed to fetch Hotspot plans");
                 setPlans(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load hotspot plans.", variant: "destructive" });
             } finally {
                 setPlansLoading(false);

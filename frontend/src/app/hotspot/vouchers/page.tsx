@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -17,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns";

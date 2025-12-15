@@ -6,19 +6,19 @@ import { useToast } from "@/hooks/use-toast"
 import { Topbar } from "@/components/topbar"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { PlusCircle, FileText, AlertTriangle, CircleDollarSign, CheckCircle, Search } from "lucide-react"
+import { PlusCircle, FileText, AlertTriangle, CircleDollarSign, Search } from "lucide-react";
 import { DataTable } from '@/components/data-table'
 import { Invoice, getInvoiceColumns } from "./components/invoice-columns"
 import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, getFilteredRowModel, ColumnFiltersState, SortingState, PaginationState } from "@tanstack/react-table"
 import { DataTablePagination } from "@/components/ui/data-table-pagination"
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DateRange } from "react-day-picker"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 
 // --- Toolbar Component ---
-const InvoicesDataTableToolbar = ({ table }: { table: any }) => {
+const InvoicesDataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<Invoice>> }) => {
   const invoiceStatuses = ["Paid", "Unpaid", "Overdue"];
 
   return (
@@ -60,7 +60,7 @@ const InvoicesDataTableToolbar = ({ table }: { table: any }) => {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string, value: string | number, icon: React.ElementType, color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>

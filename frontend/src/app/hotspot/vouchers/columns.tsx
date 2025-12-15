@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 import { Voucher } from "@/types/voucher";
 
-export const getColumns = (user: any, setDeleteCandidateBatchId: (id: string) => void): ColumnDef<Voucher>[] => [
+export const getColumns = (user: { roles: string[] } | null, setDeleteCandidateBatchId: (id: string) => void): ColumnDef<Voucher>[] => [
   {
     accessorKey: "username",
     header: "Username",

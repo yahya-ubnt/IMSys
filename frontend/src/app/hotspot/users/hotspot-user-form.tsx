@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
 import { Save, Loader2 } from "lucide-react";
 
 import { HotspotUser } from "@/types/hotspot";
@@ -28,7 +27,6 @@ interface HotspotUserFormProps {
 }
 
 export function HotspotUserForm({ isOpen, onClose, onSubmit, initialData, isSubmitting }: HotspotUserFormProps) {
-  const { toast } = useToast();
   const [formData, setFormData] = useState<HotspotUserFormData>({
     officialName: "",
     email: "",

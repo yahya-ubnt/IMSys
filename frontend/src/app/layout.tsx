@@ -1,12 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useEffect } from "react" // Import useEffect
-import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 
-import { AuthProvider, useAuth } from "@/components/auth-provider" // Assuming useAuth is exported
+import { AuthProvider } from "@/components/auth-provider" // Assuming useAuth is exported
 import { ProtectedLayout } from "@/components/protected-layout"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AppLayoutContent } from "@/components/app-layout-content"

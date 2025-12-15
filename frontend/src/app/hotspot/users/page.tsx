@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -66,7 +65,7 @@ export default function HotspotUsersPage() {
     fetchUsers();
   }, [fetchUsers, isLoggingOut]);
 
-  const handleFormSubmit = async (data: any) => {
+  const handleFormSubmit = async (data: Omit<HotspotUser, '_id'>) => {
     setIsSubmitting(true);
     const method = editingUser ? "PUT" : "POST";
     const url = editingUser ? `/api/hotspot/users/${editingUser._id}` : "/api/hotspot/users";

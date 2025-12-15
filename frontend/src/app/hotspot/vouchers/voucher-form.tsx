@@ -16,10 +16,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2 } from "lucide-react";
 
+interface MikrotikRouter {
+  _id: string;
+  name: string;
+}
+
 interface VoucherFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: { quantity: number; withPassword: boolean; server: string; profile: string; dataLimitValue: number; dataLimitUnit: string; timeLimitValue: number; timeLimitUnit: string; nameLength: number; price: number; mikrotikRouter: string; }) => void;
   isSubmitting: boolean;
 }
 
@@ -37,7 +42,7 @@ export function VoucherForm({ isOpen, onClose, onSubmit, isSubmitting }: Voucher
   const [price, setPrice] = useState("");
   const [mikrotikRouterId, setMikrotikRouterId] = useState("");
 
-  const [routers, setRouters] = useState<any[]>([]);
+  const [routers, setRouters] = useState<MikrotikRouter[]>([]);
   const [hotspotProfiles, setHotspotProfiles] = useState<string[]>([]);
   const [hotspotServers, setHotspotServers] = useState<string[]>([]);
   const [routersLoading, setRoutersLoading] = useState(true);
@@ -50,7 +55,7 @@ export function VoucherForm({ isOpen, onClose, onSubmit, isSubmitting }: Voucher
         const response = await fetch("/api/mikrotik/routers");
         if (!response.ok) throw new Error("Failed to fetch routers");
         setRouters(await response.json());
-      } catch (err) {
+      } catch {
         toast({ title: "Error", description: "Failed to load routers.", variant: "destructive" });
       } finally {
         setRoutersLoading(false);
@@ -75,7 +80,7 @@ export function VoucherForm({ isOpen, onClose, onSubmit, isSubmitting }: Voucher
         if (!serversRes.ok) throw new Error("Failed to fetch Hotspot servers");
         setHotspotProfiles(await profilesRes.json());
         setHotspotServers(await serversRes.json());
-      } catch (err) {
+      } catch {
         toast({ title: "Error", description: "Failed to load hotspot data.", variant: "destructive" });
       } finally {
         setProfilesLoading(false);

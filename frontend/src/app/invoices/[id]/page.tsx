@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Topbar } from '@/components/topbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, CalendarIcon, User, CircleDollarSign, Hash, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Hash, AlertTriangle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from "@/components/ui/badge"
 
