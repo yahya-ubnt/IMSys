@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
-import { PlusCircle, DollarSign, Calendar, CalendarDays, CalendarClock, CalendarCheck2 } from "lucide-react"
+import { PlusCircle, Calendar, CalendarDays, CalendarClock, CalendarCheck2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -33,7 +33,7 @@ import { CalendarDateRangePicker } from "@/components/date-range-picker"
 const EMPTY_EXPENSE: Partial<Expense> = { title: "", amount: 0, description: "", expenseDate: moment().format("YYYY-MM-DDTHH:mm") };
 
 // --- Toolbar Component ---
-const ExpensesDataTableToolbar = ({ table, expenseTypes }: { table: any, expenseTypes: ExpenseType[] }) => {
+const ExpensesDataTableToolbar = ({ table, expenseTypes }: { table: ReturnType<typeof useReactTable<Expense>>, expenseTypes: ExpenseType[] }) => {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-2 bg-zinc-800/50 rounded-lg mb-4">
       <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
@@ -73,7 +73,6 @@ export default function AllExpensesPage() {
   const [stats, setStats] = useState({ today: 0, week: 0, month: 0, year: 0 })
   
   // UI states
-  const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null)
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
@@ -88,7 +87,6 @@ export default function AllExpensesPage() {
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
-    setIsLoading(true)
     try {
       const [expensesRes, typesRes, statsRes] = await Promise.all([
         fetch("/api/expenses"),
@@ -102,8 +100,6 @@ export default function AllExpensesPage() {
       setStats(await statsRes.json())
     } catch {
       toast({ title: "Error", description: "Could not fetch data.", variant: "destructive" })
-    } finally {
-      setIsLoading(false)
     }
   }, [toast])
 

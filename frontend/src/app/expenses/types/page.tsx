@@ -12,7 +12,6 @@ import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns"
 import { PlusCircle, List } from "lucide-react"
@@ -33,21 +32,17 @@ export default function ExpenseTypesPage() {
   const [data, setData] = useState<ExpenseType[]>([])
   
   // UI states
-  const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExpenseType, setEditingExpenseType] = useState<Partial<ExpenseType> | null>(null)
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
-    setIsLoading(true)
     try {
       const response = await fetch("/api/expensetypes")
       if (!response.ok) throw new Error("Failed to fetch expense types")
       setData(await response.json())
     } catch {
       toast({ title: "Error", description: "Could not fetch expense types.", variant: "destructive" })
-    } finally {
-      setIsLoading(false)
     }
   }, [toast])
 
@@ -110,29 +105,10 @@ export default function ExpenseTypesPage() {
     }
   };
 
-  const handleEdit = (expenseType: ExpenseType) => {
-    setEditingExpenseType(expenseType);
-    setIsDialogOpen(true);
-  };
-
   const handleNew = () => {
     setEditingExpenseType(EMPTY_EXPENSE_TYPE);
     setIsDialogOpen(true);
   }
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure?")) return;
-    try {
-      const response = await fetch(`/api/expensetypes/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete expense type");
-      toast({ title: "Success", description: "Expense type deleted." });
-      fetchData();
-    } catch {
-      toast({ title: "Error", description: "Could not delete expense type.", variant: "destructive" });
-    }
-  };
 
   const stats = {
     total: data.length,
@@ -204,7 +180,7 @@ export default function ExpenseTypesPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string, value: number, icon: React.ElementType, color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>

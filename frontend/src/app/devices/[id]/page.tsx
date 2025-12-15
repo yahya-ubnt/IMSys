@@ -10,7 +10,6 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
 } from "@tanstack/react-table";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -71,7 +70,7 @@ export default function DeviceDetailsPage() {
         ]);
         setDevice(deviceData);
         setDowntimeLogs(logsData);
-      } catch (err) {
+      } catch (_) {
         setError("Failed to load device details.");
       } finally {
         setLoading(false);
@@ -88,7 +87,7 @@ export default function DeviceDetailsPage() {
         const response = await fetch(`/api/devices/${id}/users`);
         if (!response.ok) throw new Error("Failed to fetch users");
         setUsers(await response.json());
-      } catch (err) {
+      } catch (_) {
         toast({ title: "Error fetching users", variant: "destructive" });
       } finally {
         setUsersLoading(false);

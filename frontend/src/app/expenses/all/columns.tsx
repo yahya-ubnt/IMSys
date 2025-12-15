@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Expense } from "@/types/expenses"
-import { Badge } from "@/components/ui/badge"
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData> {

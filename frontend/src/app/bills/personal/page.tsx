@@ -9,7 +9,6 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
 } from "@tanstack/react-table"
-import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { getBills, deleteBill } from "@/lib/billService"
 import { Bill } from "@/types/bill"

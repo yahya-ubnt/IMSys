@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation'; // ADD useSearchParams
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { getBillById, deleteBill } from '@/lib/billService';
 import { Bill } from '@/types/bill';
