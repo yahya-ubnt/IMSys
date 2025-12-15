@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -91,7 +90,7 @@ export default function NewMikrotikUserPage() {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`Failed to fetch ${key}`);
                 return await response.json();
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: `Failed to load ${key}.`, variant: "destructive" });
                 return [];
             } finally {

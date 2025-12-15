@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -119,7 +118,7 @@ export default function EditMikrotikUserPage() {
                 if (userData.station && typeof userData.station !== 'string') {
                     setStationId(userData.station._id);
                 }
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load initial data.", variant: "destructive" });
             } finally {
                 setLoading(false);

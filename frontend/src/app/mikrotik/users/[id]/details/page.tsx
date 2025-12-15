@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,7 @@ export default function MikrotikUserDetailsPage() {
                 const response = await fetch(`/api/mikrotik/users/${id}/payment-stats`);
                 if (!response.ok) throw new Error("Failed to fetch payment stats");
                 setPaymentStats(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load M-Pesa payment stats.", variant: "destructive" });
             }
         };
@@ -104,7 +103,7 @@ export default function MikrotikUserDetailsPage() {
                 const response = await fetch(`/api/payments/wallet/user/${id}`);
                 if (!response.ok) throw new Error("Failed to fetch wallet transactions");
                 setWalletTransactions(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" });
             }
         };
@@ -118,7 +117,7 @@ export default function MikrotikUserDetailsPage() {
                 const response = await fetch(`/api/sms/logs/user/${id}`);
                 if (!response.ok) throw new Error("Failed to fetch SMS logs");
                 setSmsData(await response.json());
-            } catch (err) {
+            } catch {
                 toast({ title: "Error", description: "Failed to load SMS history.", variant: "destructive" });
             }
         };

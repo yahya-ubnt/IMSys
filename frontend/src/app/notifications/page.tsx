@@ -1,15 +1,14 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Notification } from '@/types/notification';
-import { useAuth } from '@/components/auth-provider'; // Keep useAuth for token if needed for other actions
 import NotificationItem from '@/components/notifications/NotificationItem';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BellRing, Info } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Info } from 'lucide-react';
 import { Topbar } from "@/components/topbar"; // Import Topbar
-import { isToday, isYesterday, isBefore, startOfDay } from 'date-fns'; // Import date-fns functions
+import { isToday, isYesterday, startOfDay } from 'date-fns'; // Import date-fns functions
 import { useNotifications } from '../../context/NotificationContext'; // Import useNotifications
 
 export default function NotificationsPage() {
@@ -29,10 +28,6 @@ export default function NotificationsPage() {
       yesterday: [],
       older: [],
     };
-
-    const now = new Date();
-    const startOfToday = startOfDay(now);
-    const startOfYesterday = startOfDay(new Date(now.setDate(now.getDate() - 1)));
 
     notifications.forEach(notification => {
       const notificationDate = new Date(notification.createdAt);

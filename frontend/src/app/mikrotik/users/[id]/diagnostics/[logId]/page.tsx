@@ -1,13 +1,12 @@
 'use client';
 
 import * as Tabs from "@radix-ui/react-tabs";
-import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ShieldCheck, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info, ArrowLeft, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, ChevronsRight, ListChecks, Users2, GitBranch, Building, Wifi, WifiOff, User, Package, Server, Info, ArrowLeft, Loader2 } from 'lucide-react';
 import { DiagnosticLog, DiagnosticStep } from '@/types/diagnostics';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from "@/components/auth-provider";
+import { useParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { Topbar } from "@/components/topbar";
 import { Button } from "@/components/ui/button";
