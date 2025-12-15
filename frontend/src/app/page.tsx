@@ -346,7 +346,7 @@ const TicketCard = ({ ticket }: { ticket: Ticket }) => {
   )
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; fill: string }[]; label?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-popover text-popover-foreground p-3 rounded-md text-xs border border-border shadow-lg">
