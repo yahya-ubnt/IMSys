@@ -47,7 +47,6 @@ export default function EditTicketPage() {
   const [submitting, setSubmitting] = useState(false);
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([]);
   useEffect(() => {
     const fetchData = async () => {
       if (!id) {
@@ -68,7 +67,6 @@ export default function EditTicketPage() {
           status: ticketData.status,
           priority: ticketData.priority,
         });
-        setMikrotikUsers(await getMikrotikUsers())
       } catch (err: unknown) {
         const errorMessage = (err instanceof Error) ? err.message : 'Failed to fetch data.';
         setError(errorMessage);

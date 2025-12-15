@@ -4,26 +4,25 @@ This document outlines the strategy for containerizing the ISP Management System
 
 ## 1. Overview
 
-Our goal is to create a portable, scalable, and consistent environment for the entire application stack. We will use Docker to containerize the individual services (backend, frontend) and Docker Compose to manage the multi-container application.
+Our goal is to create a portable, scalable, and consistent environment for the entire application stack. We use Docker to containerize individual services and Docker Compose to manage the multi-container application. This setup is optimized for both development and production workflows.
 
-This setup will consist of:
+This setup consists of:
 - A **backend** service running the Node.js API.
 - A **frontend** service running the Next.js web application.
-- A **database** service (e.g., MongoDB).
+- A **database** service (MongoDB).
 
 ## 2. File Structure
-
-The following files will be created:
 
 ```
 isp-management-system/
 ├── backend/
 │   ├── Dockerfile
-│   └── ...
+│   └── .dockerignore
 ├── frontend/
 │   ├── Dockerfile
-│   └── ...
+│   └── .dockerignore
 ├── docker-compose.yml
+├── docker-compose.prod.yml
 └── ...
 ```
 
@@ -31,28 +30,32 @@ isp-management-system/
 
 **File:** `backend/Dockerfile`
 
-This file will define the environment for our Node.js backend service.
+This multi-stage Dockerfile creates a lean production image by separating the build environment from the runtime environment.
 
 ```dockerfile
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Stage 1: Builder
+FROM node:18-alpine AS builder
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install app dependencies
 RUN npm install
 
-# Bundle app source
 COPY . .
 
-# Your app binds to port 5000, so expose it
-EXPOSE 5000
+# Stage 2: Production
+FROM node:18-alpine AS production
 
-# Define the command to run your app
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app .
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /usr/src/app
+USER appuser
+
+EXPOSE 5000
 CMD [ "node", "server.js" ]
 ```
 
@@ -60,75 +63,79 @@ CMD [ "node", "server.js" ]
 
 **File:** `frontend/Dockerfile`
 
-This file will build the Next.js application for production.
+This multi-stage Dockerfile builds the Next.js application and creates a minimal production image containing only the necessary assets.
 
 ```dockerfile
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Stage 1: Builder
+FROM node:18-alpine AS builder
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install app dependencies
 RUN npm install
 
-# Bundle app source
 COPY . .
-
-# Build the Next.js application for production
 RUN npm run build
 
-# Your app binds to port 3000, so expose it
-EXPOSE 3000
+# Stage 2: Production
+FROM node:18-alpine AS production
 
-# Define the command to start the production server
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/.next ./.next
+COPY --from=builder /usr/src/app/public ./public
+COPY --from=builder /usr/src/app/package.json ./package.json
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /usr/src/app
+USER appuser
+
+EXPOSE 3000
 CMD [ "npm", "start" ]
 ```
 
-## 5. Docker Compose Configuration
+## 5. Docker Compose for Development
 
 **File:** `docker-compose.yml`
 
-This file will orchestrate the startup and networking of all our services.
+This file is optimized for development, enabling features like hot-reloading.
 
 ```yaml
 version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: builder
     ports:
       - "5000:5000"
     environment:
       - NODE_ENV=development
       - MONGO_URI=mongodb://mongo:27017/isp_management
-      # Add other necessary environment variables
     volumes:
       - ./backend:/usr/src/app
-      - /usr/src/app/node_modules
     depends_on:
       - mongo
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: builder
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
     volumes:
       - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules
-      - /usr/src/app/.next
     depends_on:
       - backend
 
   mongo:
     image: mongo:latest
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo-data:/data/db
 
@@ -136,32 +143,78 @@ volumes:
   mongo-data:
 ```
 
-## 6. Usage
+## 6. Docker Compose for Production
 
-With this setup, the entire application can be started with:
+**File:** `docker-compose.prod.yml`
 
+This file is tailored for production, building and running the lean, optimized production images.
+
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: production
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/isp_management
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+## 7. Usage
+
+### Development
+To start the development environment with hot-reloading:
 ```bash
 docker-compose up --build
 ```
 
-And stopped with:
-
+### Production
+To build and run the optimized production images:
 ```bash
-docker-compose down
+docker-compose -f docker-compose.prod.yml up --build
 ```
 
-## 7. SaaS Use Cases & Benefits
+To stop the services for either environment:
+```bash
+docker-compose down
+# or for production
+docker-compose -f docker-compose.prod.yml down
+```
 
-Using this Docker setup provides several key advantages for a SaaS application:
+## 8. SaaS Use Cases & Benefits
 
-*   **Consistent Environments:** Developers can spin up the entire application stack (frontend, backend, database) with a single command (`docker-compose up`). This eliminates the "it works on my machine" problem and ensures everyone is working with the same setup.
-
-*   **Simplified Onboarding:** New team members can get started just by installing Docker and running the application. There's no need to manually install and configure Node.js, MongoDB, or other dependencies on their local machine.
-
-*   **Deployment Parity:** The very same Docker images built and tested locally can be deployed to staging or production environments. This consistency drastically reduces the risk of bugs appearing only in production.
-
-*   **Scalability:** When your SaaS grows, you can easily scale individual services. For example, if the backend is under heavy load, you can deploy multiple containers of the `backend` service to handle the traffic. This is the foundation for a high-availability setup.
-
-*   **Isolation:** Each service runs in its own isolated container. The backend can't interfere with the frontend or the database, leading to a more stable and secure application.
-
-*   **Portability:** The entire application is packaged and can be run on any cloud provider (AWS, Google Cloud, Azure, etc.) or on-premise server that supports Docker, preventing vendor lock-in.
+This improved Docker setup provides key advantages for a SaaS application:
+*   **Consistent Environments:** Eliminates the "it works on my machine" problem.
+*   **Simplified Onboarding:** New developers can get started quickly.
+*   **Deployment Parity:** Reduces risks by deploying the same images that were tested locally.
+*   **Scalability:** Foundation for scaling services independently.
+*   **Isolation & Security:** Services run in isolated containers with non-root users.
+*   **Portability:** Prevents vendor lock-in by being cloud-agnostic.
+*   **Efficiency:** Multi-stage builds create smaller images, saving registry space and speeding up deployments.

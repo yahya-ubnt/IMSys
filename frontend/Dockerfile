@@ -1,23 +1,28 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Stage 1: Builder
+FROM node:18-alpine AS builder
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install app dependencies
 RUN npm install
 
-# Bundle app source
 COPY . .
-
-# Build the Next.js application for production
 RUN npm run build
 
-# Your app binds to port 3000, so expose it
-EXPOSE 3000
+# Stage 2: Production
+FROM node:18-alpine AS production
 
-# Define the command to start the production server
+WORKDIR /usr/src/app
+
+# Copy production artifacts from the builder stage
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/.next ./.next
+COPY --from=builder /usr/src/app/public ./public
+COPY --from=builder /usr/src/app/package.json ./package.json
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /usr/src/app
+USER appuser
+
+EXPOSE 3000
 CMD [ "npm", "start" ]

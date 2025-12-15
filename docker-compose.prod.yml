@@ -4,28 +4,24 @@ services:
   backend:
     build:
       context: ./backend
-      target: builder
+      target: production
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - MONGO_URI=mongodb://mongo:27017/isp_management
-      # Add other necessary environment variables
-    volumes:
-      - ./backend:/usr/src/app
+      # Add other necessary production environment variables
     depends_on:
       - mongo
 
   frontend:
     build:
       context: ./frontend
-      target: builder
+      target: production
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-    volumes:
-      - ./frontend:/usr/src/app
+      - NODE_ENV=production
     depends_on:
       - backend
 
