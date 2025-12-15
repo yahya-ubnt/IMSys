@@ -8,7 +8,7 @@ import { Ticket } from '@/types/ticket';
 import { Topbar } from '@/components/topbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Trash2, Tag, FileText, CalendarIcon, User, MessageSquare, Clock } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Tag, FileText, MessageSquare, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 

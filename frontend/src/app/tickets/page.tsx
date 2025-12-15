@@ -1,8 +1,6 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -214,7 +212,7 @@ export default function TicketsPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -256,11 +254,11 @@ const DonutChartCard = ({ total, resolved, closed }: { total: number, resolved: 
     );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string | number }) => {
   if (active && payload && payload.length) {
     // Check if it's for the area chart or pie chart
     if (payload[0].payload.created !== undefined) {
-      const monthName = new Date(2000, label - 1).toLocaleString('default', { month: 'long' });
+      const monthName = new Date(2000, Number(label) - 1).toLocaleString('default', { month: 'long' });
       return (
         <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
           <p className="font-bold">{monthName}</p>

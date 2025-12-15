@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { createTicket } from "@/lib/ticketService"
 import { getMikrotikUsers } from "@/lib/mikrotikUserService"

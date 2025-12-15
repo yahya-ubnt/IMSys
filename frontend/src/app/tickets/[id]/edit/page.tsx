@@ -45,10 +45,9 @@ export default function EditTicketPage() {
   const [noteContent, setNoteContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [noteSubmitting, setNoteSubmitting] = useState(false);
+const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([])
-  const [selectedClient, setSelectedClient] = useState<string>('')
+  const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,20 +93,6 @@ export default function EditTicketPage() {
   const handleSelectChange = (name: string, value: string) => {
     setFormData({ ...formData, [name]: value });
   };
-  
-  const handleClientSelectChange = (userId: string) => {
-    setSelectedClient(userId)
-    const client = mikrotikUsers.find(user => user._id === userId)
-    if (client) {
-      setFormData(prev => ({
-        ...prev,
-        clientName: client.officialName,
-        clientPhone: client.mobileNumber,
-        clientEmail: client.emailAddress || '',
-        clientAccountId: client.mPesaRefNo || '',
-      }))
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

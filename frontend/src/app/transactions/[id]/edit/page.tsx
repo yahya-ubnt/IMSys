@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { getTransactionById, updateTransaction } from '@/lib/transactionService';
 
