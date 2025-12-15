@@ -5,14 +5,10 @@ import { motion } from "framer-motion"
 import {
   useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   PaginationState,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/data-table"
 import { getColumns, HotspotTransaction } from "./columns"
@@ -67,7 +63,7 @@ export default function HotspotTransactionsPage() {
       setTransactions(data.transactions || [])
       setPageCount(data.pages || 0)
       setStats(data.stats || { totalVolume: 0, transactionCount: 0, averageTransaction: 0 })
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to load hotspot transactions.", variant: "destructive" })
     }
   }, [pageIndex, pageSize, searchTerm, dateRange, toast])
@@ -123,7 +119,7 @@ export default function HotspotTransactionsPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -133,7 +129,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = (props: any) => {
+const DataTableToolbar = (props: { searchTerm: string; setSearchTerm: (value: string) => void; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
   const { searchTerm, setSearchTerm, dateRange, setDateRange } = props;
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
