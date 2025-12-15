@@ -11,7 +11,6 @@ import {
 } from "@tanstack/react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
-import { useAuth } from "@/components/auth-provider";
 import { Topbar } from "@/components/topbar";
 import { motion } from "framer-motion";
 import { ColumnDef } from "@tanstack/react-table";
@@ -39,7 +38,7 @@ interface PaymentHistoryEntry {
     daysDelayed: number;
 }
 
-const StatCard = ({ title, value, icon: Icon, color, suffix = '' }: any) => (
+const StatCard = ({ title, value, icon: Icon, color, suffix = '' }: { title: string; value: string | number; icon: React.ElementType; color?: string; suffix?: string }) => (
     <motion.div
         variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
         className="bg-zinc-800/50 p-4 rounded-lg flex items-center gap-4 border border-zinc-700 hover:bg-zinc-800 transition-colors"
@@ -86,7 +85,7 @@ export default function PaymentStatsPage() {
             accessorKey: "daysDelayed",
             header: "Days Delayed",
             cell: ({ row }) => {
-                const days = parseInt(row.original.daysDelayed as any, 10);
+                const days = row.original.daysDelayed;
                 if (isNaN(days) || days <= 0) {
                     return <Badge variant="secondary">On-Time</Badge>;
                 }

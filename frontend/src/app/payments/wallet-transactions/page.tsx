@@ -5,24 +5,21 @@ import { motion } from "framer-motion"
 import {
   useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   PaginationState,
   ColumnFiltersState,
-} from "@tanstack/react-table"
-import { Topbar } from "@/components/topbar"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { DataTable } from "@/components/data-table"
-import { getColumns } from "./columns"
-import { CalendarDateRangePicker } from "@/components/date-range-picker"
-import { DateRange } from "react-day-picker"
-import { useToast } from "@/hooks/use-toast"
-import { Download, Search, TrendingUp } from "lucide-react"
-import { DataTablePagination } from "@/components/ui/data-table-pagination"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "@tanstack/react-table";
+import { Topbar } from "@/components/topbar";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/data-table";
+import { getColumns } from "./columns";
+import { CalendarDateRangePicker } from "@/components/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { useToast } from "@/hooks/use-toast";
+import { Download, Search, TrendingUp } from "lucide-react";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // --- TYPE DEFINITIONS ---
 export interface WalletTransaction {
@@ -152,7 +149,7 @@ export default function WalletTransactionsPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -162,7 +159,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = ({ table, searchTerm, setSearchTerm }: { table: any, searchTerm: string, setSearchTerm: (value: string) => void }) => {
+const DataTableToolbar = ({ table, searchTerm, setSearchTerm }: { table: ReturnType<typeof useReactTable<WalletTransaction>>, searchTerm: string, setSearchTerm: (value: string) => void }) => {
   const transactionTypes = ['Credit', 'Debit', 'Adjustment'];
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">

@@ -5,9 +5,6 @@ import { motion } from "framer-motion"
 import {
   useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   PaginationState,
   ColumnDef,
 } from "@tanstack/react-table"
@@ -19,10 +16,9 @@ import { DataTable } from "@/components/data-table"
 import { getColumns } from "./columns"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 import { DateRange } from "react-day-picker"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
-import { Download, Search, DollarSign, TrendingUp, User } from "lucide-react"
-import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { useToast } from "@/hooks/use-toast";
+import { Download, Search, DollarSign, TrendingUp, User } from "lucide-react";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 // --- TYPE DEFINITIONS ---
 export interface Transaction {
@@ -85,7 +81,7 @@ export default function MpesaTransactionsPage() {
       setTransactions(data.transactions || [])
       setPageCount(data.pages || 0)
       setStats(data.stats || { totalVolume: 0, transactionCount: 0, averageTransaction: 0 })
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to load transactions.", variant: "destructive" })
     }
   }, [pageIndex, pageSize, searchTerm, dateRange, toast])
@@ -188,7 +184,7 @@ export default function MpesaTransactionsPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -198,7 +194,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = (props: any) => {
+const DataTableToolbar = (props: { searchTerm: string; setSearchTerm: (value: string) => void; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
   const { searchTerm, setSearchTerm, dateRange, setDateRange } = props;
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
