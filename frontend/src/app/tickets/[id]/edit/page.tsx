@@ -47,7 +47,6 @@ export default function EditTicketPage() {
   const [submitting, setSubmitting] = useState(false);
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mikrotikUsers, setMikrotikUsers] = useState<MikrotikUser[]>([]);
   useEffect(() => {
     const fetchData = async () => {
       if (!id) {

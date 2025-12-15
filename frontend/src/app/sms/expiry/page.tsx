@@ -44,7 +44,6 @@ export default function SmsExpiryPage() {
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
-  const [triggerTypes, setTriggerTypes] = useState<TriggerType[]>([])
   
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
