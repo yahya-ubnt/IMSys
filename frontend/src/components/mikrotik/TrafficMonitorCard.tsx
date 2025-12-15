@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/components/auth-provider';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Added
-import { Activity } from 'lucide-react';
 
 interface TrafficData {
   timestamp: string;
@@ -143,9 +142,9 @@ export function TrafficMonitorCard({ routerId }: { routerId: string }) { // Remo
   );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
   if (active && payload && payload.length) {
-    const time = new Date(label).toLocaleTimeString();
+    const time = new Date(label || '').toLocaleTimeString();
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">
         <p className="font-bold">{time}</p>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useAuth } from '@/components/auth-provider';
 import { Button } from '@/components/ui/button';
 import { QueueFormModal } from './QueueFormModal';
 import { DataTable } from '@/components/data-table';

@@ -1,6 +1,6 @@
 import { Notification } from '@/types/notification';
 import { format } from 'date-fns'; // Changed from formatDistanceToNow
-import { Wifi, WifiOff, Bell, X, Server, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, Bell, X, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 

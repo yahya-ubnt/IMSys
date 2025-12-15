@@ -69,9 +69,7 @@ export const MultiSelect = React.forwardRef<
       variant,
       value = [],
       placeholder = "Select options",
-      animation = 0,
       maxCount = 3,
-      asChild = false,
       className,
       ...props
     },

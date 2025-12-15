@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef } from 'react';
-import { useAuth } from '@/components/auth-provider';
 import { useTerminalWebSocket } from '@/hooks/useTerminalWebSocket'; // Import the custom hook
 
 interface MikroTikTerminalProps {

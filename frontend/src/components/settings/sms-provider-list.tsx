@@ -27,7 +27,7 @@ export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }: { 
       await setActiveSmsProvider(id)
       toast.success("Provider set to active.")
       onSetActive()
-    } catch (error) {
+    } catch {
       toast.error("Failed to set active provider.")
     }
   }
@@ -38,7 +38,7 @@ export function SmsProviderList({ providers, onEdit, onDelete, onSetActive }: { 
         await deleteSmsProvider(id)
         toast.success("Provider deleted.")
         onDelete()
-      } catch (error) {
+      } catch {
         toast.error("Failed to delete provider.")
       }
     }

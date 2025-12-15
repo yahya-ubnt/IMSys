@@ -1,6 +1,4 @@
 import { Bell } from 'lucide-react';
-import { useState } from 'react'; // Remove useEffect, useRef
-import { Notification } from '@/types/notification';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import NotificationItem from './NotificationItem';

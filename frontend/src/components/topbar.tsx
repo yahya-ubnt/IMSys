@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Search, Settings, User, LogOut, Sun, Moon } from "lucide-react"
+import { Search, Settings, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,23 +17,15 @@ import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import NotificationBell from "./notifications/NotificationBell"
 import { SidebarTrigger } from "@/components/ui/sidebar" // Import SidebarTrigger
-import Image from "next/image" // Import Image
-import { useSettings } from "@/hooks/use-settings" // Import useSettings
-import { Wifi } from "lucide-react" // Import Wifi icon for default logo
 
 export function Topbar() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
-  const { settings } = useSettings() // Use settings for app name/logo
 
   const handleLogout = async () => {
     await logout()
     router.push("/login")
-  }
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   const handleProfileClick = () => {

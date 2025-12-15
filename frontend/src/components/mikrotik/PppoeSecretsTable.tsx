@@ -23,7 +23,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { PppoeSecretForm, PppoeSecretFormValues } from './PppoeSecretForm';
-import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
 import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 

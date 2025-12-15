@@ -12,7 +12,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/components/auth-provider';
 
 // Helper to format rate from bps to human-readable format (e.g., 1000000 -> 1M)
 const formatRateForDisplay = (rateStr?: string): string => {

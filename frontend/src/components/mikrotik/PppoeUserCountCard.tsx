@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserCheck, UserX, Users } from 'lucide-react';
-import { useAuth } from '@/components/auth-provider';
+import { Users } from 'lucide-react';
 
 interface PppoeCounts {
   activePppoe: number;

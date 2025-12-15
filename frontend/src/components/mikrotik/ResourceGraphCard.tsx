@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter
-import { useAuth } from '@/components/auth-provider';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
-import { Cpu, Gauge, HardDrive } from 'lucide-react'; // Reverted to original import
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface ResourceData {
   name: string;
   value: number;
-  [key: string]: any;
+  [key: string]: string | number;
 }
 
 interface ResourceGraphCardProps {
@@ -89,18 +86,6 @@ export function ResourceGraphCard({ routerId, resourceType, title }: ResourceGra
     { name: 'Used', value: resourceValue !== null ? resourceValue : 0 },
     { name: 'Free', value: (totalValue !== null && resourceValue !== null) ? (totalValue - resourceValue) : 0 },
   ];
-
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const valueDisplay = (resourceType === 'cpu')
-    ? `${resourceValue !== null ? resourceValue.toFixed(0) : 'N/A'}%`
-    : `${resourceValue !== null ? formatBytes(resourceValue) : 'N/A'}/${totalValue !== null ? formatBytes(totalValue) : 'N/A'}`;
 
   const usedColor = resourceType === 'cpu' ? '#22d3ee' : (resourceType === 'memory' ? '#818cf8' : '#f59e0b');
 

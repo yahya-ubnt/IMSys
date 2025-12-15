@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner";
 import { createSmsProvider, updateSmsProvider } from "@/services/settingsService"
-import { useAuth } from "@/components/auth-provider"
 
 const providerTypes = [
   { value: "celcom", label: "Celcom Africa" },
@@ -48,7 +47,7 @@ const providerFields: Record<string, { name: string; label: string; type: string
 
 import { SmsProvider } from "@/types/sms";
 export function SmsProviderForm({ provider, onSuccess, onCancel }: { provider?: SmsProvider; onSuccess: () => void; onCancel: () => void; }) {
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm()
   const [selectedProviderType, setSelectedProviderType] = useState(provider?.providerType || "")
   // const { token } = useAuth() // Removed token from useAuth
 
@@ -61,12 +60,12 @@ export function SmsProviderForm({ provider, onSuccess, onCancel }: { provider?: 
     }
   }, [provider, setValue])
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: { [key: string]: string }) => {
     try {
       const payload = {
         name: data.name,
         providerType: data.providerType,
-        credentials: {} as { [key: string]: any },
+        credentials: {} as { [key: string]: string },
       }
       
       if (data.providerType in providerFields) {
@@ -83,8 +82,8 @@ export function SmsProviderForm({ provider, onSuccess, onCancel }: { provider?: 
         toast.success("Provider created successfully.")
       }
       onSuccess()
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred.")
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "An error occurred.")
     }
   }
 
