@@ -195,7 +195,7 @@ export default function MpesaReportPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const InputGroup = ({ icon: Icon, label, children }: any) => (
+const InputGroup = ({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) => (
   <div className="space-y-2">
     <Label className="text-zinc-300 flex items-center gap-2"><Icon className="w-4 h-4" /> {label}</Label>
     {children}

@@ -43,7 +43,7 @@ export default function LocationReportPage() {
         const users: MikrotikUser[] = await response.json()
         const uniqueApartmentHouseNumbers = ['All', ...Array.from(new Set(users.map(user => user.apartment_house_number).filter(Boolean)))];
         setApartmentHouseNumbers(uniqueApartmentHouseNumbers as string[]);
-      } catch (error) {
+      } catch {
         toast({ title: 'Error', description: 'Failed to load locations.', variant: 'destructive' })
       }
     }
@@ -66,7 +66,7 @@ export default function LocationReportPage() {
       const { reportData, totalAmount } = await response.json()
       setReportData(reportData)
       setTotalAmount(totalAmount)
-    } catch (error) {
+    } catch {
       toast({ title: 'Error', description: 'Failed to generate report.', variant: 'destructive' })
     } finally {
       setLoading(false)
