@@ -1,4 +1,4 @@
-import { SmsTemplate, SmsExpirySchedule, SmsAcknowledgement, SmsTemplateData } from '@/types/sms';
+import { SmsExpirySchedule, SmsAcknowledgement, SmsTemplateData } from '@/types/sms';
 import { fetchApi } from './utils';
 
 // SMS Template API functions

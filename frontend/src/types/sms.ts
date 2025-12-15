@@ -3,7 +3,7 @@ export interface SmsProvider {
   name: string;
   providerType: string;
   isActive: boolean;
-  [key: string]: any;
+  [key: string]: string | boolean;
 }
 
 export interface SmsTemplate {

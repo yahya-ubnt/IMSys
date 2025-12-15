@@ -10,7 +10,7 @@ export const getMpesaSettings = async () => {
 };
 
 // Update M-Pesa settings
-export const updateMpesaSettings = async (type: 'paybill' | 'till', data: any) => {
+export const updateMpesaSettings = async (type: 'paybill' | 'till', data: { [key: string]: string }) => {
   const response = await axios.put(`${API_URL}/mpesa`, { type, data });
   return response.data;
 };
@@ -35,14 +35,14 @@ export const getSmsProviders = async () => {
     return fetchApi('/api/settings/sms-providers');
 };
 
-export const createSmsProvider = async (providerData: any) => {
+export const createSmsProvider = async (providerData: { name: string; providerType: string; credentials: { [key: string]: string } }) => {
     return fetchApi('/api/settings/sms-providers', {
         method: 'POST',
         body: JSON.stringify(providerData),
     });
 };
 
-export const updateSmsProvider = async (id: string, providerData: any) => {
+export const updateSmsProvider = async (id: string, providerData: { name: string; providerType: string; credentials: { [key: string]: string } }) => {
     return fetchApi(`/api/settings/sms-providers/${id}`, {
         method: 'PUT',
         body: JSON.stringify(providerData),

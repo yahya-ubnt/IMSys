@@ -276,10 +276,14 @@ const RecentTransactions = () => {
   )
 }
 
+import Image from "next/image";
+
+// ...
+
 const TransactionCard = ({ transaction }: { transaction: Transaction }) => {
   return (
     <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
-      <img src="/mpesa-logo.svg" alt="M-Pesa Logo" className="w-10 h-10" />
+      <Image src="/mpesa-logo.svg" alt="M-Pesa Logo" width={40} height={40} />
       <div className="flex-grow">
         <p className="font-semibold">{transaction.officialName}</p>
         <p className="text-xs text-muted-foreground">{new Date(transaction.transactionDate).toLocaleString()}</p>

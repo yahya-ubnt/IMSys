@@ -1,5 +1,3 @@
-import { User } from './users'; // Assuming you have a user type defined
-
 export interface ExpenseType {
   _id: string;
   name: string;
