@@ -41,6 +41,7 @@ export default function WalletTransactionsPage() {
 
   // Data states
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [pageCount, setPageCount] = useState(0)
 
   // Filter and table states
