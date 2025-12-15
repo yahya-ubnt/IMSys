@@ -2,10 +2,9 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Sun, Moon, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, HeartPulse, MessageCircle, Timer, FileSpreadsheet } from "lucide-react"
+import { Building2, Home, Users, UserPlus, Settings, ChevronRight, LayoutGrid, Package, Wifi, DollarSign, Receipt, Wrench, MessageSquare, FileText, CreditCard, Server, FileSpreadsheet } from "lucide-react"
 
 import Image from "next/image"
-import { useTheme } from "next-themes"
 import { useSettings } from "@/hooks/use-settings"
 import { useAuth } from "@/components/auth-provider";
 
@@ -31,7 +30,6 @@ interface MenuItem {
   icon?: React.ElementType;
   items?: SubMenuItem[];
 }
-import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -378,7 +376,6 @@ const superAdminMenuCategory: MenuCategory = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { theme, setTheme } = useTheme()
   const { settings } = useSettings();
   const { user } = useAuth();
   const [openMenu, setOpenMenu] = React.useState<string | null>(null)
@@ -421,10 +418,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const handleMenuToggle = (menuTitle: string) => {
     setOpenMenu(openMenu === menuTitle ? null : menuTitle)
-  }
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
   }
 
   const allMenuCategories = user?.roles.includes('SUPER_ADMIN') 

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -38,7 +37,6 @@ const TABS = [
 ];
 
 export default function ComposeSmsPage() {
-  const router = useRouter()
   const { toast } = useToast()
   const [users, setUsers] = useState<User[]>([])
   const [mikrotikRouters, setMikrotikRouters] = useState<MikrotikRouter[]>([])

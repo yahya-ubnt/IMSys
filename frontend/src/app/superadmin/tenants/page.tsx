@@ -318,7 +318,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: s
   </div>
 );
 
-const ChartCard = ({ title, selectedYear, onYearChange, years, data }: { title: string; selectedYear: string; onYearChange: (value: string) => void; years: string[]; data: any[] }) => (
+const ChartCard = ({ title, selectedYear, onYearChange, years, data }: { title: string; selectedYear: string; onYearChange: (value: string) => void; years: string[]; data: { month: number; total: number }[] }) => (
   <div className="bg-zinc-800/50 p-4 rounded-lg">
     <div className="flex justify-between items-center mb-2">
       <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> {title}</h3>
@@ -361,7 +361,7 @@ const DonutChartCard = ({ active, suspended, total }: { active: number; suspende
     </div>
 );
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number }[]; label?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">

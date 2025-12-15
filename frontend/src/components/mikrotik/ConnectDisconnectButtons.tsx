@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Plug, PlugZap } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface ConnectDisconnectButtonsProps {

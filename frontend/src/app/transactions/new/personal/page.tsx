@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { createTransaction } from '@/lib/transactionService';
 import { Topbar } from '@/components/topbar';

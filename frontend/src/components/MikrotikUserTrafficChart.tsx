@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Download, Upload, PlayCircle, Loader2, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { Download, Upload, PlayCircle, Loader2, AlertTriangle } from "lucide-react";
 import { formatSpeed } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,8 +46,8 @@ const StatCard = ({ icon: Icon, label, value, color }: { icon: React.ElementType
 );
 
 // --- Custom Tooltip Component ---
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number; stroke: string }[]; label?: number }) => {
+  if (active && payload && payload.length && label) {
     return (
       <div className="p-2 bg-zinc-800/80 backdrop-blur-sm border border-zinc-700 rounded-lg shadow-lg">
         <p className="text-sm text-zinc-400">{new Date(label).toLocaleTimeString()}</p>
@@ -116,20 +115,6 @@ const MikrotikUserTrafficChart: React.FC<MikrotikUserTrafficChartProps> = ({ use
       setIsMonitoring(true);
     }
   };
-
-  const stats = useMemo(() => {
-    if (trafficHistory.length === 0) {
-      return { peakTx: 0, peakRx: 0, avgTx: 0, avgRx: 0 };
-    }
-    const txRates = trafficHistory.map(h => h.txRate);
-    const rxRates = trafficHistory.map(h => h.rxRate);
-    return {
-      peakTx: Math.max(...txRates),
-      peakRx: Math.max(...rxRates),
-      avgTx: txRates.reduce((a, b) => a + b, 0) / txRates.length,
-      avgRx: rxRates.reduce((a, b) => a + b, 0) / rxRates.length,
-    };
-  }, [trafficHistory]);
 
   const renderContent = () => {
     if (!isMonitoring) {

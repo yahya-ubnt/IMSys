@@ -162,7 +162,7 @@ const StatCard = ({ title, value, icon: Icon }: { title: string; value: number; 
   </div>
 );
 
-const ChartCard = ({ selectedYear, onYearChange, data }: any) => {
+const ChartCard = ({ selectedYear, onYearChange, data }: { selectedYear: string; onYearChange: (value: string) => void; data: MonthlyTotalData[] }) => {
     const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
     return (
         <div className="bg-zinc-800/50 p-4 rounded-lg">
@@ -186,7 +186,7 @@ const ChartCard = ({ selectedYear, onYearChange, data }: any) => {
     );
 };
 
-const DataTableToolbar = ({ searchTerm, onSearch }: any) => (
+const DataTableToolbar = ({ searchTerm, onSearch }: { searchTerm: string; onSearch: (value: string) => void }) => (
   <div className="flex items-center justify-end">
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
@@ -200,8 +200,8 @@ const DataTableToolbar = ({ searchTerm, onSearch }: any) => (
   </div>
 );
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: number }) => {
+  if (active && payload && payload.length && label) {
     const monthName = new Date(2000, label - 1).toLocaleString('en-US', { month: 'long' });
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">

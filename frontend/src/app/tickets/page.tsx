@@ -254,7 +254,7 @@ const DonutChartCard = ({ total, resolved, closed }: { total: number, resolved: 
     );
 }
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string | number }) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; payload: { created?: number } }[]; label?: string | number }) => {
   if (active && payload && payload.length) {
     // Check if it's for the area chart or pie chart
     if (payload[0].payload.created !== undefined) {

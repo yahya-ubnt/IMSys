@@ -116,11 +116,11 @@ export default function GeneralSettingsForm() {
       const formData = new FormData();
       
       Object.keys(data).forEach(key => {
-        const value = (data as any)[key];
+        const value = (data as { [key: string]: string | number | boolean | FileList | { [key: string]: string } })[key];
         if (value !== undefined && value !== null) {
           if (key === 'logoIcon' || key === 'favicon') {
-            if (value[0]) {
-              formData.append(key, value[0]);
+            if ((value as FileList)[0]) {
+              formData.append(key, (value as FileList)[0]);
             }
           } else if (typeof value === 'object') {
             formData.append(key, JSON.stringify(value));

@@ -13,14 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/components/auth-provider"
-import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import NotificationBell from "./notifications/NotificationBell"
 import { SidebarTrigger } from "@/components/ui/sidebar" // Import SidebarTrigger
 
 export function Topbar() {
   const { user, logout } = useAuth()
-  const { theme, setTheme } = useTheme()
   const router = useRouter()
 
   const handleLogout = async () => {
