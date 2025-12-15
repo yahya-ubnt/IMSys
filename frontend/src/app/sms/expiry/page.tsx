@@ -44,7 +44,6 @@ export default function SmsExpiryPage() {
 
   // Data states
   const [schedules, setSchedules] = useState<SmsExpirySchedule[]>([])
-  const [triggerTypes, setTriggerTypes] = useState<TriggerType[]>([])
   
   // UI states
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -69,20 +68,9 @@ export default function SmsExpiryPage() {
     }
   }, [toast])
 
-  const fetchTriggers = useCallback(async () => {
-    try {
-      const triggersRes = await fetch("/api/sms/triggers");
-      if (!triggersRes.ok) throw new Error("Failed to fetch trigger types");
-      setTriggerTypes(await triggersRes.json());
-    } catch {
-      toast({ title: "Error", description: "Failed to load trigger types.", variant: "destructive" })
-    }
-  }, [toast]);
-
   useEffect(() => {
     fetchSchedules()
-    fetchTriggers()
-  }, [fetchSchedules, fetchTriggers])
+  }, [fetchSchedules])
 
   // --- EVENT HANDLERS ---
   const handleNewSchedule = () => {
