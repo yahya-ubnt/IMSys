@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -11,20 +10,20 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-} from "@tanstack/react-table"
-import { Topbar } from "@/components/topbar"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
-import { DataTable } from "@/components/data-table"
-import { SimpleDataTablePagination } from "@/components/ui/simple-data-table-pagination"
-import { columns } from "./columns"
-import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form"
-import { PlusCircle, FileText } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { getSmsTemplates, createSmsTemplate, updateSmsTemplate, deleteSmsTemplate } from "@/lib/api/sms"
-import { SmsTemplate } from "@/types/sms"
+} from "@tanstack/react-table";
+import { Topbar } from "@/components/topbar";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth-provider";
+import { DataTable } from "@/components/data-table";
+import { SimpleDataTablePagination } from "@/components/ui/simple-data-table-pagination";
+import { columns } from "./columns";
+import { SmsTemplateForm, SmsTemplateFormData } from "./sms-template-form";
+import { PlusCircle, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { getSmsTemplates, createSmsTemplate, updateSmsTemplate, deleteSmsTemplate } from "@/lib/api/sms";
+import { SmsTemplate } from "@/types/sms";
 
 // --- MAIN COMPONENT ---
 export default function SmsTemplatesPage() {
@@ -177,7 +176,7 @@ export default function SmsTemplatesPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>

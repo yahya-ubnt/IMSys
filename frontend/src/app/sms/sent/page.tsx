@@ -1,17 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
-  ColumnDef,
-  ColumnFiltersState,
   SortingState,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
+  getCoreRowModel,
   PaginationState,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
@@ -199,7 +192,7 @@ export default function SentSmsLogPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -209,7 +202,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const DataTableToolbar = (props: any) => {
+const DataTableToolbar = (props: { searchQuery: string; setSearchQuery: (value: string) => void; messageTypeFilter: string; setMessageTypeFilter: (value: string) => void; statusFilter: string; setStatusFilter: (value: string) => void; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
   const { searchQuery, setSearchQuery, messageTypeFilter, setMessageTypeFilter, statusFilter, setStatusFilter, dateRange, setDateRange } = props;
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">

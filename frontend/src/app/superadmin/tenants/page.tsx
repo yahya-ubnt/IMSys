@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -12,11 +11,9 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
 } from "@tanstack/react-table";
-import { useAuth } from '@/components/auth-provider';
 import { Topbar } from '@/components/topbar';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Building2, CheckCircle, XCircle, BarChart2, Users, Search } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -311,7 +308,7 @@ export default function TenantManagementPage() {
 }
 
 // --- Sub-components ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
@@ -321,7 +318,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
   </div>
 );
 
-const ChartCard = ({ title, selectedYear, onYearChange, years, data }: any) => (
+const ChartCard = ({ title, selectedYear, onYearChange, years, data }: { title: string; selectedYear: string; onYearChange: (value: string) => void; years: string[]; data: any[] }) => (
   <div className="bg-zinc-800/50 p-4 rounded-lg">
     <div className="flex justify-between items-center mb-2">
       <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2"><BarChart2 size={16}/> {title}</h3>
@@ -342,7 +339,7 @@ const ChartCard = ({ title, selectedYear, onYearChange, years, data }: any) => (
   </div>
 );
 
-const DonutChartCard = ({ active, suspended, total }: any) => (
+const DonutChartCard = ({ active, suspended, total }: { active: number; suspended: number; total: number }) => (
     <div className="bg-zinc-800/50 p-4 rounded-lg">
         <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2"><Users size={16}/> Tenant Status</h3>
         <ResponsiveContainer width="100%" height={200}>
@@ -364,7 +361,7 @@ const DonutChartCard = ({ active, suspended, total }: any) => (
     </div>
 );
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-zinc-800/80 backdrop-blur-sm text-white p-2 rounded-md text-xs border border-zinc-700">

@@ -5,7 +5,6 @@ import { Card, CardHeader } from '@/components/ui/card';
 import { Topbar } from "@/components/topbar";
 import { Building2, Users, Wifi, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from '@/components/auth-provider';
 
 // --- Interface Definitions ---
 interface SuperAdminStats {
