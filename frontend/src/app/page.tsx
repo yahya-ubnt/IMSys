@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import Image from 'next/image';
 import { Topbar } from "@/components/topbar";
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, Calendar, Globe, BarChart2, Users, CheckCircle, Clock, UserPlus, ArrowUpCircle, ArrowDownCircle, Ticket as TicketIcon } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Globe, Users, CheckCircle, Clock, UserPlus, ArrowUpCircle, ArrowDownCircle, Ticket as TicketIcon } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from '@/components/auth-provider';
 
 // --- Interface Definitions ---
 interface CollectionsSummary { today: number; weekly: number; monthly: number; yearly: number; }
@@ -351,7 +350,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
     return (
       <div className="bg-popover text-popover-foreground p-3 rounded-md text-xs border border-border shadow-lg">
         <p className="font-bold text-sm mb-2">{label}</p>
-        {payload.map((pld: any, i: number) => (
+        {payload.map((pld: { name: string; value: number; fill: string }, i: number) => (
           <div key={i} style={{ color: pld.fill }}>
             {pld.name}: KES {pld.value.toLocaleString()}
           </div>
