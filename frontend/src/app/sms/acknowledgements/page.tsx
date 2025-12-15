@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -75,7 +74,7 @@ export default function SmsAcknowledgementsPage() {
         const response = await fetch("/api/sms/triggers");
         if (!response.ok) throw new Error("Failed to fetch trigger types");
         setTriggerTypes(await response.json());
-      } catch (error) {
+      } catch {
         toast({ title: "Error", description: "Failed to load trigger types.", variant: "destructive" });
       }
     };

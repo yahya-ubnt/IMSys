@@ -12,7 +12,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/components/auth-provider";
 import { useSettings } from "@/hooks/use-settings";
 import { Loader2, Save, Building, Palette, Bot } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -112,12 +111,12 @@ export default function GeneralSettingsForm() {
     fetchSettings();
   }, [brandingForm, companyInfoForm, billingForm]);
 
-  const onSubmit = async (data: any, section: string) => {
+  const onSubmit = async (data: BrandingFormValues | CompanyInfoFormValues | BillingFormValues, section: string) => {
     try {
       const formData = new FormData();
       
       Object.keys(data).forEach(key => {
-        const value = data[key];
+        const value = (data as any)[key];
         if (value !== undefined && value !== null) {
           if (key === 'logoIcon' || key === 'favicon') {
             if (value[0]) {

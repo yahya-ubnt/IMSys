@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/StyledTabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Settings, CreditCard, MessageSquare, MessageCircle, Bell } from "lucide-react"
+import { Settings, CreditCard, MessageSquare, Bell } from "lucide-react";
 import MpesaSettingsPage from "./mpesa/page"
 import SmsSettingsPage from "./sms/page"
 

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-  ColumnDef,
   ColumnFiltersState,
   SortingState,
   PaginationState,
@@ -11,7 +10,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
@@ -75,7 +74,7 @@ export default function SmsExpiryPage() {
       const triggersRes = await fetch("/api/sms/triggers");
       if (!triggersRes.ok) throw new Error("Failed to fetch trigger types");
       setTriggerTypes(await triggersRes.json());
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to load trigger types.", variant: "destructive" })
     }
   }, [toast]);
@@ -209,7 +208,7 @@ export default function SmsExpiryPage() {
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: any) => (
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
   <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
     <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>

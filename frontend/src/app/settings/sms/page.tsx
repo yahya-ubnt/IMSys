@@ -37,7 +37,7 @@ export default function SmsSettingsPage() {
     try {
       const data = await getSmsProviders()
       setProviders(data)
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch SMS providers.")
     }
   }

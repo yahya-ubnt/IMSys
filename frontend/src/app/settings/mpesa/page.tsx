@@ -11,8 +11,7 @@ import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/componen
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Save, Loader2, Settings, CreditCard } from "lucide-react"
-import { useAuth } from "@/components/auth-provider";
+import { ChevronLeft, ChevronRight, Save, Loader2, Settings, CreditCard } from "lucide-react";
 
 // --- Zod Schema Definitions ---
 const mpesaConfigSchema = z.object({
