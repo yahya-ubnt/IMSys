@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@/components/auth-provider';
 import { DataTable } from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
