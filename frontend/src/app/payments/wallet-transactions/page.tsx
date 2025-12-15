@@ -82,7 +82,7 @@ export default function WalletTransactionsPage() {
       const data = await response.json()
       setTransactions(data.transactions || [])
       setPageCount(data.pages || 1)
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" })
     } finally {
       setIsLoading(false)

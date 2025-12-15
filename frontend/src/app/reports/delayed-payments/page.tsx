@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import React from "react";
 import {
   useReactTable,
@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns } from "./columns";
 import { Topbar } from "@/components/topbar";
