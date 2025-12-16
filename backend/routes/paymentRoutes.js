@@ -24,10 +24,7 @@ router.post(
   initiateStkPush
 );
 
-// M-Pesa C2B & STK Callbacks
-router.post('/daraja-callback', handleDarajaCallback);
-
-// Cash Payments
+// M-Pesa STK Push
 router.post(
   '/cash',
   isSuperAdminOrAdmin,

@@ -42,6 +42,7 @@ const smsExpiryScheduleRoutes = require('./routes/smsExpiryScheduleRoutes');
 const smsAcknowledgementRoutes = require('./routes/smsAcknowledgementRoutes');
 const smsRoutes = require('./routes/smsRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const publicPaymentRoutes = require('./routes/publicPaymentRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const expenseTypeRoutes = require('./routes/expenseTypeRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
@@ -101,6 +102,7 @@ const tenantRoutes = require('./routes/tenantRoutes');
 // --- Public Routes ---
 // Routes that do not require authentication go here.
 app.use('/api/users', publicUserRoutes);
+app.use('/api/payments', publicPaymentRoutes);
 app.use('/api/upload', uploadRoutes); // Assuming upload might have public access points, adjust if not
 
 // --- Global Authentication Middleware ---
