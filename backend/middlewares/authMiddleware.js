@@ -13,13 +13,15 @@ exports.protect = async (req, res, next) => {
     try {
       token = req.cookies.token;
 
+      // Decode the token which now contains id, tenant, and roles
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      req.user = await User.findById(decoded.id).select('-password');
+      // Attach the decoded payload directly to the request object
+      req.user = decoded;
 
       if (!req.user) {
         res.status(401);
-        throw new Error('Not authorized, user not found');
+        throw new Error('Not authorized, user data not in token');
       }
 
       next();

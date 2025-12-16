@@ -11,7 +11,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    const token = generateToken(user._id);
+    const token = generateToken(user);
 
     res.cookie('token', token, {
       httpOnly: true,
