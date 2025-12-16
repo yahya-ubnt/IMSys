@@ -317,11 +317,16 @@ function TenantTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null,
                 const cronHour = parseInt(parts[1], 10);
 
                 if (!isNaN(cronMinute) && !isNaN(cronHour)) {
-                    const newAmpm = cronHour >= 12 ? 'PM' : 'AM';
-                    const newHour = cronHour % 12 === 0 ? 12 : cronHour % 12;
+                    // Convert from UTC cron time to local display time
+                    const now = new Date();
+                    now.setUTCHours(cronHour, cronMinute);
                     
-                    setHour(String(newHour));
-                    setMinute(String(cronMinute).padStart(2, '0'));
+                    const localHour = now.getHours();
+                    const newAmpm = localHour >= 12 ? 'PM' : 'AM';
+                    const newHour12 = localHour % 12 === 0 ? 12 : localHour % 12;
+                    
+                    setHour(String(newHour12));
+                    setMinute(String(now.getMinutes()).padStart(2, '0'));
                     setAmpm(newAmpm);
                 }
             } catch {
@@ -333,15 +338,21 @@ function TenantTaskForm({ task, onSave }: { task: Partial<ScheduledTask> | null,
     const handleSave = async () => {
         if (!task) return;
 
-        let twentyFourHour = parseInt(hour, 10);
-        if (ampm === 'PM' && twentyFourHour !== 12) {
-            twentyFourHour += 12;
-        } else if (ampm === 'AM' && twentyFourHour === 12) {
-            twentyFourHour = 0;
+        // Create a date object in the local timezone based on user's selection
+        const localDate = new Date();
+        let localHour24 = parseInt(hour, 10);
+        if (ampm === 'PM' && localHour24 !== 12) {
+            localHour24 += 12;
+        } else if (ampm === 'AM' && localHour24 === 12) {
+            localHour24 = 0;
         }
+        localDate.setHours(localHour24, parseInt(minute, 10), 0, 0);
 
-        const newCronMinute = parseInt(minute, 10);
-        const newSchedule = `${newCronMinute} ${twentyFourHour} * * *`;
+        // Get the UTC equivalent hour and minute
+        const newCronMinute = localDate.getUTCMinutes();
+        const newCronHour = localDate.getUTCHours();
+
+        const newSchedule = `${newCronMinute} ${newCronHour} * * *`;
         const formData = { ...task, schedule: newSchedule };
 
         try {
