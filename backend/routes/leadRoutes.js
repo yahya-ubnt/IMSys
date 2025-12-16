@@ -9,10 +9,9 @@ const {
   deleteLead,
   updateLeadStatus,
 } = require('../controllers/leadController');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 router.route('/').post(
-  protect,
   isSuperAdminOrAdmin,
   [
     body('phoneNumber', 'Phone number is required').not().isEmpty(),
@@ -28,13 +27,13 @@ router.route('/').post(
     body('email', 'Please include a valid email').optional().isEmail(),
   ],
   createLead
-).get(protect, isSuperAdminOrAdmin, getAllLeads);
+).get(isSuperAdminOrAdmin, getAllLeads);
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdmin, getLeadById)
-  .put(protect, isSuperAdminOrAdmin, updateLead)
-  .delete(protect, isSuperAdminOrAdmin, deleteLead);
+  .get(isSuperAdminOrAdmin, getLeadById)
+  .put(isSuperAdminOrAdmin, updateLead)
+  .delete(isSuperAdminOrAdmin, deleteLead);
 
-router.route('/status/:id').put(protect, isSuperAdminOrAdmin, updateLeadStatus);
+router.route('/status/:id').put(isSuperAdminOrAdmin, updateLeadStatus);
 
 module.exports = router;

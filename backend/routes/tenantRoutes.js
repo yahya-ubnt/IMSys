@@ -9,10 +9,10 @@ const {
   getTenantStats,
   getMonthlyTenantGrowth,
 } = require('../controllers/tenantController');
-const { protect, isSuperAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdmin } = require('../middlewares/authMiddleware');
 
 // All routes in this file are protected and for Super Admins only.
-router.use(protect, isSuperAdmin);
+router.use(isSuperAdmin);
 
 router.route('/')
   .post(createTenant)

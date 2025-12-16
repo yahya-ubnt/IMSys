@@ -3,14 +3,14 @@ const router = express.Router();
 const {
   getNotifications,
   markAsRead,
-  markAllAsRead,
   deleteNotification,
+  markAllAsRead,
 } = require('../controllers/notificationController');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/').get(protect, isSuperAdminOrAdmin, getNotifications);
-router.route('/:id/read').put(protect, isSuperAdminOrAdmin, markAsRead);
-router.route('/:id').delete(protect, isSuperAdminOrAdmin, deleteNotification);
-router.route('/read/all').put(protect, isSuperAdminOrAdmin, markAllAsRead);
+router.route('/').get(isSuperAdminOrAdmin, getNotifications);
+router.route('/:id/read').put(isSuperAdminOrAdmin, markAsRead);
+router.route('/:id').delete(isSuperAdminOrAdmin, deleteNotification);
+router.route('/read/all').put(isSuperAdminOrAdmin, markAllAsRead);
 
 module.exports = router;

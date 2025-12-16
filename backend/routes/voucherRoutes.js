@@ -6,18 +6,18 @@ const {
   deleteVoucherBatch,
   loginVoucher,
 } = require('../controllers/voucherController');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 router.post('/login', loginVoucher); // Public route for voucher login
 
 router
   .route('/')
-  .post(protect, isSuperAdminOrAdmin, generateVouchers)
-  .get(protect, isSuperAdminOrAdmin, getVouchers);
+  .post(isSuperAdminOrAdmin, generateVouchers)
+  .get(isSuperAdminOrAdmin, getVouchers);
 
 router
   .route('/batch/:batchId')
-  .delete(protect, isSuperAdminOrAdmin, deleteVoucherBatch);
+  .delete(isSuperAdminOrAdmin, deleteVoucherBatch);
 
 module.exports = router;
 

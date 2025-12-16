@@ -11,33 +11,33 @@ const {
   getMonthlyTicketStats, // Import new function
   deleteTicket,
 } = require('../controllers/ticketController');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 router
   .route('/')
-  .post(protect, isSuperAdminOrAdmin, createTicket)
-  .get(protect, isSuperAdminOrAdmin, getTickets);
+  .post(isSuperAdminOrAdmin, createTicket)
+  .get(isSuperAdminOrAdmin, getTickets);
 
 router
     .route('/stats')
-    .get(protect, isSuperAdminOrAdmin, getTicketStats);
+    .get(isSuperAdminOrAdmin, getTicketStats);
 
 router
     .route('/monthly-totals')
-    .get(protect, isSuperAdminOrAdmin, getMonthlyTicketTotals);
+    .get(isSuperAdminOrAdmin, getMonthlyTicketTotals);
 
 router
     .route('/monthly-stats')
-    .get(protect, isSuperAdminOrAdmin, getMonthlyTicketStats);
+    .get(isSuperAdminOrAdmin, getMonthlyTicketStats);
 
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdmin, getTicketById)
-  .put(protect, isSuperAdminOrAdmin, updateTicket)
-  .delete(protect, isSuperAdminOrAdmin, deleteTicket);
+  .get(isSuperAdminOrAdmin, getTicketById)
+  .put(isSuperAdminOrAdmin, updateTicket)
+  .delete(isSuperAdminOrAdmin, deleteTicket);
 
 router
     .route('/:id/notes')
-    .post(protect, isSuperAdminOrAdmin, addNoteToTicket);
+    .post(isSuperAdminOrAdmin, addNoteToTicket);
 
 module.exports = router;

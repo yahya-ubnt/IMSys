@@ -10,10 +10,9 @@ const {
   getDeviceDowntimeLogs,
 } = require('../controllers/deviceController');
 const { getMikrotikUsersByStation } = require('../controllers/mikrotikUserController');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
 router.route('/').post(
-  protect,
   isSuperAdminOrAdmin,
   [
     body('router', 'Router ID is required').not().isEmpty(),
@@ -22,9 +21,9 @@ router.route('/').post(
     body('deviceType', 'Device type is required').isIn(['Access', 'Station']),
   ],
   createDevice
-).get(protect, isSuperAdminOrAdmin, getDevices);
-router.route('/:id').get(protect, isSuperAdminOrAdmin, getDeviceById).put(protect, isSuperAdminOrAdmin, updateDevice).delete(protect, isSuperAdminOrAdmin, deleteDevice);
-router.route('/:id/downtime').get(protect, isSuperAdminOrAdmin, getDeviceDowntimeLogs);
-router.route('/:stationId/users').get(protect, isSuperAdminOrAdmin, getMikrotikUsersByStation);
+).get(isSuperAdminOrAdmin, getDevices);
+router.route('/:id').get(isSuperAdminOrAdmin, getDeviceById).put(isSuperAdminOrAdmin, updateDevice).delete(isSuperAdminOrAdmin, deleteDevice);
+router.route('/:id/downtime').get(isSuperAdminOrAdmin, getDeviceDowntimeLogs);
+router.route('/:stationId/users').get(isSuperAdminOrAdmin, getMikrotikUsersByStation);
 
 module.exports = router;

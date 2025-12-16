@@ -25,6 +25,7 @@
     "express-async-handler": "^1.2.0",
     "express-rate-limit": "^8.1.0",
     "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
     "json-2-csv": "^5.5.9",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.6.0",

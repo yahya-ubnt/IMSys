@@ -1,5 +1,4 @@
 const express = require('express');
-const router = express.Router();
 const { body } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const {
@@ -19,6 +18,9 @@ const {
 } = require('../controllers/userController');
 const { protect, isSuperAdmin, isAdmin } = require('../middlewares/authMiddleware');
 
+const publicRouter = express.Router();
+const privateRouter = express.Router();
+
 // Apply rate limiting to the login route
 const loginLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -26,8 +28,8 @@ const loginLimiter = rateLimit({
   message: 'Too many login attempts from this IP, please try again after 1 minute',
 });
 
-// Public routes
-router.post('/login', 
+// --- Public Routes ---
+publicRouter.post('/login', 
   [
     loginLimiter,
     body('email', 'Please include a valid email').isEmail(),
@@ -35,14 +37,19 @@ router.post('/login',
   ],
   loginUser
 );
-router.post('/logout', logoutUser);
+publicRouter.post('/logout', logoutUser);
+
+
+// --- Private Routes ---
+// Note: The 'protect' middleware will be applied globally in server.js, 
+// so it is removed from the individual routes here.
 
 // Authenticated user routes
-router.route('/profile').get(protect, getUserProfile);
+privateRouter.route('/profile').get(getUserProfile);
 
 // ADMIN routes for managing their own users
-router.route('/my-users').get(protect, isAdmin, getTenantUsers).post(
-  [protect, isAdmin],
+privateRouter.route('/my-users').get(isAdmin, getTenantUsers).post(
+  [isAdmin],
   [
     body('fullName', 'Full name is required').not().isEmpty(),
     body('email', 'Please include a valid email').isEmail(),
@@ -51,15 +58,15 @@ router.route('/my-users').get(protect, isAdmin, getTenantUsers).post(
   ],
   createTenantUser
 );
-router
+privateRouter
     .route('/my-users/:id')
-    .get(protect, isAdmin, getTenantUserById)
-    .put(protect, isAdmin, updateTenantUser)
-    .delete(protect, isAdmin, deleteTenantUser);
+    .get(isAdmin, getTenantUserById)
+    .put(isAdmin, updateTenantUser)
+    .delete(isAdmin, deleteTenantUser);
 
 // SUPER_ADMIN routes for managing all users
-router.route('/').get(protect, isSuperAdmin, getUsers).post(
-  [protect, isSuperAdmin],
+privateRouter.route('/').get(isSuperAdmin, getUsers).post(
+  [isSuperAdmin],
   [
     body('fullName', 'Full name is required').not().isEmpty(),
     body('email', 'Please include a valid email').isEmail(),
@@ -69,11 +76,11 @@ router.route('/').get(protect, isSuperAdmin, getUsers).post(
   ],
   createUser
 );
-router
+privateRouter
   .route('/:id')
-  .get(protect, isSuperAdmin, getUserById)
+  .get(isSuperAdmin, getUserById)
   .put(
-    [protect, isSuperAdmin],
+    [isSuperAdmin],
     [
       body('fullName', 'Full name must be a string').optional().isString(),
       body('email', 'Please include a valid email').optional().isEmail(),
@@ -83,6 +90,6 @@ router
     ],
     updateUser
   )
-  .delete(protect, isSuperAdmin, deleteUser);
+  .delete(isSuperAdmin, deleteUser);
 
-module.exports = router;
+module.exports = { publicRouter, privateRouter };

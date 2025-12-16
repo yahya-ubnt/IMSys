@@ -7,34 +7,34 @@ const {
   getExpenseById,
   updateExpense,
   deleteExpense,
+  getExpenseStats,
   getMonthlyExpenseTotal,
   getYearlyMonthlyExpenseTotals,
   getDailyExpenseTotals,
-  getExpenseStats,
 } = require('../controllers/expenseController');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
 
-router.route('/stats').get(protect, isSuperAdminOrAdmin, getExpenseStats);
-router.route('/monthly-total').get(protect, isSuperAdminOrAdmin, getMonthlyExpenseTotal);
-router.route('/yearly-monthly-totals').get(protect, isSuperAdminOrAdmin, getYearlyMonthlyExpenseTotals);
-router.route('/daily-expense-totals').get(protect, isSuperAdminOrAdmin, getDailyExpenseTotals);
+router.route('/stats').get(isSuperAdminOrAdmin, getExpenseStats);
+router.route('/monthly-total').get(isSuperAdminOrAdmin, getMonthlyExpenseTotal);
+router.route('/yearly-monthly-totals').get(isSuperAdminOrAdmin, getYearlyMonthlyExpenseTotals);
+router.route('/daily-expense-totals').get(isSuperAdminOrAdmin, getDailyExpenseTotals);
 
 router.route('/').post(
-  protect,
   isSuperAdminOrAdmin,
   [
-    body('title', 'Title is required').not().isEmpty(),
-    body('amount', 'Amount must be a number').isNumeric(),
-    body('expenseType', 'Expense type is required').not().isEmpty(),
-    body('expenseDate', 'Expense date is required').isISO8601(),
+    body('date', 'Date is required').isISO8601().toDate(),
+    body('type', 'Type is required').not().isEmpty(),
+    body('amount', 'Amount must be a positive number').isFloat({ gt: 0 }),
+    body('description', 'Description is required').not().isEmpty(),
   ],
   createExpense
-).get(protect, isSuperAdminOrAdmin, getExpenses);
+).get(isSuperAdminOrAdmin, getExpenses);
 
 router
   .route('/:id')
-  .get(protect, isSuperAdminOrAdmin, getExpenseById)
-  .put(protect, isSuperAdminOrAdmin, updateExpense)
-  .delete(protect, isSuperAdminOrAdmin, deleteExpense);
+  .get(isSuperAdminOrAdmin, getExpenseById)
+  .put(isSuperAdminOrAdmin, updateExpense)
+  .delete(isSuperAdminOrAdmin, deleteExpense);
 
 module.exports = router;
+

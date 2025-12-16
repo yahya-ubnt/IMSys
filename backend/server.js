@@ -7,14 +7,16 @@ if (!process.env.JWT_SECRET) {
 }
 
 const express = require('express');
+const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const path = require('path'); // Import path module
+const { protect } = require('./middlewares/authMiddleware'); // Import protect middleware
 
 // Import routes
 const leadRoutes = require('./routes/leadRoutes');
-const userRoutes = require('./routes/userRoutes');
+const { publicRouter: publicUserRoutes, privateRouter: privateUserRoutes } = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes'); // Import upload routes
 
 const dailyTransactionRoutes = require('./routes/dailyTransactionRoutes'); // Import daily transaction routes
@@ -57,6 +59,7 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Middleware
+app.use(helmet());
 app.use(express.json()); // For parsing application/json
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -95,7 +98,18 @@ const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 
-// Mount routes
+// --- Public Routes ---
+// Routes that do not require authentication go here.
+app.use('/api/users', publicUserRoutes);
+app.use('/api/upload', uploadRoutes); // Assuming upload might have public access points, adjust if not
+
+// --- Global Authentication Middleware ---
+// All routes defined after this point will require a valid token.
+app.use('/api', protect);
+
+// --- Private Routes ---
+// Mount protected routes
+app.use('/api/users', privateUserRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/mikrotik/routers', mikrotikRouterRoutes);
@@ -110,22 +124,15 @@ app.use('/api/routers/:routerId/dashboard', mikrotikDashboardRoutes);
 app.use('/api/devices', deviceRoutes); // CPE & AP Devices
 app.use('/api/search', searchRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/tenants', tenantRoutes);
-
-
-// app.use('/api/providers', require('./routes/providerRoutes')); // Add provider routes
-
-app.use('/api/daily-transactions', dailyTransactionRoutes); // Add daily transaction routes
-app.use('/api/bills', billRoutes); // Add bill routes
-app.use('/api/invoices', invoiceRoutes); // Add invoice routes
+app.use('/api/daily-transactions', dailyTransactionRoutes);
+app.use('/api/bills', billRoutes);
+app.use('/api/invoices', invoiceRoutes);
 app.use('/api/technician-activities', technicianActivityRoutes);
-app.use('/api/settings', settingsRoutes); // ADDED // Add technician activity routes
-app.use('/api/settings/sms-providers', smsProviderRoutes); // Mount SMS provider routes
-
+app.use('/api/settings', settingsRoutes);
+app.use('/api/settings/sms-providers', smsProviderRoutes);
 app.use('/api/smstemplates', smsTemplateRoutes);
 app.use('/api/smsexpiryschedules', smsExpiryScheduleRoutes);
 app.use('/api/smsacknowledgements', smsAcknowledgementRoutes);
@@ -134,12 +141,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/expensetypes', expenseTypeRoutes);
 app.use('/api/expenses', expenseRoutes);
-app.use('/api/tickets', ticketRoutes); // Add ticket routes
-
-
-
-
-// Simple GET routes for testing wiring
+app.use('/api/tickets', ticketRoutes);
 
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));

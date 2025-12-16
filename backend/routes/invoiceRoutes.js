@@ -11,7 +11,6 @@ const {
 } = require('../controllers/invoiceController');
 
 // All routes below are protected and require a logged-in user.
-router.use(protect);
 
 // Admin-specific routes
 router.route('/stats').get(isAdmin, getInvoiceStats);
