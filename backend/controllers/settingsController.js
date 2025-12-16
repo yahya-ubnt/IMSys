@@ -146,9 +146,13 @@ const updateMpesaSettings = asyncHandler(async (req, res) => {
   }
 
   if (type === 'paybill') {
-    settings.mpesaPaybill = { ...settings.mpesaPaybill, ...data };
+    // The model's 'get' function provides the decrypted object.
+    const existingPaybillSettings = settings.mpesaPaybill || {};
+    // We create a new, complete object and assign it. The 'set' function will handle encryption.
+    settings.mpesaPaybill = { ...existingPaybillSettings, ...data };
   } else if (type === 'till') {
-    settings.mpesaTill = { ...settings.mpesaTill, ...data };
+    const existingTillSettings = settings.mpesaTill || {};
+    settings.mpesaTill = { ...existingTillSettings, ...data };
   } else {
     res.status(400);
     throw new Error('Invalid settings type specified');

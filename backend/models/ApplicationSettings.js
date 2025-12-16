@@ -95,12 +95,12 @@ const ApplicationSettingsSchema = mongoose.Schema(
       client: { type: String, default: "" },
     },
     mpesaPaybill: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       get: jsonDecrypt,
       set: jsonEncrypt,
     },
     mpesaTill: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       get: jsonDecrypt,
       set: jsonEncrypt,
     },
