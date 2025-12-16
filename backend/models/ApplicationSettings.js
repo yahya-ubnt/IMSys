@@ -1,4 +1,32 @@
 const mongoose = require('mongoose');
+const { encrypt, decrypt } = require('../utils/crypto');
+
+// Helper function to handle JSON parsing for getters
+const jsonDecrypt = (value) => {
+  if (value) {
+    try {
+      return JSON.parse(decrypt(value));
+    } catch (e) {
+      console.error("Failed to parse decrypted JSON:", e);
+      return value; // return raw value if parsing fails
+    }
+  }
+  return value;
+};
+
+// Helper function to handle JSON stringifying for setters
+const jsonEncrypt = (value) => {
+  if (value && typeof value === 'object') {
+    try {
+      return encrypt(JSON.stringify(value));
+    } catch (e) {
+      console.error("Failed to stringify and encrypt JSON:", e);
+      return value;
+    }
+  }
+  return value;
+};
+
 
 const ApplicationSettingsSchema = mongoose.Schema(
   {
@@ -67,22 +95,14 @@ const ApplicationSettingsSchema = mongoose.Schema(
       client: { type: String, default: "" },
     },
     mpesaPaybill: {
-      environment: { type: String, default: 'sandbox' },
-      paybillNumber: { type: String, trim: true },
-      consumerKey: { type: String, trim: true },
-      consumerSecret: { type: String, trim: true },
-      passkey: { type: String, trim: true },
-      activated: { type: Boolean, default: false },
-      callbackURL: { type: String, trim: true }
+      type: String,
+      get: jsonDecrypt,
+      set: jsonEncrypt,
     },
     mpesaTill: {
-      environment: { type: String, default: 'sandbox' },
-      tillStoreNumber: { type: String, trim: true },
-      tillNumber: { type: String, trim: true },
-      consumerKey: { type: String, trim: true },
-      consumerSecret: { type: String, trim: true },
-      passkey: { type: String, trim: true },
-      activated: { type: Boolean, default: false }
+      type: String,
+      get: jsonDecrypt,
+      set: jsonEncrypt,
     },
     adminNotificationEmails: {
       type: [String],
@@ -105,6 +125,8 @@ const ApplicationSettingsSchema = mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { getters: true },
+    toObject: { getters: true },
   }
 );
 
