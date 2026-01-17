@@ -28,10 +28,10 @@ export const columns = ({ handleEdit, handleDelete }: ColumnsProps): ColumnDef<S
     header: "Name",
   },
   {
-    accessorKey: "content",
+    accessorKey: "messageBody",
     header: "Message Body",
     cell: ({ row }) => {
-      const message = row.original.content
+      const message = row.original.messageBody
       return <div className="truncate max-w-xs">{message}</div>
     },
   },

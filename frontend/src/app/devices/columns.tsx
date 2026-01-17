@@ -69,7 +69,7 @@ export const getColumns = (
   {
     accessorKey: "router.name",
     header: "Router",
-    cell: ({ row }) => (typeof row.original.router === 'object' ? row.original.router.name : row.original.router) || 'N/A',
+    cell: ({ row }) => (typeof row.original.router === 'object' && row.original.router ? row.original.router.name : row.original.router || 'N/A'),
   },
   {
     accessorKey: "lastSeen",

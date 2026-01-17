@@ -9,7 +9,7 @@ import { SmsTemplate } from "@/types/sms"
 
 export type SmsTemplateFormData = {
   name: string
-  content: string
+  messageBody: string
 }
 
 interface SmsTemplateFormProps {
@@ -19,13 +19,13 @@ interface SmsTemplateFormProps {
 }
 
 export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateFormProps) {
-  const [formData, setFormData] = useState<SmsTemplateFormData>({ name: "", content: "" })
+  const [formData, setFormData] = useState<SmsTemplateFormData>({ name: "", messageBody: "" })
 
   useEffect(() => {
     if (initialData) {
-      setFormData({ name: initialData.name, content: initialData.content })
+      setFormData({ name: initialData.name, messageBody: initialData.messageBody })
     } else {
-      setFormData({ name: "", content: "" })
+      setFormData({ name: "", messageBody: "" })
     }
   }, [initialData])
 
@@ -35,7 +35,7 @@ export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateF
   }
 
   const handleInsertVariable = (variable: string) => {
-    setFormData((prev) => ({ ...prev, content: prev.content + `{{${variable}}}` }))
+    setFormData((prev) => ({ ...prev, messageBody: prev.messageBody + `{{${variable}}}` }))
   }
 
   return (
@@ -51,11 +51,11 @@ export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateF
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="content" className="text-zinc-300">Message Body</Label>
+        <Label htmlFor="messageBody" className="text-zinc-300">Message Body</Label>
         <Textarea
-          id="content"
-          value={formData.content}
-          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          id="messageBody"
+          value={formData.messageBody}
+          onChange={(e) => setFormData({ ...formData, messageBody: e.target.value })}
           rows={6}
           placeholder="Type your message here..."
           className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"

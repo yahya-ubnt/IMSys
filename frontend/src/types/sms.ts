@@ -9,13 +9,13 @@ export interface SmsProvider {
 export interface SmsTemplate {
   _id?: string;
   name: string;
-  content: string;
+  messageBody: string;
   createdAt: string;
 }
 
 export type SmsTemplateData = {
   name: string;
-  content: string;
+  messageBody: string;
 }
 
 export interface SmsExpirySchedule {

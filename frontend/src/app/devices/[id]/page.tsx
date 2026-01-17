@@ -175,7 +175,7 @@ export default function DeviceDetailsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
                     <DetailItem icon={MapPin} label="Location" value={device.location} />
                     <DetailItem icon={Network} label="MAC Address" value={device.macAddress} />
-                    <DetailItem icon={Server} label="Monitoring Router" value={typeof device.router === 'object' ? device.router.name : device.router} />
+                    <DetailItem icon={Server} label="Monitoring Router" value={typeof device.router === 'object' && device.router ? device.router.name : device.router || 'N/A'} />
                     <DetailItem icon={Wifi} label={device.deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"} value={device.ssid} />
                     <DetailItem icon={Lock} label="Login Username" value={device.loginUsername} />
                   </div>
