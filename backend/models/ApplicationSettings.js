@@ -8,7 +8,7 @@ const jsonDecrypt = (value) => {
       return JSON.parse(decrypt(value));
     } catch (e) {
       console.error("Failed to parse decrypted JSON:", e);
-      return value; // return raw value if parsing fails
+      throw new Error('Failed to decrypt and parse application settings value.');
     }
   }
   return value;
@@ -21,7 +21,7 @@ const jsonEncrypt = (value) => {
       return encrypt(JSON.stringify(value));
     } catch (e) {
       console.error("Failed to stringify and encrypt JSON:", e);
-      return value;
+      throw new Error('Failed to encrypt and stringify application settings value.');
     }
   }
   return value;
