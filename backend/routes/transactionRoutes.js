@@ -1,19 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { createTransaction, getTransactions, getTransactionById, updateTransaction, deleteTransaction, getTransactionStats, getMonthlyTransactionTotals } = require('../controllers/transactionController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/stats').get(isSuperAdminOrAdmin, getTransactionStats);
-router.route('/monthly-totals').get(isSuperAdminOrAdmin, getMonthlyTransactionTotals);
-router.route('/').post(isSuperAdminOrAdmin, createTransaction).get(isSuperAdminOrAdmin, getTransactions);
+router.route('/stats').get(protect, isSuperAdminOrAdmin, getTransactionStats);
+router.route('/monthly-totals').get(protect, isSuperAdminOrAdmin, getMonthlyTransactionTotals);
+router.route('/').post(protect, isSuperAdminOrAdmin, createTransaction).get(protect, isSuperAdminOrAdmin, getTransactions);
 
 router
     .route('/:id')
-    .get(isSuperAdminOrAdmin, getTransactionById)
+    .get(protect, isSuperAdminOrAdmin, getTransactionById)
     .put(
+        protect,
         isSuperAdminOrAdmin,
         updateTransaction
     )
-    .delete(isSuperAdminOrAdmin, deleteTransaction);
+    .delete(protect, isSuperAdminOrAdmin, deleteTransaction);
 
 module.exports = router;

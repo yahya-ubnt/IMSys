@@ -10,7 +10,7 @@ const {
   updateMpesaSettings,
   activateMpesa,
 } = require('../controllers/settingsController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 // Multer config for file uploads
 const storage = multer.diskStorage({
@@ -41,7 +41,8 @@ const upload = multer({
   },
 });
 
-router.route('/general').get(isSuperAdminOrAdmin, getGeneralSettings).put(
+router.route('/general').get(protect, isSuperAdminOrAdmin, getGeneralSettings).put(
+  protect,
   isSuperAdminOrAdmin,
   upload.fields([{ name: 'logoIcon', maxCount: 1 }, { name: 'favicon', maxCount: 1 }]),
   [
@@ -52,7 +53,8 @@ router.route('/general').get(isSuperAdminOrAdmin, getGeneralSettings).put(
   updateGeneralSettings
 );
 
-router.route('/mpesa').get(isSuperAdminOrAdmin, getMpesaSettings).put(
+router.route('/mpesa').get(protect, isSuperAdminOrAdmin, getMpesaSettings).put(
+  protect,
   isSuperAdminOrAdmin,
   [
     body('type', 'M-Pesa type (paybill or till) is required').isIn(['paybill', 'till']),
@@ -66,6 +68,7 @@ router.route('/mpesa').get(isSuperAdminOrAdmin, getMpesaSettings).put(
 );
 
 router.route('/mpesa/activate').post(
+  protect,
   isSuperAdminOrAdmin,
   [
     body('type', 'M-Pesa type (paybill or till) is required').isIn(['paybill', 'till']),

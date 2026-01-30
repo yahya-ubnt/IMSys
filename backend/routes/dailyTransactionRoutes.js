@@ -11,15 +11,15 @@ const {
   getMonthlyTransactionTotals,
   getDailyCollectionTotals,
 } = require('../controllers/dailyTransactionController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 // Specific routes must come before generic routes
-router.route('/stats').get(isSuperAdminOrAdmin, getDailyTransactionStats);
-router.route('/monthly-totals').get(isSuperAdminOrAdmin, getMonthlyTransactionTotals);
-router.route('/daily-collection-totals').get(isSuperAdminOrAdmin, getDailyCollectionTotals);
+router.route('/stats').get(protect, isSuperAdminOrAdmin, getDailyTransactionStats);
+router.route('/monthly-totals').get(protect, isSuperAdminOrAdmin, getMonthlyTransactionTotals);
+router.route('/daily-collection-totals').get(protect, isSuperAdminOrAdmin, getDailyCollectionTotals);
 
 router.route('/').post(
-  [isSuperAdminOrAdmin],
+  [protect, isSuperAdminOrAdmin],
   [
     body('amount', 'Amount must be a number').isNumeric(),
     body('method', 'Invalid payment method').isIn(['M-Pesa', 'Bank', 'Cash']),
@@ -29,12 +29,12 @@ router.route('/').post(
     body('category', 'Invalid category').isIn(['Personal', 'Company']),
   ],
   createDailyTransaction
-).get(isSuperAdminOrAdmin, getDailyTransactions);
+).get(protect, isSuperAdminOrAdmin, getDailyTransactions);
 
 router
   .route('/:id')
-  .get(isSuperAdminOrAdmin, getDailyTransactionById)
-  .put(isSuperAdminOrAdmin, updateDailyTransaction)
-  .delete(isSuperAdminOrAdmin, deleteDailyTransaction);
+  .get(protect, isSuperAdminOrAdmin, getDailyTransactionById)
+  .put(protect, isSuperAdminOrAdmin, updateDailyTransaction)
+  .delete(protect, isSuperAdminOrAdmin, deleteDailyTransaction);
 
 module.exports = router;

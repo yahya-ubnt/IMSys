@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 const {
   createPackage,
   getPackages,
@@ -9,7 +9,7 @@ const {
   deletePackage,
 } = require('../controllers/packageController');
 
-router.route('/').post(isSuperAdminOrAdmin, createPackage).get(isSuperAdminOrAdmin, getPackages);
-router.route('/:id').get(isSuperAdminOrAdmin, getPackageById).put(isSuperAdminOrAdmin, updatePackage).delete(isSuperAdminOrAdmin, deletePackage);
+router.route('/').post(protect, isSuperAdminOrAdmin, createPackage).get(protect, isSuperAdminOrAdmin, getPackages);
+router.route('/:id').get(protect, isSuperAdminOrAdmin, getPackageById).put(protect, isSuperAdminOrAdmin, updatePackage).delete(protect, isSuperAdminOrAdmin, deletePackage);
 
 module.exports = router;

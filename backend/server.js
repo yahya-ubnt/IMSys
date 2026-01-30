@@ -12,7 +12,6 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const path = require('path'); // Import path module
-const { protect } = require('./middlewares/authMiddleware'); // Import protect middleware
 
 // Import routes
 const leadRoutes = require('./routes/leadRoutes');
@@ -104,10 +103,6 @@ const tenantRoutes = require('./routes/tenantRoutes');
 app.use('/api/users', publicUserRoutes);
 app.use('/api/payments', publicPaymentRoutes);
 app.use('/api/upload', uploadRoutes); // Assuming upload might have public access points, adjust if not
-
-// --- Global Authentication Middleware ---
-// All routes defined after this point will require a valid token.
-app.use('/api', protect);
 
 // --- Private Routes ---
 // Mount protected routes

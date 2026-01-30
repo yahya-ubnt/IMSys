@@ -9,12 +9,13 @@ const {
     deleteSmsProvider,
     setActiveSmsProvider,
 } = require('../controllers/smsProviderController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware'); // Assuming you have admin middleware
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 // All these routes should be protected and restricted to admins.
 router.route('/')
-    .get(isSuperAdminOrAdmin, getSmsProviders)
+    .get(protect, isSuperAdminOrAdmin, getSmsProviders)
     .post(
+        protect,
         isSuperAdminOrAdmin,
         [
             body('name', 'Provider name is required').not().isEmpty(),
@@ -25,11 +26,11 @@ router.route('/')
     );
 
 router.route('/:id')
-    .get(isSuperAdminOrAdmin, getSmsProviderById)
-    .put(isSuperAdminOrAdmin, updateSmsProvider)
-    .delete(isSuperAdminOrAdmin, deleteSmsProvider);
+    .get(protect, isSuperAdminOrAdmin, getSmsProviderById)
+    .put(protect, isSuperAdminOrAdmin, updateSmsProvider)
+    .delete(protect, isSuperAdminOrAdmin, deleteSmsProvider);
 
 router.route('/:id/set-active')
-    .post(isSuperAdminOrAdmin, setActiveSmsProvider);
+    .post(protect, isSuperAdminOrAdmin, setActiveSmsProvider);
 
 module.exports = router;

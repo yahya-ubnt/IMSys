@@ -8,12 +8,13 @@ const {
   exportSmsLogs,
   getSmsLogsForUser,
 } = require('../controllers/smsController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/triggers').get(isSuperAdminOrAdmin, getSmsTriggers);
+router.route('/triggers').get(protect, isSuperAdminOrAdmin, getSmsTriggers);
 
 router.post(
   '/compose',
+  protect,
   isSuperAdminOrAdmin,
   [
     body('message', 'Message body is required').not().isEmpty(),
@@ -26,8 +27,8 @@ router.post(
   composeAndSendSms
 );
 
-router.route('/log').get(isSuperAdminOrAdmin, getSentSmsLog);
-router.route('/log/export').get(isSuperAdminOrAdmin, exportSmsLogs);
-router.route('/logs/user/:userId').get(isSuperAdminOrAdmin, getSmsLogsForUser);
+router.route('/log').get(protect, isSuperAdminOrAdmin, getSentSmsLog);
+router.route('/log/export').get(protect, isSuperAdminOrAdmin, exportSmsLogs);
+router.route('/logs/user/:userId').get(protect, isSuperAdminOrAdmin, getSmsLogsForUser);
 
 module.exports = router;

@@ -6,11 +6,11 @@ const {
   getMonthlyCollectionTotals,
   getDailyCollectionTotals,
 } = require('../controllers/collectionController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/stats').get(isSuperAdminOrAdmin, getCollectionStats);
-router.route('/monthly-totals').get(isSuperAdminOrAdmin, getMonthlyCollectionTotals);
-router.route('/daily-totals').get(isSuperAdminOrAdmin, getDailyCollectionTotals);
-router.route('/').get(isSuperAdminOrAdmin, getCollections);
+router.route('/stats').get(protect, isSuperAdminOrAdmin, getCollectionStats);
+router.route('/monthly-totals').get(protect, isSuperAdminOrAdmin, getMonthlyCollectionTotals);
+router.route('/daily-totals').get(protect, isSuperAdminOrAdmin, getDailyCollectionTotals);
+router.route('/').get(protect, isSuperAdminOrAdmin, getCollections);
 
 module.exports = router;

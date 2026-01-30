@@ -8,13 +8,14 @@ const {
   updateBill,
   deleteBill,
 } = require('../controllers/billController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/').post(isSuperAdminOrAdmin, createBill).get(isSuperAdminOrAdmin, getBills);
+router.route('/').post(protect, isSuperAdminOrAdmin, createBill).get(protect, isSuperAdminOrAdmin, getBills);
 router
   .route('/:id')
-  .get(isSuperAdminOrAdmin, getBillById)
+  .get(protect, isSuperAdminOrAdmin, getBillById)
   .put(
+    protect,
     isSuperAdminOrAdmin,
     [
       body('name', 'Name is required').optional().not().isEmpty(),

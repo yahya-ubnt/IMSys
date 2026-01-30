@@ -7,19 +7,20 @@ const {
     deleteScheduledTask,
     runScheduledTask
 } = require('../controllers/scheduledTaskController');
-const { isSuperAdmin, isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdmin, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 router.route('/')
-    .get(isSuperAdminOrAdmin, getScheduledTasks)
+    .get(protect, isSuperAdminOrAdmin, getScheduledTasks)
     .post(
-        [isSuperAdmin], // Only SuperAdmins can create new task definitions
+        protect,
+        isSuperAdmin, // Only SuperAdmins can create new task definitions
         createScheduledTask
     );
 
 router.route('/:id')
-    .put(isSuperAdminOrAdmin, updateScheduledTask)
-    .delete(isSuperAdmin, deleteScheduledTask); // Only SuperAdmins can delete task definitions
+    .put(protect, isSuperAdminOrAdmin, updateScheduledTask)
+    .delete(protect, isSuperAdmin, deleteScheduledTask); // Only SuperAdmins can delete task definitions
 
-router.route('/:id/run').post(isSuperAdminOrAdmin, runScheduledTask);
+router.route('/:id/run').post(protect, isSuperAdminOrAdmin, runScheduledTask);
 
 module.exports = router;

@@ -7,17 +7,17 @@ const {
   updateHotspotUser,
   deleteHotspotUser,
 } = require('../controllers/hotspotUserController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 router
   .route('/')
-  .post(isSuperAdminOrAdmin, createHotspotUser)
-  .get(isSuperAdminOrAdmin, getHotspotUsers);
+  .post(protect, isSuperAdminOrAdmin, createHotspotUser)
+  .get(protect, isSuperAdminOrAdmin, getHotspotUsers);
 
 router
   .route('/:id')
-  .get(isSuperAdminOrAdmin, getHotspotUserById)
-  .put(isSuperAdminOrAdmin, updateHotspotUser)
-  .delete(isSuperAdminOrAdmin, deleteHotspotUser);
+  .get(protect, isSuperAdminOrAdmin, getHotspotUserById)
+  .put(protect, isSuperAdminOrAdmin, updateHotspotUser)
+  .delete(protect, isSuperAdminOrAdmin, deleteHotspotUser);
 
 module.exports = router;
