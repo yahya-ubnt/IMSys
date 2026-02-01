@@ -5,13 +5,25 @@ const { encrypt, decrypt } = require('../utils/crypto');
 const jsonDecrypt = (value) => {
   if (value) {
     try {
-      return JSON.parse(decrypt(value));
+      const decryptedText = decrypt(value);
+      if (typeof decryptedText === 'string' && decryptedText.trim().length > 0) {
+        try {
+          return JSON.parse(decryptedText);
+        } catch (jsonParseError) {
+          console.error("Failed to parse decrypted JSON string:", jsonParseError, "Decrypted text:", decryptedText);
+          return {}; // Return empty object if JSON parsing fails
+        }
+      }
+      if (typeof decryptedText === 'object' && decryptedText !== null) {
+          return decryptedText;
+      }
+      return {};
     } catch (e) {
-      console.error("Failed to parse decrypted JSON:", e);
-      throw new Error('Failed to decrypt and parse application settings value.');
+      console.error("Failed to decrypt application settings value:", e, "Original value:", value);
+      return {}; // Return empty object if decryption itself fails
     }
   }
-  return value;
+  return {};
 };
 
 // Helper function to handle JSON stringifying for setters

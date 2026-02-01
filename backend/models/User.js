@@ -24,7 +24,7 @@ const UserSchema = mongoose.Schema(
     },
     roles: [{
       type: String,
-      enum: ['SUPER_ADMIN', 'ADMIN', 'TECHNICIAN', 'SUPPORT'], // Roles are now scoped to the tenant
+      enum: ['SUPER_ADMIN', 'ADMIN'], // Roles are now scoped to the tenant
       required: true,
     }],
     tenant: { // The 'tenantOwner' field is replaced by 'tenant'
@@ -52,6 +52,14 @@ UserSchema.pre('save', async function (next) {
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Exclude password from JSON output
+UserSchema.set('toJSON', {
+  transform: (doc, ret, options) => {
+    delete ret.password;
+    return ret;
+  },
+});
 
 
 module.exports = mongoose.model('User', UserSchema);

@@ -23,7 +23,8 @@ function encrypt(text) {
 }
 
 function decrypt(text) {
-  if (text === null || typeof text === 'undefined') {
+  // If text is not a non-empty string or doesn't contain the separator, return it as is.
+  if (typeof text !== 'string' || !text || !text.includes(':')) {
     return text;
   }
   const textParts = text.split(':');

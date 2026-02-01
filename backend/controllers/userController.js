@@ -214,6 +214,12 @@ const getTenantUserById = asyncHandler(async (req, res) => {
 const updateTenantUser = asyncHandler(async (req, res) => {
     const { fullName, email, password, phone, roles } = req.body;
 
+    // Prevent an ADMIN from escalating their privileges to SUPER_ADMIN
+    if (roles && roles.includes('SUPER_ADMIN')) {
+        res.status(403);
+        throw new Error('Admins cannot assign the SUPER_ADMIN role.');
+    }
+
     const user = await User.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
     if (user) {
