@@ -1,13 +1,29 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Topbar } from "@/components/topbar";
 import { Button } from '@/components/ui/button';
 import { DollarSign, TrendingUp, Calendar, Globe, Users, CheckCircle, Clock, UserPlus, ArrowUpCircle, ArrowDownCircle, Ticket as TicketIcon } from "lucide-react";
-import { motion } from "framer-motion";
+import dynamic from 'next/dynamic';
+
+// Dynamically import Recharts components
+const DynamicBarChart = dynamic(() => import('recharts').then((mod) => mod.BarChart), { ssr: false });
+const DynamicXAxis = dynamic(() => import('recharts').then((mod) => mod.XAxis), { ssr: false });
+const DynamicYAxis = dynamic(() => import('recharts').then((mod) => mod.YAxis), { ssr: false });
+const DynamicTooltip = dynamic(() => import('recharts').then((mod) => mod.Tooltip), { ssr: false });
+const DynamicResponsiveContainer = dynamic(() => import('recharts').then((mod) => mod.ResponsiveContainer), { ssr: false });
+const DynamicCartesianGrid = dynamic(() => import('recharts').then((mod) => mod.CartesianGrid), { ssr: false });
+const DynamicLegend = dynamic(async () => {
+  const { Legend } = await import('recharts');
+  // eslint-disable-next-line react/display-name
+  return (props: any) => <Legend {...props} />;
+}, { ssr: false });
+const DynamicBar = dynamic(() => import('recharts').then((mod) => mod.Bar), { ssr: false });
+
+// Dynamically import framer-motion
+const DynamicMotionDiv = dynamic(() => import('framer-motion').then((mod) => mod.motion.div), { ssr: false });
 
 // --- Interface Definitions ---
 interface CollectionsSummary { today: number; weekly: number; monthly: number; yearly: number; }
@@ -95,7 +111,7 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">An overview of your system's collections and expenses.</p>
         </div>
 
-        <motion.div layout className="bg-card backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+        <DynamicMotionDiv layout className="bg-card backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border border-b-0">
               <FinancialStatCard title="Today's Summary" collections={summary?.today || 0} expenses={expenseSummary?.today || 0} icon={DollarSign} />
@@ -117,7 +133,7 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </DynamicMotionDiv>
       </div>
     </div>
   );
@@ -228,24 +244,23 @@ const FinancialChartCard = () => {
           </Select>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis dataKey={view === 'monthly' ? 'month' : 'day'} tickFormatter={view === 'monthly' ? (m => m.substring(0, 3)) : undefined} style={{ fontSize: '0.75rem' }} stroke="var(--muted-foreground)" />
-          <YAxis 
+      <DynamicResponsiveContainer width="100%" height={300}>
+        <DynamicBarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+          <DynamicCartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <DynamicXAxis dataKey={view === 'monthly' ? 'month' : 'day'} tickFormatter={view === 'monthly' ? (m => m.substring(0, 3)) : undefined} style={{ fontSize: '0.75rem' }} stroke="var(--muted-foreground)" />
+          <DynamicYAxis 
             style={{ fontSize: '0.75rem' }} 
             stroke="var(--muted-foreground)" 
             tickCount={8}
             tickFormatter={val => `KES ${val.toLocaleString()}`}
             allowDecimals={false}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
-          <Legend />
-          <Bar dataKey="collections" fill="var(--chart-collections)" name="Collections" barSize={2} />
-          <Bar dataKey="expenses" fill="var(--chart-expenses)" name="Expenses" barSize={2} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+          <DynamicTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(100,100,100,0.1)' }} />
+          <DynamicLegend />
+          <DynamicBar dataKey="collections" fill="var(--chart-collections)" name="Collections" barSize={2} />
+          <DynamicBar dataKey="expenses" fill="var(--chart-expenses)" name="Expenses" barSize={2} />
+        </DynamicBarChart>
+              </DynamicResponsiveContainer>    </div>
   );
 };
 

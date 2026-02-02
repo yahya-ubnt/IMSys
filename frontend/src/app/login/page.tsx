@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, BarChart3, AlertCircle, Mail, Sun, Moon } from "lucide-react"
 import { useTheme } from "next-themes"
-import { ThemeProvider } from "@/components/theme-provider"
 import { useAuth } from "@/components/auth-provider"
 
 function LoginPageContent() {
