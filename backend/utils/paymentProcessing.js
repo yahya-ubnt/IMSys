@@ -1,4 +1,5 @@
 const moment = require('moment');
+const { randomUUID } = require('crypto');
 const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
 const { reconnectMikrotikUser } = require('./mikrotikUtils');
@@ -16,10 +17,11 @@ const smsTriggers = require('../constants/smsTriggers');
  * @param {string} paymentSource - The source of the payment (e.g., 'Cash', 'M-Pesa').
  * @param {string} externalTransactionId - The transaction ID from the payment provider.
  * @param {string} adminId - The ID of the admin processing the payment (if applicable).
+ * @param {object} session - The Mongoose session for atomic operations.
  */
-const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSource, externalTransactionId, adminId = null) => {
+const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSource, externalTransactionId, adminId = null, session) => {
   console.log(`[${new Date().toISOString()}] Starting payment processing for user ${mikrotikUserId} with amount ${amountPaid}`);
-  const user = await MikrotikUser.findById(mikrotikUserId).populate('package');
+  const user = await MikrotikUser.findById(mikrotikUserId).session(session).populate('package');
 
   if (!user) {
     console.error(`[${new Date().toISOString()}] User not found for payment processing: ${mikrotikUserId}`);
@@ -31,22 +33,22 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   user.walletBalance += amountPaid;
   console.log(`[${new Date().toISOString()}] Wallet credited. New balance: ${user.walletBalance}`);
 
-  await WalletTransaction.create({
+  await WalletTransaction.create([{
     tenant: user.tenant,
     mikrotikUser: user._id,
-    transactionId: `WT-CREDIT-${Date.now()}`,
+    transactionId: `WT-CREDIT-${randomUUID()}`,
     type: 'Credit',
     amount: amountPaid,
     source: paymentSource,
     balanceAfter: user.walletBalance,
     comment: `Payment received. Original TX ID: ${externalTransactionId}`,
     processedBy: adminId,
-  });
+  }], { session });
   console.log(`[${new Date().toISOString()}] Wallet transaction (credit) created.`);
 
   if (!user.package || !user.package.price || user.package.price <= 0) {
     console.warn(`[${new Date().toISOString()}] User ${user.username} has no valid package price. Amount credited to wallet.`);
-    await user.save();
+    await user.save({ session });
     return;
   }
   console.log(`[${new Date().toISOString()}] Package price: ${user.package.price}`);
@@ -67,17 +69,17 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
     user.expiryDate = newExpiryDate.toDate();
     monthsExtended += 1;
 
-    await WalletTransaction.create({
+    await WalletTransaction.create([{
       tenant: user.tenant,
       mikrotikUser: user._id,
-      transactionId: `DEBIT-RENEW-${Date.now()}`,
+      transactionId: `DEBIT-RENEW-${randomUUID()}`,
       type: 'Debit',
       amount: packagePrice,
       source: 'Subscription Renewal',
       balanceAfter: user.walletBalance,
       comment: 'Automatic renewal of 1 month.',
       processedBy: null, // System-processed
-    });
+    }], { session });
     console.log(`[${new Date().toISOString()}] Wallet transaction (debit for renewal) created. New expiry: ${user.expiryDate}`);
   } else {
     console.log(`[${new Date().toISOString()}] User not expired or insufficient funds for 1 month renewal. Expiry: ${newExpiryDate.toISOString()}, Wallet: ${user.walletBalance}, Package Price: ${packagePrice}`);
@@ -98,24 +100,24 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
 
       user.walletBalance -= costOfFutureMonths;
 
-      await WalletTransaction.create({
+      await WalletTransaction.create([{
         tenant: user.tenant,
         mikrotikUser: user._id,
-        transactionId: `DEBIT-FUTURE-${Date.now()}`,
+        transactionId: `DEBIT-FUTURE-${randomUUID()}`,
         type: 'Debit',
         amount: costOfFutureMonths,
         source: 'Subscription Purchase',
         balanceAfter: user.walletBalance,
         comment: `Automatic purchase of ${futureMonthsToBuy} future month(s).`,
         processedBy: null, // System-processed
-      });
+      }], { session });
       console.log(`[${new Date().toISOString()}] Wallet transaction (debit for future months) created. New expiry: ${user.expiryDate}`);
     }
   } else {
     console.log(`[${new Date().toISOString()}] Insufficient funds for future month purchases. Wallet: ${user.walletBalance}, Package Price: ${packagePrice}`);
   }
 
-  await user.save();
+  await user.save({ session });
   console.log(`[${new Date().toISOString()}] User saved to database. Final expiry: ${user.expiryDate}, final balance: ${user.walletBalance}`);
 
   if (monthsExtended > 0) {

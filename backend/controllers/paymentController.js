@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
+const mongoose = require('mongoose');
+const { randomUUID } = require('crypto');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
 const MikrotikUser = require('../models/MikrotikUser');
@@ -127,7 +129,7 @@ const createCashPayment = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { userId, amount, transactionId, comment } = req.body;
+  const { userId, amount, comment } = req.body;
   const amountPaid = parseFloat(amount);
 
   const user = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant });
@@ -136,21 +138,36 @@ const createCashPayment = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  await processSubscriptionPayment(userId, amountPaid, 'Cash', transactionId, req.user._id);
+  const transactionId = `CASH-${randomUUID()}`;
+  
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const transaction = await Transaction.create({
-    transactionId,
-    amount: amountPaid,
-    referenceNumber: user.username,
-    officialName: user.officialName,
-    msisdn: user.mobileNumber,
-    transactionDate: new Date(),
-    paymentMethod: 'Cash',
-    comment,
-    tenant: req.user.tenant,
-  });
+  try {
+    await processSubscriptionPayment(userId, amountPaid, 'Cash', transactionId, req.user._id, session);
 
-  res.status(201).json(transaction);
+    const transaction = await Transaction.create([{
+      transactionId,
+      amount: amountPaid,
+      referenceNumber: user.username,
+      officialName: user.officialName,
+      msisdn: user.mobileNumber,
+      transactionDate: new Date(),
+      paymentMethod: 'Cash',
+      comment,
+      tenant: req.user.tenant,
+    }], { session });
+
+    await session.commitTransaction();
+    res.status(201).json(transaction[0]);
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Cash payment transaction failed:', error);
+    res.status(500).json({ message: 'Cash payment failed. Transaction was rolled back.' });
+  } finally {
+    session.endSession();
+  }
 });
 
 const getWalletTransactions = asyncHandler(async (req, res) => {
@@ -182,20 +199,55 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { userId, type, amount, source, comment, transactionId } = req.body;
+  const { userId, type, amount, source, comment } = req.body;
+  const parsedAmount = parseFloat(amount);
 
-  const transaction = await WalletTransaction.create({
-    tenant: req.user.tenant,
-    mikrotikUser: userId,
-    type,
-    amount,
-    source,
-    comment,
-    transactionId,
-    balanceAfter: 0 // This should be calculated based on the user's wallet balance
-  });
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  res.status(201).json(transaction);
+  try {
+    const user = await MikrotikUser.findById(userId).session(session);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (type === 'Credit') {
+      user.walletBalance += parsedAmount;
+    } else if (type === 'Debit') {
+      if (user.walletBalance < parsedAmount) {
+        throw new Error('Insufficient wallet balance.');
+      }
+      user.walletBalance -= parsedAmount;
+    } else {
+      throw new Error('Invalid transaction type.');
+    }
+
+    const transactionId = `WT-${type.toUpperCase()}-${randomUUID()}`;
+
+    const transaction = await WalletTransaction.create([{
+      tenant: req.user.tenant,
+      mikrotikUser: userId,
+      type,
+      amount: parsedAmount,
+      source,
+      comment,
+      transactionId,
+      balanceAfter: user.walletBalance,
+      processedBy: req.user._id,
+    }], { session });
+
+    await user.save({ session });
+    await session.commitTransaction();
+
+    res.status(201).json(transaction[0]);
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Wallet transaction failed:', error);
+    res.status(500).json({ message: error.message || 'Wallet transaction failed and was rolled back.' });
+  } finally {
+    session.endSession();
+  }
 });
 
 module.exports = {
