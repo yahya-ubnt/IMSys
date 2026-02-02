@@ -4,7 +4,7 @@ const HotspotSession = require('../models/HotspotSession');
 const getSessionStatus = asyncHandler(async (req, res) => {
   const { macAddress } = req.params;
 
-  const session = await HotspotSession.findOne({ macAddress });
+  const session = await HotspotSession.findOne({ macAddress, tenant: req.user.tenant });
 
   if (session) {
     if (new Date() > session.endTime) {

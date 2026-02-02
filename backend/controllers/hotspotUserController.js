@@ -68,8 +68,15 @@ exports.createHotspotUser = async (req, res) => {
       mikrotikRouter,
     });
 
-    const createdUser = await user.save();
-    res.status(201).json(createdUser);
+    try {
+      const createdUser = await user.save();
+      res.status(201).json(createdUser);
+    } catch (dbError) {
+      // If saving to DB fails, attempt to remove the user from Mikrotik
+      console.error('Failed to save hotspot user to database, attempting rollback on Mikrotik:', dbError);
+      await removeHotspotUser(router, hotspotName); // Assuming hotspotName is sufficient to identify the user on Mikrotik
+      res.status(500).json({ message: 'Failed to create hotspot user due to database error, Mikrotik user rolled back.' });
+    }
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
