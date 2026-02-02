@@ -186,7 +186,7 @@ const createTenantUser = asyncHandler(async (req, res) => {
         email,
         password,
         phone,
-        roles: roles || ['USER'], // Default to USER role if not provided
+        roles: roles || ['ADMIN'], // Default to ADMIN role if not provided
         tenant: req.user.tenant, // Assign tenant from the logged-in admin
     });
 
