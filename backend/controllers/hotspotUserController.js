@@ -27,7 +27,7 @@ exports.createHotspotUser = async (req, res) => {
       mikrotikRouter,
     } = req.body;
 
-    const router = await MikrotikRouter.findById(mikrotikRouter);
+    const router = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenant: req.user.tenant });
     if (!router) {
       return res.status(404).json({ message: 'Mikrotik router not found' });
     }

@@ -4,18 +4,7 @@ const { decrypt } = require('../utils/crypto');
 const RouterOSAPI = require('node-routeros').RouterOSAPI;
 
 const connectToRouter = asyncHandler(async (req, res, next) => {
-  const router = await MikrotikRouter.findById(req.params.routerId);
-
-  if (!router) {
-    res.status(404);
-    throw new Error('Router not found');
-  }
-
-  // Check for ownership
-  if (router.tenant.toString() !== req.user.tenant.toString()) {
-    res.status(401);
-    throw new Error('Not authorized to access this router');
-  }
+  const router = await MikrotikRouter.findOne({ _id: req.params.routerId, tenant: req.user.tenant });
 
   let decryptedPassword;
   try {
