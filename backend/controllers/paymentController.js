@@ -27,6 +27,15 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 });
 
 const handleDarajaCallback = asyncHandler(async (req, res) => {
+  // SECURITY TODO: Implement request validation (IP whitelisting or signature verification)
+  // to ensure callbacks are genuinely from Safaricom. This is critical for production.
+  // Example: const safaricomIps = ['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208'];
+  // const requestIp = req.ip;
+  // if (!safaricomIps.includes(requestIp)) {
+  //   console.warn(`[SECURITY] Callback from untrusted IP rejected: ${requestIp}`);
+  //   return res.status(403).json({ message: 'Untrusted source' });
+  // }
+
   console.log(`[${new Date().toISOString()}] M-Pesa Callback Received:`, JSON.stringify(req.body, null, 2));
 
   try {
@@ -206,23 +215,31 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
   session.startTransaction();
 
   try {
-    const user = await MikrotikUser.findById(userId).session(session);
-    if (!user) {
-      throw new Error('User not found');
-    }
+    let updatedUser;
+    const transactionId = `WT-${type.toUpperCase()}-${randomUUID()}`;
 
     if (type === 'Credit') {
-      user.walletBalance += parsedAmount;
+      updatedUser = await MikrotikUser.findByIdAndUpdate(
+        userId,
+        { $inc: { walletBalance: parsedAmount } },
+        { new: true, session }
+      );
     } else if (type === 'Debit') {
-      if (user.walletBalance < parsedAmount) {
+      updatedUser = await MikrotikUser.findOneAndUpdate(
+        { _id: userId, walletBalance: { $gte: parsedAmount } },
+        { $inc: { walletBalance: -parsedAmount } },
+        { new: true, session }
+      );
+      if (!updatedUser) {
         throw new Error('Insufficient wallet balance.');
       }
-      user.walletBalance -= parsedAmount;
     } else {
       throw new Error('Invalid transaction type.');
     }
 
-    const transactionId = `WT-${type.toUpperCase()}-${randomUUID()}`;
+    if (!updatedUser) {
+      throw new Error('User not found.');
+    }
 
     const transaction = await WalletTransaction.create([{
       tenant: req.user.tenant,
@@ -232,11 +249,10 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
       source,
       comment,
       transactionId,
-      balanceAfter: user.walletBalance,
+      balanceAfter: updatedUser.walletBalance,
       processedBy: req.user._id,
     }], { session });
 
-    await user.save({ session });
     await session.commitTransaction();
 
     res.status(201).json(transaction[0]);
