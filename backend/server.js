@@ -203,7 +203,12 @@ process.on('uncaughtException', (err) => {
 // Initialize WebSocket terminal service
 const terminalService = require('./services/terminalService');
 terminalService.init(server);
-require('./scripts/masterScheduler');
+
+// Only start the Master Scheduler if NOT in test mode
+// This prevents "Zombie" database queries from keeping the process alive or crashing Jest
+if (process.env.NODE_ENV !== 'test') {
+  require('./scripts/masterScheduler');
+}
 
 module.exports = app; // For testing purposes
 
