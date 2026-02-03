@@ -1,0 +1,25 @@
+{
+    # Global options
+    # email your-email@example.com 
+}
+
+# The main application (Frontend)
+# Replace :80 with your actual domain later (e.g., app.example.com)
+:80 {
+    reverse_proxy frontend:3000
+}
+
+# The Backend API
+# Replace :5000 with your actual domain later (e.g., api.example.com)
+# We map a sub-path or subdomain. Let's use a path for simplicity locally, or subdomain in prod.
+# For now, let's assume we might want api.example.com or just map /api/*
+# usage: http://localhost/api -> backend:5000/api
+handle_path /api/* {
+    reverse_proxy backend:5000
+}
+
+# VPN Management UI
+# Replace :51821 with vpn.example.com
+:51821 {
+    reverse_proxy wireguard:51821
+}
