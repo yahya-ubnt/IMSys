@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { getTicketById, updateTicket, addNoteToTicket } from '@/lib/ticketService';
-import { getMikrotikUsers } from "@/lib/mikrotikUserService"
 
 import { Ticket, TicketFormData } from '@/types/ticket';
 
@@ -18,13 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, PlusCircle, MessageSquare } from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
-interface MikrotikUser {
-  _id: string;
-  officialName: string;
-  mobileNumber: string;
-  mPesaRefNo: string;
-  emailAddress?: string;
-}
 
 export default function EditTicketPage() {
   const { id } = useParams();

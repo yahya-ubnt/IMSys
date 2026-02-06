@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useMemo } from "react"
+import { fetchApi } from "@/lib/api"
 
 interface User {
   name: string
@@ -41,23 +42,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
         setToken(cookieToken || null);
 
-        const response = await fetch('/api/users/profile');
-        if (response.ok) {
-          const data = await response.json();
-          const user: User = {
-            name: data.fullName,
-            email: data.email,
-            roles: data.roles,
-            tenant: data.tenant, // Add tenant to the user object
-            loginMethod: 'email', // Assuming email login
-          };
-          setUser(user);
-        } else {
-          if (response.status !== 401 && response.status !== 403) {
-            console.error('Error checking auth status:', response.statusText);
-          }
-          setUser(null);
-        }
+        const data = await fetchApi('/users/profile', { token: cookieToken });
+        const user: User = {
+          name: data.fullName,
+          email: data.email,
+          roles: data.roles,
+          tenant: data.tenant, // Add tenant to the user object
+          loginMethod: 'email', // Assuming email login
+        };
+        setUser(user);
       } catch (error) {
         setUser(null);
         console.error('Error checking auth status:', error);

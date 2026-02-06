@@ -8,9 +8,10 @@ const {
   updateTemplate,
   deleteTemplate,
 } = require('../controllers/smsTemplateController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/').get(isSuperAdminOrAdmin, getTemplates).post(
+router.route('/').get(protect, isSuperAdminOrAdmin, getTemplates).post(
+  protect,
   isSuperAdminOrAdmin,
   [
     body('name', 'Template name is required').not().isEmpty(),
@@ -21,8 +22,8 @@ router.route('/').get(isSuperAdminOrAdmin, getTemplates).post(
 
 router
   .route('/:id')
-  .get(isSuperAdminOrAdmin, getTemplateById)
-  .put(isSuperAdminOrAdmin, updateTemplate)
-  .delete(isSuperAdminOrAdmin, deleteTemplate);
+  .get(protect, isSuperAdminOrAdmin, getTemplateById)
+  .put(protect, isSuperAdminOrAdmin, updateTemplate)
+  .delete(protect, isSuperAdminOrAdmin, deleteTemplate);
 
 module.exports = router;

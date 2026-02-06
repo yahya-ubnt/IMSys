@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, BarChart3, AlertCircle, Mail, Sun, Moon } from "lucide-react"
+import { Eye, EyeOff, BarChart3, AlertCircle, Mail, Sun, Moon, Globe } from "lucide-react"
 import { useTheme } from "next-themes"
-import { ThemeProvider } from "@/components/theme-provider"
 import { useAuth } from "@/components/auth-provider"
+import { fetchApi } from "@/lib/api"
 
 function LoginPageContent() {
   const [email, setEmail] = useState("")
@@ -43,29 +43,20 @@ function LoginPageContent() {
     setError("")
 
     try {
-      const response = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const data = await fetchApi("/users/login", {
+        method: "POST",
+        body: { email, password },
+      })
+
+      login({
+        email: data.email,
+        fullName: data.fullName,
+        roles: data.roles,
+        loginMethod: "email",
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        login({
-          email: data.email,
-          fullName: data.fullName,
-          roles: data.roles,
-          loginMethod: "email",
-        });
-        router.push("/");
-      } else {
-        setError(data.message || "Invalid email or password");
-      }
-    } catch {
-      setError("An error occurred. Please try again.");
+      router.push("/");
+    } catch (err: any) {
+      setError(err.message || "An error occurred. Please try again.");
     }
 
     setIsLoading(false)
@@ -76,7 +67,7 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       {/* Theme Toggle Button */}
       {mounted && (
         <Button
@@ -90,17 +81,17 @@ function LoginPageContent() {
         </Button>
       )}
 
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-md mx-auto backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
         <CardHeader className="space-y-1 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg">
-              <BarChart3 className="h-7 w-7" />
+              <Globe className="h-7 w-7" />
             </div>
             <div className="text-left">
               <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {"Referral System"}
+                {"ISP Management System"}
               </div>
-              <div className="text-sm text-muted-foreground -mt-1">MANAGEMENT SYSTEM</div>
+              <div className="text-sm text-muted-foreground -mt-1"></div>
             </div>
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>

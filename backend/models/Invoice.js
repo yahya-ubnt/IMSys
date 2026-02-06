@@ -50,7 +50,7 @@ const invoiceSchema = new mongoose.Schema(
     paymentTransaction: {
       // Links to the transaction that paid this invoice
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'MpesaTransaction', // Or a more generic 'Transaction' model if available
+      ref: 'Transaction', // Or a more generic 'Transaction' model if available
     },
   },
   {

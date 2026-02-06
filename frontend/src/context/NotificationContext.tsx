@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Notification } from '@/types/notification';
 import { useAuth } from '@/components/auth-provider';
 import { getSocket, initializeSocket } from '../services/socketService';
@@ -19,19 +19,22 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const [unreadCount, setUnreadCount] = useState(0);
   const { user, isLoading } = useAuth();
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (signal: AbortSignal) => {
     try {
       const response = await fetch('/api/notifications', {
         cache: 'no-store',
         credentials: 'include',
+        signal,
       });
       if (response.ok) {
         const data = await response.json();
         setNotifications(data);
         setUnreadCount(data.filter((n: Notification) => n.status === 'unread').length);
       }
-    } catch (error) {
-      console.error('Failed to fetch notifications', error);
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Failed to fetch notifications', error);
+      }
     }
   }, []);
 
@@ -88,8 +91,11 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
   // Initial fetch and WebSocket listener
   useEffect(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     if (!isLoading && user) {
-      fetchNotifications();
+      fetchNotifications(signal);
       
       initializeSocket();
       const socket = getSocket();
@@ -103,12 +109,23 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
 
       return () => {
         socket.off('new_notification', handleNewNotification);
+        abortController.abort();
       };
+    } else if (!isLoading && !user) {
+      // Clear notifications and close socket on logout
+      setNotifications([]);
+      setUnreadCount(0);
+      const socket = getSocket();
+      if (socket) {
+        socket.disconnect();
+      }
     }
   }, [fetchNotifications, isLoading, user]);
 
+  const contextValue = useMemo(() => ({ notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification }), [notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification]);
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, deleteNotification }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

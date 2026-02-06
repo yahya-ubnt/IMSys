@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
+const mongoose = require('mongoose');
+const { randomUUID } = require('crypto');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
 const MikrotikUser = require('../models/MikrotikUser');
@@ -25,6 +27,15 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 });
 
 const handleDarajaCallback = asyncHandler(async (req, res) => {
+  // SECURITY: Implement request validation (IP whitelisting or signature verification)
+  // to ensure callbacks are genuinely from Safaricom. This is critical for production.
+  const safaricomIps = ['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208'];
+  const requestIp = req.ip;
+  if (!safaricomIps.includes(requestIp)) {
+    console.warn(`[SECURITY] Callback from untrusted IP rejected: ${requestIp}`);
+    return res.status(403).json({ message: 'Untrusted source' });
+  }
+
   console.log(`[${new Date().toISOString()}] M-Pesa Callback Received:`, JSON.stringify(req.body, null, 2));
 
   try {
@@ -127,7 +138,7 @@ const createCashPayment = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { userId, amount, transactionId, comment } = req.body;
+  const { userId, amount, comment } = req.body;
   const amountPaid = parseFloat(amount);
 
   const user = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant });
@@ -136,21 +147,36 @@ const createCashPayment = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  await processSubscriptionPayment(userId, amountPaid, 'Cash', transactionId, req.user._id);
+  const transactionId = `CASH-${randomUUID()}`;
+  
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const transaction = await Transaction.create({
-    transactionId,
-    amount: amountPaid,
-    referenceNumber: user.username,
-    officialName: user.officialName,
-    msisdn: user.mobileNumber,
-    transactionDate: new Date(),
-    paymentMethod: 'Cash',
-    comment,
-    tenant: req.user.tenant,
-  });
+  try {
+    await processSubscriptionPayment(userId, amountPaid, 'Cash', transactionId, req.user._id, session);
 
-  res.status(201).json(transaction);
+    const transaction = await Transaction.create([{
+      transactionId,
+      amount: amountPaid,
+      referenceNumber: user.username,
+      officialName: user.officialName,
+      msisdn: user.mobileNumber,
+      transactionDate: new Date(),
+      paymentMethod: 'Cash',
+      comment,
+      tenant: req.user.tenant,
+    }], { session });
+
+    await session.commitTransaction();
+    res.status(201).json(transaction[0]);
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Cash payment transaction failed:', error);
+    res.status(500).json({ message: 'Cash payment failed. Transaction was rolled back.' });
+  } finally {
+    session.endSession();
+  }
 });
 
 const getWalletTransactions = asyncHandler(async (req, res) => {
@@ -182,20 +208,62 @@ const createWalletTransaction = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { userId, type, amount, source, comment, transactionId } = req.body;
+  const { userId, type, amount, source, comment } = req.body;
+  const parsedAmount = parseFloat(amount);
 
-  const transaction = await WalletTransaction.create({
-    tenant: req.user.tenant,
-    mikrotikUser: userId,
-    type,
-    amount,
-    source,
-    comment,
-    transactionId,
-    balanceAfter: 0 // This should be calculated based on the user's wallet balance
-  });
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  res.status(201).json(transaction);
+  try {
+    let updatedUser;
+    const transactionId = `WT-${type.toUpperCase()}-${randomUUID()}`;
+
+    if (type === 'Credit') {
+      updatedUser = await MikrotikUser.findByIdAndUpdate(
+        userId,
+        { $inc: { walletBalance: parsedAmount } },
+        { new: true, session }
+      );
+    } else if (type === 'Debit') {
+      updatedUser = await MikrotikUser.findOneAndUpdate(
+        { _id: userId, walletBalance: { $gte: parsedAmount } },
+        { $inc: { walletBalance: -parsedAmount } },
+        { new: true, session }
+      );
+      if (!updatedUser) {
+        throw new Error('Insufficient wallet balance.');
+      }
+    } else {
+      throw new Error('Invalid transaction type.');
+    }
+
+    if (!updatedUser) {
+      throw new Error('User not found.');
+    }
+
+    const transaction = await WalletTransaction.create([{
+      tenant: req.user.tenant,
+      mikrotikUser: userId,
+      type,
+      amount: parsedAmount,
+      source,
+      comment,
+      transactionId,
+      balanceAfter: updatedUser.walletBalance,
+      processedBy: req.user._id,
+    }], { session });
+
+    await session.commitTransaction();
+
+    res.status(201).json(transaction[0]);
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Wallet transaction failed:', error);
+    res.status(500).json({ message: error.message || 'Wallet transaction failed and was rolled back.' });
+  } finally {
+    session.endSession();
+  }
 });
 
 module.exports = {

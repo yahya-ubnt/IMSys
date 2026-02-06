@@ -12,14 +12,15 @@ const {
   getYearlyMonthlyExpenseTotals,
   getDailyExpenseTotals,
 } = require('../controllers/expenseController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/stats').get(isSuperAdminOrAdmin, getExpenseStats);
-router.route('/monthly-total').get(isSuperAdminOrAdmin, getMonthlyExpenseTotal);
-router.route('/yearly-monthly-totals').get(isSuperAdminOrAdmin, getYearlyMonthlyExpenseTotals);
-router.route('/daily-expense-totals').get(isSuperAdminOrAdmin, getDailyExpenseTotals);
+router.route('/stats').get(protect, isSuperAdminOrAdmin, getExpenseStats);
+router.route('/monthly-total').get(protect, isSuperAdminOrAdmin, getMonthlyExpenseTotal);
+router.route('/yearly-monthly-totals').get(protect, isSuperAdminOrAdmin, getYearlyMonthlyExpenseTotals);
+router.route('/daily-expense-totals').get(protect, isSuperAdminOrAdmin, getDailyExpenseTotals);
 
 router.route('/').post(
+  protect,
   isSuperAdminOrAdmin,
   [
     body('date', 'Date is required').isISO8601().toDate(),
@@ -28,13 +29,13 @@ router.route('/').post(
     body('description', 'Description is required').not().isEmpty(),
   ],
   createExpense
-).get(isSuperAdminOrAdmin, getExpenses);
+).get(protect, isSuperAdminOrAdmin, getExpenses);
 
 router
   .route('/:id')
-  .get(isSuperAdminOrAdmin, getExpenseById)
-  .put(isSuperAdminOrAdmin, updateExpense)
-  .delete(isSuperAdminOrAdmin, deleteExpense);
+  .get(protect, isSuperAdminOrAdmin, getExpenseById)
+  .put(protect, isSuperAdminOrAdmin, updateExpense)
+  .delete(protect, isSuperAdminOrAdmin, deleteExpense);
 
 module.exports = router;
 

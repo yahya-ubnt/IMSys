@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const MpesaTransactionSchema = mongoose.Schema(
   {
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
     transactionId: {
       type: String,
       required: true,

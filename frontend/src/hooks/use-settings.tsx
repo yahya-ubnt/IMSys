@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useAuth } from '@/components/auth-provider';
 
 interface Settings {
@@ -25,9 +25,12 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     const fetchSettings = async () => {
       try {
-        const response = await fetch("/api/settings/general", { credentials: 'include' });
+        const response = await fetch("/api/settings/general", { credentials: 'include', signal });
         if (response.ok) {
           const data = await response.json();
           setSettings({
@@ -36,17 +39,37 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             logoIcon: data.logoIcon,
           });
         }
-      } catch (error) {
-        console.error("Failed to fetch settings:", error);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error("Failed to fetch settings:", error);
+        }
       }
     };
+
     if (!isLoading && user) {
       fetchSettings();
     }
+
+    return () => {
+      abortController.abort();
+    };
   }, [isLoading, user]);
 
+  // Reset settings on logout
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setSettings({
+        appName: "MEDIATEK",
+        slogan: "MANAGEMENT SYSTEM",
+        logoIcon: null,
+      });
+    }
+  }, [isLoading, user]);
+
+  const contextValue = useMemo(() => ({ settings, setSettings }), [settings]);
+
   return (
-    <SettingsContext.Provider value={{ settings, setSettings }}>
+    <SettingsContext.Provider value={contextValue}>
       {children}
     </SettingsContext.Provider>
   );

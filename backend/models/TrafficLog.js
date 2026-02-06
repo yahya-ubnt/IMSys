@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const trafficLogSchema = new mongoose.Schema({
+  tenant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'MikrotikUser',

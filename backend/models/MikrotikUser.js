@@ -110,6 +110,18 @@ const MikrotikUserSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    syncStatus: {
+      type: String,
+      enum: ['pending', 'synced', 'error'],
+      default: 'synced',
+    },
+    syncErrorMessage: {
+      type: String,
+    },
+    pendingPackage: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Package',
+    },
     
   },
   {

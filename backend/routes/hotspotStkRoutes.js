@@ -6,8 +6,10 @@ const {
   getHotspotTransactions,
 } = require('../controllers/hotspotStkController');
 
-router.route('/').get(getHotspotTransactions);
-router.route('/stk-push').post(initiateStkPush);
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
+
+router.route('/').get(protect, isSuperAdminOrAdmin, getHotspotTransactions);
+router.route('/stk-push').post(protect, initiateStkPush);
 router.route('/callback').post(handleHotspotCallback);
 
 module.exports = router;

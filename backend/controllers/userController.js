@@ -186,7 +186,7 @@ const createTenantUser = asyncHandler(async (req, res) => {
         email,
         password,
         phone,
-        roles: roles || ['USER'], // Default to USER role if not provided
+        roles: roles || ['ADMIN'], // Default to ADMIN role if not provided
         tenant: req.user.tenant, // Assign tenant from the logged-in admin
     });
 
@@ -213,6 +213,12 @@ const getTenantUserById = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const updateTenantUser = asyncHandler(async (req, res) => {
     const { fullName, email, password, phone, roles } = req.body;
+
+    // Prevent an ADMIN from escalating their privileges to SUPER_ADMIN
+    if (roles && roles.includes('SUPER_ADMIN')) {
+        res.status(403);
+        throw new Error('Admins cannot assign the SUPER_ADMIN role.');
+    }
 
     const user = await User.findOne({ _id: req.params.id, tenant: req.user.tenant });
 

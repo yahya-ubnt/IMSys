@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const {
   getSmsTriggers,
   composeAndSendSms,
@@ -8,13 +9,28 @@ const {
   exportSmsLogs,
   getSmsLogsForUser,
 } = require('../controllers/smsController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
-router.route('/triggers').get(isSuperAdminOrAdmin, getSmsTriggers);
+// Define a rate limiter for the compose SMS endpoint
+const composeSmsLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // Limit each user to 5 requests per window
+  message: 'Too many requests to send SMS from this account. Please try again after a minute.',
+  keyGenerator: (req) => {
+    // Rate limit based on the authenticated user's ID
+    return req.user._id;
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+router.route('/triggers').get(protect, isSuperAdminOrAdmin, getSmsTriggers);
 
 router.post(
   '/compose',
+  protect,
   isSuperAdminOrAdmin,
+  composeSmsLimiter, // Apply rate limiting to this route
   [
     body('message', 'Message body is required').not().isEmpty(),
     body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotik', 'location', 'unregistered']),
@@ -26,8 +42,8 @@ router.post(
   composeAndSendSms
 );
 
-router.route('/log').get(isSuperAdminOrAdmin, getSentSmsLog);
-router.route('/log/export').get(isSuperAdminOrAdmin, exportSmsLogs);
-router.route('/logs/user/:userId').get(isSuperAdminOrAdmin, getSmsLogsForUser);
+router.route('/log').get(protect, isSuperAdminOrAdmin, getSentSmsLog);
+router.route('/log/export').get(protect, isSuperAdminOrAdmin, exportSmsLogs);
+router.route('/logs/user/:userId').get(protect, isSuperAdminOrAdmin, getSmsLogsForUser);
 
 module.exports = router;

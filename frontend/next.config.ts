@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         // DEV-ONLY: Proxy to localhost because the backend is on the host network.
         // In production, this is typically handled by a reverse proxy (e.g., Nginx).
-        destination: 'http://localhost:5000/api/:path*',
+        destination: 'http://backend:5000/api/:path*',
       },
     ];
   },

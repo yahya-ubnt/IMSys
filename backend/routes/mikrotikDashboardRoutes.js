@@ -21,11 +21,11 @@ const {
   getPppoeUserCounts,
   getStaticUserCounts,
 } = require('../controllers/mikrotikDashboardController');
-const { isAdmin } = require('../middlewares/authMiddleware');
+const { protect, isAdmin } = require('../middlewares/protect');
 const { connectToRouter } = require('../middlewares/mikrotikDashboardMiddleware');
 
 // Apply middleware for all routes in this file
-router.use(isAdmin, connectToRouter);
+router.use(protect, isAdmin, connectToRouter);
 
 router.route('/status').get(getRouterStatus);
 router.route('/interfaces').get(getRouterInterfaces);

@@ -10,11 +10,12 @@ const {
   getWalletTransactionById, 
   createWalletTransaction 
 } = require('../controllers/paymentController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 // M-Pesa STK Push
 router.post(
   '/initiate-stk',
+  protect,
   isSuperAdminOrAdmin,
   [
     body('amount', 'Amount is required').isNumeric(),
@@ -27,6 +28,7 @@ router.post(
 // M-Pesa STK Push
 router.post(
   '/cash',
+  protect,
   isSuperAdminOrAdmin,
   [
     body('userId', 'User ID is required').not().isEmpty(),
@@ -37,11 +39,12 @@ router.post(
 );
 
 // Wallet Transactions
-router.route('/transactions').get(isSuperAdminOrAdmin, getTransactions);
-router.route('/wallet').get(isSuperAdminOrAdmin, getWalletTransactions);
-router.route('/wallet/user/:id').get(isSuperAdminOrAdmin, getWalletTransactions);
+router.route('/transactions').get(protect, isSuperAdminOrAdmin, getTransactions);
+router.route('/wallet').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
+router.route('/wallet/user/:id').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
 router.post(
   '/wallet',
+  protect,
   isSuperAdminOrAdmin,
   [
     body('userId', 'User ID is required').not().isEmpty(),
@@ -51,6 +54,6 @@ router.post(
   ],
   createWalletTransaction
 );
-router.route('/wallet/:id').get(isSuperAdminOrAdmin, getWalletTransactionById);
+router.route('/wallet/:id').get(protect, isSuperAdminOrAdmin, getWalletTransactionById);
 
 module.exports = router;

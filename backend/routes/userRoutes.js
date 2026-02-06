@@ -16,7 +16,7 @@ const {
   updateTenantUser,
   deleteTenantUser,
 } = require('../controllers/userController');
-const { protect, isSuperAdmin, isAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdmin, isAdmin } = require('../middlewares/protect');
 
 const publicRouter = express.Router();
 const privateRouter = express.Router();
@@ -41,15 +41,15 @@ publicRouter.post('/logout', logoutUser);
 
 
 // --- Private Routes ---
-// Note: The 'protect' middleware will be applied globally in server.js, 
-// so it is removed from the individual routes here.
+// All routes here are protected
 
 // Authenticated user routes
-privateRouter.route('/profile').get(getUserProfile);
+privateRouter.route('/profile').get(protect, getUserProfile);
 
 // ADMIN routes for managing their own users
-privateRouter.route('/my-users').get(isAdmin, getTenantUsers).post(
-  [isAdmin],
+privateRouter.route('/my-users').get(protect, isAdmin, getTenantUsers).post(
+  protect,
+  isAdmin,
   [
     body('fullName', 'Full name is required').not().isEmpty(),
     body('email', 'Please include a valid email').isEmail(),
@@ -60,13 +60,14 @@ privateRouter.route('/my-users').get(isAdmin, getTenantUsers).post(
 );
 privateRouter
     .route('/my-users/:id')
-    .get(isAdmin, getTenantUserById)
-    .put(isAdmin, updateTenantUser)
-    .delete(isAdmin, deleteTenantUser);
+    .get(protect, isAdmin, getTenantUserById)
+    .put(protect, isAdmin, updateTenantUser)
+    .delete(protect, isAdmin, deleteTenantUser);
 
 // SUPER_ADMIN routes for managing all users
-privateRouter.route('/').get(isSuperAdmin, getUsers).post(
-  [isSuperAdmin],
+privateRouter.route('/').get(protect, isSuperAdmin, getUsers).post(
+  protect,
+  isSuperAdmin,
   [
     body('fullName', 'Full name is required').not().isEmpty(),
     body('email', 'Please include a valid email').isEmail(),
@@ -78,9 +79,10 @@ privateRouter.route('/').get(isSuperAdmin, getUsers).post(
 );
 privateRouter
   .route('/:id')
-  .get(isSuperAdmin, getUserById)
+  .get(protect, isSuperAdmin, getUserById)
   .put(
-    [isSuperAdmin],
+    protect,
+    isSuperAdmin,
     [
       body('fullName', 'Full name must be a string').optional().isString(),
       body('email', 'Please include a valid email').optional().isEmail(),
@@ -90,6 +92,6 @@ privateRouter
     ],
     updateUser
   )
-  .delete(isSuperAdmin, deleteUser);
+  .delete(protect, isSuperAdmin, deleteUser);
 
 module.exports = { publicRouter, privateRouter };

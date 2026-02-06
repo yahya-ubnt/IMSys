@@ -8,21 +8,22 @@ const {
   updateExpenseType,
   deleteExpenseType,
 } = require('../controllers/expenseTypeController');
-const { isSuperAdminOrAdmin } = require('../middlewares/authMiddleware');
+const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
 router.route('/').post(
+  protect,
   isSuperAdminOrAdmin,
   [
     body('name', 'Name is required').not().isEmpty(),
     body('description', 'Description must be a string').optional().isString(),
   ],
   createExpenseType
-).get(isSuperAdminOrAdmin, getExpenseTypes);
+).get(protect, isSuperAdminOrAdmin, getExpenseTypes);
 
 router
   .route('/:id')
-  .get(isSuperAdminOrAdmin, getExpenseTypeById)
-  .put(isSuperAdminOrAdmin, updateExpenseType)
-  .delete(isSuperAdminOrAdmin, deleteExpenseType);
+  .get(protect, isSuperAdminOrAdmin, getExpenseTypeById)
+  .put(protect, isSuperAdminOrAdmin, updateExpenseType)
+  .delete(protect, isSuperAdminOrAdmin, deleteExpenseType);
 
 module.exports = router;

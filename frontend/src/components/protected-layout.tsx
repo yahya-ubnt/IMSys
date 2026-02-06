@@ -17,11 +17,7 @@ export function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const publicRoutes = ["/login", "/register"]
   const isPublicRoute = publicRoutes.includes(pathname)
 
-  useEffect(() => {
-    if (!isLoading && !user && !isPublicRoute) {
-      router.push("/login")
-    }
-  }, [isLoading, user, isPublicRoute, router])
+
 
   if (isLoading) {
     return (

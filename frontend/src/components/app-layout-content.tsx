@@ -16,7 +16,7 @@ export function AppLayoutContent({ children }: AppLayoutContentProps) {
   return (
     <SidebarProvider>
       {!hideSidebar && <AppSidebar />}
-      <main className="flex-1 md:pl-[var(--sidebar-width)] md:peer-data-[state=collapsed]:pl-[var(--sidebar-width-icon)] bg-zinc-900 text-white overflow-y-auto transition-[padding-left] duration-200 ease-linear" data-sidebar="content">
+      <main className={`flex-1 bg-zinc-900 text-white overflow-y-auto transition-[padding-left] duration-200 ease-linear ${!hideSidebar ? 'md:pl-[var(--sidebar-width)] md:peer-data-[state=collapsed]:pl-[var(--sidebar-width-icon)]' : ''}`} data-sidebar="content">
         {children}
       </main>
     </SidebarProvider>
