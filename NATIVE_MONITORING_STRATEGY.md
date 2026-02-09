@@ -5,9 +5,7 @@ This document outlines the strategy for a fully integrated, high-performance mon
 ---
 
 ## 1. Core Philosophy: "Business-Aware Monitoring"
-Unlike general monitoring tools, IMSys knows *who* owns a device. The monitoring is not just about IPs; it's about customer satisfaction, billing, and automated troubleshooting.
-
----
+Unlike general monitoring tools, IMSys knows *who* owns a device.
 
 ## 2. Two Types of Reconciliation: A Critical Distinction
 It is crucial to understand that IMSys performs two different types of "reconciliation," each with a different purpose and a different "source of truth."
@@ -41,6 +39,9 @@ It is crucial to understand that IMSys performs two different types of "reconcil
     *   To get a definitive, real-time status for static IP users, the **Worker** connects to the Core Router API and executes an active `/ping` command for the user's specific IP address (e.g., `/ping 192.168.88.50 count=1`).
     *   The worker parses the response to determine if the device is reachable. This provides a reliable, momentary snapshot of the device's status.
 *   **Why:** This approach uses the router as an in-network "proxy," solving the "different LAN" problem. It allows the central server to monitor devices on private networks without requiring complex routing or compromising security. While slightly more resource-intensive than a passive ARP check, it guarantees accuracy.
+*   **Polling Strategy (A Hybrid Approach):** To balance real-time accuracy with resource costs, a tiered polling strategy is used:
+    *   **Baseline Monitoring:** A distributed worker process (as described in the implementation architecture) pings all static users on a configurable, non-aggressive schedule (e.g., every 5 minutes). This is sufficient for dashboard views, historical data, and most automated alerts.
+    *   **On-Demand "Live" Check:** The user interface provides a manual "Check Live Status" button for individual users. Clicking this triggers an immediate, high-priority ping to provide support staff with by-the-second truth during active troubleshooting, without the overhead of constant high-frequency polling.
 
 ---
 
