@@ -35,11 +35,12 @@ It is crucial to understand that IMSys performs two different types of "reconcil
 *   **Impact:** **0% Server Polling Overhead.** Status updates are instant (sub-second).
 *   **Automation:** IMSys automatically injects these scripts into the router profiles via API on first connection.
 
-### B. Static Users: "Proxy-ARP" Monitoring
+### B. Static Users: Active "Proxy-Ping" Monitoring
 *   **Method:** BullMQ Worker + MikroTik API (Proxy).
 *   **How it works:**
-    *   **Worker** connects to the Core Router API and checks the **ARP Table** (`/ip arp print where address=X.X.X.X`).
-    *   **Why:** Solves the "different LAN" problem. The router pings its own local neighbors and reports back.
+    *   To get a definitive, real-time status for static IP users, the **Worker** connects to the Core Router API and executes an active `/ping` command for the user's specific IP address (e.g., `/ping 192.168.88.50 count=1`).
+    *   The worker parses the response to determine if the device is reachable. This provides a reliable, momentary snapshot of the device's status.
+*   **Why:** This approach uses the router as an in-network "proxy," solving the "different LAN" problem. It allows the central server to monitor devices on private networks without requiring complex routing or compromising security. While slightly more resource-intensive than a passive ARP check, it guarantees accuracy.
 
 ---
 
