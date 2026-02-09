@@ -43,6 +43,14 @@ It is crucial to understand that IMSys performs two different types of "reconcil
     *   **Baseline Monitoring:** A distributed worker process (as described in the implementation architecture) pings all static users on a configurable, non-aggressive schedule (e.g., every 5 minutes). This is sufficient for dashboard views, historical data, and most automated alerts.
     *   **On-Demand "Live" Check:** The user interface provides a manual "Check Live Status" button for individual users. Clicking this triggers an immediate, high-priority ping to provide support staff with by-the-second truth during active troubleshooting, without the overhead of constant high-frequency polling.
 
+### Baseline Polling Architecture
+
+| Stage | Component | Trigger / Input | Responsibility |
+| :--- | :--- | :--- | :--- |
+| 1. Dispatch | **`node-cron` Scheduler** | Every 5 mins (Configurable) | Adds a single `start-polling-cycle` job to the `master-scheduler-queue`. |
+| 1. Dispatch | **Master Worker** | Processes job from `master-scheduler-queue` | Fetches all active routers and adds one job per router (`{ routerId }`) to the `router-polling-queue`. |
+| 2. Execution | **Router Polling Worker**| Processes job from `router-polling-queue` | **1.** Connects to the specified router. **2.** Pings all its static users via "Smart Batch" (controlled concurrency). **3.** Updates the database with results. **4.** Disconnects. |
+
 ---
 
 ## 4. Infrastructure Monitoring: The "Snitch & Heartbeat" Model
