@@ -9,7 +9,22 @@ Unlike general monitoring tools, IMSys knows *who* owns a device. The monitoring
 
 ---
 
-## 2. User Status Monitoring (PPPoE & Static)
+## 2. Two Types of Reconciliation: A Critical Distinction
+It is crucial to understand that IMSys performs two different types of "reconciliation," each with a different purpose and a different "source of truth."
+
+### A. Monitoring Reconciliation (The "Reporter")
+*   **Purpose:** To ensure the IMSys database has an accurate picture of the network's real-time health.
+*   **Question:** *"Is my database's `UP`/`DOWN` status for this device correct?"*
+*   **Source of Truth:** **The Hardware (Router).** If the router says a device is down, the database is updated to match reality.
+
+### B. Billing/Service Reconciliation (The "Enforcer")
+*   **Purpose:** To enforce business rules and ensure network services match what a customer has paid for.
+*   **Question:** *"Is this user's active session on the router allowed by their current subscription status in my database?"*
+*   **Source of Truth:** **The IMSys Database.** If the database says a user's plan has expired, the system forces the router to disconnect the user.
+
+---
+
+## 3. User Status Monitoring (PPPoE & Static)
 
 ### A. PPPoE Users: Real-Time "Push" Status
 *   **Method:** MikroTik Webhooks (Event-Driven).
@@ -28,7 +43,7 @@ Unlike general monitoring tools, IMSys knows *who* owns a device. The monitoring
 
 ---
 
-## 3. Infrastructure Monitoring: The "Snitch & Heartbeat" Model
+## 4. Infrastructure Monitoring: The "Snitch & Heartbeat" Model
 
 To avoid the complexity and overhead of SNMP, we use an event-driven "Snitch" model for antennas and a "Heartbeat" for core routers.
 
@@ -49,7 +64,19 @@ Since a Core Router cannot report its own death, the server performs a lightweig
 
 ---
 
-## 4. Discovery & Hierarchy (The "Scout")
+## 5. The "Self-Healing" Reconciliation Job (for Monitoring)
+
+To protect against missed webhooks (e.g., during a network blip) or accidental misconfigurations, a scheduled BullMQ job runs every 30-60 minutes to perform a "double-check." This is the safety net that makes the system truly enterprise-grade.
+
+The job performs two and only two functions:
+1.  **Verify Configuration (The Rules):** It asks the router for a list of all its Netwatch rules. It compares this list to what IMSys expects to be monitored. If an ISP admin accidentally deleted a rule, IMSys automatically re-creates it.
+2.  **Verify State (The Status):** It asks the router for the current `UP`/`DOWN` status of all monitored devices. If the router's reality (e.g., `status=down`) does not match the IMSys database (e.g., `status="UP"`), IMSys corrects its own database and triggers any necessary alerts.
+
+This process ensures the monitoring system is resilient and automatically heals itself over time.
+
+---
+
+## 6. Discovery & Hierarchy (The "Scout")
 
 ### A. Zero-Config Discovery via MNDP
 *   **Method:** MNDP/LLDP via MikroTik Neighbors (`/ip neighbor print`).
@@ -67,7 +94,7 @@ Since a Core Router cannot report its own death, the server performs a lightweig
 
 ---
 
-## 5. Performance & Health (No-SNMP History)
+## 7. Performance & Health (No-SNMP History)
 
 We replace heavy SNMP graphs with lightweight "Snapshot Data" stored directly in MongoDB.
 
@@ -79,7 +106,7 @@ We replace heavy SNMP graphs with lightweight "Snapshot Data" stored directly in
 
 ---
 
-## 5. Why This Beats External Tools (LibreNMS)
+## 8. Why This Beats External Tools (LibreNMS)
 
 1.  **Unified Experience:** One login, one dashboard, one mobile-responsive UI.
 2.  **Ease of Adoption:** No SNMP setup required for basic monitoring. If the Core Router can see it, IMSys can monitor it.
@@ -87,7 +114,7 @@ We replace heavy SNMP graphs with lightweight "Snapshot Data" stored directly in
 4.  **Integrated Troubleshooting:** When a support ticket is opened, the technician sees the "last 24-hour signal graph" right next to the ticket.
 ---
 
-## 6. Implementation Roadmap
+## 9. Implementation Roadmap
 
 1.  **Phase 1 (The Worker):** Refactor current polling into BullMQ jobs (one job per router).
 2.  **Phase 2 (The Webhook):** Create the API endpoint for MikroTik PPP scripts to "Push" status updates.
