@@ -1,132 +1,88 @@
 # IMSys Unified Network Monitoring & Discovery (NATIVE)
 
-This document outlines the strategy for a fully integrated, high-performance monitoring system built directly into IMSys. By leveraging **BullMQ**, **Redis**, and the **MikroTik API**, we eliminate the need for external tools like LibreNMS while providing a more seamless experience for ISPs.
+This document outlines the strategy for a high-performance monitoring system. The **IMSys Server** acts as the central "Brain," polling the network via a secure **WireGuard Tunnel** to ensure CPU safety for the ISP core routers.
 
 ---
 
 ## 1. Core Philosophy: "Business-Aware Monitoring"
-Unlike general monitoring tools, IMSys knows *who* owns a device.
-
-## 2. Two Types of Reconciliation: A Critical Distinction
-It is crucial to understand that IMSys performs two different types of "reconciliation," each with a different purpose and a different "source of truth."
-
-### A. Monitoring Reconciliation (The "Reporter")
-*   **Purpose:** To ensure the IMSys database has an accurate picture of the network's real-time health.
-*   **Question:** *"Is my database's `UP`/`DOWN` status for this device correct?"*
-*   **Source of Truth:** **The Hardware (Router).** If the router says a device is down, the database is updated to match reality.
-
-### B. Billing/Service Reconciliation (The "Enforcer")
-*   **Purpose:** To enforce business rules and ensure network services match what a customer has paid for.
-*   **Question:** *"Is this user's active session on the router allowed by their current subscription status in my database?"*
-*   **Source of Truth:** **The IMSys Database.** If the database says a user's plan has expired, the system forces the router to disconnect the user.
+IMSys doesn't just monitor IPs; it monitors the business relationship between a Core Router, a Sector AP, and a Customer.
 
 ---
 
-## 3. User Status Monitoring (PPPoE & Static)
+## 2. User Status Monitoring (PPPoE & Static)
 
 ### A. PPPoE Users: Real-Time "Push" Status
 *   **Method:** MikroTik Webhooks (Event-Driven).
-*   **How it works:** 
-    *   The MikroTik `PPP Profile` (On-Up/On-Down) is configured with a 1-line script.
-    *   **On-Up:** Router hits `IMSys/api/webhooks/ppp-status?user=XXX&status=online`.
-    *   **On-Down:** Router hits `IMSys/api/webhooks/ppp-status?user=XXX&status=offline`.
-*   **Impact:** **0% Server Polling Overhead.** Status updates are instant (sub-second).
-*   **Automation:** IMSys automatically injects these scripts into the router profiles via API on first connection.
+*   **Mechanism:** MikroTik `PPP Profile` (On-Up/On-Down) scripts hit IMSys API endpoints.
+*   **CPU Impact:** **Zero Polling.** Only fires when a session changes.
+*   **Diagnostic Lever:** Every PPPoE user has a **"Live Check"** button in the dashboard. This triggers a manual **Proxy-Ping** from the Core Router to the user's IP to verify latency and packet loss during troubleshooting.
+*   **Safety:** IMSys automatically injects/verifies these scripts during router reconciliation.
 
-### B. Static Users: Active "Proxy-Ping" Monitoring
-*   **Method:** BullMQ Worker + MikroTik API (Proxy).
-*   **How it works:**
-    *   To get a definitive, real-time status for static IP users, the **Worker** connects to the Core Router API and executes an active `/ping` command for the user's specific IP address (e.g., `/ping 192.168.88.50 count=1`).
-    *   The worker parses the response to determine if the device is reachable. This provides a reliable, momentary snapshot of the device's status.
-*   **Why:** This approach uses the router as an in-network "proxy," solving the "different LAN" problem. It allows the central server to monitor devices on private networks without requiring complex routing or compromising security. While slightly more resource-intensive than a passive ARP check, it guarantees accuracy.
-*   **Polling Strategy (A Hybrid Approach):** To balance real-time accuracy with resource costs, a tiered polling strategy is used:
-    *   **Baseline Monitoring:** A distributed worker process (as described in the implementation architecture) pings all static users on a configurable, non-aggressive schedule (e.g., every 5 minutes). This is sufficient for dashboard views, historical data, and most automated alerts.
-    *   **On-Demand "Live" Check:** The user interface provides a manual "Check Live Status" button for individual users. Clicking this triggers an immediate, high-priority ping to provide support staff with by-the-second truth during active troubleshooting, without the overhead of constant high-frequency polling.
-
-### Baseline Polling Architecture
-
-| Stage | Component | Trigger / Input | Responsibility |
-| :--- | :--- | :--- | :--- |
-| 1. Dispatch | **`node-cron` Scheduler** | Every 5 mins (Configurable) | Adds a single `start-polling-cycle` job to the `master-scheduler-queue`. |
-| 1. Dispatch | **Master Worker** | Processes job from `master-scheduler-queue` | Fetches all active routers and adds one job per router (`{ routerId }`) to the `router-polling-queue`. |
-| 2. Execution | **Router Polling Worker**| Processes job from `router-polling-queue` | **1.** Connects to the specified router. **2.** Pings all its static users via "Smart Batch" (controlled concurrency). **3.** Updates the database with results. **4.** Disconnects. |
+### B. Static Users: The "Passive ARP Observer"
+*   **Method:** Server-led API check of the Core Router's ARP table (`/ip arp print`).
+*   **Logic:** If a static user's MAC is in the router's ARP table, they are marked **ONLINE**.
+*   **Lever:** For troubleshooting, an admin can toggle **Active Proxy-Ping** for a specific user, which forces the router to ping that IP once per cycle.
 
 ---
 
-## 4. Infrastructure Monitoring: The "Snitch & Heartbeat" Model
+## 3. Infrastructure Monitoring: The "Hierarchical" Model
 
-To avoid the complexity and overhead of SNMP, we use an event-driven "Snitch" model for antennas and a "Heartbeat" for core routers.
+To protect the core router's CPU and ensure technical accuracy, IMSys uses a **Hierarchical Polling** model. The **IMSys Server** connects directly to the device that "owns" the connection Layer via the VPN.
 
-### A. The "Snitch" (MikroTik Netwatch)
-For Antennas, Sector APs, and Switches, we don't poll from the server. Instead, we let the **Core Router** monitor them locally.
-*   **Mechanism:** MikroTik **Netwatch**.
-*   **Logic:** 
-    1.  The Core Router is programmed to ping its children (APs/Antennas) every 30 seconds.
-    2.  If an AP fails, the Core Router triggers a "Down Script."
-    3.  The script "snitches" to the IMSys server via a Webhook: `IMSys/api/webhooks/device-status?id=XXX&status=down`.
-*   **Benefit:** Instant reporting of tower failures without the server ever lifting a finger.
+### A. Monitoring Tiers
 
-### B. The "Heartbeat" (Server Polling)
-Since a Core Router cannot report its own death, the server performs a lightweight heartbeat check.
-*   **Mechanism:** BullMQ Heartbeat.
-*   **Logic:** The server pings the **Core Router IP** (WireGuard Tunnel) once every 60 seconds.
-*   **Scale:** Because there are few Core Routers (compared to thousands of devices), this has negligible impact on server performance.
+| Tier | Method | Target | Source Device | Frequency |
+| :--- | :--- | :--- | :--- | :--- |
+| **Tier 1: Resident** | **Netwatch** | Backbone | Core Router | Real-time |
+| **Tier 2: Passive** | **Wireless Table** | Client Antennas | **Sector AP** | 5-10 Mins |
+| **Tier 3: Active** | **ARP/Ping** | Static Users | Core Router | 5-10 Mins |
+
+### B. The "One-Shot" Distributed Job
+1.  **Core Heartbeat (Every 60s):** The IMSys Server pings the Core Router via the WireGuard tunnel.
+2.  **AP Snapshot (Every 10m):** The Server loops through all registered **Sector APs**. It connects to each AP and pulls the local `/interface wireless registration-table` to update Signal/CCQ for all connected antennas at once.
+3.  **Result:** Minimal API hits on the Core Router; targeted polling on the APs where the wireless "truth" lives.
 
 ---
 
-## 5. The "Self-Healing" Reconciliation Job (for Monitoring)
+## 4. Device Management: Manual Entry & Human Context
 
-To protect against missed webhooks (e.g., during a network blip) or accidental misconfigurations, a scheduled BullMQ job runs every 30-60 minutes to perform a "double-check." This is the safety net that makes the system truly enterprise-grade.
+We do not wait for devices to "appear." We provide a robust entry system that prioritizes human-readable alerts over technical IPs.
 
-The job performs two and only two functions:
-1.  **Verify Configuration (The Rules):** It asks the router for a list of all its Netwatch rules. It compares this list to what IMSys expects to be monitored. If an ISP admin accidentally deleted a rule, IMSys automatically re-creates it.
-2.  **Verify State (The Status):** It asks the router for the current `UP`/`DOWN` status of all monitored devices. If the router's reality (e.g., `status=down`) does not match the IMSys database (e.g., `status="UP"`), IMSys corrects its own database and triggers any necessary alerts.
+### A. The "Contextual Identity"
+Every device (Manual or Claimed) supports:
+1. **Site/Building Name:** Human label for the physical location (e.g., "Blue Plaza").
+2. **Installation Note:** Specific placement details (e.g., "North facing on the water tank").
+3. **Location Inheritance (Smart Latching):** To minimize typing, a device automatically inherits the "Site Name" from its Parent (e.g., a Sector AP) unless overridden.
 
-This process ensures the monitoring system is resilient and automatically heals itself over time.
-
----
-
-## 6. Discovery & Hierarchy (The "Scout")
-
-### A. Zero-Config Discovery via MNDP
-*   **Method:** MNDP/LLDP via MikroTik Neighbors (`/ip neighbor print`).
-*   **Workflow:**
-    1.  Admin clicks **"Scan Tower"** in IMSys.
-    2.  System asks the Core Router who it sees physically connected.
-    3.  It finds Antennas and Switches automatically, even if they have no configuration.
-    4.  Admin clicks "Add," and the system automatically creates the monitoring link.
-
-### B. Automatic Hierarchy (Topology Mapping)
-*   **How it works:** 
-    *   Devices discovered via "Router A" are saved with `parentId: RouterA`.
-    *   This creates a 3-tier tree: `Core Router > Sector AP > Client Antenna`.
-*   **Smart Alerts (Suppression):** If a Core Router goes down, the system **silences** the 500 individual client alerts and sends only **one** alert for the Root cause.
+### B. Two Paths to Monitoring
+*   **Path 1: Manual Entry (Primary):** Admin enters Name, MAC, IP, and selects the Parent. IMSys verifies the connection and sets up the monitoring tier.
+*   **Path 2: Guided Discovery (Assistant):** Admin triggers a scan. IMSys shows "Unmanaged" devices found in Neighbor/Wireless tables. Admin "Claims" them and assigns a Parent/Site in one click.
 
 ---
 
-## 7. Performance & Health (No-SNMP History)
+## 5. Smart Alerts (Hierarchy Suppression)
 
-We replace heavy SNMP graphs with lightweight "Snapshot Data" stored directly in MongoDB.
-
-*   **Metric Collection:** Every 10 minutes, a BullMQ job grabs:
-    *   **Latency (ms):** To detect link quality.
-    *   **Signal Strength (dBm):** Fetched via MikroTik API (Wireless Registration Table).
-*   **Storage:** Data is saved in a capped collection for 30 days.
-*   **Visualization:** Native React charts inside the IMSys profile.
+The hierarchy is used to prevent "Alert Storms."
+*   **Logic:** Before alerting for an Antenna, the Alert Worker checks the status of its **Parent** (Sector AP) and **Grandparent** (Core Router).
+*   **Action:** If the Parent is DOWN, the child alert is **suppressed**. The admin receives one notification: *"Sector AP North is DOWN (Affecting 45 users)."*
 
 ---
 
-## 8. Why This Beats External Tools (LibreNMS)
+## 6. Access & Security (How we log in)
 
-1.  **Unified Experience:** One login, one dashboard, one mobile-responsive UI.
-2.  **Ease of Adoption:** No SNMP setup required for basic monitoring. If the Core Router can see it, IMSys can monitor it.
-3.  **Low Resource Footprint:** No extra VPS required. The entire monitoring engine runs in your existing Redis/Node.js stack.
-4.  **Integrated Troubleshooting:** When a support ticket is opened, the technician sees the "last 24-hour signal graph" right next to the ticket.
+### A. Credential Inheritance
+* **Automagic Login:** APs can be set to "Inherit Credentials" from their Parent Core Router to save the admin from re-typing passwords.
+* **Encryption:** All management credentials (loginUsername/loginPassword) are stored using AES-256 encryption.
+
+### B. VPN-Backed Web UI (Troubleshooting)
+* **Direct Access:** Every device in the dashboard has a "Web UI" button.
+* **The "Key" Workflow:** If the Admin has their WireGuard VPN active (the "Key" icon on mobile), clicking the button opens the device's internal management page directly in their browser.
+
 ---
 
-## 9. Implementation Roadmap
+## 7. Implementation Levers (Safety Valves)
 
-1.  **Phase 1 (The Worker):** Refactor current polling into BullMQ jobs (one job per router).
-2.  **Phase 2 (The Webhook):** Create the API endpoint for MikroTik PPP scripts to "Push" status updates.
-3.  **Phase 3 (The Scout):** Implement the "Neighbor Scan" button using the MikroTik API.
-4.  **Phase 4 (The Chart):** Add the History collection and simple frontend graphs.
+The admin has "Levers" in the settings to tune the system if the router is weak:
+*   **Lever 1: Snapshot Interval:** Increase from 10m to 30m to reduce API hits.
+*   **Lever 2: Passive-Only Mode:** Disable all Netwatch rules and rely entirely on the 10-minute API snapshots.
+*   **Lever 3: VIP Selection:** Manually select which 5-10 devices are "critical enough" to warrant a real-time Netwatch script.
