@@ -6,7 +6,7 @@ import { getSocket, initializeSocket } from '../services/socketService';
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (signal: AbortSignal) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;

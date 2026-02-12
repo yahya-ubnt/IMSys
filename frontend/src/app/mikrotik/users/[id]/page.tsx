@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Device { _id: string; deviceName: string; ipAddress: string; }
 import { Package } from "@/types/mikrotik-package";
-interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; officialName: string; emailAddress?: string; apartment_house_number?: string; door_number_unit_label?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; }
+interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; officialName: string; emailAddress?: string; apartment_house_number?: string; door_number_unit_label?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -54,6 +54,7 @@ export default function EditMikrotikUserPage() {
     const [pppoePassword, setPppoePassword] = useState("");
     const [remoteAddress, setRemoteAddress] = useState("");
     const [ipAddress, setIpAddress] = useState("");
+    const [macAddress, setMacAddress] = useState("");
     const [officialName, setOfficialName] = useState("");
     const [emailAddress, setEmailAddress] = useState("");
     const [mPesaRefNo, setMPesaRefNo] = useState("");
@@ -106,6 +107,7 @@ export default function EditMikrotikUserPage() {
                 setPppoePassword(userData.pppoePassword || "");
                 setRemoteAddress(userData.remoteAddress || "");
                 setIpAddress(userData.ipAddress || "");
+                setMacAddress(userData.macAddress || "");
                 setOfficialName(userData.officialName);
                 setEmailAddress(userData.emailAddress || "");
                 setApartmentHouseNumber(userData.apartment_house_number || "");
@@ -168,7 +170,7 @@ export default function EditMikrotikUserPage() {
             expiryDate,
             station: stationId,
             ...(serviceType === 'pppoe' && { pppoePassword, remoteAddress }),
-            ...(serviceType === 'static' && { ipAddress }),
+            ...(serviceType === 'static' && { ipAddress, macAddress }),
         };
 
         try {
@@ -238,6 +240,7 @@ export default function EditMikrotikUserPage() {
                                                             <div className="space-y-1"><Label className="text-xs">Username</Label><Input value={username} disabled className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
                                                             {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
+                                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 00:11:22:33:44:55" /></div>}
                                                         </div>
                                                     </div>
                                                     <div className="space-y-3">

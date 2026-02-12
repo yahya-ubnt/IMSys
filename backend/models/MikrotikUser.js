@@ -44,6 +44,10 @@ const MikrotikUserSchema = mongoose.Schema(
         type: String,
         // Required for Static IP, validation handled in controller
     },
+    macAddress: {
+        type: String,
+        // Required for Static IP (DHCP Lease), validation handled in controller
+    },
 
     // Personal & Billing Information
     officialName: {
@@ -132,5 +136,9 @@ const MikrotikUserSchema = mongoose.Schema(
 MikrotikUserSchema.index({ tenant: 1 });
 MikrotikUserSchema.index({ tenant: 1, username: 1 }, { unique: true });
 MikrotikUserSchema.index({ tenant: 1, mPesaRefNo: 1 }, { unique: true });
+MikrotikUserSchema.index({ tenant: 1, macAddress: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { macAddress: { $exists: true, $ne: null } } 
+});
 
 module.exports = mongoose.model('MikrotikUser', MikrotikUserSchema);
