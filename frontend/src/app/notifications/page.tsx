@@ -18,7 +18,11 @@ export default function NotificationsPage() {
 
   // Call fetchNotifications once on mount for this page
   useEffect(() => {
-    fetchNotifications();
+    const abortController = new AbortController();
+    fetchNotifications(abortController.signal);
+    return () => {
+      abortController.abort();
+    };
   }, [fetchNotifications]);
 
 

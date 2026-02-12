@@ -4,9 +4,10 @@ import { getCookie } from 'cookies-next';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
-interface ApiOptions extends RequestInit {
+interface ApiOptions extends Omit<RequestInit, 'body'> {
   token?: string;
   isFormData?: boolean;
+  body?: any;
 }
 
 export async function fetchApi<T>(
