@@ -29,13 +29,15 @@
 
 ### A. Hierarchy: Building-First
 1. **Building Model**: A new `Building` entity serves as the physical site anchor.
-2. **Clean-Up**: `location` fields in Routers/Devices are replaced by a `building` Reference.
-3. **Inheritance**: Users inherit their "Building Context" from the `Device` they are connected to.
+2. **Device Building Assignment**: Each `Device` (Router, AP, Station) is explicitly assigned to a `Building`. This assignment is done during device creation.
+3. **User Building Context**: `MikrotikUser` inherits its "Building Context" from the `Device` (client antenna/station) they are directly linked to.
+4. **Clean-Up**: The existing `location` string fields in Routers/Devices are replaced by a `building` Reference.
 
 ### B. Monitoring: "Snitch & Heartbeat"
-1. **PPPoE & Static (Push)**: mikroTik Webhooks (On-Up/On-Down/On-Bound) provide **instant** status updates.
-2. **Infrastructure (Heartbeat)**: BullMQ Job pings the Core Router every 60s.
-3. **Infrastructure (Snitch)**: Devices (APs/Backhauls) use Netwatch to report status via webhooks.
+1. **PPPoE (Push)**: mikroTik Webhooks (On-Up/On-Down) provide **instant** status updates.
+2. **Static (DHCP-Event & Targeted ARP Pull)**: DHCP Lease Scripts (`on-bound`) for "Online" events. **Targeted ARP Polling** (asking the router for specific static IPs in its ARP table) every 5-10 minutes is used for efficient "Offline" detection. Final "Offline" confirmation via `on-delete` script.
+3. **Infrastructure (Heartbeat)**: BullMQ Job pings the Core Router every 60s.
+4. **Infrastructure (Snitch)**: Devices (APs/Backhauls) use Netwatch to report status via webhooks.
 
 ### C. Logic: "State-Based Sync"
 - We stop sending "commands" and start defining "desired states." 
@@ -75,17 +77,13 @@ Webhooks will be coded into a new controller `webhookController.js`.
 
 ## 5. The Intelligent Detective: Diagnostic Tree-Walk
 
-
-
 The Tree-Walk is a core logic path triggered in three specific scenarios to ensure data accuracy and alert sanity.
-
-
 
 ### A. Trigger Scenario 1: Event-Driven Webhooks (The "Push" Trigger)
 
 - **Source**: MikroTik Router (PPP On-Down, DHCP On-Unbound, Netwatch Down-Script).
 
-- **Immediate Action**: Before the Database marks the user/device as `DOWN`, the Webhook Controller triggers a **Parent Spot-Check**.
+- **Immediate Action**: Before the Database marks the device as `DOWN`, the Webhook Controller triggers a **Parent Spot-Check**.
 
 - **Logic**: It pings the parent (Sector AP) to see if the "Down" signal is part of a larger outage. If the parent is DOWN, the child alert is suppressed.
 
@@ -123,51 +121,21 @@ The Tree-Walk is a core logic path triggered in three specific scenarios to ensu
 
 ## 7. Asynchronous Diagnostic Pipeline (BullMQ)
 
-
-
-
-
-
-
 To ensure the system remains responsive during mass outages, the diagnostic and alert logic is fully decoupled into a BullMQ pipeline.
-
-
-
-
-
-
 
 ### A. The Three-Stage Pipeline
 
-
-
 1. **Detection Stage**: A Webhook or Poll detects a "DOWN" event and pushes a job to the `monitoring-queue`.
-
-
 
 2. **Diagnostic Stage (The Worker)**: The Monitoring Worker picks up the job and executes the **Recursive Tree-Walk**. It performs the high-priority pings to parents to identify the root cause.
 
-
-
 3. **Alerting Stage**: Once the root cause is confirmed, a job is passed to the `notification-queue` to send the final, suppressed alert to the correct personnel.
-
-
-
-
-
-
 
 ### B. Benefits of Async Diagnostics
 
-
-
 - **Scalability**: Handles hundreds of simultaneous disconnections without blocking the main API thread.
 
-
-
 - **Backoff & Retries**: If a diagnostic ping fails due to a network glitch, BullMQ retries the check automatically.
-
-
 
 - **Throttling**: Prevents overwhelming the Core Router by limiting the number of concurrent diagnostic pings.
 

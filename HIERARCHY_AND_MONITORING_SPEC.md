@@ -21,10 +21,10 @@ Used for Routers, Switches, Access Points, and Stations.
 - `status`: `['UP', 'DOWN', 'MAINTENANCE']`
 
 ### B. `MikrotikUser` Model (Customers)
-- `linkedDeviceId`: (ObjectId) Reference to the `Device` (Station/Antenna) that provides service to this user.
+- `linkedDeviceId`: (ObjectId) Reference to the `Device` (Station/Antenna) that provides service to this user. This is the source of the user's Building context.
 - **Dashboard Status**: 
     - PPPoE: Updated via Webhooks (Instant).
-    - Static: Updated via ARP Table polling (Every 5-10 mins).
+    - Static: Updated via DHCP Lease Scripts (on-bound) and Targeted ARP Polling (for offline).
 - **Live Diagnostic**: A manual "Live Check" button for both types to trigger an instant Proxy-Ping for troubleshooting.
 
 ---
@@ -48,7 +48,9 @@ Used for Routers, Switches, Access Points, and Stations.
     1. **DHCP Reservation**: IMSys locks the `IP` to the `MAC Address` on the Core Router.
     2. **Simple Queue**: Speed is enforced via a Simple Queue based on the `Package`.
 - **Status Method**: 
-    - **Event-Driven**: Router uses DHCP Lease Scripts to hit the IMSys Webhook on connection/disconnection.
+    - **Event-Driven (Online)**: Router uses DHCP Lease Scripts (`on-bound`) for instant "ONLINE" status.
+    - **Fast Offline (Targeted ARP Polling)**: Server asks the router for specific static IPs in its ARP table (every 5-10 mins). This is more efficient than dumping the entire ARP table.
+    - **Confirmed Offline (Event-Driven)**: Router uses DHCP Lease Scripts (`on-delete`) for final confirmation after lease expiration.
     - **Diagnostic Lever**: "Live Check" button triggers an instant `/ping` from the router.
 
 ### Tier 4: PPPoE "Event Push"
@@ -96,11 +98,11 @@ To maintain a clean hierarchy, devices are added using a guided process that ens
 - **Entry**: Admin enters Device Name, IP, MAC, and Model. (Or "Claims" from a Scan).
 - **Verification**: IMSys attempts to ping the IP via the Parent Router to verify reachability.
 
-### Step 2: The Hierarchical Link
-- **Parent Selection**: Admin selects the parent device (e.g., "Core Router -> Sector A").
-- **Building Context**:
-    - **Inherit**: Device automatically inherits the **Building/Site Name** from the parent.
-    - **Override**: Admin can manually set a different Building if it is a backhaul link between sites.
+### Step 2: The Hierarchical Link & Building Context
+- **Parent Selection**: Admin selects the parent device (e.g., "Core Router -> Sector A"). This defines the network connection.
+- **Building Assignment**:
+    - Admin explicitly assigns the device to a **Building**. This is crucial as APs and Stations may be in different physical locations.
+    - For Users: A `MikrotikUser` will inherit its building context from its `linkedDeviceId` (their client antenna/station).
 
 ### Step 3: Monitoring Assignment
 - **Select Tier**: Admin chooses between **Netwatch** (Resident) or **None** (Manual Diagnostic only).
