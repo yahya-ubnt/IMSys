@@ -55,10 +55,20 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
           }
           await client.write('/ppp/secret/add', pppSecretArgs);
         } else if (user.serviceType === 'static') {
+          // 1. Create Static DHCP Lease
+          if (user.macAddress) {
+            await client.write('/ip/dhcp-server/lease/add', [
+              `=address=${user.ipAddress}`,
+              `=mac-address=${user.macAddress}`,
+              `=comment=IMSys: ${user.username}`,
+            ]);
+          }
+          // 2. Create Simple Queue
           await client.write('/queue/simple/add', [
             `=name=${user.username}`,
             `=target=${user.ipAddress}`,
             `=max-limit=${user.package.rateLimit}`,
+            `=comment=IMSys: ${user.username}`,
           ]);
         }
         user.provisionedOnMikrotik = true;
@@ -131,19 +141,14 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
             console.warn(`[${new Date().toISOString()}] MikroTik Sync Worker: PPP Secret for user ${user.username} not found on MikroTik. Marking as synced.`);
           }
         } else if (user.serviceType === 'static') {
-          const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-          if (simpleQueues.length > 0) {
-            const queueId = simpleQueues[0]['.id'];
-            // Set max-limit to 1k/1k and disable the queue
-            await client.write('/queue/simple/set', [
-              `=.id=${queueId}`,
-              '=max-limit=1k/1k',
-              '=disabled=yes',
-              `=comment=${isManualDisconnect ? 'Manually disconnected' : 'Expired'} by system at ${new Date().toISOString()}`
-            ]);
-          } else {
-            console.warn(`[${new Date().toISOString()}] MikroTik Sync Worker: Simple Queue for static user ${user.username} not found on MikroTik. Marking as synced.`);
-          }
+          // New "Address List" method: Add IP to BLOCKED_USERS list
+          // The Simple Queue stays enabled at full speed, but firewall drops traffic
+          await client.write('/ip/firewall/address-list/add', [
+            '=list=BLOCKED_USERS',
+            `=address=${user.ipAddress}`,
+            `=comment=${isManualDisconnect ? 'Manually disconnected' : 'Expired'} by IMSys at ${new Date().toISOString()}`
+          ]);
+          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Static user ${user.username} (${user.ipAddress}) added to BLOCKED_USERS list.`);
         }
         user.isSuspended = true;
         user.isManuallyDisconnected = isManualDisconnect || false;
@@ -170,19 +175,16 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
             throw new Error(`PPP Secret for user ${user.username} not found on MikroTik.`);
           }
         } else if (user.serviceType === 'static') {
-          const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-          if (simpleQueues.length > 0) {
-            const queueId = simpleQueues[0]['.id'];
-            // Set max-limit to the user's package rate limit and enable the queue
-            await client.write('/queue/simple/set', [
-              `=.id=${queueId}`,
-              `=max-limit=${user.package.rateLimit}`,
-              '=disabled=no',
-              `=comment=Manually connected by system at ${new Date().toISOString()}`
-            ]);
-          } else {
-            throw new Error(`Simple Queue for static user ${user.username} not found on MikroTik.`);
+          // New "Address List" method: Remove IP from BLOCKED_USERS list
+          const blockedEntries = await client.write('/ip/firewall/address-list/print', [
+            `?address=${user.ipAddress}`,
+            '?list=BLOCKED_USERS'
+          ]);
+          
+          for (const entry of blockedEntries) {
+            await client.write('/ip/firewall/address-list/remove', [`=.id=${entry['.id']}`]);
           }
+          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Static user ${user.username} (${user.ipAddress}) removed from BLOCKED_USERS list.`);
         }
         user.isSuspended = false;
         user.isManuallyDisconnected = false;
@@ -262,9 +264,11 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
               continue; // Skip this router
             }
 
-            // Fetch all PPP secrets and simple queues from the router
+            // Fetch all PPP secrets, simple queues, DHCP leases, and address lists from the router
             const routerPppSecrets = await routerClient.write('/ppp/secret/print');
             const routerSimpleQueues = await routerClient.write('/queue/simple/print');
+            const routerDhcpLeases = await routerClient.write('/ip/dhcp-server/lease/print');
+            const routerAddressLists = await routerClient.write('/ip/firewall/address-list/print');
 
             for (const dbUser of users) {
               let needsUpdate = false;
@@ -296,27 +300,41 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
                 }
               } else if (dbUser.serviceType === 'static') {
                 const matchingQueue = routerSimpleQueues.find(queue => queue.name === dbUser.username);
-                if (matchingQueue) {
+                const matchingLease = routerDhcpLeases.find(lease => lease.address === dbUser.ipAddress);
+                const isInBlockedList = routerAddressLists.some(listEntry => 
+                  listEntry.address === dbUser.ipAddress && listEntry.list === 'BLOCKED_USERS'
+                );
+
+                if (matchingQueue && (matchingLease || !dbUser.macAddress)) {
                   routerUserFound = true;
-                  // Compare states
+                  // 1. Compare rate limits
                   const dbRateLimit = dbUser.package.rateLimit;
                   const routerRateLimit = matchingQueue['max-limit'];
-                  if (matchingQueue.disabled === 'yes' && !dbUser.isSuspended) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is active, but disabled on router. Queuing connect job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('connectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  } else if (matchingQueue.disabled === 'no' && dbUser.isSuspended) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is suspended, but active on router. Queuing disconnect job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('disconnectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  } else if (routerRateLimit !== dbRateLimit) {
+                  if (routerRateLimit !== dbRateLimit) {
                     console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} has different rate limit on router. Queuing update job.`);
                     needsUpdate = true;
                     await mikrotikSyncQueue.add('updateUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
                   }
+
+                  // 2. Compare suspension state with Address List
+                  if (dbUser.isSuspended && !isInBlockedList) {
+                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is suspended but NOT in BLOCKED_USERS list. Queuing disconnect job.`);
+                    needsUpdate = true;
+                    await mikrotikSyncQueue.add('disconnectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
+                  } else if (!dbUser.isSuspended && isInBlockedList) {
+                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is active but IS in BLOCKED_USERS list. Queuing connect job.`);
+                    needsUpdate = true;
+                    await mikrotikSyncQueue.add('connectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
+                  }
+
+                  // 3. Ensure the queue is ENABLED (we no longer disable queues for disconnections)
+                  if (matchingQueue.disabled === 'yes') {
+                     console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: Simple Queue for static user ${dbUser.username} is disabled but should be enabled. Fixing...`);
+                     await routerClient.write('/queue/simple/set', [`=.id=${matchingQueue['.id']}`, '=disabled=no']);
+                  }
                 } else {
-                  // User in DB but not on Router
-                  console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} not found on router. Queuing add job.`);
+                  // User in DB but missing Queue or Lease on Router
+                  console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} (Static) missing queue or lease on router. Queuing add job.`);
                   needsUpdate = true;
                   await mikrotikSyncQueue.add('addUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
                 }

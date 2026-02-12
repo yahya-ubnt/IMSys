@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id: string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
 interface Device { _id: string; deviceName: string; ipAddress: string; }
-interface NewMikrotikUserData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
+interface NewMikrotikUserData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -63,6 +63,7 @@ export default function NewMikrotikUserPage() {
     const [username, setUsername] = useState("");
     const [pppoePassword, setPppoePassword] = useState("");
     const [ipAddress, setIpAddress] = useState("");
+    const [macAddress, setMacAddress] = useState("");
     const [remoteAddress, setRemoteAddress] = useState("");
     const [officialName, setOfficialName] = useState("");
     const [emailAddress, setEmailAddress] = useState("");
@@ -182,6 +183,7 @@ export default function NewMikrotikUserPage() {
             userData.remoteAddress = remoteAddress;
         } else if (serviceType === 'static') {
             userData.ipAddress = ipAddress;
+            userData.macAddress = macAddress;
         }
 
         try {
@@ -246,6 +248,7 @@ export default function NewMikrotikUserPage() {
                                                             {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div></div>}
                                                             {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">Remote Address</Label><Input value={remoteAddress} onChange={e => setRemoteAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
                                                             {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
+                                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 00:11:22:33:44:55" /></div>}
                                                         </div>
                                                     </div>
                                                     <div className="space-y-3">

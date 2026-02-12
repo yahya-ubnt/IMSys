@@ -60,6 +60,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     pppoePassword,
     remoteAddress,
     ipAddress,
+    macAddress,
     officialName,
     emailAddress,
     apartment_house_number,
@@ -138,6 +139,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
     pppoePassword,
     remoteAddress,
     ipAddress,
+    macAddress,
     officialName,
     emailAddress,
     apartment_house_number,
@@ -254,6 +256,7 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
     pppoePassword,
     remoteAddress,
     ipAddress,
+    macAddress,
     officialName,
     emailAddress,
     apartment_house_number,
@@ -284,6 +287,11 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
   user.pppoePassword = pppoePassword || user.pppoePassword;
   user.remoteAddress = remoteAddress || user.remoteAddress;
   user.ipAddress = ipAddress || user.ipAddress;
+  if (macAddress && user.macAddress !== macAddress) {
+    user.macAddress = macAddress;
+    user.syncStatus = 'pending';
+    needsSync = true;
+  }
   user.officialName = officialName || user.officialName;
   user.emailAddress = emailAddress || user.emailAddress;
   user.apartment_house_number = apartment_house_number || user.apartment_house_number;
