@@ -14,6 +14,12 @@ import { useTheme } from "next-themes"
 import { useAuth } from "@/components/auth-provider"
 import { fetchApi } from "@/lib/api"
 
+interface LoginResponse {
+  email: string;
+  fullName: string;
+  roles: string[];
+}
+
 function LoginPageContent() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -43,7 +49,7 @@ function LoginPageContent() {
     setError("")
 
     try {
-      const data = await fetchApi("/users/login", {
+      const data = await fetchApi<LoginResponse>("/users/login", {
         method: "POST",
         body: { email, password },
       })

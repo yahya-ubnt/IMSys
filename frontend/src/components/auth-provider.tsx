@@ -27,6 +27,16 @@ interface AuthContextType {
   isAdmin: boolean
 }
 
+interface UserProfile {
+  fullName: string;
+  email: string;
+  roles: string[];
+  tenant?: {
+    _id: string;
+    name: string;
+  };
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -42,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
         setToken(cookieToken || null);
 
-        const data = await fetchApi('/users/profile', { token: cookieToken });
+        const data = await fetchApi<UserProfile>('/users/profile', { token: cookieToken });
         const user: User = {
           name: data.fullName,
           email: data.email,
