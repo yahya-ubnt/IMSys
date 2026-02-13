@@ -1,5 +1,24 @@
 # IMSys Hierarchy & Monitoring Specification
 
+## Project Status (as of Feb 13, 2026)
+
+### Phase 1: Foundational Layer [COMPLETED]
+This initial phase focused on building the core architecture and data models required for the intelligent monitoring system.
+
+**Key Achievements:**
+- **New Data Architecture**:
+    - Created the `Building` model to represent physical locations.
+    - Redesigned the `Device` model with `physicalBuildingId` and `serviceArea` to accurately map hardware location vs. its coverage zone.
+    - Updated the `MikrotikUser` model to link directly to a `Building`.
+- **Intelligent Onboarding UI**:
+    - Implemented the "New Device" form allowing admins to configure service areas.
+    - Built the "Smart User Wizard" which automatically finds and links the correct network Station based on the client's selected building.
+    - Added on-the-fly "New Building" creation from within both workflows.
+- **Application Stability**:
+    - Resolved numerous critical backend and frontend bugs that caused build failures and runtime crashes. The application is now stable.
+
+---
+
 This document defines the technical architecture for the unified network hierarchy and monitoring system in IMSys.
 
 ## 1. The Core Philosophy: "The Sane Tree"
@@ -124,8 +143,21 @@ Since webhooks can be missed during network instability, a BullMQ job performs a
 
 ## 8. Implementation Roadmap
 
-1.  **Schema Update**: Update `Device` and `MikrotikUser` models.
-2.  **Webhook Engine**: Create the unified `/api/webhooks/network-event` endpoint.
-3.  **Injection Engine**: Build the utility to push Netwatch/PPP scripts to MikroTiks.
-4.  **Worker Implementation**: BullMQ workers for Heartbeats and ARP batching.
-5.  **UI Integration**: Add the "Parent" dropdown and "Live Check" buttons.
+1.  **[DONE] Schema & API Foundation**:
+    - Update `Device`, `MikrotikUser` models.
+    - Add new `Building` model.
+    - Create backend API and controller for Buildings.
+2.  **[DONE] Smart Onboarding UI**:
+    - Implement the "New Device" page with Service Area configuration.
+    - Implement the "Smart User Wizard" with automatic station selection.
+    - Add on-the-fly building creation to both forms.
+3.  **[TODO] Hardware Parent Linking UI**:
+    - Add the "Parent Device" dropdown to the "New/Edit Device" page to allow linking devices to each other (e.g., Station to Access Point).
+4.  **[DONE] Recursive Diagnostic Engine**:
+    - Create the `backend/services/diagnosticTreeService.js`.
+    - Implement the "tree-walk" logic to find the root cause of an outage by recursively checking parent device statuses.
+5.  **[DONE] Webhook & Worker Integration**:
+    - Create the unified `/api/webhooks/network-event` endpoint.
+    - This endpoint will receive "DOWN" events and trigger the Diagnostic Engine via a high-priority BullMQ job.
+6.  **[TODO] Live Check UI**:
+    - Add a "Live Check" button to the device and user dashboards to manually trigger a diagnostic ping.

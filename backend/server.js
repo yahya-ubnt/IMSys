@@ -105,12 +105,14 @@ const searchRoutes = require('./routes/searchRoutes');
 const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 
 // --- Public Routes ---
 // Routes that do not require authentication go here.
 app.use('/api/users', publicUserRoutes);
 app.use('/api/payments', publicPaymentRoutes);
 app.use('/api/upload', uploadRoutes); // Assuming upload might have public access points, adjust if not
+app.use('/api/webhooks', webhookRoutes);
 
 // --- Private Routes ---
 // Mount protected routes

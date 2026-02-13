@@ -34,6 +34,10 @@ const MikrotikRouterSchema = mongoose.Schema(
       type: String,
       required: false,
     },
+    isCoreRouter: {
+      type: Boolean,
+      default: false,
+    },
     isOnline: {
       type: Boolean,
       default: false,

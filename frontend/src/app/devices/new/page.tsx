@@ -44,6 +44,7 @@ export default function NewDevicePage() {
     const [deviceType, setDeviceType] = useState<"Access" | "Station" | '' >('');
     const [deviceName, setDeviceName] = useState("");
     const [deviceModel, setDeviceModel] = useState("");
+    const [parentId, setParentId] = useState("");
     const [physicalBuildingId, setPhysicalBuildingId] = useState("");
     const [serviceArea, setServiceArea] = useState<string[]>([]);
     const [ipAddress, setIpAddress] = useState("");
@@ -138,7 +139,8 @@ export default function NewDevicePage() {
 
         const deviceData = {
             router: routerId, deviceType, deviceName, deviceModel, ipAddress,
-            macAddress, loginUsername, ssid, physicalBuilding: physicalBuildingId, serviceArea: finalServiceArea
+            macAddress, loginUsername, ssid, parentId: parentId || undefined,
+            physicalBuilding: physicalBuildingId, serviceArea: finalServiceArea
         };
 
         // Conditionally add passwords
@@ -196,6 +198,18 @@ export default function NewDevicePage() {
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div className="space-y-1"><Label className="text-xs">Device Name</Label><Input value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">Device Model</Label><Input value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        <div className="space-y-1 sm:col-span-2">
+                                                            <Label className="text-xs">Parent Device (Uplink)</Label>
+                                                            <Select onValueChange={setParentId} value={parentId} disabled={accessPointsLoading || routersLoading}>
+                                                                <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select parent device" /></SelectTrigger>
+                                                                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                                    <Label className="px-3 text-xs text-zinc-400">Access Points</Label>
+                                                                    {accessPoints.map(d => <SelectItem key={d._id} value={d._id} className="text-sm">{d.deviceName}</SelectItem>)}
+                                                                    <Label className="px-3 text-xs text-zinc-400">Core Routers</Label>
+                                                                    {routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
                                                         <div className="space-y-1 sm:col-span-2 border-t border-zinc-800 pt-3">
                                                             <Label className="text-xs">Physical Location</Label>
                                                             <div className="flex items-center gap-2">
@@ -260,11 +274,15 @@ export default function NewDevicePage() {
                                                         <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">Login Username</Label><Input value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">Login Password</Label><Input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                        <div className="space-y-1"><Label className="text-xs">{deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"}</Label>
-                                                            {deviceType === 'Access' ? <Input value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                                                                : <Select onValueChange={setSsid} value={ssid} disabled={accessPointsLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap.ssid || ap.deviceName || ''} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select>}
-                                                        </div>
-                                                        <div className="space-y-1"><Label className="text-xs">{deviceType === 'Access' ? "WPA2 Key" : "Pre-shared Key"}</Label><Input type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        
+                                                        {deviceType === 'Access' && (
+                                                            <div className="space-y-1">
+                                                                <Label className="text-xs">Broadcasted SSID</Label>
+                                                                <Input value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                                                            </div>
+                                                        )}
+
+                                                        <div className="space-y-1"><Label className="text-xs">Wireless Key</Label><Input type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                     </div>
                                                 </motion.div>
                                             )}

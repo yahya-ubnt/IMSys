@@ -1,4 +1,5 @@
 const mikrotikSyncWorker = require('./workers/mikrotikSyncWorker');
+const diagnosticWorker = require('./workers/diagnosticWorker');
 
 // Start the worker
 mikrotikSyncWorker.on('completed', (job) => {
