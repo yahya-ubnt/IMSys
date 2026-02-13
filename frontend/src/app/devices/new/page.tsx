@@ -42,6 +42,7 @@ export default function NewDevicePage() {
     // Form State
     const [routerId, setRouterId] = useState("");
     const [deviceType, setDeviceType] = useState<"Access" | "Station" | '' >('');
+    const [monitoringMode, setMonitoringMode] = useState<"SNITCH" | "NONE">('NONE');
     const [deviceName, setDeviceName] = useState("");
     const [deviceModel, setDeviceModel] = useState("");
     const [parentId, setParentId] = useState("");
@@ -138,7 +139,7 @@ export default function NewDevicePage() {
         const finalServiceArea = [...new Set([physicalBuildingId, ...serviceArea])];
 
         const deviceData = {
-            router: routerId, deviceType, deviceName, deviceModel, ipAddress,
+            router: routerId, deviceType, monitoringMode, deviceName, deviceModel, ipAddress,
             macAddress, loginUsername, ssid, parentId: parentId || undefined,
             physicalBuilding: physicalBuildingId, serviceArea: finalServiceArea
         };
@@ -191,6 +192,19 @@ export default function NewDevicePage() {
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={routersLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
                                                         <div className="space-y-1"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select></div>
+                                                        <div className="space-y-1 sm:col-span-2">
+                                                            <Label className="text-xs">Monitoring Mode</Label>
+                                                            <Select onValueChange={(v: "SNITCH" | "NONE") => setMonitoringMode(v)} value={monitoringMode}>
+                                                                <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                                                                    <SelectValue placeholder="Select monitoring mode" />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                                    <SelectItem value="SNITCH" className="text-sm">Netwatch (Snitch) - Automatic Alerts</SelectItem>
+                                                                    <SelectItem value="NONE" className="text-sm">None - Manual Diagnostic Only</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <p className="text-[10px] text-zinc-500 mt-1">SNITCH mode enables instant automated failure reporting via the router.</p>
+                                                        </div>
                                                     </div>
                                                 </motion.div>
                                             ) : (

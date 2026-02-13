@@ -108,8 +108,9 @@ const checkAllDevices = async (tenant) => {
       await Promise.all(pingPromises);
 
       // Send consolidated alert for devices that came online
-      if (devicesUp.length > 0) {
-        await sendConsolidatedAlert(devicesUp, 'UP', tenant, null, 'Device');
+      const devicesUpForAlert = devicesUp.filter(d => d.monitoringMode !== 'SNITCH');
+      if (devicesUpForAlert.length > 0) {
+        await sendConsolidatedAlert(devicesUpForAlert, 'UP', tenant, null, 'Device');
       }
 
       for (const device of potentiallyOfflineDevices) {
@@ -133,8 +134,9 @@ const checkAllDevices = async (tenant) => {
       }
 
       // Send consolidated alert for devices that went offline
-      if (devicesDown.length > 0) {
-        await sendConsolidatedAlert(devicesDown, 'DOWN', tenant, null, 'Device');
+      const devicesDownForAlert = devicesDown.filter(d => d.monitoringMode !== 'SNITCH');
+      if (devicesDownForAlert.length > 0) {
+        await sendConsolidatedAlert(devicesDownForAlert, 'DOWN', tenant, null, 'Device');
       }
 
     } catch (error) {

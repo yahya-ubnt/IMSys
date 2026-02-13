@@ -33,7 +33,10 @@ const runDiagnostic = asyncHandler(async (req, res) => {
     const run = async () => {
       sendEvent('start', { message: 'Diagnostic process initiated...' });
       const { userId } = req.params;
-      const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant }).populate('mikrotikRouter').populate('station');
+      const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant })
+        .populate('mikrotikRouter')
+        .populate('station')
+        .populate('building');
       if (!mikrotikUser) throw new Error('Mikrotik User not found');
 
       const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
@@ -69,7 +72,10 @@ const runDiagnostic = asyncHandler(async (req, res) => {
       const addStep = (stepName, status, summary, details = {}) => steps.push({ stepName, status, summary, details });
 
       const { userId } = req.params;
-      const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant }).populate('mikrotikRouter').populate('station');
+      const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant })
+        .populate('mikrotikRouter')
+        .populate('station')
+        .populate('building');
       if (!mikrotikUser) return res.status(404).json({ message: 'Mikrotik User not found' });
 
       const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
@@ -102,43 +108,53 @@ const runDiagnostic = asyncHandler(async (req, res) => {
 // --- Diagnostic Paths Helpers ---
 
 const runCpeDiagnosticPath = async (addStep, mikrotikUser) => {
-  const cpe = mikrotikUser.station;
+  const station = mikrotikUser.station;
   const router = mikrotikUser.mikrotikRouter;
 
-  // 1. CPE (Station) Check
-  if (!cpe) {
-    addStep('CPE Check', 'Warning', 'No CPE (station) is associated with this client.');
-    return; // Cannot proceed with this path
-  }
-  const isCPEOnline = await checkCPEStatus(cpe, router);
-  if (!isCPEOnline) {
-    addStep('CPE Check', 'Failure', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is offline.`);
-  } else {
-    addStep('CPE Check', 'Success', `The client's CPE "${cpe.deviceName}" (${cpe.ipAddress}) is online.`);
+  if (!station) {
+    addStep('Hardware Check', 'Warning', 'No network station (CPE) is linked to this user.');
+    return;
   }
 
-  // 2. AP (Access Point) Check
-  const ap = await Device.findOne({ deviceType: 'Access', ssid: cpe.ssid, router: router._id });
-  if (!ap) {
-    addStep('AP Check', 'Warning', `No Access Point found with the same SSID (${cpe.ssid}) as the CPE.`);
-  } else {
-    const isAPOnline = await checkCPEStatus(ap, router);
-    const apStatus = isAPOnline ? 'Success' : 'Failure';
-    const apSummary = isAPOnline ? `Access Point "${ap.deviceName}" (${ap.ipAddress}) is online.` : `Access Point "${ap.deviceName}" (${ap.ipAddress}) is offline.`;
-    addStep('AP Check', apStatus, apSummary);
-  }
-
-  // 3. Station-Based Neighbor Analysis
-  const stationNeighbors = await MikrotikUser.find({ station: cpe._id, tenant: mikrotikUser.tenant });
+  // Use a recursive helper to walk up the tree
+  await walkHardwareTree(addStep, station, router, mikrotikUser.tenant);
+  
+  // Station-Based Neighbor Analysis
+  const stationNeighbors = await MikrotikUser.find({ station: station._id, tenant: mikrotikUser.tenant });
   await performNeighborAnalysis(addStep, stationNeighbors, router, 'Station-Based', mikrotikUser._id);
 };
 
+const walkHardwareTree = async (addStep, device, router, tenantId) => {
+  const isOnline = await checkCPEStatus(device, router);
+  const status = isOnline ? 'Success' : 'Failure';
+  const summary = `${device.deviceType} "${device.deviceName}" (${device.ipAddress}) is ${isOnline ? 'online' : 'offline'}.`;
+  
+  addStep(`${device.deviceType} Check`, status, summary);
+
+  if (!isOnline && device.parentId) {
+    // If the device is offline, check its parent to find the root cause
+    const parent = await Device.findOne({ _id: device.parentId, tenant: tenantId });
+    if (parent) {
+      console.log(`[Diagnostic] Device ${device.deviceName} is offline. Checking parent ${parent.deviceName}...`);
+      await walkHardwareTree(addStep, parent, router, tenantId);
+    }
+  }
+};
+
 const runApartmentDiagnosticPath = async (addStep, mikrotikUser) => {
-  const apartmentNeighbors = await MikrotikUser.find({ 
-    apartment_house_number: mikrotikUser.apartment_house_number,
+  const building = mikrotikUser.building;
+
+  if (!building) {
+    addStep('Location Check', 'Warning', 'No physical building is linked to this user.');
+    return;
+  }
+
+  const buildingNeighbors = await MikrotikUser.find({ 
+    building: building._id,
     tenant: mikrotikUser.tenant 
   });
-  await performNeighborAnalysis(addStep, apartmentNeighbors, mikrotikUser.mikrotikRouter, 'Apartment-Based', mikrotikUser._id);
+  
+  await performNeighborAnalysis(addStep, buildingNeighbors, mikrotikUser.mikrotikRouter, 'Building-Based', mikrotikUser._id);
 };
 
 const performNeighborAnalysis = async (addStep, neighbors, router, analysisType, targetUserId) => {

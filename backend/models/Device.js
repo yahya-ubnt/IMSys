@@ -21,6 +21,12 @@ const deviceSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide a MAC address'],
     },
+    monitoringMode: {
+      type: String,
+      required: true,
+      enum: ['SNITCH', 'NONE'],
+      default: 'NONE',
+    },
     deviceType: {
       type: String,
       required: true,
