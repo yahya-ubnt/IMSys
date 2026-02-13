@@ -35,8 +35,19 @@ const deviceSchema = new mongoose.Schema(
     lastSeen: {
       type: Date,
     },
-    location: {
-      type: String,
+    physicalBuilding: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Building',
+    },
+    serviceArea: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Building',
+      },
+    ],
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Device', // Self-reference for hierarchy
     },
     deviceName: {
       type: String,

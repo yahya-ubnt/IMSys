@@ -99,6 +99,7 @@ const hotspotStkRoutes = require('./routes/hotspotStkRoutes');
 const hotspotSessionRoutes = require('./routes/hotspotSessionRoutes');
 const voucherRoutes = require('./routes/voucherRoutes');
 const deviceRoutes = require('./routes/deviceRoutes'); // CPE & AP Devices
+const buildingRoutes = require('./routes/buildingRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
@@ -126,6 +127,7 @@ app.use('/api/hotspot', hotspotStkRoutes);
 app.use('/api/hotspot', hotspotSessionRoutes);
 app.use('/api/routers/:routerId/dashboard', mikrotikDashboardRoutes);
 app.use('/api/devices', deviceRoutes); // CPE & AP Devices
+app.use('/api/buildings', buildingRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/notifications', notificationRoutes);

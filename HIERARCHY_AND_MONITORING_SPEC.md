@@ -12,20 +12,17 @@ IMSys does not view the network as a flat list of IPs. It views it as a hierarch
 
 ## 2. Data Model Extensions
 
-### A. `Device` Model (Infrastructure)
-Used for Routers, Switches, Access Points, and Stations.
-- `parentId`: (ObjectId) Reference to another `Device` or `MikrotikRouter`.
-- `monitoringMode`: `['SNITCH', 'NONE']`
-    - `SNITCH`: Router uses Netwatch to report status via Webhook. (Recommended for APs/Stations).
-    - `NONE`: No background polling. (Manual "Live Check" only).
-- `status`: `['UP', 'DOWN', 'MAINTENANCE']`
+### A. `Device` Model (The "Pizzeria")
+- **`physicalBuildingId`**: (ObjectId, ref: 'Building') The building where the hardware is physically installed.
+- **`serviceArea`**: ([ObjectId], ref: 'Building') An array of Building IDs this device provides service to. This is its "delivery zone."
+- **`parentId`**: (ObjectId, ref: 'Device') The device's parent in the network hardware tree.
 
-### B. `MikrotikUser` Model (Customers)
-- `linkedDeviceId`: (ObjectId) Reference to the `Device` (Station/Antenna) that provides service to this user. This is the source of the user's Building context.
-- **Dashboard Status**: 
-    - PPPoE: Updated via Webhooks (Instant).
-    - Static: Updated via DHCP Lease Scripts (on-bound) and Targeted ARP Polling (for offline).
-- **Live Diagnostic**: A manual "Live Check" button for both types to trigger an instant Proxy-Ping for troubleshooting.
+### B. `Building` Model (The "Neighborhood")
+- A simple model containing `name`, `address`, etc. Acts as a geographical grouping for users and devices.
+
+### C. `MikrotikUser` Model (The "Customer")
+- **`buildingId`**: (ObjectId, ref: 'Building') The building where the customer is physically located.
+- **`stationId`**: (ObjectId, ref: 'Device') A direct link to the specific Device providing the service. This is mandatory for monitoring.
 
 ---
 
@@ -90,26 +87,28 @@ To support Alert Suppression and Smart Diagnostics, the system uses a dedicated 
 
 ---
 
-## 6. The Device Onboarding Flow (The "Claim & Context" Workflow)
+## 6. The Smart Onboarding Workflow
 
-To maintain a clean hierarchy, devices are added using a guided process that ensures human context is captured.
+This workflow is designed to be simple for the admin, while being powerful enough to handle complex network layouts.
 
-### Step 1: Identity & Reachability
-- **Entry**: Admin enters Device Name, IP, MAC, and Model. (Or "Claims" from a Scan).
-- **Verification**: IMSys attempts to ping the IP via the Parent Router to verify reachability.
+### A. Phase 1: Device Configuration (Setting the "Delivery Zone")
 
-### Step 2: The Hierarchical Link & Building Context
-- **Parent Selection**: Admin selects the parent device (e.g., "Core Router -> Sector A"). This defines the network connection.
-- **Building Assignment**:
-    - Admin explicitly assigns the device to a **Building**. This is crucial as APs and Stations may be in different physical locations.
-    - For Users: A `MikrotikUser` will inherit its building context from its `linkedDeviceId` (their client antenna/station).
+This is a one-time setup for each new Station (antenna).
+1.  **Physical Location**: Admin adds a new Device and assigns it to its `physicalBuildingId` (e.g., "The antenna is on the roof of **Building A**").
+2.  **Service Area**: Admin specifies the `serviceArea` for this device. This is a list of all buildings it can serve.
+    - *Scenario 1 (Simple)*: The antenna on Building A only serves Building A. The `serviceArea` is `[Building A]`.
+    - *Scenario 2 (Wired Neighbor)*: The antenna on Building A serves both Building A and the wired Building B. The `serviceArea` is `[Building A, Building B]`.
 
-### Step 3: Monitoring Assignment
-- **Select Tier**: Admin chooses between **Netwatch** (Resident) or **None** (Manual Diagnostic only).
-- **Auto-Config**: If Netwatch is selected, IMSys automatically pushes the "Snitch" scripts to the Core Router.
+### B. Phase 2: The New Client Wizard (Placing the "Order")
 
-### Step 4: Finalize
-- Device is saved to the DB and added to the **Monitoring Queue**. The hierarchy is now live for reporting.
+This is the simplified workflow for adding a new user.
+1.  **Select Client's Building**: The admin selects the building where the client physically lives (e.g., **Building B**).
+2.  **The System Finds the Station**: The system automatically searches for all `Devices` that include "Building B" in their `serviceArea`.
+3.  **The System Links the Station**:
+    - **If ONE station is found**: It is **auto-selected** and the admin doesn't have to do anything. The form might show a simple confirmation text like `Connected via: Antenna on Building A`.
+    - **If MULTIPLE stations are found**: The admin is presented with a small, filtered dropdown list to choose the correct station. This handles the "two antennas in one building" scenario.
+
+This hybrid approach ensures the `User -> Station` link is always correctly established for monitoring, while keeping the UI as simple as possible for the administrator.
 
 ## 7. The Safety Net: Reconciliation Engine (Self-Healing)
 

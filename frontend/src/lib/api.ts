@@ -2,7 +2,10 @@
 
 import { getCookie } from 'cookies-next';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+const IS_SERVER = typeof window === 'undefined';
+const API_BASE_URL = IS_SERVER 
+  ? (process.env.NEXT_PUBLIC_API_BASE_URL_SERVER || 'http://backend:5000/api')
+  : (process.env.NEXT_PUBLIC_API_BASE_URL_CLIENT || 'http://localhost:5000/api');
 
 interface ApiOptions extends Omit<RequestInit, 'body'> {
   token?: string;

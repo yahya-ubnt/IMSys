@@ -9,7 +9,8 @@ export interface Device {
   deviceType: "Access" | "Station";
   status: "UP" | "DOWN";
   lastSeen?: string;
-  location?: string;
+  physicalBuilding?: string;
+  serviceArea?: string[];
   deviceName?: string;
   deviceModel?: string;
   loginUsername?: string;
@@ -34,6 +35,11 @@ export interface MikrotikRouter {
   _id: string;
   name: string;
   ipAddress: string;
+}
+
+export interface Building {
+  _id: string;
+  name: string;
 }
 
 // Fetch all devices
@@ -108,6 +114,32 @@ export const getMikrotikRouters = async (): Promise<MikrotikRouter[]> => {
     throw new Error(errorData.message || "Failed to fetch Mikrotik routers");
   }
   return response.json();
+};
+
+// Fetch Buildings (for dropdowns in device forms)
+export const getBuildings = async (): Promise<any[]> => { // Using any for now, should be replaced with a Building interface
+  const response = await fetch(`/api/buildings`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch buildings");
+  }
+  const data = await response.json();
+  return data.data; // The buildings are in the 'data' property
+};
+
+// Create a new building
+export const createBuilding = async (buildingData: { name: string, address?: string }): Promise<Building> => {
+  const response = await fetch(`/api/buildings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildingData),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to create building");
+  }
+  const data = await response.json();
+  return data.data;
 };
 
 // Fetch Downtime Logs for a specific device

@@ -23,6 +23,10 @@ const MikrotikUserSchema = mongoose.Schema(
       ref: 'Package',
       required: true,
     },
+    building: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Building',
+    },
     station: {
       type: mongoose.Schema.ObjectId,
       ref: 'Device',

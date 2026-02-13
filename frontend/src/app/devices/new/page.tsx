@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, HardDrive, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Save, HardDrive, ChevronRight, ChevronLeft, Loader2, Plus } from "lucide-react";
 import { Topbar } from "@/components/topbar";
-import { createDevice, Device, getMikrotikRouters, getDevices, MikrotikRouter } from "@/lib/deviceService";
+import { createDevice, getMikrotikRouters, getDevices, getBuildings, createBuilding, type MikrotikRouter, type Device, type Building } from "@/lib/deviceService";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Step Indicator ---
@@ -43,7 +44,8 @@ export default function NewDevicePage() {
     const [deviceType, setDeviceType] = useState<"Access" | "Station" | '' >('');
     const [deviceName, setDeviceName] = useState("");
     const [deviceModel, setDeviceModel] = useState("");
-    const [location, setLocation] = useState("");
+    const [physicalBuildingId, setPhysicalBuildingId] = useState("");
+    const [serviceArea, setServiceArea] = useState<string[]>([]);
     const [ipAddress, setIpAddress] = useState("");
     const [macAddress, setMacAddress] = useState("");
     const [loginUsername, setLoginUsername] = useState("");
@@ -51,22 +53,38 @@ export default function NewDevicePage() {
     const [ssid, setSsid] = useState("");
     const [wirelessPassword, setWirelessPassword] = useState("");
 
+    // Dialog State
+    const [isBuildingDialogOpen, setIsBuildingDialogOpen] = useState(false);
+    const [newBuildingName, setNewBuildingName] = useState("");
+    const [isSavingBuilding, setIsSavingBuilding] = useState(false);
+
     // Data & UI State
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
     const [routersLoading, setRoutersLoading] = useState(true);
+    const [buildings, setBuildings] = useState<Building[]>([]);
+    const [buildingsLoading, setBuildingsLoading] = useState(true);
     const [accessPoints, setAccessPoints] = useState<Device[]>([]);
     const [accessPointsLoading, setAccessPointsLoading] = useState(true);
 
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                setRouters(await getMikrotikRouters());
-                setAccessPoints(await getDevices("Access"));
-            } catch {
-                toast({ title: "Error fetching initial data", variant: "destructive" });
+                const routersPromise = getMikrotikRouters();
+                const accessPointsPromise = getDevices("Access");
+                const buildingsPromise = getBuildings();
+
+                const [routersData, accessPointsData, buildingsData] = await Promise.all([routersPromise, accessPointsPromise, buildingsPromise]);
+                
+                setRouters(routersData || []);
+                setAccessPoints(accessPointsData || []);
+                setBuildings(buildingsData || []);
+
+            } catch (error) {
+                toast({ title: "Error fetching initial data", description: (error instanceof Error) ? error.message : "Unknown error", variant: "destructive" });
             } finally {
                 setRoutersLoading(false);
                 setAccessPointsLoading(false);
+                setBuildingsLoading(false);
             }
         };
         fetchInitialData();
@@ -86,20 +104,52 @@ export default function NewDevicePage() {
         setStep(1);
     };
 
+    const handleCreateBuilding = async () => {
+        if (!newBuildingName.trim()) {
+            toast({ title: "Building name cannot be empty", variant: "destructive" });
+            return;
+        }
+        setIsSavingBuilding(true);
+        try {
+            const newBuilding = await createBuilding({ name: newBuildingName });
+            toast({ title: "Building Created", description: `Successfully created ${newBuilding.name}.` });
+            
+            // Refetch buildings and select the new one
+            const updatedBuildings = await getBuildings();
+            setBuildings(updatedBuildings);
+            setPhysicalBuildingId(newBuilding._id);
+
+            setIsBuildingDialogOpen(false);
+            setNewBuildingName("");
+        } catch (error) {
+            toast({ title: "Error Creating Building", description: (error instanceof Error) ? error.message : "Unknown error", variant: "destructive" });
+        } finally {
+            setIsSavingBuilding(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!deviceType) { toast({ title: "Device Type is required", variant: "destructive" }); return; }
+        if (!physicalBuildingId) { toast({ title: "Physical Location is required", variant: "destructive" }); return; }
         setLoading(true);
-        const deviceData: Partial<Device> = {
-            router: routerId, deviceType, deviceName, deviceModel, location, ipAddress,
-            macAddress, loginUsername, ssid,
+
+        const finalServiceArea = [...new Set([physicalBuildingId, ...serviceArea])];
+
+        const deviceData = {
+            router: routerId, deviceType, deviceName, deviceModel, ipAddress,
+            macAddress, loginUsername, ssid, physicalBuilding: physicalBuildingId, serviceArea: finalServiceArea
         };
-        if (loginPassword) deviceData.loginPassword = loginPassword;
-        if (wirelessPassword) deviceData.wirelessPassword = wirelessPassword;
+
+        // Conditionally add passwords
+        const finalDeviceData: any = { ...deviceData };
+        if (loginPassword) finalDeviceData.loginPassword = loginPassword;
+        if (wirelessPassword) finalDeviceData.wirelessPassword = wirelessPassword;
 
         try {
-            const newDevice = await createDevice(deviceData);
+            const newDevice = await createDevice(finalDeviceData);
             toast({ title: "Device Created Successfully" });
+            
             const redirectBack = searchParams.get('redirectBackToUserCreation');
             if (redirectBack === 'true' && newDevice.deviceType === 'Station') {
                 router.push(`/mikrotik/users/new?newStationId=${newDevice._id}`);
@@ -146,7 +196,66 @@ export default function NewDevicePage() {
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div className="space-y-1"><Label className="text-xs">Device Name</Label><Input value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">Device Model</Label><Input value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                        <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Location</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g., Rooftop of Building A" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        <div className="space-y-1 sm:col-span-2 border-t border-zinc-800 pt-3">
+                                                            <Label className="text-xs">Physical Location</Label>
+                                                            <div className="flex items-center gap-2">
+                                                                <Select onValueChange={setPhysicalBuildingId} value={physicalBuildingId} disabled={buildingsLoading}>
+                                                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-full"><SelectValue placeholder="Select primary building" /></SelectTrigger>
+                                                                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                                        {buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Dialog open={isBuildingDialogOpen} onOpenChange={setIsBuildingDialogOpen}>
+                                                                    <DialogTrigger asChild>
+                                                                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0">
+                                                                            <Plus className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DialogTrigger>
+                                                                    <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700">
+                                                                        <DialogHeader>
+                                                                            <DialogTitle className="text-white">Create New Building</DialogTitle>
+                                                                        </DialogHeader>
+                                                                        <div className="grid gap-4 py-4">
+                                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                                <Label htmlFor="building-name" className="text-right text-zinc-400">Name</Label>
+                                                                                <Input id="building-name" value={newBuildingName} onChange={(e) => setNewBuildingName(e.target.value)} className="col-span-3 bg-zinc-800 border-zinc-600" />
+                                                                            </div>
+                                                                        </div>
+                                                                        <DialogFooter>
+                                                                            <Button type="button" onClick={handleCreateBuilding} disabled={isSavingBuilding}>
+                                                                                {isSavingBuilding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                                                                Save Building
+                                                                            </Button>
+                                                                        </DialogFooter>
+                                                                    </DialogContent>
+                                                                </Dialog>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-1 sm:col-span-2">
+                                                            <Label className="text-xs">Additionally Serves (Wired Neighbors)</Label>
+                                                            <div className="grid grid-cols-2 gap-2 p-2 rounded-md border border-zinc-700 bg-zinc-800/50 max-h-32 overflow-y-auto">
+                                                                {buildings.map(b => (
+                                                                    <div key={b._id} className="flex items-center gap-2">
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            id={`service-area-${b._id}`}
+                                                                            value={b._id}
+                                                                            checked={serviceArea.includes(b._id)}
+                                                                            onChange={(e) => {
+                                                                                if (e.target.checked) {
+                                                                                    setServiceArea([...serviceArea, b._id]);
+                                                                                } else {
+                                                                                    setServiceArea(serviceArea.filter(id => id !== b._id));
+                                                                                }
+                                                                            }}
+                                                                            disabled={b._id === physicalBuildingId}
+                                                                            className="form-checkbox h-4 w-4 text-blue-600 bg-zinc-700 border-zinc-600 rounded focus:ring-blue-500"
+                                                                        />
+                                                                        <Label htmlFor={`service-area-${b._id}`} className="text-sm font-normal">{b.name}</Label>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                         <div className="space-y-1"><Label className="text-xs">IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                         <div className="space-y-1"><Label className="text-xs">Login Username</Label><Input value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
