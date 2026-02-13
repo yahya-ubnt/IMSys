@@ -1,6 +1,7 @@
 const diagnosticQueue = require('../queues/diagnosticQueue');
 const { verifyRootCause } = require('../services/diagnosticTreeService');
 const Device = require('../models/Device');
+const { sendConsolidatedAlert } = require('../services/alertingService');
 
 console.log('Diagnostic Worker process started.');
 
@@ -10,7 +11,7 @@ diagnosticQueue.process('verifyDeviceStatus', async (job) => {
 
   try {
     // We need the tenantId to perform the check. Let's look up the device first.
-    const device = await Device.findById(deviceId).lean();
+    const device = await Device.findById(deviceId);
     if (!device) {
       throw new Error(`Device with ID ${deviceId} not found.`);
     }
@@ -20,8 +21,12 @@ diagnosticQueue.process('verifyDeviceStatus', async (job) => {
     const result = await verifyRootCause(deviceId, device.tenant);
     
     console.log(`[Diagnostic Worker] Diagnosis complete for device: ${deviceId}. Root cause: ${result.rootCause?.deviceName || 'N/A'}`);
-    // Here you would typically trigger notifications based on the result.
-    // For example, send an alert only for the rootCause device.
+    
+    // If we found a root cause, send an alert for it.
+    if (result.rootCause) {
+        // We pass the rootCause as an array to sendConsolidatedAlert
+        await sendConsolidatedAlert([result.rootCause], 'DOWN (Root Cause)', device.tenant, null, 'Device');
+    }
 
   } catch (error) {
     console.error(`[Diagnostic Worker] Job for deviceId ${deviceId} failed:`, error);

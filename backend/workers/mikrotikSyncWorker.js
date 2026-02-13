@@ -6,7 +6,7 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const Device = require('../models/Device');
 const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
-const { getMikrotikApiClient, injectNetwatchScript } = require('../utils/mikrotikUtils'); // Assuming this utility exists
+const { getMikrotikApiClient, injectNetwatchScript, injectPPPProfileScripts } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
 const { processExpiredClientDisconnectScheduler } = require('../jobs/scheduleExpiredClientDisconnectsJob'); // Import the scheduler processor
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
@@ -276,12 +276,16 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
               continue; // Skip this router
             }
 
-            // Fetch all PPP secrets, simple queues, DHCP leases, and address lists from the router
-            const routerPppSecrets = await routerClient.write('/ppp/secret/print');
-            const routerSimpleQueues = await routerClient.write('/queue/simple/print');
-            const routerDhcpLeases = await routerClient.write('/ip/dhcp-server/lease/print');
-            const routerAddressLists = await routerClient.write('/ip/firewall/address-list/print');
+            // Fetch all state data in bulk for efficiency
+            const [routerPppSecrets, routerSimpleQueues, routerDhcpLeases, routerAddressLists, routerNetwatchRules] = await Promise.all([
+              routerClient.write('/ppp/secret/print'),
+              routerClient.write('/queue/simple/print'),
+              routerClient.write('/ip/dhcp-server/lease/print'),
+              routerClient.write('/ip/firewall/address-list/print'),
+              routerClient.write('/tool/netwatch/print')
+            ]);
 
+            // --- 1. Reconcile Users (State) ---
             for (const dbUser of users) {
               let needsUpdate = false;
               let routerUserFound = false;
@@ -361,7 +365,26 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
               }
             }
 
-            // Identify users on Router but not in DB (Ghost users)
+            // --- 2. Reconcile Configuration (The Healer) ---
+            console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Starting configuration healing for router ${router.name}`);
+            
+            // A. Heal Device Monitoring (Netwatch)
+            const dbDevices = await Device.find({ tenant: tenantId, router: router._id });
+            for (const device of dbDevices) {
+              const matchingNetwatch = routerNetwatchRules.find(rule => rule.host === device.ipAddress);
+              
+              // If netwatch rule is missing OR its comment doesn't start with 'IMSys Monitor', re-inject.
+              if (!matchingNetwatch || !matchingNetwatch.comment?.startsWith('IMSys Monitor')) {
+                console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Healing Device: ${device.deviceName}. Netwatch rule missing or incorrect. Re-injecting.`);
+                await injectNetwatchScript(router, device);
+              }
+            }
+
+            // B. Heal User Monitoring (PPP Profile Scripts)
+            // This ensures profiles have the on-up/on-down scripts
+            await injectPPPProfileScripts(router);
+
+            // --- 3. Identify Ghost Users ---
             const dbUsernames = new Set(users.map(u => u.username));
             const ghostPppSecrets = routerPppSecrets.filter(secret => !dbUsernames.has(secret.name));
             const ghostSimpleQueues = routerSimpleQueues.filter(queue => !dbUsernames.has(queue.name));

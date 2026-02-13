@@ -306,4 +306,44 @@ const injectNetwatchScript = async (router, targetDevice) => {
   }
 };
 
-module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript };
+const injectPPPProfileScripts = async (router) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    const webhookUrl = `http://${process.env.BACKEND_IP_ADDRESS}:${process.env.PORT}/api/webhooks/network-event`;
+    const apiKey = process.env.WEBHOOK_API_KEY;
+
+    // We target the 'default' and 'default-encryption' profiles usually used for PPPoE
+    const profilesToHeal = ['default', 'default-encryption'];
+
+    for (const profileName of profilesToHeal) {
+      // MikroTik scripts for PPP profiles use $user variable
+      const onUpScript = `/tool fetch url="${webhookUrl}?username=$user&status=up&apiKey=${apiKey}" keep-result=no`;
+      const onDownScript = `/tool fetch url="${webhookUrl}?username=$user&status=down&apiKey=${apiKey}" keep-result=no`;
+
+      const existingProfiles = await client.write('/ppp/profile/print', [`?name=${profileName}`]);
+      
+      if (existingProfiles && existingProfiles.length > 0) {
+        const profileId = existingProfiles[0]['.id'];
+        await client.write('/ppp/profile/set', [
+          `=.id=${profileId}`,
+          `=on-up=${onUpScript}`,
+          `=on-down=${onDownScript}`,
+          `=comment=Healed by IMSys at ${new Date().toISOString()}`,
+        ]);
+        console.log(`Successfully healed PPP profile ${profileName} on router ${router.name}`);
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error(`Failed to heal PPP profiles on router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
+module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, injectPPPProfileScripts };
