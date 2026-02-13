@@ -143,21 +143,14 @@ Since webhooks can be missed during network instability, a BullMQ job performs a
 
 ## 8. Implementation Roadmap
 
-1.  **[DONE] Schema & API Foundation**:
-    - Update `Device`, `MikrotikUser` models.
-    - Add new `Building` model.
-    - Create backend API and controller for Buildings.
-2.  **[DONE] Smart Onboarding UI**:
-    - Implement the "New Device" page with Service Area configuration.
-    - Implement the "Smart User Wizard" with automatic station selection.
-    - Add on-the-fly building creation to both forms.
-3.  **[TODO] Hardware Parent Linking UI**:
-    - Add the "Parent Device" dropdown to the "New/Edit Device" page to allow linking devices to each other (e.g., Station to Access Point).
-4.  **[DONE] Recursive Diagnostic Engine**:
-    - Create the `backend/services/diagnosticTreeService.js`.
-    - Implement the "tree-walk" logic to find the root cause of an outage by recursively checking parent device statuses.
-5.  **[DONE] Webhook & Worker Integration**:
-    - Create the unified `/api/webhooks/network-event` endpoint.
-    - This endpoint will receive "DOWN" events and trigger the Diagnostic Engine via a high-priority BullMQ job.
-6.  **[TODO] Live Check UI**:
-    - Add a "Live Check" button to the device and user dashboards to manually trigger a diagnostic ping.
+### Phase 1: Data & Onboarding (Completed)
+1.  **[DONE] Schema & API Foundation**: Models and APIs for Buildings, Devices, and Users.
+2.  **[DONE] Smart Onboarding UI**: Forms for adding devices and users with the new hierarchy logic.
+3.  **[DONE] Hardware Parent Linking UI**: Dropdown to link devices to parents.
+4.  **[DONE] Manual Live Check UI**: Button on Device page for instant ping tests.
+
+### Phase 2: Automation & Monitoring (In Progress)
+5.  **[DONE] Webhook Receiver**: The `/api/webhooks/network-event` endpoint is ready to receive DOWN events.
+6.  **[DONE] Diagnostic Engine**: The `diagnosticTreeService` and its BullMQ worker are built to process DOWN events and find the root cause.
+7.  **[TODO] The Injection Engine**: A service that logs into routers to automatically configure the Netwatch, DHCP, and PPPoE scripts that *send* events to the webhook.
+8.  **[TODO] Active Monitoring Jobs**: The scheduled, repeating jobs for the "Core Heartbeat" and "Targeted ARP Polling" described in the Monitoring Strategies.
