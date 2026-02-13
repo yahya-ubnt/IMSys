@@ -1,22 +1,18 @@
 const axios = require('axios');
 const moment = require('moment');
 const mongoose = require('mongoose');
-const MikrotikUser = require('../models/MikrotikUser');
-const MpesaAlert = require('../models/MpesaAlert');
-const Transaction = require('../models/Transaction');
 const ApplicationSettings = require('../models/ApplicationSettings');
 const StkRequest = require('../models/StkRequest');
+const Transaction = require('../models/Transaction');
 const HotspotPlan = require('../models/HotspotPlan');
 const HotspotSession = require('../models/HotspotSession');
 const HotspotTransaction = require('../models/HotspotTransaction');
 const MikrotikRouter = require('../models/MikrotikRouter');
-const Invoice = require('../models/Invoice');
-const { processSubscriptionPayment } = require('../utils/paymentProcessing');
+const MpesaAlert = require('../models/MpesaAlert');
+const PaymentService = require('./paymentService');
 const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
 const { formatPhoneNumber } = require('../utils/formatters');
-
-// ... (getTenantMpesaCredentials, getDarajaAxiosInstance, initiateStkPushService, registerCallbackURL remain the same)
 
 const getTenantMpesaCredentials = async (tenant) => {
   const settings = await ApplicationSettings.findOne({ tenant });
@@ -102,87 +98,6 @@ const registerCallbackURL = async (tenant) => {
   return response.data;
 };
 
-
-/**
- * A centralized function to handle a successful payment, ensuring atomicity.
- */
-const handleSuccessfulPayment = async (params) => {
-  const { tenant, amount, transactionId, reference, paymentMethod, msisdn, officialName, comment } = params;
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    let userToCredit;
-    let finalComment = comment;
-
-    // --- INVOICE PAYMENT LOGIC ---
-    if (reference.startsWith('INV-')) {
-      const invoice = await Invoice.findOne({ 
-        invoiceNumber: reference, 
-        status: { $in: ['Unpaid', 'Overdue'] }, 
-        tenant: tenant 
-      }).session(session).populate('mikrotikUser');
-
-      if (!invoice) {
-        throw new Error(`Payment received for invoice '${reference}', but the invoice was not found, already paid, or does not belong to this tenant.`);
-      }
-      
-      invoice.status = 'Paid';
-      invoice.paidDate = new Date();
-      await invoice.save({ session });
-      
-      userToCredit = invoice.mikrotikUser;
-      finalComment = `Payment for Invoice #${reference}`;
-    } 
-    // --- SUBSCRIPTION PAYMENT LOGIC ---
-    else {
-      userToCredit = await MikrotikUser.findOne({ mPesaRefNo: reference, tenant: tenant }).session(session);
-    }
-
-    // If no user is found for either invoice or subscription, create an alert.
-    if (!userToCredit) {
-      throw new Error(`Payment of KES ${amount} for account '${reference}' received, but no user was found.`);
-    }
-
-    // Process the payment against the user's account.
-    await processSubscriptionPayment(userToCredit._id, amount, paymentMethod, transactionId, null, session);
-
-    // Create a standard transaction log.
-    await Transaction.create([{
-      transactionId,
-      amount,
-      referenceNumber: reference,
-      officialName: officialName || userToCredit.officialName,
-      msisdn,
-      transactionDate: new Date(),
-      paymentMethod,
-      tenant,
-      mikrotikUser: userToCredit._id,
-      comment: finalComment,
-    }], { session });
-
-    await session.commitTransaction();
-    console.log(`Successfully processed payment for ${reference} with TX ID ${transactionId}`);
-
-  } catch (error) {
-    await session.abortTransaction();
-    console.error(`Payment processing failed for TX ID ${transactionId}:`, error.message);
-    // Create an alert for reconciliation.
-    await MpesaAlert.create({ 
-      message: error.message, 
-      transactionId, 
-      amount, 
-      referenceNumber: reference, 
-      tenant, 
-      paymentDate: new Date() 
-    });
-  } finally {
-    session.endSession();
-  }
-};
-
-
 const processStkCallback = async (callbackData) => {
   const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
 
@@ -216,8 +131,6 @@ const processStkCallback = async (callbackData) => {
 
   // --- HOTSPOT LOGIC (Remains separate as it doesn't use processSubscriptionPayment) ---
   if (stkRequest.type === 'HOTSPOT') {
-    // This logic needs its own transaction if it involves multiple DB writes.
-    // For now, it is left as is, but should be reviewed for atomicity.
     const hotspotTransaction = await HotspotTransaction.findOneAndUpdate(
       { macAddress: stkRequest.accountReference, status: 'pending' },
       { status: 'completed', transactionId: transactionId },
@@ -240,14 +153,14 @@ const processStkCallback = async (callbackData) => {
   } 
   // --- INVOICE & SUBSCRIPTION LOGIC ---
   else {
-    await handleSuccessfulPayment({
+    await PaymentService.handleSuccessfulPayment({
       tenant: stkRequest.tenant,
       amount: amount,
       transactionId: transactionId,
       reference: stkRequest.accountReference,
       paymentMethod: 'M-Pesa (STK)',
       msisdn: msisdn,
-      officialName: null, // Will be fetched from the user/invoice record
+      officialName: null,
       comment: null,
     });
   }
@@ -276,7 +189,7 @@ const processC2bCallback = async (callbackData) => {
     return;
   }
 
-  await handleSuccessfulPayment({
+  await PaymentService.handleSuccessfulPayment({
     tenant: settings.tenant,
     amount: TransAmount,
     transactionId: TransID,

@@ -1,208 +1,24 @@
 const asyncHandler = require('express-async-handler');
-const { validationResult, body } = require('express-validator');
+const { validationResult } = require('express-validator');
 const MikrotikUser = require('../models/MikrotikUser');
 const Package = require('../models/Package');
 const MikrotikRouter = require('../models/MikrotikRouter');
-const RouterOSAPI = require('node-routeros').RouterOSAPI;
-const { decrypt } = require('../utils/crypto'); // Import decrypt function
+const UserService = require('../services/userService');
 const UserDowntimeLog = require('../models/UserDowntimeLog');
-const WalletTransaction = require('../models/WalletTransaction');
 const Transaction = require('../models/Transaction');
-const ApplicationSettings = require('../models/ApplicationSettings');
-const { sendAcknowledgementSms } = require('../services/smsService');
-const smsTriggers = require('../constants/smsTriggers');
-const { getMikrotikApiClient, reconnectMikrotikUser } = require('../utils/mikrotikUtils'); // Import getMikrotikApiClient
-
-const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
-
-// Helper function to generate a unique 6-digit number
-const generateUnique6DigitNumber = async (tenant) => {
-  let isUnique = false;
-  let randomNumber;
-  while (!isUnique) {
-    randomNumber = Math.floor(100000 + Math.random() * 900000).toString();
-    const existingUser = await MikrotikUser.findOne({ mPesaRefNo: randomNumber, tenant: tenant });
-    if (!existingUser) {
-      isUnique = true;
-    }
-  }
-  return randomNumber;
-};
-
-// Helper function to generate a random 6-letter string
-const generateRandom6LetterString = () => {
-  const characters = 'abcdefghijklmnopqrstuvwxyz';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-};
-
-const formatUpdateArgs = (argsObject) => {
-  return Object.entries(argsObject).map(([key, value]) => `=${key}=${value}`);
-};
+const { getMikrotikApiClient } = require('../utils/mikrotikUtils');
+const { decrypt } = require('../utils/crypto');
+const RouterOSAPI = require('node-routeros').RouterOSAPI;
 
 // @desc    Create a new Mikrotik User
 // @route   POST /api/mikrotik/users
 // @access  Private
 const createMikrotikUser = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const {
-    mikrotikRouter,
-    serviceType,
-    package: packageId,
-    username,
-    pppoePassword,
-    remoteAddress,
-    ipAddress,
-    macAddress,
-    officialName,
-    emailAddress,
-    apartment_house_number,
-    door_number_unit_label,
-    mPesaRefNo,
-    installationFee,
-    billingCycle,
-    mobileNumber,
-    expiryDate,
-    station,
-    sendWelcomeSms,
-  } = req.body;
-
-  // Verify ownership of router
-  const router = await MikrotikRouter.findOne({ _id: mikrotikRouter, tenant: req.user.tenant });
-  if (!router) {
-    res.status(401);
-    throw new Error('Not authorized to use this router');
-  }
-
-  // Verify ownership of package
-  const selectedPackage = await Package.findOne({ _id: packageId, tenant: req.user.tenant });
-  if (!selectedPackage) {
-    res.status(401);
-    throw new Error('Not authorized to use this package');
-  }
-
-  if (selectedPackage.serviceType !== serviceType) {
-    res.status(400);
-    throw new Error('Service type of user must match selected package service type');
-  }
-
-  // Validate package profile/rateLimit based on serviceType
-  if (serviceType === 'pppoe' && !selectedPackage.profile) {
-    res.status(400);
-    throw new Error('The selected package is missing a PPP profile. Please edit the package to include a profile.');
-  }
-  if (serviceType === 'static' && !selectedPackage.rateLimit) {
-    res.status(400);
-    throw new Error('The selected package is missing a rate limit. Please edit the package to include a rate limit.');
-  }
-
-  // Validate PPPoE specific fields
-  if (serviceType === 'pppoe') {
-    if (!pppoePassword) {
-      res.status(400);
-      throw new Error('PPPoE password is required for PPPoE users');
-    }
-  }
-
-  // Handle mPesaRefNo generation if requested
-  let finalMPesaRefNo = mPesaRefNo;
-  if (mPesaRefNo === 'generate_6_digit_number') {
-    finalMPesaRefNo = await generateUnique6DigitNumber(req.user.tenant);
-  } else if (mPesaRefNo === 'generate_6_letter_string') {
-    finalMPesaRefNo = generateRandom6LetterString();
-  }
-
-  const userExists = await MikrotikUser.findOne({ username, tenant: req.user.tenant });
-  if (userExists) {
-    res.status(400);
-    throw new Error('A user with this username already exists');
-  }
-
-  const mPesaRefNoExists = await MikrotikUser.findOne({ mPesaRefNo: finalMPesaRefNo, tenant: req.user.tenant });
-  if (mPesaRefNoExists) {
-    res.status(400);
-    throw new Error('M-Pesa Reference Number must be unique');
-  }
-
-  const mikrotikUser = await MikrotikUser.create({
-    mikrotikRouter,
-    serviceType,
-    package: packageId,
-    username,
-    pppoePassword,
-    remoteAddress,
-    ipAddress,
-    macAddress,
-    officialName,
-    emailAddress,
-    apartment_house_number,
-    door_number_unit_label,
-    mPesaRefNo: finalMPesaRefNo,
-    installationFee,
-    billingCycle,
-    mobileNumber,
-    expiryDate,
-    station,
-    tenant: req.user.tenant, // Associate with the logged-in user's tenant
-    provisionedOnMikrotik: false, // Set to false initially
-    syncStatus: 'pending', // Set sync status to pending
-  });
-
-  // If there is an installation fee, create an initial debit for it.
-  if (mikrotikUser && installationFee && parseFloat(installationFee) > 0) {
-    const fee = parseFloat(installationFee);
-    mikrotikUser.walletBalance -= fee;
-
-    await WalletTransaction.create({
-      tenant: req.user.tenant,
-      mikrotikUser: mikrotikUser._id,
-      transactionId: `DEBIT-INSTALL-${Date.now()}-${mikrotikUser.username}`,
-      type: 'Debit',
-      amount: fee,
-      source: 'Installation Fee',
-      balanceAfter: mikrotikUser.walletBalance,
-      comment: 'Initial installation fee.',
-    });
-
-    await mikrotikUser.save();
-  }
-
-  if (mikrotikUser) {
-    // Add a job to the queue to provision the user on the Mikrotik router
-    await mikrotikSyncQueue.add('addUser', {
-      mikrotikUserId: mikrotikUser._id,
-      tenantId: req.user.tenant,
-    });
-
-    if (sendWelcomeSms) {
-      try {
-          await sendAcknowledgementSms(
-              smsTriggers.MIKROTIK_USER_CREATED,
-              mikrotikUser.mobileNumber,
-              {
-                  officialName: mikrotikUser.officialName,
-                  mPesaRefNo: mikrotikUser.mPesaRefNo,
-                  tenant: req.user.tenant, // Pass the tenant's ID
-                  mikrotikUser: mikrotikUser._id // Associate with the user
-              }
-          );
-      } catch (error) {
-          console.error(`Failed to send acknowledgement SMS for new user ${mikrotikUser.username}:`, error);
-      }
-    }
-
-    res.status(201).json(mikrotikUser);
-  } else {
-    res.status(400);
-    throw new Error('Invalid Mikrotik user data');
-  }
+  const mikrotikUser = await UserService.createMikrotikUser(req.body, req.user.tenant);
+  res.status(201).json(mikrotikUser);
 });
 
 // @desc    Get all Mikrotik Users
@@ -241,82 +57,7 @@ const getMikrotikUserById = asyncHandler(async (req, res) => {
 // @route   PUT /api/mikrotik/users/:id
 // @access  Private
 const updateMikrotikUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant });
-
-  if (!user) {
-    res.status(404);
-    throw new Error('Mikrotik User not found');
-  }
-
-  const {
-    mikrotikRouter,
-    serviceType,
-    package: packageId,
-    username,
-    pppoePassword,
-    remoteAddress,
-    ipAddress,
-    macAddress,
-    officialName,
-    emailAddress,
-    apartment_house_number,
-    door_number_unit_label,
-    mPesaRefNo,
-    installationFee,
-    billingCycle,
-    mobileNumber,
-    expiryDate,
-    isSuspended,
-    station,
-  } = req.body;
-
-  // Keep track of what needs to be synced
-  let needsSync = false;
-
-  // Handle package change specifically
-  if (packageId && user.package.toString() !== packageId) {
-    user.pendingPackage = packageId;
-    user.syncStatus = 'pending';
-    needsSync = true;
-  }
-
-  // Update other user fields
-  user.mikrotikRouter = mikrotikRouter || user.mikrotikRouter;
-  user.serviceType = serviceType || user.serviceType;
-  user.username = username || user.username;
-  user.pppoePassword = pppoePassword || user.pppoePassword;
-  user.remoteAddress = remoteAddress || user.remoteAddress;
-  user.ipAddress = ipAddress || user.ipAddress;
-  if (macAddress && user.macAddress !== macAddress) {
-    user.macAddress = macAddress;
-    user.syncStatus = 'pending';
-    needsSync = true;
-  }
-  user.officialName = officialName || user.officialName;
-  user.emailAddress = emailAddress || user.emailAddress;
-  user.apartment_house_number = apartment_house_number || user.apartment_house_number;
-  user.door_number_unit_label = door_number_unit_label || user.door_number_unit_label;
-  user.mPesaRefNo = mPesaRefNo || user.mPesaRefNo;
-  user.installationFee = installationFee || user.installationFee;
-  user.billingCycle = billingCycle || user.billingCycle;
-  user.mobileNumber = mobileNumber || user.mobileNumber;
-  user.expiryDate = expiryDate || user.expiryDate;
-  user.station = station || user.station;
-
-  if (expiryDate && new Date(expiryDate) > new Date()) {
-    user.isSuspended = false;
-  }
-
-  const updatedUser = await user.save();
-
-  // If a sync-worthy change was made, add a job to the queue
-  if (needsSync) {
-    await mikrotikSyncQueue.add('updateUser', {
-      mikrotikUserId: updatedUser._id,
-      tenantId: req.user.tenant,
-    });
-  }
-
+  const updatedUser = await UserService.updateUser(req.params.id, req.body, req.user.tenant);
   res.status(200).json(updatedUser);
 });
 
@@ -324,129 +65,28 @@ const updateMikrotikUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/mikrotik/users/:id
 // @access  Private
 const deleteMikrotikUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant });
-
-  if (!user) {
-    res.status(404);
-    throw new Error('Mikrotik User not found');
-  }
-
-  const router = await MikrotikRouter.findById(user.mikrotikRouter);
-  if (user.provisionedOnMikrotik) {
-    const router = await MikrotikRouter.findById(user.mikrotikRouter);
-    if (router) {
-      let client;
-      let mikrotikDeletionFailed = false; // Flag to track Mikrotik deletion status
-      try {
-        client = new RouterOSAPI({
-          host: router.ipAddress,
-          user: router.apiUsername,
-          password: decrypt(router.apiPassword),
-          port: router.apiPort,
-        });
-
-        await client.connect();
-
-        if (user.serviceType === 'pppoe') {
-          try {
-            const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-            if (pppSecrets.length > 0) {
-              const secretId = pppSecrets[0]['.id'];
-              await client.write('/ppp/secret/remove', [`=.id=${secretId}`]);
-            } else {
-              console.warn(`Mikrotik user ${user.username} (PPP) not found on router ${router.name}.`);
-            }
-          } catch (pppError) {
-            console.error(`Error during PPP secret operation for user ${user.username}: ${pppError.message}`);
-            mikrotikDeletionFailed = true;
-          }
-        } else if (user.serviceType === 'static') {
-          try {
-            const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-            if (simpleQueues.length > 0) {
-              const queueId = simpleQueues[0]['.id'];
-              await client.write('/queue/simple/remove', [`=.id=${queueId}`]);
-            } else {
-              console.warn(`Mikrotik user ${user.username} (Static) not found on router ${router.name}.`);
-            }
-          } catch (staticError) {
-            console.error(`Error during Simple Queue operation for user ${user.username}: ${staticError.message}`);
-            mikrotikDeletionFailed = true;
-          }
-        }
-      } catch (connectionError) {
-        console.error(`Mikrotik connection or API error for user ${user.username}: ${connectionError.message}`);
-        mikrotikDeletionFailed = true;
-      } finally {
-        if (client) {
-          client.close();
-        }
-      }
-
-      if (mikrotikDeletionFailed) {
-        console.warn(`Mikrotik de-provisioning failed for user ${user.username}. Proceeding with application database deletion.`);
-      }
-    }
-  } else {
-    console.warn(`Mikrotik user ${user.username} was not provisioned on Mikrotik. Deleting only from application database.`);
-  }
-
-  await user.deleteOne();
-
-  res.status(200).json({ message: 'Mikrotik User removed' });
+  await UserService.deleteUser(req.params.id, req.user.tenant);
+  res.status(200).json({ message: 'Mikrotik User removal initiated' });
 });
 
-// @desc    Manually disconnect a Mikrotik User
-// @route   POST /api/mikrotik/users/:id/disconnect
-// @access  Private/Admin
+// ... (manualDisconnectUser, manualConnectUser logic updated to use generic sync)
+
 const manualDisconnectUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant });
+  const updatedUser = await UserService.updateUser(req.params.id, {
+    isSuspended: true,
+    isManuallyDisconnected: true,
+  }, req.user.tenant);
 
-  if (!user) {
-    res.status(404);
-    throw new Error('Mikrotik User not found');
-  }
-
-  // Set the desired state in the database first
-  user.isManuallyDisconnected = true;
-  user.isSuspended = true;
-  user.syncStatus = 'pending';
-  await user.save();
-
-  // Add a job to the queue to perform the disconnection on the router
-  await mikrotikSyncQueue.add('disconnectUser', {
-    mikrotikUserId: user._id,
-    tenantId: req.user.tenant,
-    isManualDisconnect: true, // Flag to indicate a manual action
-  });
-
-  res.status(200).json({ message: 'User disconnection initiated successfully', user });
+  res.status(200).json({ message: 'User disconnection initiated successfully', user: updatedUser });
 });
 
-// @desc    Manually connect a Mikrotik User
-// @route   POST /api/mikrotik/users/:id/connect
-// @access  Private/Admin
 const manualConnectUser = asyncHandler(async (req, res) => {
-  const user = await MikrotikUser.findOne({ _id: req.params.id, tenant: req.user.tenant });
+  const updatedUser = await UserService.updateUser(req.params.id, {
+    isSuspended: false,
+    isManuallyDisconnected: false,
+  }, req.user.tenant);
 
-  if (!user) {
-    res.status(404);
-    throw new Error('Mikrotik User not found');
-  }
-
-  // Set the desired state in the database first
-  user.isManuallyDisconnected = false;
-  user.isSuspended = false;
-  user.syncStatus = 'pending';
-  await user.save();
-
-  // Add a job to the queue to perform the connection on the router
-  await mikrotikSyncQueue.add('connectUser', {
-    mikrotikUserId: user._id,
-    tenantId: req.user.tenant,
-  });
-
-  res.status(200).json({ message: 'User connection initiated successfully', user });
+  res.status(200).json({ message: 'User connection initiated successfully', user: updatedUser });
 });
 
 

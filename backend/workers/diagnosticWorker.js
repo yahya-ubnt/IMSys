@@ -1,11 +1,15 @@
-const diagnosticQueue = require('../queues/diagnosticQueue');
+const { Worker } = require('bullmq');
 const { verifyRootCause } = require('../services/diagnosticTreeService');
 const Device = require('../models/Device');
 const { sendConsolidatedAlert } = require('../services/alertingService');
+const connectDB = require('../config/db');
+
+// Connect to DB for the worker
+connectDB();
 
 console.log('Diagnostic Worker process started.');
 
-diagnosticQueue.process('verifyDeviceStatus', async (job) => {
+const diagnosticWorker = new Worker('diagnostic-queue', async (job) => {
   const { deviceId } = job.data;
   console.log(`[Diagnostic Worker] Processing job for deviceId: ${deviceId}`);
 
@@ -33,12 +37,19 @@ diagnosticQueue.process('verifyDeviceStatus', async (job) => {
     // You might want to add retry logic or move to a failed jobs queue here.
     throw error; // Throw error to let BullMQ know the job failed
   }
+}, {
+  connection: {
+    host: 'redis',
+    port: 6379,
+  },
 });
 
-diagnosticQueue.on('completed', (job) => {
+diagnosticWorker.on('completed', (job) => {
   console.log(`Job ${job.id} completed!`);
 });
 
-diagnosticQueue.on('failed', (job, err) => {
+diagnosticWorker.on('failed', (job, err) => {
   console.log(`Job ${job.id} failed with error: ${err.message}`);
 });
+
+module.exports = diagnosticWorker;

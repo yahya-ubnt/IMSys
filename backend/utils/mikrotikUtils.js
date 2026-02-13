@@ -346,4 +346,133 @@ const injectPPPProfileScripts = async (router) => {
   }
 };
 
-module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, injectPPPProfileScripts };
+/**
+ * Idempotent sync for a Mikrotik user.
+ * Checks actual state on router and aligns it with DB intent.
+ */
+const syncMikrotikUser = async (client, user) => {
+  if (user.serviceType === 'pppoe') {
+    return await ensurePppSecret(client, user);
+  } else if (user.serviceType === 'static') {
+    return await ensureStaticLeaseAndQueue(client, user);
+  }
+  return false;
+};
+
+const ensurePppSecret = async (client, user) => {
+  const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+  const desiredProfile = user.isSuspended ? 'Disconnect' : user.package.profile;
+  const desiredDisabled = user.isSuspended ? 'yes' : 'no';
+  const comment = `Synced by IMSys at ${new Date().toISOString()}`;
+
+  const secretArgs = [
+    `=name=${user.username}`,
+    `=password=${user.pppoePassword}`,
+    `=profile=${desiredProfile}`,
+    `=service=pppoe`,
+    `=disabled=${desiredDisabled}`,
+    `=comment=${comment}`,
+  ];
+  if (user.remoteAddress) {
+    secretArgs.push(`=remote-address=${user.remoteAddress}`);
+  }
+
+  if (pppSecrets.length === 0) {
+    console.log(`[Sync] Creating missing PPP secret for ${user.username}`);
+    await client.write('/ppp/secret/add', secretArgs);
+  } else {
+    const existing = pppSecrets[0];
+    const needsUpdate = 
+      existing.password !== user.pppoePassword ||
+      existing.profile !== desiredProfile ||
+      existing.disabled !== desiredDisabled ||
+      (user.remoteAddress && existing['remote-address'] !== user.remoteAddress);
+
+    if (needsUpdate) {
+      console.log(`[Sync] Updating PPP secret for ${user.username}`);
+      await client.write('/ppp/secret/set', [`=.id=${existing['.id']}`, ...secretArgs]);
+    }
+  }
+
+  // Handle active session if suspended
+  if (user.isSuspended) {
+    const activeSessions = await client.write('/ppp/active/print', [`?name=${user.username}`]);
+    for (const session of activeSessions) {
+      console.log(`[Sync] Terminating active session for suspended user ${user.username}`);
+      await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
+    }
+  }
+
+  return true;
+};
+
+const ensureStaticLeaseAndQueue = async (client, user) => {
+  // 1. Ensure DHCP Lease
+  if (user.macAddress) {
+    const leases = await client.write('/ip/dhcp-server/lease/print', [`?mac-address=${user.macAddress}`]);
+    const leaseArgs = [
+      `=address=${user.ipAddress}`,
+      `=mac-address=${user.macAddress}`,
+      `=comment=IMSys: ${user.username}`,
+    ];
+
+    if (leases.length === 0) {
+      console.log(`[Sync] Creating missing DHCP lease for ${user.username}`);
+      await client.write('/ip/dhcp-server/lease/add', leaseArgs);
+    } else {
+      const existing = leases[0];
+      if (existing.address !== user.ipAddress) {
+        console.log(`[Sync] Updating DHCP lease address for ${user.username}`);
+        await client.write('/ip/dhcp-server/lease/set', [`=.id=${existing['.id']}`, `=address=${user.ipAddress}`]);
+      }
+    }
+  }
+
+  // 2. Ensure Simple Queue
+  const queues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+  const desiredLimit = user.package.rateLimit;
+  // Note: For static users, we currently use 'BLOCKED_USERS' address list for suspension,
+  // but we should still ensure the queue exists and is configured correctly.
+  const queueArgs = [
+    `=name=${user.username}`,
+    `=target=${user.ipAddress}`,
+    `=max-limit=${desiredLimit}`,
+    `=comment=IMSys: ${user.username}`,
+    `=disabled=no`, // Simple queues for static users are always enabled
+  ];
+
+  if (queues.length === 0) {
+    console.log(`[Sync] Creating missing Simple Queue for ${user.username}`);
+    await client.write('/queue/simple/add', queueArgs);
+  } else {
+    const existing = queues[0];
+    if (existing.target !== `${user.ipAddress}/32` || existing['max-limit'] !== desiredLimit || existing.disabled !== 'no') {
+      console.log(`[Sync] Updating Simple Queue for ${user.username}`);
+      await client.write('/queue/simple/set', [`=.id=${existing['.id']}`, ...queueArgs]);
+    }
+  }
+
+  // 3. Ensure Firewall Address List (Suspension)
+  const listEntries = await client.write('/ip/firewall/address-list/print', [
+    `?address=${user.ipAddress}`,
+    `?list=BLOCKED_USERS`
+  ]);
+
+  if (user.isSuspended && listEntries.length === 0) {
+    console.log(`[Sync] Blocking static user ${user.username} (adding to BLOCKED_USERS)`);
+    await client.write('/ip/firewall/address-list/add', [
+      '=list=BLOCKED_USERS',
+      `=address=${user.ipAddress}`,
+      `=comment=Suspended by IMSys at ${new Date().toISOString()}`
+    ]);
+  } else if (!user.isSuspended && listEntries.length > 0) {
+    console.log(`[Sync] Unblocking static user ${user.username} (removing from BLOCKED_USERS)`);
+    for (const entry of listEntries) {
+      await client.write('/ip/firewall/address-list/remove', [`=.id=${entry['.id']}`]);
+    }
+  }
+
+  return true;
+};
+
+module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };

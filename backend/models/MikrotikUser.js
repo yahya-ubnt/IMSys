@@ -126,6 +126,9 @@ const MikrotikUserSchema = mongoose.Schema(
     syncErrorMessage: {
       type: String,
     },
+    lastSyncedAt: {
+      type: Date,
+    },
     pendingPackage: {
       type: mongoose.Schema.ObjectId,
       ref: 'Package',

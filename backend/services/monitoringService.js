@@ -164,10 +164,4 @@ const checkAllDevices = async (tenant) => {
   }
 };
 
-const startMonitoring = () => {
-  console.log('Starting CPE & AP monitoring service...');
-  // This will be triggered by the master scheduler now
-  // setInterval(checkAllDevices, PING_INTERVAL);
-};
-
-module.exports = { startMonitoring, checkAllDevices };
+module.exports = { checkAllDevices };

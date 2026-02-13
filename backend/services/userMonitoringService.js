@@ -69,6 +69,11 @@ async function performUserStatusCheck(tenant) {
                 timeout: 5000, // Increased timeout for bulk operations
             });
 
+            const potentiallyOfflineUsers = [];
+            const usersOnline = [];
+            const usersOffline = [];
+            const usersOfflineRouterUnreachable = [];
+
             try {
                 await client.connect();
 
@@ -79,11 +84,6 @@ async function performUserStatusCheck(tenant) {
                 ]);
 
                 const onlinePppoeUsers = new Set(pppActiveSessions.map(s => s.name));
-                
-                const potentiallyOfflineUsers = [];
-                const usersOnline = [];
-                const usersOffline = [];
-                const usersOfflineRouterUnreachable = [];
 
                 // 4. Initial online status check
                 for (const user of users) {
@@ -206,29 +206,6 @@ async function performUserStatusCheck(tenant) {
     }
 }
 
-let userMonitoringInterval = null;
-
-function startUserMonitoring(intervalMs) {
-    if (userMonitoringInterval) {
-        console.log(`[${new Date().toISOString()}] User monitoring already running. Clearing existing interval.`);
-        clearInterval(userMonitoringInterval);
-    }
-    console.log(`[${new Date().toISOString()}] Starting user monitoring every ${intervalMs / 1000} seconds.`);
-    // This will be triggered by the master scheduler now
-    // performUserStatusCheck();
-    // userMonitoringInterval = setInterval(performUserStatusCheck, intervalMs);
-}
-
-function stopUserMonitoring() {
-    if (userMonitoringInterval) {
-        console.log(`[${new Date().toISOString()}] Stopping user monitoring.`);
-        clearInterval(userMonitoringInterval);
-        userMonitoringInterval = null;
-    }
-}
-
 module.exports = {
-    startUserMonitoring,
-    stopUserMonitoring,
     performUserStatusCheck // Export for immediate manual trigger if needed
 };

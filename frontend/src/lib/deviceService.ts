@@ -8,6 +8,7 @@ export interface Device {
   macAddress: string;
   deviceType: "Access" | "Station";
   status: "UP" | "DOWN";
+  monitoringMode?: "SNITCH" | "NONE";
   lastSeen?: string;
   physicalBuilding?: string | Building;
   serviceArea?: string[];
