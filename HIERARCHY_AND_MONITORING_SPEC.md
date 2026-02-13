@@ -153,4 +153,5 @@ Since webhooks can be missed during network instability, a BullMQ job performs a
 5.  **[DONE] Webhook Receiver**: The `/api/webhooks/network-event` endpoint is ready to receive DOWN events.
 6.  **[DONE] Diagnostic Engine**: The `diagnosticTreeService` and its BullMQ worker are built to process DOWN events and find the root cause.
 7.  **[DONE] The Injection Engine**: A service that logs into routers to automatically configure the Netwatch, DHCP, and PPPoE scripts that *send* events to the webhook.
-8.  **[DONE] Active Monitoring Jobs**: The scheduled, repeating jobs for the "Core Heartbeat" and "Targeted ARP Polling" described in the Monitoring Strategies.
+8.  **[DONE] Active Monitoring Jobs**: The scheduled, repeating jobs for the "Core Heartbeat" (Tier 1).
+    - *Note*: Tier 3 (ARP Polling) has been intentionally omitted from background jobs to minimize load; it remains available as a manual "Live Check" only.
