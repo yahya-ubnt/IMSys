@@ -58,11 +58,11 @@ IMSys does not view the network as a flat list of IPs. It views it as a hierarch
 - **Webhook**: `POST /api/webhooks/network-event?id={deviceId}&status={up|down}` [DONE]
 - **Benefit**: Zero server polling; instant failure reporting. [DONE]
 
-### Tier 3: Static User "DHCP-Event" Model [EXCLUDED/MANUAL ONLY]
+### Tier 3: Static User Monitoring [REMOVED / MANUAL ONLY]
 - **Target**: Users with static IPs (using DHCP Reservations).
-- **Status Method**: 
-    - **Live Check**: "Live Check" button triggers an instant `/ping` from the router. [DONE]
-    - *Note*: Automatic background monitoring for static users is currently disabled to minimize load.
+- **Status**: 
+    - **Background Monitoring**: **REMOVED**. No ICMP polling or Netwatch is performed for static users to minimize server and router load.
+    - **Live Check**: "Live Check" button triggers an instant `/ping` from the router for real-time verification. [DONE]
 
 ### Tier 4: PPPoE "Event Push" [DONE]
 - **Target**: PPPoE Users. [DONE]

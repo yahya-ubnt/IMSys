@@ -9,28 +9,6 @@ const User = require('../models/User'); // Import User model
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay
 
-async function checkUserOnlineStatus(user, client) {
-    let isOnline = false;
-    const router = user.mikrotikRouter;
-
-    if (!router) {
-        console.warn(`[${new Date().toISOString()}] User ${user.username} has no associated router. Skipping status check.`);
-        return false;
-    }
-
-    // Assumes client is already connected
-    if (user.serviceType === 'pppoe') {
-        const pppActive = await client.write('/ppp/active/print');
-        isOnline = pppActive.some(session => session.name === user.username);
-    } else if (user.serviceType === 'static') {
-        if (user.ipAddress) {
-            const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-            isOnline = pingReplies.some(reply => !reply.status);
-        }
-    }
-    return isOnline;
-}
-
 async function performUserStatusCheck(tenant) {
     console.log(`[${new Date().toISOString()}] Performing bulk user status check for tenant ${tenant}...`);
 
@@ -138,9 +116,6 @@ async function performUserStatusCheck(tenant) {
                             if (user.serviceType === 'pppoe') {
                                 const pppActive = await client.write('/ppp/active/print');
                                 isOnlineNow = pppActive.some(session => session.name === user.username);
-                            } else if (user.serviceType === 'static') {
-                                const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-                                isOnlineNow = pingReplies.some(reply => !reply.status);
                             }
                         } catch (err) {
                             console.error(`[${new Date().toISOString()}] Retry check failed for ${user.username}:`, err);

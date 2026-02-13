@@ -35,7 +35,7 @@
 
 ### B. Monitoring: "Snitch & Heartbeat"
 1. **PPPoE (Push)**: mikroTik Webhooks (On-Up/On-Down) provide **instant** status updates.
-2. **Static (DHCP-Event & Targeted ARP Pull)**: DHCP Lease Scripts (`on-bound`) for "Online" events. **Targeted ARP Polling** (asking the router for specific static IPs in its ARP table) every 5-10 minutes is used for efficient "Offline" detection. Final "Offline" confirmation via `on-delete` script.
+2. **Static (Manual Live Check Only)**: Background monitoring (ARP/ICMP) for static users is strictly disabled to minimize server and router load. Status is updated only via manual "Live Check" from the dashboard.
 3. **Infrastructure (Heartbeat)**: BullMQ Job pings the Core Router every 60s.
 4. **Infrastructure (Snitch)**: Devices (APs/Backhauls) use Netwatch to report status via webhooks.
 

@@ -33,14 +33,26 @@ const verifyRootCause = async (deviceId, tenantId) => {
   console.log(`[Diagnostic Engine] Checking parent: ${parent.deviceName} (${parent.ipAddress})`);
 
   // We need a core router to proxy the ping through.
-  // This logic will need to be enhanced to select the correct core router.
-  const coreRouter = await MikrotikRouter.findOne({ tenant: tenantId, isCoreRouter: true }); // Assuming a flag `isCoreRouter`
+  const coreRouter = await MikrotikRouter.findOne({ tenant: tenantId, isCoreRouter: true });
   if (!coreRouter) {
       console.error(`[Diagnostic Engine] No core router found for tenant ${tenantId} to proxy ping.`);
       return { error: 'Core router not found' };
   }
 
-  const isParentOnline = await checkCPEStatus(parent, coreRouter);
+  // Robustness Threshold: Check the parent up to 3 times with a delay to filter jitter
+  let isParentOnline = false;
+  const THRESHOLD_ATTEMPTS = 3;
+  const RETRY_DELAY = 2000;
+
+  for (let i = 0; i < THRESHOLD_ATTEMPTS; i++) {
+    isParentOnline = await checkCPEStatus(parent, coreRouter);
+    if (isParentOnline) break;
+    
+    if (i < THRESHOLD_ATTEMPTS - 1) {
+      console.log(`[Diagnostic Engine] Parent ${parent.deviceName} check ${i+1}/${THRESHOLD_ATTEMPTS} failed. Retrying...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    }
+  }
 
   if (isParentOnline) {
     console.log(`[Diagnostic Engine] Parent ${parent.deviceName} is ONLINE. Root cause is ${device.deviceName}.`);
