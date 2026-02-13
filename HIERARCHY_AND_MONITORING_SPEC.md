@@ -21,138 +21,128 @@ This initial phase focused on building the core architecture and data models req
 
 This document defines the technical architecture for the unified network hierarchy and monitoring system in IMSys.
 
-## 1. The Core Philosophy: "The Sane Tree"
+## 1. The Core Philosophy: "The Sane Tree" [DONE]
 IMSys does not view the network as a flat list of IPs. It views it as a hierarchical tree where every device and user has a "Parent." This allows for:
-- **Root-Cause Analysis**: Identifying exactly where a failure started.
-- **Alert Suppression**: Silencing hundreds of client alerts when a main tower or router fails.
-- **Business Intelligence**: Knowing exactly which customers are affected by a specific hardware failure.
+- **Root-Cause Analysis**: Identifying exactly where a failure started. [DONE]
+- **Alert Suppression**: Silencing hundreds of client alerts when a main tower or router fails. [DONE]
+- **Business Intelligence**: Knowing exactly which customers are affected by a specific hardware failure. [DONE]
 
 ---
 
-## 2. Data Model Extensions
+## 2. Data Model Extensions [DONE]
 
-### A. `Device` Model (The "Pizzeria")
-- **`physicalBuildingId`**: (ObjectId, ref: 'Building') The building where the hardware is physically installed.
-- **`serviceArea`**: ([ObjectId], ref: 'Building') An array of Building IDs this device provides service to. This is its "delivery zone."
-- **`parentId`**: (ObjectId, ref: 'Device') The device's parent in the network hardware tree.
+### A. `Device` Model (The "Pizzeria") [DONE]
+- **`physicalBuildingId`**: (ObjectId, ref: 'Building') The building where the hardware is physically installed. [DONE]
+- **`serviceArea`**: ([ObjectId], ref: 'Building') An array of Building IDs this device provides service to. This is its "delivery zone." [DONE]
+- **`parentId`**: (ObjectId, ref: 'Device') The device's parent in the network hardware tree. [DONE]
 
-### B. `Building` Model (The "Neighborhood")
-- A simple model containing `name`, `address`, etc. Acts as a geographical grouping for users and devices.
+### B. `Building` Model (The "Neighborhood") [DONE]
+- A simple model containing `name`, `address`, etc. Acts as a geographical grouping for users and devices. [DONE]
 
-### C. `MikrotikUser` Model (The "Customer")
-- **`buildingId`**: (ObjectId, ref: 'Building') The building where the customer is physically located.
-- **`stationId`**: (ObjectId, ref: 'Device') A direct link to the specific Device providing the service. This is mandatory for monitoring.
+### C. `MikrotikUser` Model (The "Customer") [DONE]
+- **`buildingId`**: (ObjectId, ref: 'Building') The building where the customer is physically located. [DONE]
+- **`stationId`**: (ObjectId, ref: 'Device') A direct link to the specific Device providing the service. This is mandatory for monitoring. [DONE]
 
 ---
 
 ## 3. Monitoring Strategies
 
-### Tier 1: Core Heartbeat (WireGuard)
-- **Target**: Core Routers.
-- **Method**: BullMQ job pings the WireGuard Tunnel IP every 60 seconds.
-- **Failure**: If the tunnel IP is unreachable, the Router is marked `DOWN`, and all child alerts are suppressed.
+### Tier 1: Core Heartbeat (WireGuard) [DONE]
+- **Target**: Core Routers. [DONE]
+- **Method**: BullMQ job pings the WireGuard Tunnel IP every 60 seconds. [DONE]
+- **Failure**: If the tunnel IP is unreachable, the Router is marked `DOWN`, and all child alerts are suppressed. [DONE]
 
-### Tier 2: Infrastructure "Snitch" (Netwatch)
-- **Target**: APs, Switches, Sector Antennas.
-- **Method**: IMSys injects a Netwatch rule into the Core Router.
-- **Webhook**: `POST /api/webhooks/network-event?id={deviceId}&status={up|down}`
-- **Benefit**: Zero server polling; instant failure reporting.
+### Tier 2: Infrastructure "Snitch" (Netwatch) [DONE]
+- **Target**: APs, Switches, Sector Antennas. [DONE]
+- **Method**: IMSys injects a Netwatch rule into the Core Router. [DONE]
+- **Webhook**: `POST /api/webhooks/network-event?id={deviceId}&status={up|down}` [DONE]
+- **Benefit**: Zero server polling; instant failure reporting. [DONE]
 
-### Tier 3: Static User "DHCP-Event" Model
+### Tier 3: Static User "DHCP-Event" Model [EXCLUDED/MANUAL ONLY]
 - **Target**: Users with static IPs (using DHCP Reservations).
-- **Provisioning**: 
-    1. **DHCP Reservation**: IMSys locks the `IP` to the `MAC Address` on the Core Router.
-    2. **Simple Queue**: Speed is enforced via a Simple Queue based on the `Package`.
 - **Status Method**: 
-    - **Event-Driven (Online)**: Router uses DHCP Lease Scripts (`on-bound`) for instant "ONLINE" status.
-    - **Fast Offline (Targeted ARP Polling)**: Server asks the router for specific static IPs in its ARP table (every 5-10 mins). This is more efficient than dumping the entire ARP table.
-    - **Confirmed Offline (Event-Driven)**: Router uses DHCP Lease Scripts (`on-delete`) for final confirmation after lease expiration.
-    - **Diagnostic Lever**: "Live Check" button triggers an instant `/ping` from the router.
+    - **Live Check**: "Live Check" button triggers an instant `/ping` from the router. [DONE]
+    - *Note*: Automatic background monitoring for static users is currently disabled to minimize load.
 
-### Tier 4: PPPoE "Event Push"
-- **Target**: PPPoE Users.
-- **Method**: Profile scripts (`on-up`/`on-down`) send webhooks to IMSys.
-- **Benefit**: 100% scalable; zero server load.
+### Tier 4: PPPoE "Event Push" [DONE]
+- **Target**: PPPoE Users. [DONE]
+- **Method**: Profile scripts (`on-up`/`on-down`) send webhooks to IMSys. [DONE]
+- **Benefit**: 100% scalable; zero server load. [DONE]
 
 ---
 
-## 4. The Alert Sanity Algorithm (Suppression)
+## 4. The Alert Sanity Algorithm (Suppression) [DONE]
 
 When a "DOWN" event is received for `TargetX`:
-1.  **Look Up Parent**: Find `parentId` or `linkedDeviceId` for `TargetX`.
+1.  **Look Up Parent**: Find `parentId` or `linkedDeviceId` for `TargetX`. [DONE]
 2.  **Check Parent Status**: 
-    *   If `Parent` is `DOWN`: Log the failure for `TargetX` but **SUPPRESS** all notifications (SMS/Email).
-    *   If `Parent` is `UP`: This is the root cause. **SEND** notifications for `TargetX`.
-3.  **Recursive Check**: The system continues checking parents all the way to the Core Router to ensure no higher-level failure is active.
+    *   If `Parent` is `DOWN`: Log the failure for `TargetX` but **SUPPRESS** all notifications (SMS/Email). [DONE]
+    *   If `Parent` is `UP`: This is the root cause. **SEND** notifications for `TargetX`. [DONE]
+3.  **Recursive Check**: The system continues checking parents all the way to the Core Router to ensure no higher-level failure is active. [DONE]
 
 ---
 
-## 5. The Recursive Diagnostic Engine (The "Flashlight")
+## 5. The Recursive Diagnostic Engine (The "Flashlight") [DONE]
 
 To support Alert Suppression and Smart Diagnostics, the system uses a dedicated service to "walk" the hierarchy upwards in real-time.
 
-### A. The Engine Logic: `verifyRootCause(targetId)`
-- **Trigger**: Any "DOWN" event from a webhook or poll.
+### A. The Engine Logic: `verifyRootCause(targetId)` [DONE]
+- **Trigger**: Any "DOWN" event from a webhook or poll. [DONE]
 - **Recursive Step**: 
-    1. IMSys identifies the `parentId` (Infrastructure) or `linkedDeviceId` (User).
-    2. IMSys executes an instant `/ping` to the parent IP via the Core Router API.
-    3. If the parent is reachable: The engine stops and identifies the original `targetId` as the root cause.
-    4. If the parent is unreachable: The engine marks the parent as `DOWN` in the DB and recursively calls `verifyRootCause(parentId)`.
+    1. IMSys identifies the `parentId` (Infrastructure) or `linkedDeviceId` (User). [DONE]
+    2. IMSys executes an instant `/ping` to the parent IP via the Core Router API. [DONE]
+    3. If the parent is reachable: The engine stops and identifies the original `targetId` as the root cause. [DONE]
+    4. If the parent is unreachable: The engine marks the parent as `DOWN` in the DB and recursively calls `verifyRootCause(parentId)`. [DONE]
 
-### B. Technical Implementation
-- **Service**: `backend/services/diagnosticTreeService.js`
-- **Uplink Verification**: Uses `mikrotikUtils.js` to proxy pings through the Core Router.
-- **Outcome**: Ensures that only one "Root Cause" alert is sent, even if 500 child devices go offline.
+### B. Technical Implementation [DONE]
+- **Service**: `backend/services/diagnosticTreeService.js` [DONE]
+- **Uplink Verification**: Uses `mikrotikUtils.js` to proxy pings through the Core Router. [DONE]
+- **Outcome**: Ensures that only one "Root Cause" alert is sent, even if 500 child devices go offline. [DONE]
 
 ---
 
-## 6. The Smart Onboarding Workflow
+## 6. The Smart Onboarding Workflow [DONE]
 
 This workflow is designed to be simple for the admin, while being powerful enough to handle complex network layouts.
 
-### A. Phase 1: Device Configuration (Setting the "Delivery Zone")
+### A. Phase 1: Device Configuration (Setting the "Delivery Zone") [DONE]
 
 This is a one-time setup for each new Station (antenna).
-1.  **Physical Location**: Admin adds a new Device and assigns it to its `physicalBuildingId` (e.g., "The antenna is on the roof of **Building A**").
-2.  **Service Area**: Admin specifies the `serviceArea` for this device. This is a list of all buildings it can serve.
-    - *Scenario 1 (Simple)*: The antenna on Building A only serves Building A. The `serviceArea` is `[Building A]`.
-    - *Scenario 2 (Wired Neighbor)*: The antenna on Building A serves both Building A and the wired Building B. The `serviceArea` is `[Building A, Building B]`.
+1.  **Physical Location**: Admin adds a new Device and assigns it to its `physicalBuildingId`. [DONE]
+2.  **Service Area**: Admin specifies the `serviceArea` for this device. [DONE]
 
-### B. Phase 2: The New Client Wizard (Placing the "Order")
+### B. Phase 2: The New Client Wizard (Placing the "Order") [DONE]
 
 This is the simplified workflow for adding a new user.
-1.  **Select Client's Building**: The admin selects the building where the client physically lives (e.g., **Building B**).
-2.  **The System Finds the Station**: The system automatically searches for all `Devices` that include "Building B" in their `serviceArea`.
-3.  **The System Links the Station**:
-    - **If ONE station is found**: It is **auto-selected** and the admin doesn't have to do anything. The form might show a simple confirmation text like `Connected via: Antenna on Building A`.
-    - **If MULTIPLE stations are found**: The admin is presented with a small, filtered dropdown list to choose the correct station. This handles the "two antennas in one building" scenario.
+1.  **Select Client's Building**: The admin selects the building where the client physically lives. [DONE]
+2.  **The System Finds the Station**: The system automatically searches for all `Devices` that include the building in their `serviceArea`. [DONE]
+3.  **The System Links the Station**: [DONE]
 
-This hybrid approach ensures the `User -> Station` link is always correctly established for monitoring, while keeping the UI as simple as possible for the administrator.
+---
 
-## 7. The Safety Net: Reconciliation Engine (Self-Healing)
+## 7. The Safety Net: Reconciliation Engine (Self-Healing) [DONE]
 
 Since webhooks can be missed during network instability, a BullMQ job performs a "Double-Check" every 15-30 minutes:
 
-### A. State Reconciliation (The Reality Check)
-- **Action**: IMSys pulls the full state (PPP Active, DHCP Leases, Netwatch Status) from all routers.
-- **Correction**: If the Database status differs from the Hardware reality, the Database is updated to match the Hardware.
+### A. State Reconciliation (The Reality Check) [DONE]
+- **Action**: IMSys pulls the full state (PPP Active, DHCP Leases, Netwatch Status) from all routers. [DONE]
+- **Correction**: If the Database status differs from the Hardware reality, the Database is updated to match the Hardware. [DONE]
 
-### B. Configuration Reconciliation (The Healer)
-- **Action**: IMSys verifies that all required "Snitch" scripts (Netwatch, PPP Profiles, DHCP Lease Scripts) are present and correct on the routers.
-- **Correction**: Missing or altered scripts are automatically re-injected by IMSys.
+### B. Configuration Reconciliation (The Healer) [DONE]
+- **Action**: IMSys verifies that all required "Snitch" scripts (Netwatch, PPP Profiles) are present and correct on the routers. [DONE]
+- **Correction**: Missing or altered scripts are automatically re-injected by IMSys. [DONE]
 
 ## 8. Implementation Roadmap
 
 ### Phase 1: Data & Onboarding (Completed)
-1.  **[DONE] Schema & API Foundation**: Models and APIs for Buildings, Devices, and Users.
-2.  **[DONE] Smart Onboarding UI**: Forms for adding devices and users with the new hierarchy logic.
-3.  **[DONE] Hardware Parent Linking UI**: Dropdown to link devices to parents.
-4.  **[DONE] Manual Live Check UI**: Button on Device page for instant ping tests.
+1.  **[DONE] Schema & API Foundation**
+2.  **[DONE] Smart Onboarding UI**
+3.  **[DONE] Hardware Parent Linking UI**
+4.  **[DONE] Manual Live Check UI**
 
 ### Phase 2: Automation & Monitoring (Completed)
-5.  **[DONE] Webhook Receiver**: The `/api/webhooks/network-event` endpoint is ready to receive DOWN events.
-6.  **[DONE] Diagnostic Engine**: The `diagnosticTreeService` and its BullMQ worker are built to process DOWN events, find the root cause, and send suppressed alerts.
-7.  **[DONE] The Injection Engine**: A service that logs into routers to automatically configure the Netwatch, DHCP, and PPPoE scripts.
-8.  **[DONE] Active Monitoring Jobs**: The scheduled, repeating jobs for the "Core Heartbeat" (Tier 1).
-    - *Note*: Tier 3 (ARP Polling) has been intentionally omitted from background jobs to minimize load; it remains available as a manual "Live Check" only.
-9.  **[DONE] The Healer (Self-Healing)**: Integrated into the 15-minute reconciliation worker to automatically restore missing or altered router scripts.
+5.  **[DONE] Webhook Receiver**
+6.  **[DONE] Diagnostic Engine**
+7.  **[DONE] The Injection Engine**
+8.  **[DONE] Active Monitoring Jobs**
+9.  **[DONE] The Healer (Self-Healing)**
