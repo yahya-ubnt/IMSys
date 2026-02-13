@@ -3,9 +3,10 @@ const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const MikrotikUser = require('../models/MikrotikUser');
 const MikrotikRouter = require('../models/MikrotikRouter');
+const Device = require('../models/Device');
 const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
-const { getMikrotikApiClient } = require('../utils/mikrotikUtils'); // Assuming this utility exists
+const { getMikrotikApiClient, injectNetwatchScript } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
 const { processExpiredClientDisconnectScheduler } = require('../jobs/scheduleExpiredClientDisconnectsJob'); // Import the scheduler processor
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
@@ -14,7 +15,7 @@ const { processReconciliationScheduler } = require('../jobs/reconciliationJob');
 connectDB();
 
 const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
-  const { mikrotikUserId, tenantId, isManualDisconnect, reason } = job.data;
+  const { mikrotikUserId, deviceId, tenantId, isManualDisconnect, reason } = job.data;
   const { name: jobType } = job;
 
   console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Processing job '${jobType}' for user ${mikrotikUserId || 'N/A'} (Tenant: ${tenantId || 'N/A'})`);
@@ -22,6 +23,7 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
   let client;
   let user;
   let router;
+  let device;
 
   try {
     // For jobs that involve a specific user, fetch the user and router details
@@ -41,6 +43,16 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
     }
 
     switch (jobType) {
+      case 'enableNetwatch':
+        device = await Device.findById(deviceId).populate('router');
+        if (!device) throw new Error(`Device ${deviceId} not found.`);
+        router = device.router;
+        if (!router) throw new Error(`Router not found for device ${device.deviceName}`);
+        
+        await injectNetwatchScript(router, device);
+        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Netwatch injected for ${device.deviceName}`);
+        break;
+
       case 'addUser':
         // Logic to add user to MikroTik
         if (user.serviceType === 'pppoe') {

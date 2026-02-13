@@ -13,9 +13,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Edit, Server, MapPin, Network, Lock, Wifi, Clock, Users, HardDrive, WifiOff } from "lucide-react";
+import { ArrowLeft, Edit, Server, MapPin, Network, Lock, Wifi, Clock, Users, HardDrive, WifiOff, ScanLine, ShieldCheck, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/topbar";
-import { Device, DowntimeLog, getDeviceById, getDeviceDowntimeLogs } from "@/lib/deviceService";
+import { Device, DowntimeLog, getDeviceById, getDeviceDowntimeLogs, pingDevice, enableMonitoring } from "@/lib/deviceService";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table";
 import { columns as downtimeColumns } from "./columns";
@@ -53,6 +53,8 @@ export default function DeviceDetailsPage() {
   const [users, setUsers] = useState<MikrotikUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [isPinging, setIsPinging] = useState(false);
+  const [isEnablingMonitoring, setIsEnablingMonitoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -78,6 +80,45 @@ export default function DeviceDetailsPage() {
     };
     fetchData();
   }, [id]);
+
+  const handleLiveCheck = async () => {
+    setIsPinging(true);
+    try {
+      const result = await pingDevice(id);
+      toast({
+        title: "Live Check Complete",
+        description: `Device is currently ${result.status}.`,
+        variant: result.status === 'Reachable' ? 'default' : 'destructive',
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to perform live check.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPinging(false);
+    }
+  };
+
+  const handleEnableMonitoring = async () => {
+    setIsEnablingMonitoring(true);
+    try {
+      await enableMonitoring(id);
+      toast({
+        title: "Monitoring Injection Queued",
+        description: "The request to enable Netwatch monitoring has been sent to the router.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: (error instanceof Error) ? error.message : "Failed to enable monitoring.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEnablingMonitoring(false);
+    }
+  };
 
   useEffect(() => {
     if (!id || !device) { setUsersLoading(false); return; }
@@ -148,7 +189,17 @@ export default function DeviceDetailsPage() {
               <p className="text-sm text-zinc-400">{device.deviceType}</p>
             </div>
           </div>
-          <Link href={`/devices/edit/${id}`}><Button variant="outline" size="sm"><Edit className="h-3 w-3 mr-2" />Edit Device</Button></Link>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleLiveCheck} disabled={isPinging}>
+              {isPinging ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <ScanLine className="h-3 w-3 mr-2" />}
+              {isPinging ? 'Pinging...' : 'Live Check'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleEnableMonitoring} disabled={isEnablingMonitoring}>
+              {isEnablingMonitoring ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <ShieldCheck className="h-3 w-3 mr-2" />}
+              {isEnablingMonitoring ? 'Enabling...' : 'Enable Monitoring'}
+            </Button>
+            <Link href={`/devices/edit/${id}`}><Button variant="outline" size="sm"><Edit className="h-3 w-3 mr-2" />Edit Device</Button></Link>
+          </div>
         </div>
 
         <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex-1 flex flex-col">
@@ -173,7 +224,7 @@ export default function DeviceDetailsPage() {
               <CardContent className="p-4 flex-1">
                 <TabsPrimitive.Content value="overview" className="h-full">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
-                    <DetailItem icon={MapPin} label="Location" value={device.location} />
+                    <DetailItem icon={MapPin} label="Physical Location" value={typeof device.physicalBuilding === 'object' ? device.physicalBuilding.name : device.physicalBuilding} />
                     <DetailItem icon={Network} label="MAC Address" value={device.macAddress} />
                     <DetailItem icon={Server} label="Monitoring Router" value={typeof device.router === 'object' && device.router ? device.router.name : device.router || 'N/A'} />
                     <DetailItem icon={Wifi} label={device.deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"} value={device.ssid} />

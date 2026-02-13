@@ -4,6 +4,8 @@ const Device = require('../models/Device');
 const DowntimeLog = require('../models/DowntimeLog');
 const MikrotikRouter = require('../models/MikrotikRouter'); // Import MikrotikRouter
 const { sanitizeString } = require('../utils/sanitization'); // Import sanitizeString
+const { checkCPEStatus } = require('../utils/mikrotikUtils'); // Import for live ping
+const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 
 // @desc    Create a new device
 // @route   POST /api/devices
@@ -19,7 +21,9 @@ const createDevice = asyncHandler(async (req, res) => {
     ipAddress,
     macAddress,
     deviceType,
-    location,
+    physicalBuilding,
+    serviceArea,
+    parentId,
     deviceName,
     deviceModel,
     loginUsername,
@@ -47,7 +51,9 @@ const createDevice = asyncHandler(async (req, res) => {
     ipAddress,
     macAddress,
     deviceType,
-    location: sanitizeString(location),
+    physicalBuilding,
+    serviceArea,
+    parentId,
     deviceName: sanitizeString(deviceName),
     deviceModel: sanitizeString(deviceModel),
     loginUsername: sanitizeString(loginUsername),
@@ -84,7 +90,9 @@ const getDevices = asyncHandler(async (req, res) => {
 const getDeviceById = asyncHandler(async (req, res) => {
   const query = { _id: req.params.id, tenant: req.user.tenant };
 
-  const device = await Device.findOne(query).populate('router', 'name ipAddress');
+  const device = await Device.findOne(query)
+    .populate('router', 'name ipAddress')
+    .populate('physicalBuilding', 'name');
 
   if (device) {
     let responseDevice = device.toObject(); // Convert to plain object to add properties
@@ -120,7 +128,9 @@ const updateDevice = asyncHandler(async (req, res) => {
   device.ipAddress = req.body.ipAddress || device.ipAddress;
   device.macAddress = req.body.macAddress || device.macAddress;
   device.deviceType = req.body.deviceType || device.deviceType;
-  device.location = req.body.location ? sanitizeString(req.body.location) : device.location;
+  device.physicalBuilding = req.body.physicalBuilding || device.physicalBuilding;
+  device.serviceArea = req.body.serviceArea || device.serviceArea;
+  device.parentId = req.body.parentId || device.parentId;
   device.deviceName = req.body.deviceName ? sanitizeString(req.body.deviceName) : device.deviceName;
   device.deviceModel = req.body.deviceModel ? sanitizeString(req.body.deviceModel) : device.deviceModel;
   device.loginUsername = req.body.loginUsername ? sanitizeString(req.body.loginUsername) : device.loginUsername;
@@ -173,6 +183,55 @@ const getDeviceDowntimeLogs = asyncHandler(async (req, res) => {
   res.json(logs);
 });
 
+// @desc    Perform a live ping check on a device
+// @route   POST /api/devices/:id/ping
+// @access  Admin
+const pingDevice = asyncHandler(async (req, res) => {
+  const device = await Device.findOne({ _id: req.params.id, tenant: req.user.tenant });
+
+  if (!device) {
+    res.status(404);
+    throw new Error('Device not found');
+  }
+
+  // Find a core router for the tenant to proxy the ping
+  const coreRouter = await MikrotikRouter.findOne({ tenant: req.user.tenant, isCoreRouter: true });
+  if (!coreRouter) {
+    res.status(400);
+    throw new Error('No core router is configured for this tenant to perform the check.');
+  }
+
+  const isOnline = await checkCPEStatus(device, coreRouter);
+
+  res.status(200).json({
+    success: true,
+    status: isOnline ? 'Reachable' : 'Unreachable',
+  });
+});
+
+// @desc    Enable Netwatch monitoring for a device
+// @route   POST /api/devices/:id/enable-monitoring
+// @access  Admin
+const enableMonitoring = asyncHandler(async (req, res) => {
+  const device = await Device.findOne({ _id: req.params.id, tenant: req.user.tenant });
+
+  if (!device) {
+    res.status(404);
+    throw new Error('Device not found');
+  }
+
+  // Add job to the sync queue
+  await mikrotikSyncQueue.add('enableNetwatch', { 
+    deviceId: device._id,
+    tenantId: req.user.tenant 
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Monitoring injection queued successfully.',
+  });
+});
+
 module.exports = {
   createDevice,
   getDevices,
@@ -180,4 +239,6 @@ module.exports = {
   updateDevice,
   deleteDevice,
   getDeviceDowntimeLogs,
+  pingDevice,
+  enableMonitoring,
 };

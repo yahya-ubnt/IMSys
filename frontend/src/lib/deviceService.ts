@@ -9,7 +9,7 @@ export interface Device {
   deviceType: "Access" | "Station";
   status: "UP" | "DOWN";
   lastSeen?: string;
-  physicalBuilding?: string;
+  physicalBuilding?: string | Building;
   serviceArea?: string[];
   deviceName?: string;
   deviceModel?: string;
@@ -140,6 +140,30 @@ export const createBuilding = async (buildingData: { name: string, address?: str
   }
   const data = await response.json();
   return data.data;
+};
+
+// Ping a device for live status
+export const pingDevice = async (id: string): Promise<{ success: boolean; status: 'Reachable' | 'Unreachable' }> => {
+  const response = await fetch(`/api/devices/${id}/ping`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to ping device");
+  }
+  return response.json();
+};
+
+// Enable Netwatch monitoring for a device
+export const enableMonitoring = async (id: string): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`/api/devices/${id}/enable-monitoring`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to enable monitoring");
+  }
+  return response.json();
 };
 
 // Fetch Downtime Logs for a specific device

@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const { diagnosticQueue } = require('../queues/diagnosticQueue'); // Assuming a dedicated queue for diagnostics
+const diagnosticQueue = require('../queues/diagnosticQueue'); // Assuming a dedicated queue for diagnostics
 
 // @desc    Handle incoming network events from device webhooks
 // @route   POST /api/webhooks/network-event

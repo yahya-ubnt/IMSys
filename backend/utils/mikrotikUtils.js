@@ -260,4 +260,50 @@ const reconnectMikrotikUser = async (userId, tenantId) => {
   }
 };
 
-module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles };
+const injectNetwatchScript = async (router, targetDevice) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    const webhookUrl = `http://${process.env.BACKEND_IP_ADDRESS}:${process.env.PORT}/api/webhooks/network-event`;
+    const apiKey = process.env.WEBHOOK_API_KEY;
+    const deviceId = targetDevice._id;
+
+    const onUpScript = `/tool fetch url="${webhookUrl}?deviceId=${deviceId}&status=up&apiKey=${apiKey}" keep-result=no`;
+    const onDownScript = `/tool fetch url="${webhookUrl}?deviceId=${deviceId}&status=down&apiKey=${apiKey}" keep-result=no`;
+
+    // Check if a netwatch for this host already exists
+    const existingNetwatch = await client.write('/tool/netwatch/print', [`?host=${targetDevice.ipAddress}`]);
+
+    if (existingNetwatch && existingNetwatch.length > 0) {
+      const netwatchId = existingNetwatch[0]['.id'];
+      console.log(`Netwatch for ${targetDevice.ipAddress} already exists. Updating scripts.`);
+      await client.write('/tool/netwatch/set', [
+        `=.id=${netwatchId}`,
+        `=on-up=${onUpScript}`,
+        `=on-down=${onDownScript}`,
+        `=comment=IMSys Monitor: ${targetDevice.deviceName}`,
+      ]);
+    } else {
+      console.log(`Creating new Netwatch for ${targetDevice.ipAddress}.`);
+      await client.write('/tool/netwatch/add', [
+        `=host=${targetDevice.ipAddress}`,
+        `=on-up=${onUpScript}`,
+        `=on-down=${onDownScript}`,
+        `=comment=IMSys Monitor: ${targetDevice.deviceName}`,
+      ]);
+    }
+    
+    console.log(`Successfully injected Netwatch script for ${targetDevice.deviceName} on router ${router.name}`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to inject Netwatch script for ${targetDevice.deviceName} on router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
+module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript };

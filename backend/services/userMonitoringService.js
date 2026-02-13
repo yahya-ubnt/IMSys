@@ -73,12 +73,14 @@ async function performUserStatusCheck(tenant) {
                 await client.connect();
 
                 // 3. Fetch online user data in bulk
-                const [pppActiveSessions, simpleQueues] = await Promise.all([
+                const [pppActiveSessions, simpleQueues, arpTable] = await Promise.all([
                     client.write('/ppp/active/print'),
-                    client.write('/queue/simple/print')
+                    client.write('/queue/simple/print'),
+                    client.write('/ip/arp/print')
                 ]);
 
                 const onlinePppoeUsers = new Set(pppActiveSessions.map(s => s.name));
+                const activeArpIps = new Set(arpTable.map(entry => entry.address));
                 
                 const potentiallyOfflineUsers = [];
                 const usersOnline = [];
@@ -91,9 +93,8 @@ async function performUserStatusCheck(tenant) {
                     if (user.serviceType === 'pppoe') {
                         isOnline = onlinePppoeUsers.has(user.username);
                     } else if (user.serviceType === 'static') {
-                        // For static users, we will do individual checks with retries if they appear offline
-                        const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-                        isOnline = pingReplies.some(reply => !reply.status);
+                        // Tier 3: Targeted ARP Polling
+                        isOnline = activeArpIps.has(user.ipAddress);
                     }
 
                     if (isOnline) {

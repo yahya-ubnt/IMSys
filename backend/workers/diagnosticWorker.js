@@ -1,4 +1,4 @@
-const { diagnosticQueue } = require('../queues/diagnosticQueue');
+const diagnosticQueue = require('../queues/diagnosticQueue');
 const { verifyRootCause } = require('../services/diagnosticTreeService');
 const Device = require('../models/Device');
 

@@ -55,6 +55,18 @@ async function checkRouter(router) {
                     isOnline = true; // Still considered "online" as it's pingable
                     location += ' (API Unreachable)';
                     console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is UNREACHABLE (ping OK, API failed).`);
+                } else if (router.isCoreRouter && router.tunnelIp) {
+                    // Tier 1: Core Heartbeat (WireGuard)
+                    const isTunnelPingable = await pingHost(router.tunnelIp);
+                    if (isTunnelPingable) {
+                        isOnline = true;
+                        location += ' (Via Tunnel)';
+                        console.log(`[${new Date().toISOString()}] Core Router ${router.name} reached via Tunnel IP ${router.tunnelIp}.`);
+                    } else {
+                        isOnline = false;
+                        location += ' (Offline)';
+                        console.log(`[${new Date().toISOString()}] Core Router ${router.name} is OFFLINE (Tunnel ping failed).`);
+                    }
                 } else {
                     isOnline = false;
                     location += ' (Offline)';
