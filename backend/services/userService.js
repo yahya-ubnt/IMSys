@@ -112,6 +112,9 @@ const UserService = {
     if (updateData.username && user.username !== updateData.username) {
         needsSync = true;
     }
+    if (updateData.isSuspended !== undefined && user.isSuspended !== updateData.isSuspended) {
+      needsSync = true;
+    }
 
     // Apply updates
     Object.assign(user, updateData);

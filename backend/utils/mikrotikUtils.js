@@ -191,75 +191,6 @@ const checkCPEStatus = async (device, router) => {
     return isOnline;
 };
 
-const reconnectMikrotikUser = async (userId, tenantId) => {
-  const user = await MikrotikUser.findOne({ _id: userId, tenant: tenantId }).populate('package').populate('mikrotikRouter');
-
-  if (!user) {
-    console.error(`User with ID ${userId} not found for reconnection.`);
-    return false;
-  }
-
-  const router = user.mikrotikRouter;
-  if (!router) {
-    console.error(`Mikrotik router not found for user ${user.username}.`);
-    return false;
-  }
-
-  let client;
-  try {
-    client = await getMikrotikApiClient(router);
-    if (!client) return false;
-
-    const comment = `Reconnected: Payment received. [${new Date().toISOString()}]`;
-
-    if (user.serviceType === 'pppoe') {
-      const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-      if (pppSecrets.length > 0) {
-        const secretId = pppSecrets[0]['.id'];
-        await client.write('/ppp/secret/set', [
-          `=.id=${secretId}`,
-          '=disabled=no',
-          `=profile=${user.package.profile}`,
-          `=comment=${comment}`,
-        ]);
-        console.log(`Successfully reconnected user ${user.username}`);
-        return true;
-      } else {
-        console.error(`PPP Secret for user ${user.username} not found on Mikrotik.`);
-        return false;
-      }
-    } else if (user.serviceType === 'static') {
-      const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-      if (simpleQueues.length > 0) {
-        const queueId = simpleQueues[0]['.id'];
-        const selectedPackage = user.package; // user.package is already populated
-
-        const updateArgs = {
-          name: user.username,
-          target: user.ipAddress,
-          'max-limit': selectedPackage.rateLimit,
-          disabled: 'no', // Enable the queue
-          comment: comment,
-        };
-
-        await client.write('/queue/simple/set', [`=.id=${queueId}`, ...formatUpdateArgs(updateArgs)]);
-        console.log(`Successfully reconnected static user ${user.username} by enabling simple queue.`);
-        return true;
-      } else {
-        console.error(`Simple Queue for static user ${user.username} not found on Mikrotik. Cannot reconnect.`);
-        return false;
-      }
-    }
-  } catch (error) {
-    console.error(`Mikrotik API reconnection error for user ${user.username}: ${error.message}`);
-    return false;
-  } finally {
-    if (client && client.connected) {
-      client.close();
-    }
-  }
-};
-
 const injectNetwatchScript = async (router, targetDevice) => {
   const client = await getMikrotikApiClient(router);
   if (!client) return false;
@@ -475,4 +406,4 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
   return true;
 };
 
-module.exports = { getMikrotikApiClient, reconnectMikrotikUser, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };
+module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };
