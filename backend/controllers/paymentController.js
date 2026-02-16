@@ -55,95 +55,18 @@ const handleDarajaCallback = asyncHandler(async (req, res) => {
 });
 
 const getTransactions = asyncHandler(async (req, res) => {
-  const { startDate, endDate, search, page = 1, limit = 10 } = req.query;
-  const query = { tenant: req.user.tenant };
-
-  if (startDate && endDate) {
-    query.transactionDate = {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
-    };
-  }
-
-  if (search) {
-    query.$or = [
-      { transactionId: { $regex: search, $options: 'i' } },
-      { referenceNumber: { $regex: search, $options: 'i' } },
-      { officialName: { $regex: search, $options: 'i' } },
-      { msisdn: { $regex: search, $options: 'i' } },
-    ];
-  }
-
-  const transactions = await Transaction.find(query)
-    .sort({ transactionDate: -1 })
-    .limit(parseInt(limit))
-    .skip((page - 1) * parseInt(limit))
-    .populate('mikrotikUser', 'username officialName');
-
-  const count = await Transaction.countDocuments(query);
-
-  res.status(200).json({ 
-    transactions, 
-    pages: Math.ceil(count / limit), 
-    count 
-  });
+  const data = await PaymentService.getTransactions(req.user.tenant, req.query);
+  res.status(200).json(data);
 });
 
 const getWalletTransactions = asyncHandler(async (req, res) => {
-  const { userId, type, startDate, endDate, searchTerm, page = 1, limit = 10 } = req.query;
-  const query = { tenant: req.user.tenant };
-  
-  const targetUserId = userId || req.params.userId;
-  if (targetUserId) {
-    query.mikrotikUser = targetUserId;
-  }
-
-  if (type) {
-    query.type = type;
-  }
-
-  if (startDate && endDate) {
-    query.createdAt = {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
-    };
-  }
-
-  if (searchTerm) {
-    query.$or = [
-      { transactionId: { $regex: searchTerm, $options: 'i' } },
-      { source: { $regex: searchTerm, $options: 'i' } },
-      { comment: { $regex: searchTerm, $options: 'i' } },
-    ];
-  }
-
-  const transactions = await WalletTransaction.find(query)
-    .sort({ createdAt: -1 })
-    .limit(parseInt(limit))
-    .skip((page - 1) * parseInt(limit))
-    .populate('mikrotikUser', 'username officialName')
-    .populate('processedBy', 'fullName');
-
-  const count = await WalletTransaction.countDocuments(query);
-    
-  res.status(200).json({
-    transactions,
-    pages: Math.ceil(count / limit),
-    count
-  });
+  const queryParams = { ...req.query, userId: req.query.userId || req.params.userId };
+  const data = await PaymentService.getWalletTransactions(req.user.tenant, queryParams);
+  res.status(200).json(data);
 });
 
 const getWalletTransactionById = asyncHandler(async (req, res) => {
-  const transaction = await WalletTransaction.findOne({
-    _id: req.params.id,
-    tenant: req.user.tenant,
-  }).populate('mikrotikUser', 'username officialName').populate('processedBy', 'fullName');
-
-  if (!transaction) {
-    res.status(404);
-    throw new Error('Wallet transaction not found');
-  }
-
+  const transaction = await PaymentService.getWalletTransactionById(req.params.id, req.user.tenant);
   res.status(200).json(transaction);
 });
 
@@ -158,9 +81,9 @@ const createCashPayment = asyncHandler(async (req, res) => {
     tenant: req.user.tenant,
     amount: parseFloat(amount),
     transactionId,
-    reference: (await MikrotikUser.findById(userId)).username,
+    reference: userId, // Pass userId directly as the reference
     paymentMethod: 'Cash',
-    officialName: null, // Fetched by service
+    officialName: null,
     comment,
   });
 
