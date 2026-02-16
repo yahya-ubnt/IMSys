@@ -1,8 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const SmsLog = require('../models/SmsLog');
-const User = require('../models/User'); // Assuming User model has phoneNumber
-const MikrotikUser = require('../models/MikrotikUser'); // Assuming MikrotikUser model
-const { sendSMS } = require('../services/smsService');
+const { sendSMS, sendBulkSms, getSmsLogs, getSmsLogsForUser } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
 const xlsx = require('xlsx');
 const { json2csv } = require('json-2-csv');
@@ -28,188 +25,32 @@ const getSmsTriggers = asyncHandler(async (req, res) => {
 const composeAndSendSms = asyncHandler(async (req, res) => {
     const {
       message,
-      sendToType, // 'users', 'mikrotik', 'location', 'unregistered'
+      sendToType,
       userIds,
       mikrotikRouterIds,
       apartmentHouseNumbers,
       unregisteredMobileNumber,
     } = req.body;
   
-    if (!message) {
-      res.status(400);
-      throw new Error('Message body is required');
-    }
+    const recipientIds = userIds || mikrotikRouterIds || apartmentHouseNumbers;
+    const logs = await sendBulkSms(message, sendToType, recipientIds, req.user.tenant, unregisteredMobileNumber);
   
-    let usersToSend = [];
-  
-    switch (sendToType) {
-      case 'users':
-        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-          res.status(400);
-          throw new Error('User IDs are required for sending to users');
-        }
-        usersToSend = await MikrotikUser.find({ _id: { $in: userIds }, tenant: req.user.tenant });
-        break;
-  
-      case 'mikrotik':
-        if (!mikrotikRouterIds || !Array.isArray(mikrotikRouterIds) || mikrotikRouterIds.length === 0) {
-          res.status(400);
-          throw new Error('Mikrotik Router IDs are required for sending to Mikrotik group');
-        }
-        usersToSend = await MikrotikUser.find({ mikrotikRouter: { $in: mikrotikRouterIds }, tenant: req.user.tenant });
-        break;
-  
-      case 'location':
-        if (!apartmentHouseNumbers || !Array.isArray(apartmentHouseNumbers) || apartmentHouseNumbers.length === 0) {
-          res.status(400);
-          throw new Error('Apartment/House Numbers are required for sending to location');
-        }
-        usersToSend = await MikrotikUser.find({ apartment_house_number: { $in: apartmentHouseNumbers }, tenant: req.user.tenant });
-        break;
-  
-      case 'unregistered':
-        if (!unregisteredMobileNumber) {
-          res.status(400);
-          throw new Error('Mobile number is required for sending to unregistered users');
-        }
-        // For unregistered, we don't have a user object
-        usersToSend.push({ mobileNumber: unregisteredMobileNumber, _id: null });
-        break;
-  
-      default:
-        res.status(400);
-        throw new Error('Invalid sendToType specified');
-    }
-  
-    if (usersToSend.length === 0) {
-      res.status(400);
-      throw new Error('No valid recipients found for the selected criteria.');
-    }
-  
-    const sentLogs = [];
-    for (const user of usersToSend) {
-      if (!user.mobileNumber) continue; // Skip if no mobile number
-  
-      const log = await SmsLog.create({
-        mobileNumber: user.mobileNumber,
-        message: message,
-        messageType: 'Compose New Message',
-        smsStatus: 'Pending',
-        tenant: req.user.tenant,
-        mikrotikUser: user._id, // This will be null for unregistered, which is correct
-      });
-  
-      try {
-        const gatewayResponse = await sendSMS(req.user.tenant, user.mobileNumber, message);
-        log.smsStatus = gatewayResponse.success ? 'Success' : 'Failed';
-        log.providerResponse = gatewayResponse.message;
-        await log.save();
-        sentLogs.push(log);
-      } catch (error) {
-        log.smsStatus = 'Failed';
-        log.providerResponse = { error: error.message };
-        await log.save();
-        sentLogs.push(log);
-        console.error(`Failed to send SMS to ${user.mobileNumber}: ${error.message}`);
-      }
-    }
-  
-    res.status(200).json({ message: 'SMS sending process completed.', logs: sentLogs });
+    res.status(200).json({ message: 'SMS sending process completed.', logs });
   });
 
 // @desc    Get sent SMS log with filtering and pagination
 // @route   GET /api/sms/log
 // @access  Private
 const getSentSmsLog = asyncHandler(async (req, res) => {
-  const pageSize = Number(req.query.limit) || 25;
-  const page = Number(req.query.page) || 1;
-
-  const query = { tenant: req.user.tenant };
-
-  if (req.query.search) {
-    const searchRegex = { $regex: req.query.search, $options: 'i' };
-    query.$or = [
-      { mobileNumber: searchRegex },
-      { message: searchRegex },
-    ];
-  }
-
-  if (req.query.messageType) {
-    query.messageType = req.query.messageType;
-  }
-
-  if (req.query.status) {
-    query.smsStatus = req.query.status;
-  }
-
-  if (req.query.startDate && req.query.endDate) {
-    query.createdAt = {
-      $gte: new Date(req.query.startDate),
-      $lte: new Date(req.query.endDate),
-    };
-  }
-
-  const count = await SmsLog.countDocuments(query);
-  const logs = await SmsLog.find(query)
-    .limit(pageSize)
-    .skip(pageSize * (page - 1))
-    .sort({ createdAt: -1 });
-
-  const statsAggregation = await SmsLog.aggregate([
-    { $match: query },
-    { $group: { _id: '$smsStatus', count: { $sum: 1 } } }
-  ]);
-
-  const stats = {
-    total: count,
-    success: 0,
-    failed: 0,
-  };
-
-  statsAggregation.forEach(status => {
-    if (status._id === 'Success') stats.success = status.count;
-    if (status._id === 'Failed') stats.failed = status.count;
-  });
-
-  res.json({
-    logs,
-    page,
-    pages: Math.ceil(count / pageSize),
-    total: count,
-    stats,
-  });
+  const data = await getSmsLogs(req.user.tenant, req.query);
+  res.json(data);
 });
 
 // @desc    Export SMS logs to CSV
 // @route   GET /api/sms/log/export
 // @access  Private
 const exportSmsLogs = asyncHandler(async (req, res) => {
-  const query = { tenant: req.user.tenant };
-
-  if (req.query.search) {
-    const searchRegex = { $regex: req.query.search, $options: 'i' };
-    query.$or = [
-      { mobileNumber: searchRegex },
-      { message: searchRegex },
-    ];
-  }
-
-  if (req.query.messageType) {
-    query.messageType = req.query.messageType;
-  }
-
-  if (req.query.status) {
-    query.smsStatus = req.query.status;
-  }
-
-  if (req.query.startDate && req.query.endDate) {
-    query.createdAt = {
-      $gte: new Date(req.query.startDate),
-      $lte: new Date(req.query.endDate),
-    };
-  }
-
-  const logs = await SmsLog.find(query).sort({ createdAt: -1 }).lean();
+  const { logs } = await getSmsLogs(req.user.tenant, { ...req.query, limit: 0 }); // Get all logs for export
 
   const data = logs.map(log => ({
     'Mobile Number': log.mobileNumber,
@@ -291,26 +132,8 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
 // @access  Private
 const getSmsLogsForUser = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-  
-    // Verify the user exists and belongs to the tenant
-    const user = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant });
-    if (!user) {
-      res.status(404);
-      throw new Error('Mikrotik user not found');
-    }
-  
-    const logs = await SmsLog.find({ mikrotikUser: userId }).sort({ createdAt: -1 });
-  
-    // Calculate stats
-    const stats = {
-      total: logs.length,
-      acknowledgement: logs.filter(log => log.messageType === 'Acknowledgement').length,
-      expiry: logs.filter(log => log.messageType === 'Expiry Alert').length,
-      composed: logs.filter(log => log.messageType === 'Compose New Message').length,
-      system: logs.filter(log => log.messageType === 'System').length,
-    };
-  
-    res.status(200).json({ logs, stats });
+    const data = await getSmsLogsForUser(userId, req.user.tenant);
+    res.status(200).json(data);
   });
 
 module.exports = {
