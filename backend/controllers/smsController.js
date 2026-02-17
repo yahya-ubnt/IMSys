@@ -130,7 +130,7 @@ const exportSmsLogs = asyncHandler(async (req, res) => {
 // @desc    Get SMS logs for a single Mikrotik User
 // @route   GET /api/sms/logs/user/:userId
 // @access  Private
-const getSmsLogsForUser = asyncHandler(async (req, res) => {
+const getSmsLogsForUserController = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const data = await getSmsLogsForUser(userId, req.user.tenant);
     res.status(200).json(data);
@@ -141,5 +141,5 @@ module.exports = {
   composeAndSendSms,
   getSentSmsLog,
   exportSmsLogs,
-  getSmsLogsForUser,
+  getSmsLogsForUserController,
 };

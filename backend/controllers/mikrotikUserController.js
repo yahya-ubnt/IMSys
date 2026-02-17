@@ -4,10 +4,11 @@ const MikrotikUser = require('../models/MikrotikUser');
 const Package = require('../models/Package');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const UserService = require('../services/userService');
-const MikrotikHardwareService = require('../services/MikrotikHardwareService');
 const UserDowntimeLog = require('../models/UserDowntimeLog');
 const Transaction = require('../models/Transaction');
 const { getMikrotikApiClient } = require('../utils/mikrotikUtils');
+const { decrypt } = require('../utils/crypto');
+const RouterOSAPI = require('node-routeros').RouterOSAPI;
 
 // @desc    Create a new Mikrotik User
 // @route   POST /api/mikrotik/users
@@ -167,12 +168,137 @@ const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
   res.status(200).json(monthlyTotals);
 });
 
+// @desc    Get Mikrotik User Status
+// @route   GET /api/mikrotik/users/:id/status
+// @access  Private
+const getMikrotikUserStatus = asyncHandler(async (req, res) => {
+  const query = { _id: req.params.id, tenant: req.user.tenant };
+
+  const user = await MikrotikUser.findOne(query).populate('mikrotikRouter').populate('package');
+
+  if (!user) {
+    res.status(404);
+    throw new Error('Mikrotik User not found');
+  }
+
+  const router = user.mikrotikRouter;
+
+  if (!router) {
+    res.status(404);
+    throw new Error('Associated Mikrotik Router not found');
+  }
+
+  let client;
+  try {
+    client = new RouterOSAPI({
+      host: router.ipAddress,
+      user: router.apiUsername,
+      password: decrypt(router.apiPassword),
+      port: router.apiPort,
+      timeout: 5000, // 5 second timeout
+    });
+
+    await client.connect();
+
+    let status = 'offline';
+
+    if (user.serviceType === 'pppoe') {
+      const pppActive = await client.write('/ppp/active/print');
+      if (pppActive.some(session => session.name === user.username)) {
+        status = 'online';
+      }
+    } else if (user.serviceType === 'static') {
+      const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
+      if (pingReplies.some(reply => reply.time)) {
+        status = 'online';
+      }
+    }
+
+    await client.close();
+    res.status(200).json({ status });
+  } catch (error) {
+    res.status(200).json({ status: 'offline' }); // Return offline on any API error
+  }
+});
+
 // @desc    Get Mikrotik User Traffic Statistics
 // @route   GET /api/mikrotik/users/:id/traffic
 // @access  Private
 const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
-  const trafficData = await MikrotikHardwareService.getUserTraffic(req.params.id);
-  res.status(200).json(trafficData);
+  const query = { _id: req.params.id, tenant: req.user.tenant };
+
+  const user = await MikrotikUser.findOne(query).populate('mikrotikRouter');
+
+  if (!user) {
+    res.status(404);
+    throw new Error('Mikrotik User not found');
+  }
+
+  const router = user.mikrotikRouter;
+
+  if (!router) {
+    res.status(404);
+    throw new Error('Associated Mikrotik Router not found');
+  }
+
+  let client;
+  try {
+    client = new RouterOSAPI({
+      host: router.ipAddress,
+      user: router.apiUsername,
+      password: decrypt(router.apiPassword),
+      port: router.apiPort,
+      timeout: 5000, // 5 second timeout
+    });
+
+    await client.connect();
+
+    let trafficData = { rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0 };
+
+    if (user.serviceType === 'pppoe') {
+      console.log('Fetching traffic for PPPoE user:', user.username);
+      const pppActiveUsers = await client.write('/ppp/active/print', [
+        '=.proplist=name,interface'
+      ]);
+      console.log('PPP Active Users:', pppActiveUsers);
+      const activeUser = pppActiveUsers.find(u => u.name === user.username);
+      if (activeUser) {
+        console.log('Active User Found:', activeUser);
+        const interfaceName = activeUser.interface;
+        const monitor = await client.write('/interface/monitor-traffic', [
+          `=interface=${interfaceName}`,
+          '=once='
+        ]);
+        console.log('Monitor Result:', monitor);
+        if (monitor.length > 0) {
+          trafficData.rxRate = parseInt(monitor[0]['rx-bits-per-second'], 10) / 8;
+          trafficData.txRate = parseInt(monitor[0]['tx-bits-per-second'], 10) / 8;
+        }
+      } else {
+        console.log('Active user not found');
+      }
+    } else if (user.serviceType === 'static') {
+      console.log('Fetching traffic for static user:', user.username);
+      const simpleQueues = await client.write('/queue/simple/print', [
+        `?name=${user.username}`,
+        '=.proplist=rate,bytes'
+      ]);
+      console.log('Simple Queues:', simpleQueues);
+      if (simpleQueues.length > 0) {
+        const [rxRate, txRate] = simpleQueues[0].rate.split('/');
+        trafficData.rxRate = parseInt(rxRate, 10);
+        trafficData.txRate = parseInt(txRate, 10);
+        const [rxBytes, txBytes] = simpleQueues[0].bytes.split('/');
+        trafficData.rxBytes = parseInt(rxBytes, 10);
+        trafficData.txBytes = parseInt(txBytes, 10);
+      }
+    }
+
+    await client.close();
+    res.status(200).json(trafficData);
+  } catch (error) {
+    res.status(200).json({ rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0, error: `Could not fetch traffic: ${error.message}` });
+  }
 });
 
 // @desc    Get all Mikrotik Users for a specific station
@@ -306,6 +432,7 @@ module.exports = {
   getMonthlyNewSubscribers,
   getMonthlyPaidSubscribers,
   getMonthlyTotalSubscribers,
+  getMikrotikUserStatus,
   getMikrotikUserTraffic,
   getDowntimeLogs,
   getDelayedPayments,
