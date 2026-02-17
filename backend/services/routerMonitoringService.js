@@ -115,8 +115,8 @@ function startRouterMonitoring(intervalMs) {
     }
     console.log(`[${new Date().toISOString()}] Starting router monitoring every ${intervalMs / 1000} seconds.`);
     // This will be triggered by the master scheduler now
-    // performRouterStatusCheck();
-    // monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
+    performRouterStatusCheck();
+    monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
 }
 
 function stopRouterMonitoring() {
