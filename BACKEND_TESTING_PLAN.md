@@ -21,7 +21,7 @@ The goal is to have unit tests for all critical business logic.
 -   [x] `services/monitoringService.js`
 -   [x] `services/routerMonitoringService.js`
 -   [x] `services/userMonitoringService.js`
--   [ ] `services/mpesaService.js` (Not done)
+-   [x] `services/mpesaService.js`
 -   [x] `services/paymentService.js`
 -   [x] `services/DeviceService.js`
 -   [x] `services/DiagnosticService.js`
@@ -37,12 +37,18 @@ The goal is to have unit tests for all critical business logic.
 
 Once we have good unit test coverage, we will move to integration tests for our controllers. This will involve testing the API endpoints without making actual HTTP requests, but by calling the controller functions directly and mocking the request and response objects.
 
--   [ ] `controllers/billController.js`
--   [ ] `controllers/buildingController.js`
--   [ ] `controllers/collectionController.js`
--   [ ] `controllers/dailyTransactionController.js`
--   [ ] `controllers/dashboardController.js`
--   [ ] `controllers/deviceController.js`
+-   [x] `controllers/billController.js`
+
+-   [x] `controllers/buildingController.js`
+
+-   [x] `controllers/collectionController.js`
+
+-   [x] `controllers/dailyTransactionController.js`
+
+-   [x] `controllers/dashboardController.js`
+
+-   [x] `controllers/deviceController.js`
+
 -   [ ] `controllers/diagnosticController.js`
 -   [ ] `controllers/expenseController.js`
 -   [ ] `controllers/expenseTypeController.js`
