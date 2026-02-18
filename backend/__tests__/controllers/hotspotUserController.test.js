@@ -191,25 +191,28 @@ describe('HotspotUser Controller', () => {
 
   describe('deleteHotspotUser', () => {
     it('should delete a hotspot user', async () => {
+      const mockRouter = { _id: 'router1', ipAddress: '192.168.1.1', username: 'admin', password: 'password' };
       const mockUser = {
         _id: 'testUserId',
         hotspotName: 'testuser',
         tenant: 'testTenant',
-        mikrotikRouter: { _id: 'router1' },
+        mikrotikRouter: mockRouter,
         deleteOne: jest.fn().mockResolvedValue({}),
       };
-      HotspotUser.findById.mockResolvedValue(mockUser);
+      HotspotUser.findById.mockReturnThis();
+      HotspotUser.populate.mockResolvedValue(mockUser);
       removeHotspotUser.mockResolvedValue(true);
 
       await deleteHotspotUser(req, res);
 
-      expect(removeHotspotUser).toHaveBeenCalledWith(expect.any(Object), 'testuser');
+      expect(removeHotspotUser).toHaveBeenCalledWith(mockRouter, 'testuser');
       expect(mockUser.deleteOne).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({ message: 'User removed' });
     });
 
     it('should return 404 if user not found', async () => {
-      HotspotUser.findById.mockResolvedValue(null);
+      HotspotUser.findById.mockReturnThis();
+      HotspotUser.populate.mockResolvedValue(null);
 
       await deleteHotspotUser(req, res);
 

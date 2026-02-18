@@ -55,10 +55,10 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/hotspotPlanController.js`
 -   [x] `controllers/hotspotSessionController.js`
 -   [ ] `controllers/hotspotStkController.js`
--   [ ] `controllers/hotspotUserController.js`
--   [ ] `controllers/invoiceController.js`
--   [ ] `controllers/leadController.js`
--   [ ] `controllers/mikrotikDashboardController.js`
+-   [x] `controllers/hotspotUserController.js`
+-   [x] `controllers/invoiceController.js`
+-   [x] `controllers/leadController.js`
+-   [x] `controllers/mikrotikDashboardController.js`
 -   [ ] `controllers/mikrotikRouterController.js`
 -   [ ] `controllers/mikrotikUserController.js`
 -   [ ] `controllers/notificationController.js`

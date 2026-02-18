@@ -13,7 +13,7 @@ exports.createHotspotUser = async (req, res) => {
       location,
       hotspotName,
       hotspotPassword,
-      package,
+      hotspotPackage,
       server,
       profile,
       referenceNumber,
@@ -53,7 +53,7 @@ exports.createHotspotUser = async (req, res) => {
       location,
       hotspotName,
       hotspotPassword,
-      package,
+      hotspotPackage,
       server,
       profile,
       referenceNumber,
@@ -126,7 +126,7 @@ exports.updateHotspotUser = async (req, res) => {
         location,
         hotspotName,
         hotspotPassword,
-        package,
+        hotspotPackage,
         server,
         profile,
         referenceNumber,
@@ -145,7 +145,7 @@ exports.updateHotspotUser = async (req, res) => {
       user.location = location || user.location;
       user.hotspotName = hotspotName || user.hotspotName;
       user.hotspotPassword = hotspotPassword || user.hotspotPassword;
-      user.package = package || user.package;
+      user.hotspotPackage = hotspotPackage || user.hotspotPackage;
       user.server = server || user.server;
       user.profile = profile || user.profile;
       user.referenceNumber = referenceNumber || user.referenceNumber;
