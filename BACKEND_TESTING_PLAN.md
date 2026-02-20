@@ -61,9 +61,9 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/mikrotikDashboardController.js`
 -   [x] `controllers/mikrotikRouterController.js`
 -   [ ] `controllers/mikrotikUserController.js`
--   [ ] `controllers/notificationController.js`
--   [ ] `controllers/packageController.js`
--   [ ] `controllers/paymentController.js`
+-   [x] `controllers/notificationController.js`
+-   [x] `controllers/packageController.js`
+-   [x] `controllers/paymentController.js`
 -   [ ] `controllers/reportController.js`
 -   [ ] `controllers/scheduledTaskController.js`
 -   [ ] `controllers/searchController.js`
