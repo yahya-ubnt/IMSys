@@ -67,7 +67,7 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/reportController.js`
 -   [x] `controllers/scheduledTaskController.js`
 -   [x] `controllers/searchController.js`
--   [ ] `controllers/settingsController.js`
+-   [x] `controllers/settingsController.js`
 -   [ ] `controllers/smsAcknowledgementController.js`
 -   [ ] `controllers/smsController.js`
 -   [ ] `controllers/smsExpiryScheduleController.js`
