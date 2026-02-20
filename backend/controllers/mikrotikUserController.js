@@ -25,12 +25,7 @@ const createMikrotikUser = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users
 // @access  Private
 const getMikrotikUsers = asyncHandler(async (req, res) => {
-  const query = { tenant: req.user.tenant };
-
-  const users = await MikrotikUser.find(query)
-    .populate('mikrotikRouter')
-    .populate('package')
-    .populate('station');
+  const users = await UserService.getPopulatedMikrotikUsers(req.user.tenant);
   res.status(200).json(users);
 });
 
@@ -38,12 +33,7 @@ const getMikrotikUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id
 // @access  Private
 const getMikrotikUserById = asyncHandler(async (req, res) => {
-  const query = { _id: req.params.id, tenant: req.user.tenant };
-
-  const user = await MikrotikUser.findOne(query)
-    .populate('mikrotikRouter')
-    .populate('package')
-    .populate('station');
+  const user = await UserService.getPopulatedMikrotikUserById(req.params.id, req.user.tenant);
 
   if (user) {
     res.status(200).json(user);
@@ -94,9 +84,7 @@ const manualConnectUser = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/clients-for-sms
 // @access  Private
 const getMikrotikClientsForSms = asyncHandler(async (req, res) => {
-  const query = { tenant: req.user.tenant };
-
-  const clients = await MikrotikUser.find(query).select('_id officialName mobileNumber expiryDate');
+  const clients = await UserService.getMikrotikClientsForSms(req.user.tenant);
   res.status(200).json(clients);
 });
 
@@ -104,19 +92,7 @@ const getMikrotikClientsForSms = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/stats/monthly-new-subscribers
 // @access  Private/Admin
 const getMonthlyNewSubscribers = asyncHandler(async (req, res) => {
-  const query = { tenant: req.user.tenant };
-
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
-  const endOfMonth = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
-
-  query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
-
-  const count = await MikrotikUser.countDocuments(query);
-
+  const { count } = await UserService.getMonthlyNewSubscribers(req.user.tenant);
   res.status(200).json({ count });
 });
 
@@ -124,20 +100,7 @@ const getMonthlyNewSubscribers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/stats/monthly-paid-subscribers
 // @access  Private/Admin
 const getMonthlyPaidSubscribers = asyncHandler(async (req, res) => {
-  const query = { tenant: req.user.tenant };
-
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
-  const endOfMonth = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
-
-  query.expiryDate = { $gte: new Date() };
-  query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
-
-  const count = await MikrotikUser.countDocuments(query);
-
+  const { count } = await UserService.getMonthlyPaidSubscribers(req.user.tenant);
   res.status(200).json({ count });
 });
 
@@ -146,25 +109,7 @@ const getMonthlyPaidSubscribers = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
   const { year } = req.params;
-
-  const query = { tenant: req.user.tenant };
-
-  const monthlyTotals = [];
-
-  for (let i = 0; i < 12; i++) {
-    const startOfMonth = new Date(year, i, 1);
-    const endOfMonth = new Date(year, i + 1, 0); // Last day of the month
-
-    query.createdAt = { $gte: startOfMonth, $lte: endOfMonth };
-
-    const count = await MikrotikUser.countDocuments(query);
-
-    monthlyTotals.push({
-      month: i + 1, // Month number (1-12)
-      total: count,
-    });
-  }
-
+  const monthlyTotals = await UserService.getMonthlyTotalSubscribers(year, req.user.tenant);
   res.status(200).json(monthlyTotals);
 });
 
@@ -172,133 +117,16 @@ const getMonthlyTotalSubscribers = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id/status
 // @access  Private
 const getMikrotikUserStatus = asyncHandler(async (req, res) => {
-  const query = { _id: req.params.id, tenant: req.user.tenant };
-
-  const user = await MikrotikUser.findOne(query).populate('mikrotikRouter').populate('package');
-
-  if (!user) {
-    res.status(404);
-    throw new Error('Mikrotik User not found');
-  }
-
-  const router = user.mikrotikRouter;
-
-  if (!router) {
-    res.status(404);
-    throw new Error('Associated Mikrotik Router not found');
-  }
-
-  let client;
-  try {
-    client = new RouterOSAPI({
-      host: router.ipAddress,
-      user: router.apiUsername,
-      password: decrypt(router.apiPassword),
-      port: router.apiPort,
-      timeout: 5000, // 5 second timeout
-    });
-
-    await client.connect();
-
-    let status = 'offline';
-
-    if (user.serviceType === 'pppoe') {
-      const pppActive = await client.write('/ppp/active/print');
-      if (pppActive.some(session => session.name === user.username)) {
-        status = 'online';
-      }
-    } else if (user.serviceType === 'static') {
-      const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-      if (pingReplies.some(reply => reply.time)) {
-        status = 'online';
-      }
-    }
-
-    await client.close();
-    res.status(200).json({ status });
-  } catch (error) {
-    res.status(200).json({ status: 'offline' }); // Return offline on any API error
-  }
+  const { status } = await UserService.getMikrotikUserStatus(req.params.id, req.user.tenant);
+  res.status(200).json({ status });
 });
 
 // @desc    Get Mikrotik User Traffic Statistics
 // @route   GET /api/mikrotik/users/:id/traffic
 // @access  Private
 const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
-  const query = { _id: req.params.id, tenant: req.user.tenant };
-
-  const user = await MikrotikUser.findOne(query).populate('mikrotikRouter');
-
-  if (!user) {
-    res.status(404);
-    throw new Error('Mikrotik User not found');
-  }
-
-  const router = user.mikrotikRouter;
-
-  if (!router) {
-    res.status(404);
-    throw new Error('Associated Mikrotik Router not found');
-  }
-
-  let client;
-  try {
-    client = new RouterOSAPI({
-      host: router.ipAddress,
-      user: router.apiUsername,
-      password: decrypt(router.apiPassword),
-      port: router.apiPort,
-      timeout: 5000, // 5 second timeout
-    });
-
-    await client.connect();
-
-    let trafficData = { rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0 };
-
-    if (user.serviceType === 'pppoe') {
-      console.log('Fetching traffic for PPPoE user:', user.username);
-      const pppActiveUsers = await client.write('/ppp/active/print', [
-        '=.proplist=name,interface'
-      ]);
-      console.log('PPP Active Users:', pppActiveUsers);
-      const activeUser = pppActiveUsers.find(u => u.name === user.username);
-      if (activeUser) {
-        console.log('Active User Found:', activeUser);
-        const interfaceName = activeUser.interface;
-        const monitor = await client.write('/interface/monitor-traffic', [
-          `=interface=${interfaceName}`,
-          '=once='
-        ]);
-        console.log('Monitor Result:', monitor);
-        if (monitor.length > 0) {
-          trafficData.rxRate = parseInt(monitor[0]['rx-bits-per-second'], 10) / 8;
-          trafficData.txRate = parseInt(monitor[0]['tx-bits-per-second'], 10) / 8;
-        }
-      } else {
-        console.log('Active user not found');
-      }
-    } else if (user.serviceType === 'static') {
-      console.log('Fetching traffic for static user:', user.username);
-      const simpleQueues = await client.write('/queue/simple/print', [
-        `?name=${user.username}`,
-        '=.proplist=rate,bytes'
-      ]);
-      console.log('Simple Queues:', simpleQueues);
-      if (simpleQueues.length > 0) {
-        const [rxRate, txRate] = simpleQueues[0].rate.split('/');
-        trafficData.rxRate = parseInt(rxRate, 10);
-        trafficData.txRate = parseInt(txRate, 10);
-        const [rxBytes, txBytes] = simpleQueues[0].bytes.split('/');
-        trafficData.rxBytes = parseInt(rxBytes, 10);
-        trafficData.txBytes = parseInt(txBytes, 10);
-      }
-    }
-
-    await client.close();
-    res.status(200).json(trafficData);
-  } catch (error) {
-    res.status(200).json({ rxRate: 0, txRate: 0, rxBytes: 0, txBytes: 0, error: `Could not fetch traffic: ${error.message}` });
-  }
+  const trafficData = await UserService.getMikrotikUserTraffic(req.params.id, req.user.tenant);
+  res.status(200).json(trafficData);
 });
 
 // @desc    Get all Mikrotik Users for a specific station
@@ -306,11 +134,7 @@ const getMikrotikUserTraffic = asyncHandler(async (req, res) => {
 // @access  Private
 const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
   const { stationId } = req.params;
-  const query = { station: stationId, tenant: req.user.tenant };
-
-  const users = await MikrotikUser.find(query)
-    .populate('package')
-    .populate('mikrotikRouter', 'name');
+  const users = await UserService.getMikrotikUsersByStation(stationId, req.user.tenant);
   res.status(200).json(users);
 });
 
@@ -318,15 +142,7 @@ const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:userId/downtime-logs
 // @access  Private/Admin
 const getDowntimeLogs = asyncHandler(async (req, res) => {
-  const query = { _id: req.params.userId, tenant: req.user.tenant };
-
-  const mikrotikUser = await MikrotikUser.findOne(query);
-  if (!mikrotikUser) {
-    res.status(404);
-    throw new Error('Mikrotik user not found or not authorized');
-  }
-
-  const logs = await UserDowntimeLog.find({ mikrotikUser: req.params.userId }).sort({ downStartTime: -1 });
+  const logs = await UserService.getDowntimeLogs(req.params.userId, req.user.tenant);
   res.status(200).json(logs);
 });
 
@@ -335,47 +151,7 @@ const getDowntimeLogs = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getDelayedPayments = asyncHandler(async (req, res) => {
   const { days_overdue, name_search } = req.query;
-
-  if (!days_overdue) {
-    res.status(400);
-    throw new Error('days_overdue query parameter is required');
-  }
-
-  const days = parseInt(days_overdue, 10);
-  if (isNaN(days)) {
-    res.status(400);
-    throw new Error('days_overdue must be a number');
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const filter = { tenant: req.user.tenant };
-
-  filter.expiryDate = { $lt: today };
-
-  if (name_search) {
-    filter.$or = [
-      { officialName: { $regex: name_search, $options: 'i' } },
-      { username: { $regex: name_search, $options: 'i' } },
-    ];
-  }
-
-  const users = await MikrotikUser.find(filter).populate('package');
-
-  const usersWithDaysOverdue = users
-    .map(user => {
-      const expiryDate = new Date(user.expiryDate);
-      const diffTime = today.getTime() - expiryDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      return {
-        ...user.toObject(),
-        daysOverdue: diffDays,
-      };
-    })
-    .filter(user => user.daysOverdue >= days);
-
+  const usersWithDaysOverdue = await UserService.getDelayedPayments(days_overdue, name_search, req.user.tenant);
   res.status(200).json(usersWithDaysOverdue);
 });
 
@@ -384,42 +160,8 @@ const getDelayedPayments = asyncHandler(async (req, res) => {
 // @route   GET /api/mikrotik/users/:id/payment-stats
 // @access  Private/Admin
 const getUserPaymentStats = asyncHandler(async (req, res) => {
-    try {
-        const userId = req.params.id;
-        const userQuery = { _id: userId, tenant: req.user.tenant };
-
-        const user = await MikrotikUser.findOne(userQuery);
-
-        if (!user) {
-            res.status(404);
-            throw new Error('User not found');
-        }
-
-        // Query for M-Pesa transactions linked to this Mikrotik user
-        const mpesaTransactions = await Transaction.find({
-            mikrotikUser: userId,
-            tenant: req.user.tenant,
-            paymentMethod: { $regex: /M-Pesa/i } // Find all M-Pesa related payments
-        }).sort({ transactionDate: -1 });
-
-        // Calculate statistics
-        const totalSpentMpesa = mpesaTransactions.reduce((acc, curr) => acc + curr.amount, 0);
-        const totalMpesaTransactions = mpesaTransactions.length;
-        const lastMpesaPayment = totalMpesaTransactions > 0 ? mpesaTransactions[0] : null;
-        const averageMpesaTransaction = totalMpesaTransactions > 0 ? totalSpentMpesa / totalMpesaTransactions : 0;
-
-        res.status(200).json({
-            totalSpentMpesa,
-            lastMpesaPaymentDate: lastMpesaPayment ? lastMpesaPayment.transactionDate : null,
-            lastMpesaPaymentAmount: lastMpesaPayment ? lastMpesaPayment.amount : null,
-            totalMpesaTransactions,
-            averageMpesaTransaction,
-            mpesaTransactionHistory: mpesaTransactions, // Send the full history
-        });
-    } catch (error) {
-        console.error(`Error fetching M-Pesa payment stats for user ${req.params.id}:`, error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
+    const stats = await UserService.getUserPaymentStats(req.params.id, req.user.tenant);
+    res.status(200).json(stats);
 });
 
 module.exports = {

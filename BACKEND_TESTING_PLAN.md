@@ -60,7 +60,7 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/leadController.js`
 -   [x] `controllers/mikrotikDashboardController.js`
 -   [x] `controllers/mikrotikRouterController.js`
--   [ ] `controllers/mikrotikUserController.js`
+-   [x] `controllers/mikrotikUserController.js`
 -   [x] `controllers/notificationController.js`
 -   [x] `controllers/packageController.js`
 -   [x] `controllers/paymentController.js`
@@ -83,7 +83,67 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/voucherController.js`
 -   [x] `controllers/webhookController.js`
 
-### Phase 3: End-to-End Tests
+### Phase 3: Model Unit Tests
+
+The goal is to have dedicated unit tests for Mongoose models to ensure data integrity and correct behavior of schema-level logic.
+
+-   [ ] `models/ApplicationSettings.js`
+-   [ ] `models/Bill.js`
+-   [ ] `models/Building.js`
+-   [ ] `models/DailyTransaction.js`
+-   [ ] `models/Device.js`
+-   [ ] `models/Expense.js`
+-   [ ] `models/ExpenseType.js`
+-   [ ] `models/HotspotPlan.js`
+-   [ ] `models/HotspotSession.js`
+-   [ ] `models/HotspotTransaction.js`
+-   [ ] `models/Invoice.js`
+-   [ ] `models/Lead.js`
+-   [ ] `models/MikrotikRouter.js`
+-   [ ] `models/MikrotikUser.js`
+-   [ ] `models/MpesaAlert.js`
+-   [ ] `models/Notification.js`
+-   [ ] `models/Package.js`
+-   [ ] `models/ScheduledTask.js`
+-   [ ] `models/SmsAcknowledgement.js`
+-   [ ] `models/SmsExpirySchedule.js`
+-   [ ] `models/SmsLog.js`
+-   [ ] `models/SmsProvider.js`
+-   [ ] `models/SmsTemplate.js`
+-   [ ] `models/Tenant.js`
+-   [ ] `models/TechnicianActivity.js`
+-   [ ] `models/Ticket.js`
+-   [ ] `models/Transaction.js`
+-   [ ] `models/User.js`
+-   [ ] `models/UserDowntimeLog.js`
+-   [ ] `models/Voucher.js`
+-   [ ] `models/WalletTransaction.js`
+
+### Phase 4: Middleware Unit Tests
+
+The goal is to test custom Express middleware functions in isolation.
+
+-   [ ] `middlewares/errorHandler.js`
+-   [ ] `middlewares/mikrotikDashboardMiddleware.js`
+-   [ ] `middlewares/protect.js`
+
+### Phase 5: Route Definition Tests (Light Integration)
+
+The goal is to verify that Express routes are correctly defined and map to the intended controller functions.
+
+-   [ ] All routes in `routes/` directory
+
+### Phase 6: Queue/Worker Integration Tests
+
+The goal is to test the interaction between the application and the BullMQ queues/workers.
+
+-   [ ] `queues/diagnosticQueue.js`
+-   [ ] `queues/mikrotikSyncQueue.js`
+-   [ ] `workers/mikrotikSyncWorker.js`
+-   [ ] `jobs/reconciliationJob.js`
+-   [ ] `jobs/scheduleExpiredClientDisconnectsJob.js`
+
+### Phase 7: End-to-End Tests
 
 Finally, we will write a few critical E2E tests for the most important user flows. This will involve using a library like `supertest` to make HTTP requests to the running application and assert the responses.
 
