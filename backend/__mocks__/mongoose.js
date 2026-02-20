@@ -7,6 +7,9 @@ const mongoose = {
       pre: jest.fn(),
       post: jest.fn(),
       index: jest.fn(),
+      virtual: jest.fn(() => ({
+        get: jest.fn(),
+      })),
     };
   },
   Types: {
