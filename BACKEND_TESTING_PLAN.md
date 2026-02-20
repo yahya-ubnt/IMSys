@@ -71,17 +71,17 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/smsAcknowledgementController.js`
 -   [x] `controllers/smsController.js`
 -   [x] `controllers/smsExpiryScheduleController.js`
--   [x] `controllers/smsProviderController.js` (*createSmsProvider test skipped*)
+-   [x] `controllers/smsProviderController.js`
 -   [x] `controllers/smsTemplateController.js`
 -   [x] `controllers/superAdminController.js`
--   [x] `controllers/technicianActivityController.js` (*updateTechnicianActivity test skipped*)
+-   [x] `controllers/technicianActivityController.js`
 -   [x] `controllers/tenantController.js`
 -   [x] `controllers/ticketController.js`
 -   [x] `controllers/transactionController.js`
 -   [x] `controllers/uploadController.js`
 -   [x] `controllers/userController.js`
--   [ ] `controllers/voucherController.js`
--   [ ] `controllers/webhookController.js`
+-   [x] `controllers/voucherController.js`
+-   [x] `controllers/webhookController.js`
 
 ### Phase 3: End-to-End Tests
 
