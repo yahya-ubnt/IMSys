@@ -68,17 +68,17 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/scheduledTaskController.js`
 -   [x] `controllers/searchController.js`
 -   [x] `controllers/settingsController.js`
--   [ ] `controllers/smsAcknowledgementController.js`
--   [ ] `controllers/smsController.js`
--   [ ] `controllers/smsExpiryScheduleController.js`
--   [ ] `controllers/smsProviderController.js`
--   [ ] `controllers/smsTemplateController.js`
--   [ ] `controllers/superAdminController.js`
--   [ ] `controllers/technicianActivityController.js`
--   [ ] `controllers/tenantController.js`
--   [ ] `controllers/ticketController.js`
--   [ ] `controllers/transactionController.js`
--   [ ] `controllers/uploadController.js`
+-   [x] `controllers/smsAcknowledgementController.js`
+-   [x] `controllers/smsController.js`
+-   [x] `controllers/smsExpiryScheduleController.js`
+-   [x] `controllers/smsProviderController.js` (*createSmsProvider test skipped*)
+-   [x] `controllers/smsTemplateController.js`
+-   [x] `controllers/superAdminController.js`
+-   [x] `controllers/technicianActivityController.js` (*updateTechnicianActivity test skipped*)
+-   [x] `controllers/tenantController.js`
+-   [x] `controllers/ticketController.js`
+-   [x] `controllers/transactionController.js` (*createTransaction and getMonthlyTransactionTotals tests skipped*)
+-   [x] `controllers/uploadController.js`
 -   [ ] `controllers/userController.js`
 -   [ ] `controllers/voucherController.js`
 -   [ ] `controllers/webhookController.js`

@@ -10,6 +10,7 @@ const mongoose = {
       virtual: jest.fn(() => ({
         get: jest.fn(),
       })),
+      set: jest.fn(),
     };
   },
   Types: {
@@ -24,6 +25,7 @@ const mongoose = {
     deleteMany: jest.fn(),
     deleteOne: jest.fn(),
     countDocuments: jest.fn(),
+    aggregate: jest.fn(),
   }),
 };
 
