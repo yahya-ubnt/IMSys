@@ -10,7 +10,22 @@ const {
 const Transaction = require('../../models/Transaction');
 const { validationResult } = require('express-validator');
 
-jest.mock('../../models/Transaction');
+jest.mock('../../models/Transaction', () => {
+  const mockTransactionInstance = {
+    save: jest.fn(),
+    deleteOne: jest.fn(),
+  };
+  const mockTransaction = jest.fn(function(data) {
+    Object.assign(this, data);
+    this.save = mockTransactionInstance.save;
+    this.deleteOne = mockTransactionInstance.deleteOne;
+  });
+  mockTransaction.findOne = jest.fn(() => mockTransactionInstance);
+  mockTransaction.find = jest.fn(() => [mockTransactionInstance]);
+  mockTransaction.aggregate = jest.fn(() => [mockTransactionInstance]);
+  mockTransaction.countDocuments = jest.fn(() => 1);
+  return mockTransaction;
+});
 jest.mock('express-validator');
 
 describe('Transaction Controller', () => {
@@ -38,7 +53,8 @@ describe('Transaction Controller', () => {
   describe('createTransaction', () => {
     it('should create a new transaction', async () => {
       const transactionData = { amount: 100 };
-      Transaction.prototype.save = jest.fn().mockResolvedValue(transactionData);
+      const mockTransactionInstance = { ...transactionData, save: jest.fn().mockResolvedValue(transactionData) };
+      Transaction.mockImplementation(() => mockTransactionInstance);
       req.body = transactionData;
       await createTransaction(req, res, next);
       expect(res.status).toHaveBeenCalledWith(201);
@@ -96,9 +112,10 @@ describe('Transaction Controller', () => {
 
   describe('getMonthlyTransactionTotals', () => {
     it('should return monthly transaction totals', async () => {
-      Transaction.aggregate.mockResolvedValue([{ month: 1, total: 1000 }]);
+      const mockMonthlyTotals = [{ _id: { month: 1 }, total: 1000 }];
+      Transaction.aggregate.mockResolvedValue(mockMonthlyTotals);
       await getMonthlyTransactionTotals(req, res, next);
-      expect(res.json).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith(expect.any(Array));
     });
   });
 });

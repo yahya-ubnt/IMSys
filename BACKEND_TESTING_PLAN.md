@@ -77,9 +77,9 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/technicianActivityController.js` (*updateTechnicianActivity test skipped*)
 -   [x] `controllers/tenantController.js`
 -   [x] `controllers/ticketController.js`
--   [x] `controllers/transactionController.js` (*createTransaction and getMonthlyTransactionTotals tests skipped*)
+-   [x] `controllers/transactionController.js`
 -   [x] `controllers/uploadController.js`
--   [ ] `controllers/userController.js`
+-   [x] `controllers/userController.js`
 -   [ ] `controllers/voucherController.js`
 -   [ ] `controllers/webhookController.js`
 
