@@ -54,7 +54,7 @@ Once we have good unit test coverage, we will move to integration tests for our 
 -   [x] `controllers/expenseTypeController.js`
 -   [x] `controllers/hotspotPlanController.js`
 -   [x] `controllers/hotspotSessionController.js`
--   [ ] `controllers/hotspotStkController.js`
+-   [x] `controllers/hotspotStkController.js`
 -   [x] `controllers/hotspotUserController.js`
 -   [x] `controllers/invoiceController.js`
 -   [x] `controllers/leadController.js`
