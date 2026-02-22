@@ -123,9 +123,9 @@ The goal is to have dedicated unit tests for Mongoose models to ensure data inte
 
 The goal is to test custom Express middleware functions in isolation.
 
--   [ ] `middlewares/errorHandler.js`
--   [ ] `middlewares/mikrotikDashboardMiddleware.js`
--   [ ] `middlewares/protect.js`
+-   [x] `middlewares/errorHandler.js`
+-   [x] `middlewares/mikrotikDashboardMiddleware.js`
+-   [x] `middlewares/protect.js`
 
 ### Phase 5: Route Definition Tests (Light Integration)
 
