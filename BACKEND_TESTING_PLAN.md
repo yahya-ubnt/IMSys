@@ -148,7 +148,7 @@ The goal is to verify that Express routes are correctly defined and map to the i
 -   [x] `routes/leadRoutes.js`
 -   [x] `routes/mikrotikDashboardRoutes.js`
 -   [x] `routes/mikrotikRouterRoutes.js`
--   [ ] `routes/mikrotikUserRoutes.js`
+-   [x] `routes/mikrotikUserRoutes.js`
 -   [x] `routes/notificationRoutes.js`
 -   [x] `routes/packageRoutes.js`
 -   [x] `routes/paymentRoutes.js`

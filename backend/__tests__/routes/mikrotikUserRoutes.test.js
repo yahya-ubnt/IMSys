@@ -37,36 +37,33 @@ jest.mock('../../controllers/mikrotikUserController', () => ({
 
 // Mock express-validator to bypass actual validation logic in tests
 jest.mock('express-validator', () => {
-  // This function will act as a mock for any chainable method (e.g., isMongoId, not, isEmpty, etc.)
-  const mockChainableMethod = jest.fn().mockReturnThis();
-
-  // This object will represent the chainable API (e.g., body('field').isMongoId()...)
-  const mockChain = {
-    isMongoId: mockChainableMethod,
-    isIn: mockChainableMethod,
-    matches: mockChainableMethod,
-    not: jest.fn(() => mockChain), // `not()` also returns a chainable object
-    isEmpty: mockChainableMethod,
-    isISO8601: mockChainableMethod,
-    toDate: mockChainableMethod,
-    optional: mockChainableMethod,
-    isString: mockChainableMethod,
-    custom: mockChainableMethod,
-    if: jest.fn(() => mockChain), // if() returns the chainable object itself
-    equals: mockChainableMethod,
+  // This is the mock object that will be returned by chainable methods
+  const mockValidationChain = {
+    isMongoId: jest.fn().mockReturnThis(),
+    isIn: jest.fn().mockReturnThis(),
+    matches: jest.fn().mockReturnThis(),
+    not: jest.fn().mockReturnThis(),
+    isEmpty: jest.fn().mockReturnThis(),
+    isISO8601: jest.fn().mockReturnThis(),
+    toDate: jest.fn().mockReturnThis(),
+    optional: jest.fn().mockReturnThis(),
+    isString: jest.fn().mockReturnThis(),
+    custom: jest.fn().mockReturnThis(),
+    if: jest.fn().mockReturnThis(),
+    equals: jest.fn().mockReturnThis(),
     // Add any other chainable methods used in your routes here
   };
 
-  // This is the actual middleware function that Express will execute.
-  // It also needs to have the chainable methods attached to it,
-  // because `body('field')` itself returns a middleware function that is also chainable.
-  const mockMiddleware = (req, res, next) => next();
-  Object.assign(mockMiddleware, mockChain); // Attach chainable methods to the middleware function
+  // This function will act as the middleware that the chain resolves to
+  const middleware = (req, res, next) => next();
+
+  // Assign all chainable methods to the middleware function itself
+  Object.assign(middleware, mockValidationChain);
 
   return {
-    body: jest.fn(() => mockMiddleware),
-    param: jest.fn(() => mockMiddleware),
-    query: jest.fn(() => mockMiddleware), // Also mock query if used
+    body: jest.fn(() => middleware),
+    param: jest.fn(() => middleware),
+    query: jest.fn(() => middleware),
     validationResult: jest.fn(() => ({
       isEmpty: () => true, // Always pass validation
     })),
