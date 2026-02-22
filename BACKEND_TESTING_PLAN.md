@@ -87,37 +87,37 @@ Once we have good unit test coverage, we will move to integration tests for our 
 
 The goal is to have dedicated unit tests for Mongoose models to ensure data integrity and correct behavior of schema-level logic.
 
--   [ ] `models/ApplicationSettings.js`
--   [ ] `models/Bill.js`
--   [ ] `models/Building.js`
--   [ ] `models/DailyTransaction.js`
--   [ ] `models/Device.js`
--   [ ] `models/Expense.js`
--   [ ] `models/ExpenseType.js`
--   [ ] `models/HotspotPlan.js`
--   [ ] `models/HotspotSession.js`
--   [ ] `models/HotspotTransaction.js`
--   [ ] `models/Invoice.js`
--   [ ] `models/Lead.js`
--   [ ] `models/MikrotikRouter.js`
--   [ ] `models/MikrotikUser.js`
--   [ ] `models/MpesaAlert.js`
--   [ ] `models/Notification.js`
--   [ ] `models/Package.js`
--   [ ] `models/ScheduledTask.js`
--   [ ] `models/SmsAcknowledgement.js`
--   [ ] `models/SmsExpirySchedule.js`
--   [ ] `models/SmsLog.js`
--   [ ] `models/SmsProvider.js`
--   [ ] `models/SmsTemplate.js`
--   [ ] `models/Tenant.js`
--   [ ] `models/TechnicianActivity.js`
--   [ ] `models/Ticket.js`
--   [ ] `models/Transaction.js`
--   [ ] `models/User.js`
--   [ ] `models/UserDowntimeLog.js`
--   [ ] `models/Voucher.js`
--   [ ] `models/WalletTransaction.js`
+-   [x] `models/ApplicationSettings.js`
+-   [x] `models/Bill.js`
+-   [x] `models/Building.js`
+-   [x] `models/DailyTransaction.js`
+-   [x] `models/Device.js`
+-   [x] `models/Expense.js`
+-   [x] `models/ExpenseType.js`
+-   [x] `models/HotspotPlan.js`
+-   [x] `models/HotspotSession.js`
+-   [x] `models/HotspotTransaction.js`
+-   [x] `models/Invoice.js`
+-   [x] `models/Lead.js`
+-   [x] `models/MikrotikRouter.js`
+-   [x] `models/MikrotikUser.js`
+-   [x] `models/MpesaAlert.js`
+-   [x] `models/Notification.js`
+-   [x] `models/Package.js`
+-   [x] `models/ScheduledTask.js`
+-   [x] `models/SmsAcknowledgement.js`
+-   [x] `models/SmsExpirySchedule.js`
+-   [x] `models/SmsLog.js`
+-   [x] `models/SmsProvider.js`
+-   [x] `models/SmsTemplate.js`
+-   [x] `models/Tenant.js`
+-   [x] `models/TechnicianActivity.js`
+-   [x] `models/Ticket.js`
+-   [x] `models/Transaction.js`
+-   [x] `models/User.js`
+-   [x] `models/UserDowntimeLog.js`
+-   [x] `models/Voucher.js`
+-   [x] `models/WalletTransaction.js`
 
 ### Phase 4: Middleware Unit Tests
 
