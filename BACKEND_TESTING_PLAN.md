@@ -176,11 +176,11 @@ The goal is to verify that Express routes are correctly defined and map to the i
 
 The goal is to test the interaction between the application and the BullMQ queues/workers.
 
--   [ ] `queues/diagnosticQueue.js`
--   [ ] `queues/mikrotikSyncQueue.js`
+-   [x] `queues/diagnosticQueue.js`
+-   [x] `queues/mikrotikSyncQueue.js`
 -   [ ] `workers/mikrotikSyncWorker.js`
--   [ ] `jobs/reconciliationJob.js`
--   [ ] `jobs/scheduleExpiredClientDisconnectsJob.js`
+-   [x] `jobs/reconciliationJob.js`
+-   [x] `jobs/scheduleExpiredClientDisconnectsJob.js`
 
 ### Phase 7: End-to-End Tests
 
