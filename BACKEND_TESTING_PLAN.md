@@ -131,7 +131,46 @@ The goal is to test custom Express middleware functions in isolation.
 
 The goal is to verify that Express routes are correctly defined and map to the intended controller functions.
 
--   [ ] All routes in `routes/` directory
+-   [x] `routes/billRoutes.js`
+-   [x] `routes/buildingRoutes.js`
+-   [x] `routes/collectionRoutes.js`
+-   [x] `routes/dailyTransactionRoutes.js`
+-   [x] `routes/dashboardRoutes.js`
+-   [x] `routes/deviceRoutes.js`
+-   [x] `routes/diagnosticRoutes.js`
+-   [x] `routes/expenseRoutes.js`
+-   [x] `routes/expenseTypeRoutes.js`
+-   [x] `routes/hotspotPlanRoutes.js`
+-   [x] `routes/hotspotSessionRoutes.js`
+-   [x] `routes/hotspotStkRoutes.js`
+-   [x] `routes/hotspotUserRoutes.js`
+-   [x] `routes/invoiceRoutes.js`
+-   [x] `routes/leadRoutes.js`
+-   [x] `routes/mikrotikDashboardRoutes.js`
+-   [x] `routes/mikrotikRouterRoutes.js`
+-   [ ] `routes/mikrotikUserRoutes.js`
+-   [x] `routes/notificationRoutes.js`
+-   [x] `routes/packageRoutes.js`
+-   [x] `routes/paymentRoutes.js`
+-   [x] `routes/publicPaymentRoutes.js`
+-   [x] `routes/reportRoutes.js`
+-   [x] `routes/scheduledTaskRoutes.js`
+-   [x] `routes/searchRoutes.js`
+-   [ ] `routes/settingsRoutes.js`
+-   [x] `routes/smsAcknowledgementRoutes.js`
+-   [x] `routes/smsExpiryScheduleRoutes.js`
+-   [x] `routes/smsProviderRoutes.js`
+-   [ ] `routes/smsRoutes.js`
+-   [x] `routes/smsTemplateRoutes.js`
+-   [x] `routes/superAdminRoutes.js`
+-   [ ] `routes/technicianActivityRoutes.js`
+-   [x] `routes/tenantRoutes.js`
+-   [x] `routes/ticketRoutes.js`
+-   [x] `routes/transactionRoutes.js`
+-   [x] `routes/uploadRoutes.js`
+-   [ ] `routes/userRoutes.js`
+-   [x] `routes/voucherRoutes.js`
+-   [x] `routes/webhookRoutes.js`
 
 ### Phase 6: Queue/Worker Integration Tests
 

@@ -19,15 +19,14 @@ router.route('/monthly-totals').get(protect, isSuperAdminOrAdmin, getMonthlyTran
 router.route('/daily-collection-totals').get(protect, isSuperAdminOrAdmin, getDailyCollectionTotals);
 
 router.route('/').post(
-  [protect, isSuperAdminOrAdmin],
-  [
-    body('amount', 'Amount must be a number').isNumeric(),
-    body('method', 'Invalid payment method').isIn(['M-Pesa', 'Bank', 'Cash']),
-    body('transactionMessage').optional(),
-    body('description').optional(),
-    body('label', 'Label is required').not().isEmpty(),
-    body('category', 'Invalid category').isIn(['Personal', 'Company']),
-  ],
+  protect,
+  isSuperAdminOrAdmin,
+  body('amount', 'Amount must be a number').isNumeric(),
+  body('method', 'Invalid payment method').isIn(['M-Pesa', 'Bank', 'Cash']),
+  body('transactionMessage').optional(),
+  body('description').optional(),
+  body('label', 'Label is required').not().isEmpty(),
+  body('category', 'Invalid category').isIn(['Personal', 'Company']),
   createDailyTransaction
 ).get(protect, isSuperAdminOrAdmin, getDailyTransactions);
 
