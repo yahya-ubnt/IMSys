@@ -102,7 +102,8 @@ export default function MikrotikUserDetailsPage() {
             try {
                 const response = await fetch(`/api/payments/wallet/user/${id}`);
                 if (!response.ok) throw new Error("Failed to fetch wallet transactions");
-                setWalletTransactions(await response.json());
+                const data = await response.json();
+                setWalletTransactions(data.transactions || []);
             } catch {
                 toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" });
             }

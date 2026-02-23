@@ -5,7 +5,7 @@ const Notification = require('../models/Notification');
 // @access  Private
 const getNotifications = async (req, res) => {
   try {
-    const query = { user: req.user._id, tenant: req.user.tenant };
+    const query = { tenant: req.user.tenant };
 
     const notifications = await Notification.find(query).sort({ createdAt: -1 });
     res.json(notifications);
@@ -19,7 +19,7 @@ const getNotifications = async (req, res) => {
 // @access  Private
 const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findOne({ _id: req.params.id, user: req.user._id, tenant: req.user.tenant });
+    const notification = await Notification.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
@@ -39,7 +39,7 @@ const markAsRead = async (req, res) => {
 // @access  Private
 const markAllAsRead = async (req, res) => {
   try {
-    await Notification.updateMany({ user: req.user._id, tenant: req.user.tenant, status: 'unread' }, { status: 'read' });
+    await Notification.updateMany({ tenant: req.user.tenant, status: 'unread' }, { status: 'read' });
     res.json({ message: 'All notifications marked as read' });
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
@@ -51,7 +51,7 @@ const markAllAsRead = async (req, res) => {
 // @access  Private
 const deleteNotification = async (req, res) => {
   try {
-    const notification = await Notification.findOneAndDelete({ _id: req.params.id, user: req.user._id, tenant: req.user.tenant });
+    const notification = await Notification.findOneAndDelete({ _id: req.params.id, tenant: req.user.tenant });
 
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });

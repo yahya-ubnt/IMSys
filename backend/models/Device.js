@@ -21,6 +21,12 @@ const deviceSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide a MAC address'],
     },
+    monitoringMode: {
+      type: String,
+      required: true,
+      enum: ['SNITCH', 'NONE'],
+      default: 'NONE',
+    },
     deviceType: {
       type: String,
       required: true,
@@ -35,8 +41,19 @@ const deviceSchema = new mongoose.Schema(
     lastSeen: {
       type: Date,
     },
-    location: {
-      type: String,
+    physicalBuilding: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Building',
+    },
+    serviceArea: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Building',
+      },
+    ],
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Device', // Self-reference for hierarchy
     },
     deviceName: {
       type: String,

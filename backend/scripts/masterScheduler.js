@@ -101,14 +101,15 @@ const masterScheduler = async () => {
 
   // Schedule monitoring jobs to run every minute
   cron.schedule('* * * * *', async () => {
-    console.log(`[${new Date().toISOString()}] Scheduler running monitoring jobs...`);
+    console.log(`[${new Date().toISOString()}] Scheduler running CORE monitoring jobs...`);
     
     try {
       const tenants = await Tenant.find({ status: 'active' }); // Find all active tenants
       for (const tenant of tenants) {
         performRouterStatusCheck(tenant._id);
-        performUserStatusCheck(tenant._id);
-        checkAllDevices(tenant._id);
+        // User and Device polling removed here as they are handled by:
+        // 1. Webhooks (Real-time)
+        // 2. Reconciliation Job (Every 15 mins)
       }
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Error in monitoring jobs main loop:`, error);

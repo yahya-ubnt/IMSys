@@ -55,6 +55,18 @@ async function checkRouter(router) {
                     isOnline = true; // Still considered "online" as it's pingable
                     location += ' (API Unreachable)';
                     console.log(`[${new Date().toISOString()}] Router ${router.name} (${router.ipAddress}) is UNREACHABLE (ping OK, API failed).`);
+                } else if (router.isCoreRouter && router.tunnelIp) {
+                    // Tier 1: Core Heartbeat (WireGuard)
+                    const isTunnelPingable = await pingHost(router.tunnelIp);
+                    if (isTunnelPingable) {
+                        isOnline = true;
+                        location += ' (Via Tunnel)';
+                        console.log(`[${new Date().toISOString()}] Core Router ${router.name} reached via Tunnel IP ${router.tunnelIp}.`);
+                    } else {
+                        isOnline = false;
+                        location += ' (Offline)';
+                        console.log(`[${new Date().toISOString()}] Core Router ${router.name} is OFFLINE (Tunnel ping failed).`);
+                    }
                 } else {
                     isOnline = false;
                     location += ' (Offline)';
@@ -77,20 +89,20 @@ async function checkRouter(router) {
 }
 
 async function performRouterStatusCheck(tenant) {
-    console.log(`[${new Date().toISOString()}] Performing router status check for tenant ${tenant}...`);
+    console.log(`[${new Date().toISOString()}] Performing CORE router status check for tenant ${tenant}...`);
 
     try {
-        const routers = await MikrotikRouter.find({ tenant });
+        const routers = await MikrotikRouter.find({ tenant, isCoreRouter: true });
 
         if (routers.length === 0) {
-            console.log(`[${new Date().toISOString()}] No MikroTik routers found in the database for this tenant.`);
+            console.log(`[${new Date().toISOString()}] No CORE MikroTik routers found in the database for this tenant.`);
             return;
         }
 
         await Promise.all(routers.map(checkRouter));
 
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] Error during router status check for tenant ${tenant}:`, error);
+        console.error(`[${new Date().toISOString()}] Error during CORE router status check for tenant ${tenant}:`, error);
     }
 }
 
@@ -103,8 +115,8 @@ function startRouterMonitoring(intervalMs) {
     }
     console.log(`[${new Date().toISOString()}] Starting router monitoring every ${intervalMs / 1000} seconds.`);
     // This will be triggered by the master scheduler now
-    // performRouterStatusCheck();
-    // monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
+    performRouterStatusCheck();
+    monitoringInterval = setInterval(performRouterStatusCheck, intervalMs);
 }
 
 function stopRouterMonitoring() {

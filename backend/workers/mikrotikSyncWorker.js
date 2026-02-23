@@ -3,9 +3,10 @@ const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const MikrotikUser = require('../models/MikrotikUser');
 const MikrotikRouter = require('../models/MikrotikRouter');
+const Device = require('../models/Device');
 const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
-const { getMikrotikApiClient } = require('../utils/mikrotikUtils'); // Assuming this utility exists
+const { getMikrotikApiClient, injectNetwatchScript, injectPPPProfileScripts, syncMikrotikUser } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
 const { processExpiredClientDisconnectScheduler } = require('../jobs/scheduleExpiredClientDisconnectsJob'); // Import the scheduler processor
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
@@ -14,7 +15,7 @@ const { processReconciliationScheduler } = require('../jobs/reconciliationJob');
 connectDB();
 
 const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
-  const { mikrotikUserId, tenantId, isManualDisconnect, reason } = job.data;
+  const { mikrotikUserId, deviceId, tenantId, isManualDisconnect, reason } = job.data;
   const { name: jobType } = job;
 
   console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Processing job '${jobType}' for user ${mikrotikUserId || 'N/A'} (Tenant: ${tenantId || 'N/A'})`);
@@ -22,6 +23,7 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
   let client;
   let user;
   let router;
+  let device;
 
   try {
     // For jobs that involve a specific user, fetch the user and router details
@@ -41,157 +43,34 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
     }
 
     switch (jobType) {
+      case 'enableNetwatch':
+        device = await Device.findById(deviceId).populate('router');
+        if (!device) throw new Error(`Device ${deviceId} not found.`);
+        router = device.router;
+        if (!router) throw new Error(`Router not found for device ${device.deviceName}`);
+        
+        await injectNetwatchScript(router, device);
+        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Netwatch injected for ${device.deviceName}`);
+        break;
+
       case 'addUser':
-        // Logic to add user to MikroTik
-        if (user.serviceType === 'pppoe') {
-          const pppSecretArgs = [
-            `=name=${user.username}`,
-            `=password=${user.pppoePassword}`,
-            `=profile=${user.package.profile}`,
-            `=service=${user.serviceType}`,
-          ];
-          if (user.remoteAddress) {
-            pppSecretArgs.push(`=remote-address=${user.remoteAddress}`);
-          }
-          await client.write('/ppp/secret/add', pppSecretArgs);
-        } else if (user.serviceType === 'static') {
-          // 1. Create Static DHCP Lease
-          if (user.macAddress) {
-            await client.write('/ip/dhcp-server/lease/add', [
-              `=address=${user.ipAddress}`,
-              `=mac-address=${user.macAddress}`,
-              `=comment=IMSys: ${user.username}`,
-            ]);
-          }
-          // 2. Create Simple Queue
-          await client.write('/queue/simple/add', [
-            `=name=${user.username}`,
-            `=target=${user.ipAddress}`,
-            `=max-limit=${user.package.rateLimit}`,
-            `=comment=IMSys: ${user.username}`,
-          ]);
-        }
+      case 'updateUser':
+      case 'disconnectUser':
+      case 'connectUser':
+      case 'syncUser':
+        // All user operations are now consolidated into an idempotent sync
+        await syncMikrotikUser(client, user);
+        
         user.provisionedOnMikrotik = true;
         user.syncStatus = 'synced';
-        user.syncErrorMessage = undefined; // Clear any previous errors
-        await user.save();
-        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} added to MikroTik.`);
-        break;
-
-      case 'updateUser':
-        // Logic to update user on MikroTik (e.g., package change)
-        if (user.pendingPackage && user.pendingPackage.toString() !== user.package.toString()) {
-          const newPackage = await Package.findById(user.pendingPackage);
-          if (!newPackage) {
-            throw new Error(`New package with ID ${user.pendingPackage} not found.`);
-          }
-
-          if (user.serviceType === 'pppoe') {
-            const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-            if (pppSecrets.length > 0) {
-              const secretId = pppSecrets[0]['.id'];
-              await client.write('/ppp/secret/set', [`=.id=${secretId}`, `=profile=${newPackage.profile}`]);
-            } else {
-              throw new Error(`PPP Secret for user ${user.username} not found on MikroTik.`);
-            }
-          } else if (user.serviceType === 'static') {
-            const simpleQueues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
-            if (simpleQueues.length > 0) {
-              const queueId = simpleQueues[0]['.id'];
-              await client.write('/queue/simple/set', [`=.id=${queueId}`, `=max-limit=${newPackage.rateLimit}`]);
-            } else {
-              throw new Error(`Simple Queue for static user ${user.username} not found on MikroTik.`);
-            }
-          }
-          user.package = user.pendingPackage; // Commit the package change
-          user.pendingPackage = undefined; // Clear pending package
-          user.syncStatus = 'synced';
-          user.syncErrorMessage = undefined;
-          await user.save();
-          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} package updated to ${newPackage.name}.`);
-        } else {
-          // Handle other potential updates if needed, or just mark as synced if no pending package
-          user.syncStatus = 'synced';
-          user.syncErrorMessage = undefined;
-          await user.save();
-          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} marked as synced (no package change).`);
-        }
-        break;
-
-      case 'disconnectUser':
-        // Logic to disconnect user from MikroTik
-        if (user.serviceType === 'pppoe') {
-          const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-          if (pppSecrets.length > 0) {
-            const secretId = pppSecrets[0]['.id'];
-            // Terminate active session
-            const allActiveSessions = await client.write('/ppp/active/print');
-            const activeSessions = allActiveSessions.filter(session => session.name === user.username);
-            for (const session of activeSessions) {
-              await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
-            }
-            // Disable PPP secret and set profile to 'Disconnect'
-            await client.write('/ppp/secret/set', [
-              `=.id=${secretId}`,
-              '=disabled=yes',
-              '=profile=Disconnect',
-              `=comment=${isManualDisconnect ? 'Manually disconnected' : 'Expired'} by system at ${new Date().toISOString()}`
-            ]);
-          } else {
-            console.warn(`[${new Date().toISOString()}] MikroTik Sync Worker: PPP Secret for user ${user.username} not found on MikroTik. Marking as synced.`);
-          }
-        } else if (user.serviceType === 'static') {
-          // New "Address List" method: Add IP to BLOCKED_USERS list
-          // The Simple Queue stays enabled at full speed, but firewall drops traffic
-          await client.write('/ip/firewall/address-list/add', [
-            '=list=BLOCKED_USERS',
-            `=address=${user.ipAddress}`,
-            `=comment=${isManualDisconnect ? 'Manually disconnected' : 'Expired'} by IMSys at ${new Date().toISOString()}`
-          ]);
-          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Static user ${user.username} (${user.ipAddress}) added to BLOCKED_USERS list.`);
-        }
-        user.isSuspended = true;
-        user.isManuallyDisconnected = isManualDisconnect || false;
-        user.syncStatus = 'synced';
         user.syncErrorMessage = undefined;
-        await user.save();
-        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} disconnected from MikroTik.`);
-        break;
-
-      case 'connectUser':
-        // Logic to connect user to MikroTik
-        if (user.serviceType === 'pppoe') {
-          const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-          if (pppSecrets.length > 0) {
-            const secretId = pppSecrets[0]['.id'];
-            // Enable PPP secret and set profile to the user's package profile
-            await client.write('/ppp/secret/set', [
-              `=.id=${secretId}`,
-              '=disabled=no',
-              `=profile=${user.package.profile}`,
-              `=comment=Manually connected by system at ${new Date().toISOString()}`
-            ]);
-          } else {
-            throw new Error(`PPP Secret for user ${user.username} not found on MikroTik.`);
-          }
-        } else if (user.serviceType === 'static') {
-          // New "Address List" method: Remove IP from BLOCKED_USERS list
-          const blockedEntries = await client.write('/ip/firewall/address-list/print', [
-            `?address=${user.ipAddress}`,
-            '?list=BLOCKED_USERS'
-          ]);
-          
-          for (const entry of blockedEntries) {
-            await client.write('/ip/firewall/address-list/remove', [`=.id=${entry['.id']}`]);
-          }
-          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Static user ${user.username} (${user.ipAddress}) removed from BLOCKED_USERS list.`);
+        user.lastSyncedAt = new Date();
+        // Clear pending package if it was a package update
+        if (user.pendingPackage && user.pendingPackage.toString() === user.package.toString()) {
+            user.pendingPackage = undefined;
         }
-        user.isSuspended = false;
-        user.isManuallyDisconnected = false;
-        user.syncStatus = 'synced';
-        user.syncErrorMessage = undefined;
         await user.save();
-        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} connected to MikroTik.`);
+        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} synced successfully.`);
         break;
 
       case 'scheduleExpiredClientDisconnects':
@@ -264,92 +143,72 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
               continue; // Skip this router
             }
 
-            // Fetch all PPP secrets, simple queues, DHCP leases, and address lists from the router
-            const routerPppSecrets = await routerClient.write('/ppp/secret/print');
-            const routerSimpleQueues = await routerClient.write('/queue/simple/print');
-            const routerDhcpLeases = await routerClient.write('/ip/dhcp-server/lease/print');
-            const routerAddressLists = await routerClient.write('/ip/firewall/address-list/print');
+            // Fetch all state data in bulk for efficiency
+            const [routerPppSecrets, routerSimpleQueues, routerDhcpLeases, routerAddressLists, routerNetwatchRules] = await Promise.all([
+              routerClient.write('/ppp/secret/print'),
+              routerClient.write('/queue/simple/print'),
+              routerClient.write('/ip/dhcp-server/lease/print'),
+              routerClient.write('/ip/firewall/address-list/print'),
+              routerClient.write('/tool/netwatch/print')
+            ]);
 
+            // --- 1. Reconcile Users (Identify Discrepancies) ---
             for (const dbUser of users) {
-              let needsUpdate = false;
-              let routerUserFound = false;
+              let needsSync = false;
 
               if (dbUser.serviceType === 'pppoe') {
                 const matchingSecret = routerPppSecrets.find(secret => secret.name === dbUser.username);
-                if (matchingSecret) {
-                  routerUserFound = true;
-                  // Compare states
-                  if (matchingSecret.disabled === 'yes' && !dbUser.isSuspended) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is active, but disabled on router. Queuing connect job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('connectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  } else if (matchingSecret.disabled === 'no' && dbUser.isSuspended) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is suspended, but active on router. Queuing disconnect job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('disconnectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  } else if (matchingSecret.profile !== dbUser.package.profile) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} has different package profile on router. Queuing update job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('updateUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  }
+                if (!matchingSecret) {
+                  needsSync = true;
                 } else {
-                  // User in DB but not on Router
-                  console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} not found on router. Queuing add job.`);
-                  needsUpdate = true;
-                  await mikrotikSyncQueue.add('addUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
+                  const desiredProfile = dbUser.isSuspended ? 'Disconnect' : dbUser.package.profile;
+                  const desiredDisabled = dbUser.isSuspended ? 'yes' : 'no';
+                  if (matchingSecret.profile !== desiredProfile || matchingSecret.disabled !== desiredDisabled || matchingSecret.password !== dbUser.pppoePassword) {
+                    needsSync = true;
+                  }
                 }
               } else if (dbUser.serviceType === 'static') {
                 const matchingQueue = routerSimpleQueues.find(queue => queue.name === dbUser.username);
-                const matchingLease = routerDhcpLeases.find(lease => lease.address === dbUser.ipAddress);
                 const isInBlockedList = routerAddressLists.some(listEntry => 
                   listEntry.address === dbUser.ipAddress && listEntry.list === 'BLOCKED_USERS'
                 );
+                const shouldBeBlocked = dbUser.isSuspended;
 
-                if (matchingQueue && (matchingLease || !dbUser.macAddress)) {
-                  routerUserFound = true;
-                  // 1. Compare rate limits
-                  const dbRateLimit = dbUser.package.rateLimit;
-                  const routerRateLimit = matchingQueue['max-limit'];
-                  if (routerRateLimit !== dbRateLimit) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} has different rate limit on router. Queuing update job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('updateUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  }
-
-                  // 2. Compare suspension state with Address List
-                  if (dbUser.isSuspended && !isInBlockedList) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is suspended but NOT in BLOCKED_USERS list. Queuing disconnect job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('disconnectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  } else if (!dbUser.isSuspended && isInBlockedList) {
-                    console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} is active but IS in BLOCKED_USERS list. Queuing connect job.`);
-                    needsUpdate = true;
-                    await mikrotikSyncQueue.add('connectUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
-                  }
-
-                  // 3. Ensure the queue is ENABLED (we no longer disable queues for disconnections)
-                  if (matchingQueue.disabled === 'yes') {
-                     console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: Simple Queue for static user ${dbUser.username} is disabled but should be enabled. Fixing...`);
-                     await routerClient.write('/queue/simple/set', [`=.id=${matchingQueue['.id']}`, '=disabled=no']);
-                  }
-                } else {
-                  // User in DB but missing Queue or Lease on Router
-                  console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Discrepancy: DB user ${dbUser.username} (Static) missing queue or lease on router. Queuing add job.`);
-                  needsUpdate = true;
-                  await mikrotikSyncQueue.add('addUser', { mikrotikUserId: dbUser._id, tenantId: tenantId });
+                if (!matchingQueue || isInBlockedList !== shouldBeBlocked || matchingQueue['max-limit'] !== dbUser.package.rateLimit) {
+                  needsSync = true;
                 }
               }
 
-              if (!needsUpdate && dbUser.syncStatus !== 'synced') {
-                // If no discrepancy found and DB status is not synced, mark as synced
+              if (needsSync) {
+                console.log(`[Reconcile] User ${dbUser.username} is out of sync. Queuing syncUser job.`);
+                await mikrotikSyncQueue.add('syncUser', { mikrotikUserId: dbUser._id, tenantId });
+              } else if (dbUser.syncStatus !== 'synced') {
                 dbUser.syncStatus = 'synced';
-                dbUser.syncErrorMessage = undefined;
+                dbUser.lastSyncedAt = new Date();
                 await dbUser.save();
-                console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${dbUser.username} reconciled and marked as synced.`);
               }
             }
 
-            // Identify users on Router but not in DB (Ghost users)
+            // --- 2. Reconcile Configuration (The Healer) ---
+            console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Starting configuration healing for router ${router.name}`);
+            
+            // A. Heal Device Monitoring (Netwatch)
+            const dbDevices = await Device.find({ tenant: tenantId, router: router._id });
+            for (const device of dbDevices) {
+              const matchingNetwatch = routerNetwatchRules.find(rule => rule.host === device.ipAddress);
+              
+              // If netwatch rule is missing OR its comment doesn't start with 'IMSys Monitor', re-inject.
+              if (!matchingNetwatch || !matchingNetwatch.comment?.startsWith('IMSys Monitor')) {
+                console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Healing Device: ${device.deviceName}. Netwatch rule missing or incorrect. Re-injecting.`);
+                await injectNetwatchScript(router, device);
+              }
+            }
+
+            // B. Heal User Monitoring (PPP Profile Scripts)
+            // This ensures profiles have the on-up/on-down scripts
+            await injectPPPProfileScripts(router);
+
+            // --- 3. Identify Ghost Users ---
             const dbUsernames = new Set(users.map(u => u.username));
             const ghostPppSecrets = routerPppSecrets.filter(secret => !dbUsernames.has(secret.name));
             const ghostSimpleQueues = routerSimpleQueues.filter(queue => !dbUsernames.has(queue.name));

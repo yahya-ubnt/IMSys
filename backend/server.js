@@ -99,17 +99,20 @@ const hotspotStkRoutes = require('./routes/hotspotStkRoutes');
 const hotspotSessionRoutes = require('./routes/hotspotSessionRoutes');
 const voucherRoutes = require('./routes/voucherRoutes');
 const deviceRoutes = require('./routes/deviceRoutes'); // CPE & AP Devices
+const buildingRoutes = require('./routes/buildingRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const scheduledTaskRoutes = require('./routes/scheduledTaskRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 
 // --- Public Routes ---
 // Routes that do not require authentication go here.
 app.use('/api/users', publicUserRoutes);
 app.use('/api/payments', publicPaymentRoutes);
 app.use('/api/upload', uploadRoutes); // Assuming upload might have public access points, adjust if not
+app.use('/api/webhooks', webhookRoutes);
 
 // --- Private Routes ---
 // Mount protected routes
@@ -126,6 +129,7 @@ app.use('/api/hotspot', hotspotStkRoutes);
 app.use('/api/hotspot', hotspotSessionRoutes);
 app.use('/api/routers/:routerId/dashboard', mikrotikDashboardRoutes);
 app.use('/api/devices', deviceRoutes); // CPE & AP Devices
+app.use('/api/buildings', buildingRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/notifications', notificationRoutes);

@@ -40,9 +40,11 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
 
   const [routerId, setRouterId] = useState(typeof initialData?.router === 'object' ? initialData?.router?._id || "" : initialData?.router || "");
   const [deviceType, setDeviceType] = useState<"Access" | "Station" | undefined>(initialData?.deviceType || undefined);
+  const [monitoringMode, setMonitoringMode] = useState<"SNITCH" | "NONE">(initialData?.monitoringMode || 'NONE');
   const [deviceName, setDeviceName] = useState(initialData?.deviceName || "");
   const [deviceModel, setDeviceModel] = useState(initialData?.deviceModel || "");
-  const [location, setLocation] = useState(initialData?.location || "");
+  const [physicalBuildingId, setPhysicalBuildingId] = useState(typeof initialData?.physicalBuilding === 'object' ? initialData.physicalBuilding._id : initialData?.physicalBuilding || "");
+  const [serviceArea, setServiceArea] = useState(initialData?.serviceArea || []);
   const [ipAddress, setIpAddress] = useState(initialData?.ipAddress || "");
   const [macAddress, setMacAddress] = useState(initialData?.macAddress || "");
   const [loginUsername, setLoginUsername] = useState(initialData?.loginUsername || "");
@@ -75,7 +77,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
       return;
     }
     const deviceData: Partial<Device> = {
-      router: { _id: routerId, name: '' }, deviceType, deviceName, deviceModel, location, ipAddress,
+      router: { _id: routerId, name: '' }, deviceType, monitoringMode, deviceName, deviceModel, physicalBuilding: physicalBuildingId, serviceArea, ipAddress,
       macAddress, loginUsername, ssid,
     };
     if (loginPassword) deviceData.loginPassword = loginPassword;
@@ -96,6 +98,19 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={routersLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-1"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label className="text-xs">Monitoring Mode</Label>
+                      <Select onValueChange={(v: "SNITCH" | "NONE") => setMonitoringMode(v)} value={monitoringMode}>
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                          <SelectValue placeholder="Select monitoring mode" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                          <SelectItem value="SNITCH" className="text-sm">Netwatch (Snitch) - Automatic Alerts</SelectItem>
+                          <SelectItem value="NONE" className="text-sm">None - Manual Diagnostic Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-zinc-500 mt-1">SNITCH mode enables instant automated failure reporting via the router.</p>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -103,7 +118,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1"><Label className="text-xs">Device Name</Label><Input value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                     <div className="space-y-1"><Label className="text-xs">Device Model</Label><Input value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                    <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Location</Label><Input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g., Rooftop of Building A" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                    {/* Building selection is now handled on the parent new/edit page */}
                     <div className="space-y-1"><Label className="text-xs">IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                     <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                     <div className="space-y-1"><Label className="text-xs">Login Username</Label><Input value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>

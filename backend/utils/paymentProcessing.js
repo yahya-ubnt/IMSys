@@ -2,7 +2,6 @@ const moment = require('moment');
 const { randomUUID } = require('crypto');
 const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
-const { reconnectMikrotikUser } = require('./mikrotikUtils');
 const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
 
@@ -113,8 +112,16 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   console.log(`[${new Date().toISOString()}] User saved. Final expiry: ${user.expiryDate}, final balance: ${user.walletBalance}`);
 
   if (monthsExtended > 0 && !user.isManuallyDisconnected) {
-    console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username}.`);
-    await reconnectMikrotikUser(user._id, user.tenant);
+    console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username} via state-based sync.`);
+    user.isSuspended = false;
+    user.syncStatus = 'pending';
+    await user.save({ session }); // Save again to reflect suspension/sync status
+
+    const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
+    await mikrotikSyncQueue.add('syncUser', {
+      mikrotikUserId: user._id,
+      tenantId: user.tenant,
+    });
   }
 
   try {

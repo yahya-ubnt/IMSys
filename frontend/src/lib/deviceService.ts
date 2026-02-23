@@ -8,8 +8,10 @@ export interface Device {
   macAddress: string;
   deviceType: "Access" | "Station";
   status: "UP" | "DOWN";
+  monitoringMode?: "SNITCH" | "NONE";
   lastSeen?: string;
-  location?: string;
+  physicalBuilding?: string | Building;
+  serviceArea?: string[];
   deviceName?: string;
   deviceModel?: string;
   loginUsername?: string;
@@ -34,6 +36,11 @@ export interface MikrotikRouter {
   _id: string;
   name: string;
   ipAddress: string;
+}
+
+export interface Building {
+  _id: string;
+  name: string;
 }
 
 // Fetch all devices
@@ -106,6 +113,56 @@ export const getMikrotikRouters = async (): Promise<MikrotikRouter[]> => {
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || "Failed to fetch Mikrotik routers");
+  }
+  return response.json();
+};
+
+// Fetch Buildings (for dropdowns in device forms)
+export const getBuildings = async (): Promise<any[]> => { // Using any for now, should be replaced with a Building interface
+  const response = await fetch(`/api/buildings`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch buildings");
+  }
+  const data = await response.json();
+  return data.data; // The buildings are in the 'data' property
+};
+
+// Create a new building
+export const createBuilding = async (buildingData: { name: string, address?: string }): Promise<Building> => {
+  const response = await fetch(`/api/buildings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildingData),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to create building");
+  }
+  const data = await response.json();
+  return data.data;
+};
+
+// Ping a device for live status
+export const pingDevice = async (id: string): Promise<{ success: boolean; status: 'Reachable' | 'Unreachable' }> => {
+  const response = await fetch(`/api/devices/${id}/ping`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to ping device");
+  }
+  return response.json();
+};
+
+// Enable Netwatch monitoring for a device
+export const enableMonitoring = async (id: string): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`/api/devices/${id}/enable-monitoring`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to enable monitoring");
   }
   return response.json();
 };

@@ -1,218 +1,117 @@
-# IMSys Engineering Guide & Roadmap
+# IMSys Engineering Master Plan & Roadmap
 
-This document outlines our engineering standards, infrastructure architecture, and deployment strategy. It serves as the "source of truth" for the team.
+This document serves as the **Source of Truth** and **Implementation Roadmap** for the IMSys project. It bridges the gap between our current codebase and our production-ready target state.
 
 ## 1. Collaboration Workflow: "Speed with Safety"
 
-We are moving from solo coding to a team workflow. The goal is to move fast without breaking production.
+Our goal is high-velocity delivery with zero production breakage.
 
 ### The Golden Rule
 **NEVER push directly to the `main` branch.**
 
-### The Process
-1.  **Pick a Task:** "I'm working on the M-Pesa integration."
-2.  **Branch Out:**
-    ```bash
-    git checkout -b feature/mpesa-integration
-    ```
-3.  **Code & Commit:**
-    *   Keep commits small and descriptive.
-    *   Run local checks before committing.
-4.  **Push & PR:**
-    ```bash
-    git push origin feature/mpesa-integration
-    ```
-    *   Go to GitHub/GitLab and open a **Pull Request (PR)** to `main`.
-5.  **The Check (CI):**
-    *   GitHub Actions will automatically run. If it fails (tests/lint), you cannot merge.
-6.  **Merge:**
-    *   Review the code (even your own).
-    *   Squash and Merge.
-    *   *This triggers the deployment to production.*
+### The Workflow
+1.  **Branch Strategy:**
+    *   `main`: Production-ready code. Deploys automatically.
+    *   `feature/xyz`: Development work.
+    *   `hotfix/xyz`: Critical production fixes.
+2.  **Process:**
+    *   Create branch -> Code -> Local Test -> Push.
+    *   Open Pull Request (PR) to `main`.
+    *   **CI Checks (Target):** Automated Lint & Test must pass.
+    *   Squash & Merge -> Triggers Deployment.
 
 ---
 
-## 2. Infrastructure: The "Box" (Docker Compose)
+## 2. Infrastructure Architecture (Target State)
 
-We are running everything on a single VPS using Docker Compose. This makes our infrastructure portable and easy to restore.
+We are evolving our current `docker-compose.prod.yml` into a fully containerized "Box" that manages itself.
 
-### The Stack (Services)
+### The Stack (Target)
+1.  **The App Core:**
+    *   `frontend`: Next.js (Port 3000)
+    *   `backend`: Node.js/Express (Port 5000)
+    *   `mongo`: Database (Port 27017, Volume Persisted)
+2.  **The Connectivity Layer (To Be Implemented):**
+    *   `nginx-proxy-manager`: Handles SSL/Domains. Eliminates manual Nginx config.
+    *   `wg-easy` (WireGuard): Manages VPN tunnels for Mikrotik communication.
+    *   `openvpn`: Legacy backup.
 
-1.  **Reverse Proxy (The Doorman)**
-    *   **Service:** `nginx-proxy-manager`
-    *   **Why:** Nginx configuration via terminal is painful. This provides a beautiful **Web UI** at port `81`.
-    *   **Job:** Handles SSL (Let's Encrypt), routes `imsys.com` to Frontend, `api.imsys.com` to Backend.
-
-2.  **The App**
-    *   **`frontend`**: Next.js (Port 3000 - internal only)
-    *   **`backend`**: Node.js/Express (Port 5000 - internal only)
-    *   **`mongo`**: Database (Port 27017 - internal only)
-
-3.  **The Connectivity Layer (VPNs)**
-    *   **`wg-easy` (WireGuard)**:
-        *   Modern, fast VPN.
-        *   Includes a **Web UI** (Port 51821) to generate client configs (QR codes) for Mikrotiks.
-    *   **`openvpn`**:
-        *   Legacy support for older routers.
-        *   Solid, reliable backup.
-
-### Production Docker Compose (`docker-compose.prod.yml`)
-
-We will update our compose file to include these services.
-
-```yaml
-services:
-  # --- The App ---
-  backend:
-    build:
-      context: ./backend
-      target: production
-    # No ports exposed publicly! The Proxy handles it.
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/isp_management
-    depends_on:
-      - mongo
-    networks:
-      - app_network
-
-  frontend:
-    build:
-      context: ./frontend
-      target: production
-    # No ports exposed publicly!
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - backend
-    networks:
-      - app_network
-
-  mongo:
-    image: mongo:latest
-    volumes:
-      - ./data/mongo:/data/db # Persist data on host
-    networks:
-      - app_network
-
-  # --- The Doorman (Proxy) ---
-  proxy:
-    image: 'jc21/nginx-proxy-manager:latest'
-    restart: unless-stopped
-    ports:
-      - '80:80'   # HTTP
-      - '443:443' # HTTPS
-      - '81:81'   # Admin Web UI
-    volumes:
-      - ./data/npm:/data
-      - ./data/letsencrypt:/etc/letsencrypt
-    networks:
-      - app_network
-
-  # --- The Connectivity (VPNs) ---
-  wireguard:
-    image: ghcr.io/wg-easy/wg-easy
-    container_name: wg-easy
-    volumes:
-      - ./data/wireguard:/etc/wireguard
-    environment:
-      - WG_HOST=YOUR_SERVER_IP # ⚠️ CHANGE THIS
-      - PASSWORD=YOUR_ADMIN_PASS # ⚠️ CHANGE THIS
-    ports:
-      - "51820:51820/udp" # VPN Traffic
-      - "51821:51821/tcp" # Web UI
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-    networks:
-      - app_network
-
-  openvpn:
-    image: kylemanna/openvpn
-    volumes:
-      - ./data/openvpn:/etc/openvpn
-    ports:
-      - "1194:1194/udp"
-    cap_add:
-      - NET_ADMIN
-    networks:
-      - app_network
-
-networks:
-  app_network:
-    driver: bridge
-```
+### The "Onboarding Wizard" (Upcoming)
+To simplify deployment for new ISPs, we will build an **Onboarding Wizard**.
+*   **Concept:** A CLI or Web-based setup tool running on first launch.
+*   **Responsibilities:**
+    1.  **Environment Config:** prompts for `MONGO_URI`, `JWT_SECRET`, `MIKROTIK_IP`.
+    2.  **Domain Setup:** Configures Nginx Proxy Manager automatically.
+    3.  **Admin Creation:** Creates the first Super Admin user.
+    4.  **Security:** Generates encryption keys and VPN credentials.
 
 ---
 
-## 3. Network Architecture: "Call Home"
+## 3. Network Architecture: "Call Home" Strategy
 
-This is how we control routers behind NATs (without needing static IPs at client sites).
+**Problem:** ISPs often have routers behind CGNAT (no public IP).
+**Solution:** Reverse VPN Tunnels.
 
-1.  **The Tunnel:**
-    *   We create a persistent VPN tunnel.
-    *   **Mikrotik (Client)** initiates connection -> **VPS (Server)**.
-    *   This punches through the client's firewall.
-2.  **Addressing:**
-    *   WireGuard assigns internal IPs (e.g., `10.8.0.x`).
-    *   VPS is always `10.8.0.1`.
-    *   Client Router A is `10.8.0.2`.
-3.  **Command Execution:**
-    *   Backend says: "Disconnect User X".
-    *   Code executes: `ssh admin@10.8.0.2 "/interface pppoe-server remove [find user=X]"`
-    *   Traffic flows securely over the VPN tunnel.
+1.  **The Tunnel:** Mikrotik (Client) -> VPN (Server).
+2.  **Addressing:** Fixed internal IPs (e.g., `10.8.0.x`) allow the Backend to command routers regardless of their public IP changes.
+3.  **Command Execution:** Backend uses SSH over the VPN IP (`ssh admin@10.8.0.x`).
 
 ---
 
-## 4. CI/CD Pipeline: The "Automator"
+## 4. CI/CD Pipeline Specification (GitHub Actions)
 
-We will use **GitHub Actions**.
+We will implement the following pipelines in `.github/workflows/`.
 
-**File:** `.github/workflows/deploy.yml`
+### A. The "Gatekeeper" (Pull Requests)
+**File:** `pr-check.yml`
+*   **Trigger:** Open PR to `main`.
+*   **Jobs:**
+    1.  **Lint:** `npm run lint` (Frontend & Backend).
+    2.  **Build Check:** `npm run build` (Ensures no compile errors).
+    3.  **Unit Tests:** `npm test` (Logic verification).
 
-**What it does:**
-1.  **Test:** Runs on every Push.
-    *   `npm run lint`
-    *   `npm test` (Playwright)
-2.  **Build:** Runs on merge to `main`.
-    *   Builds Docker images for Frontend and Backend.
-    *   Pushes them to GitHub Container Registry (GHCR).
-3.  **Deploy:**
-    *   Logs into VPS via SSH.
-    *   Runs: `docker-compose pull && docker-compose up -d`.
+### B. The "Shipper" (Production Deploy)
+**File:** `deploy.yml`
+*   **Trigger:** Push/Merge to `main`.
+*   **Jobs:**
+    1.  **Containerize:** Build Docker images for Frontend/Backend.
+    2.  **Publish:** Push images to GitHub Container Registry (GHCR).
+    3.  **Deploy:**
+        *   SSH into VPS.
+        *   `docker-compose pull`
+        *   `docker-compose up -d`
+        *   Run migrations (if any).
 
 ---
 
-## 5. Testing Strategy: The "Critical Path"
+## 5. Testing Strategy & Implementation Plan
 
-We cannot test manually forever. We need **Automated End-to-End (E2E) Tests** that focus on the parts of the app that generate revenue and provide service.
+Current Status: **Pending Implementation**.
+We need to install frameworks and write the "Critical Path" tests.
 
-**Tool:** Playwright (Robot user that clicks through the real UI).
+### Phase 1: The Foundation (Immediate Actions)
+1.  **Backend:** Install `jest` and `supertest`.
+    *   *Goal:* Test API endpoints (Auth, User Creation).
+2.  **Frontend:** Install `playwright`.
+    *   *Goal:* E2E browser testing.
 
-### The "Must-Have" Core Service Tests
+### Phase 2: The "Money" Tests (Critical Path)
+These 4 scenarios must pass for a release to be considered safe:
 
-1.  **The "Sales Funnel" Test (Leads to Clients)**
-    *   **Goal:** Ensure we can capture new business.
-    *   **Workflow:** Register a new Lead -> Open Lead Profile -> Click "Convert to User" -> Fill Mikrotik User form -> Submit.
-    *   **Success:** Lead is deleted/moved, and a new Mikrotik User record is created.
+1.  **The Sales Funnel:** Lead -> Client conversion.
+2.  **Provisioning:** Backend -> Mikrotik configuration success.
+3.  **Enforcement:** Suspend/Unsuspend user triggers RouterOS command.
+4.  **Billing:** Payment -> Wallet Credit -> Service Extension.
 
-2.  **The "Provisioning" Test (Mikrotik Integration)**
-    *   **Goal:** Ensure the backend can actually talk to the routers.
-    *   **Workflow:** Create a new PPPoE User -> Click Save.
-    *   **Success:** Backend receives the request, and (in test mode) we verify the API call was sent to the Mikrotik router.
+### Phase 3: "Nice-to-Haves"
+*   Visual Regression Testing (Snapshot comparisons).
+*   Load Testing (Simulating 1000 concurrent users).
 
-3.  **The "Enforcement" Test (Cutting & Restoring Service)**
-    *   **Goal:** Ensure we can manage client access.
-    *   **Workflow:** Search for an active User -> Click "Disconnect" -> Confirm -> Verify Status is "Suspended" -> Click "Connect" -> Verify Status is "Active".
-    *   **Success:** The UI reflects the state change, and the backend sends the corresponding `/ppp/secret/set disabled=yes/no` command.
+---
 
-4.  **The "Payment & Wallet" Test**
-    *   **Goal:** Ensure billing is accurate.
-    *   **Workflow:** Trigger a manual STK push request -> Log a dummy payment.
-    *   **Success:** The User's wallet balance increases, and a Transaction log is generated.
+## 6. Implementation Checklist (Next Steps)
 
-If any of these 4 tests fail, the **deployment is cancelled**. This protects our core revenue and service reliability.
-
+- [ ] **Step 1:** Initialize Testing Frameworks (`npm install ...`).
+- [ ] **Step 2:** Create `.github/workflows` directory and pipeline YAMLs.
+- [ ] **Step 3:** Update `docker-compose.prod.yml` to include Nginx & Wireguard.
+- [ ] **Step 4:** Write the "Sales Funnel" Playwright test.

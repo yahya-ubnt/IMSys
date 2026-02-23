@@ -46,6 +46,21 @@ const handleFailedPing = async (device, devicesDown) => {
   await Device.updateOne({ _id: device._id }, { $set: { status: 'DOWN' } });
 };
 
+const pingWithRetry = async (client, device) => {
+  for (let i = 0; i < RETRY_ATTEMPTS; i++) {
+    try {
+      const response = await client.write('/ping', [`=address=${device.ipAddress}`, '=count=1']);
+      if (response && response.some(r => r.received && parseInt(r.received, 10) > 0)) {
+        return true; // Ping successful
+      }
+    } catch (error) {
+      console.error(`Retry ping failed for ${device.ipAddress}:`, error.message);
+    }
+    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+  }
+  return false; // Ping failed after all retries
+};
+
 const checkAllDevices = async (tenant) => {
   const devices = await Device.find({ tenant }).populate('router').populate('tenant');
   if (devices.length === 0) {
@@ -83,9 +98,8 @@ const checkAllDevices = async (tenant) => {
 
       await client.connect();
 
-      const potentiallyOfflineDevices = [];
-      const devicesUp = []; // Array to collect devices that come online
-      const devicesDown = []; // Array to collect devices that go offline
+      const devicesUp = [];
+      const devicesDown = [];
 
       const pingPromises = routerDevices.map(async (device) => {
         try {
@@ -94,47 +108,35 @@ const checkAllDevices = async (tenant) => {
             await handleSuccessfulPing(device, devicesUp);
           } else {
             if (device.status === 'UP') {
-              potentiallyOfflineDevices.push(device);
+              const isStillDown = await pingWithRetry(client, device);
+              if (!isStillDown) {
+                await handleFailedPing(device, devicesDown);
+              }
+            } else {
+                await handleFailedPing(device, devicesDown);
             }
           }
         } catch (error) {
           console.error(`Error pinging ${device.ipAddress}:`, error.message);
           if (device.status === 'UP') {
-            potentiallyOfflineDevices.push(device);
+            const isStillDown = await pingWithRetry(client, device);
+            if (!isStillDown) {
+                await handleFailedPing(device, devicesDown);
+            }
           }
         }
       });
 
       await Promise.all(pingPromises);
 
-      // Send consolidated alert for devices that came online
-      if (devicesUp.length > 0) {
-        await sendConsolidatedAlert(devicesUp, 'UP', tenant, null, 'Device');
+      const devicesUpForAlert = devicesUp.filter(d => d.monitoringMode !== 'SNITCH');
+      if (devicesUpForAlert.length > 0) {
+        await sendConsolidatedAlert(devicesUpForAlert, 'UP', tenant, null, 'Device');
       }
 
-      for (const device of potentiallyOfflineDevices) {
-        let isStillDown = true;
-        for (let i = 0; i < RETRY_ATTEMPTS; i++) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-          try {
-            const response = await client.write('/ping', [`=address=${device.ipAddress}`, '=count=1']);
-            if (response && response.some(r => r.received && parseInt(r.received, 10) > 0)) {
-              isStillDown = false;
-              break;
-            }
-          } catch (error) {
-            console.error(`Retry ping failed for ${device.ipAddress}:`, error.message);
-          }
-        }
-
-        if (isStillDown) {
-          await handleFailedPing(device, devicesDown);
-        }
-      }
-
-      // Send consolidated alert for devices that went offline
-      if (devicesDown.length > 0) {
-        await sendConsolidatedAlert(devicesDown, 'DOWN', tenant, null, 'Device');
+      const devicesDownForAlert = devicesDown.filter(d => d.monitoringMode !== 'SNITCH');
+      if (devicesDownForAlert.length > 0) {
+        await sendConsolidatedAlert(devicesDownForAlert, 'DOWN', tenant, null, 'Device');
       }
 
     } catch (error) {
@@ -162,10 +164,4 @@ const checkAllDevices = async (tenant) => {
   }
 };
 
-const startMonitoring = () => {
-  console.log('Starting CPE & AP monitoring service...');
-  // This will be triggered by the master scheduler now
-  // setInterval(checkAllDevices, PING_INTERVAL);
-};
-
-module.exports = { startMonitoring, checkAllDevices };
+module.exports = { checkAllDevices, pingWithRetry };

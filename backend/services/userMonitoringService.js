@@ -9,28 +9,6 @@ const User = require('../models/User'); // Import User model
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000; // 1 second delay
 
-async function checkUserOnlineStatus(user, client) {
-    let isOnline = false;
-    const router = user.mikrotikRouter;
-
-    if (!router) {
-        console.warn(`[${new Date().toISOString()}] User ${user.username} has no associated router. Skipping status check.`);
-        return false;
-    }
-
-    // Assumes client is already connected
-    if (user.serviceType === 'pppoe') {
-        const pppActive = await client.write('/ppp/active/print');
-        isOnline = pppActive.some(session => session.name === user.username);
-    } else if (user.serviceType === 'static') {
-        if (user.ipAddress) {
-            const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-            isOnline = pingReplies.some(reply => !reply.status);
-        }
-    }
-    return isOnline;
-}
-
 async function performUserStatusCheck(tenant) {
     console.log(`[${new Date().toISOString()}] Performing bulk user status check for tenant ${tenant}...`);
 
@@ -69,6 +47,11 @@ async function performUserStatusCheck(tenant) {
                 timeout: 5000, // Increased timeout for bulk operations
             });
 
+            const potentiallyOfflineUsers = [];
+            const usersOnline = [];
+            const usersOffline = [];
+            const usersOfflineRouterUnreachable = [];
+
             try {
                 await client.connect();
 
@@ -79,11 +62,6 @@ async function performUserStatusCheck(tenant) {
                 ]);
 
                 const onlinePppoeUsers = new Set(pppActiveSessions.map(s => s.name));
-                
-                const potentiallyOfflineUsers = [];
-                const usersOnline = [];
-                const usersOffline = [];
-                const usersOfflineRouterUnreachable = [];
 
                 // 4. Initial online status check
                 for (const user of users) {
@@ -91,9 +69,9 @@ async function performUserStatusCheck(tenant) {
                     if (user.serviceType === 'pppoe') {
                         isOnline = onlinePppoeUsers.has(user.username);
                     } else if (user.serviceType === 'static') {
-                        // For static users, we will do individual checks with retries if they appear offline
-                        const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-                        isOnline = pingReplies.some(reply => !reply.status);
+                        // Tier 3: Static User Monitoring is currently Manual Only (Live Check)
+                        // Skipping background check to minimize server and router load.
+                        continue; 
                     }
 
                     if (isOnline) {
@@ -138,9 +116,6 @@ async function performUserStatusCheck(tenant) {
                             if (user.serviceType === 'pppoe') {
                                 const pppActive = await client.write('/ppp/active/print');
                                 isOnlineNow = pppActive.some(session => session.name === user.username);
-                            } else if (user.serviceType === 'static') {
-                                const pingReplies = await client.write('/ping', [`=address=${user.ipAddress}`, '=count=2']);
-                                isOnlineNow = pingReplies.some(reply => !reply.status);
                             }
                         } catch (err) {
                             console.error(`[${new Date().toISOString()}] Retry check failed for ${user.username}:`, err);
@@ -206,29 +181,6 @@ async function performUserStatusCheck(tenant) {
     }
 }
 
-let userMonitoringInterval = null;
-
-function startUserMonitoring(intervalMs) {
-    if (userMonitoringInterval) {
-        console.log(`[${new Date().toISOString()}] User monitoring already running. Clearing existing interval.`);
-        clearInterval(userMonitoringInterval);
-    }
-    console.log(`[${new Date().toISOString()}] Starting user monitoring every ${intervalMs / 1000} seconds.`);
-    // This will be triggered by the master scheduler now
-    // performUserStatusCheck();
-    // userMonitoringInterval = setInterval(performUserStatusCheck, intervalMs);
-}
-
-function stopUserMonitoring() {
-    if (userMonitoringInterval) {
-        console.log(`[${new Date().toISOString()}] Stopping user monitoring.`);
-        clearInterval(userMonitoringInterval);
-        userMonitoringInterval = null;
-    }
-}
-
 module.exports = {
-    startUserMonitoring,
-    stopUserMonitoring,
     performUserStatusCheck // Export for immediate manual trigger if needed
 };

@@ -271,7 +271,7 @@ const RecentTransactions = () => {
       try {
         const res = await fetch('/api/payments/transactions?limit=5');
         const data = await res.json();
-        setTransactions(data.transactions);
+        setTransactions(data.transactions || []);
       } catch (error) {
         console.error("Failed to fetch recent transactions", error);
       }
@@ -320,7 +320,7 @@ const RecentTickets = () => {
       try {
         const res = await fetch('/api/tickets?limit=5');
         const data = await res.json();
-        setTickets(data.tickets);
+        setTickets(data.tickets || []);
       } catch (error) {
         console.error("Failed to fetch recent tickets", error);
       }

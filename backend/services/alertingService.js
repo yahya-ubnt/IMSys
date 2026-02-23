@@ -1,7 +1,7 @@
 const Notification = require('../models/Notification');
 const ApplicationSettings = require('../models/ApplicationSettings'); // Import ApplicationSettings
 const { sendEmail } = require('./emailService'); // Import sendEmail
-const io = require('../socket').getIO(); // Import the initialized socket.io instance
+const socket = require('../socket');
 
 const sendConsolidatedAlert = async (entities, status, tenant, user = null, entityType = 'Device') => {
   let message;
@@ -78,7 +78,12 @@ const sendConsolidatedAlert = async (entities, status, tenant, user = null, enti
 
     // Emit a websocket event to the tenant's room
     if (tenant) {
-      io.to(tenant.toString()).emit('new_notification', notification);
+      try {
+        const io = socket.getIO();
+        io.to(tenant.toString()).emit('new_notification', notification);
+      } catch (err) {
+        // Socket.io not initialized (likely in a worker), skip emitting
+      }
     }
   } catch (error) {
     console.error('Error saving notification:', error);

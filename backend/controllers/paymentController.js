@@ -5,8 +5,10 @@ const { randomUUID } = require('crypto');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
 const MikrotikUser = require('../models/MikrotikUser');
-const { processSubscriptionPayment } = require('../utils/paymentProcessing');
-const { initiateStkPushService, processStkCallback, processC2bCallback } = require('../services/mpesaService');
+const PaymentService = require('../services/paymentService');
+const { initiateStkPushService } = require('../services/mpesaService');
+
+// ... (initiateStkPush and handleDarajaCallback logic remains same, but calls PaymentService)
 
 const initiateStkPush = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
@@ -17,7 +19,6 @@ const initiateStkPush = asyncHandler(async (req, res) => {
   const { amount, phoneNumber, accountReference } = req.body;
 
   try {
-    // Pass the logged-in user's tenant ID to the service
     const response = await initiateStkPushService(req.user.tenant, amount, phoneNumber, accountReference);
     res.status(200).json(response);
   } catch (error) {
@@ -27,8 +28,6 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 });
 
 const handleDarajaCallback = asyncHandler(async (req, res) => {
-  // SECURITY: Implement request validation (IP whitelisting or signature verification)
-  // to ensure callbacks are genuinely from Safaricom. This is critical for production.
   const safaricomIps = ['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208'];
   const requestIp = req.ip;
   if (!safaricomIps.includes(requestIp)) {
@@ -38,232 +37,69 @@ const handleDarajaCallback = asyncHandler(async (req, res) => {
 
   console.log(`[${new Date().toISOString()}] M-Pesa Callback Received:`, JSON.stringify(req.body, null, 2));
 
+  // The processStkCallback and processC2bCallback already use PaymentService internally now
+  const { processStkCallback, processC2bCallback } = require('../services/mpesaService');
+
   try {
-    // Check if it's an STK Push callback
     if (req.body.Body && req.body.Body.stkCallback) {
-      console.log(`[${new Date().toISOString()}] Processing STK Push callback.`);
       await processStkCallback(req.body.Body.stkCallback);
-    } 
-    // Check if it's a C2B confirmation or validation
-    else if (req.body.TransID) {
-      console.log(`[${new Date().toISOString()}] Processing C2B callback.`);
+    } else if (req.body.TransID) {
       await processC2bCallback(req.body);
-    } 
-    // Otherwise, it's a callback we don't handle
-    else {
-      console.log(`[${new Date().toISOString()}] Received a callback that is not a standard STK or C2B payload.`);
     }
 
-    // Respond to Safaricom acknowledging receipt
-    res.status(200).json({
-      "ResultCode": 0,
-      "ResultDesc": "Accepted"
-    });
-    console.log(`[${new Date().toISOString()}] M-Pesa callback successfully processed and acknowledged.`);
+    res.status(200).json({ "ResultCode": 0, "ResultDesc": "Accepted" });
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in handleDarajaCallback:`, error);
-    res.status(500).json({
-      "ResultCode": 1,
-      "ResultDesc": "Internal Server Error"
-    });
+    res.status(500).json({ "ResultCode": 1, "ResultDesc": "Internal Server Error" });
   }
 });
 
 const getTransactions = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 15, searchTerm, startDate, endDate, userId } = req.query;
+  const data = await PaymentService.getTransactions(req.user.tenant, req.query);
+  res.status(200).json(data);
+});
 
-  const query = { tenant: req.user.tenant };
+const getWalletTransactions = asyncHandler(async (req, res) => {
+  const queryParams = { ...req.query, userId: req.query.userId || req.params.userId };
+  const data = await PaymentService.getWalletTransactions(req.user.tenant, queryParams);
+  res.status(200).json(data);
+});
 
-  if (userId) {
-    try {
-      const mikrotikUser = await MikrotikUser.findById(userId);
-      if (mikrotikUser) {
-        query.mikrotikUser = mikrotikUser._id;
-      } else {
-        return res.status(200).json({ transactions: [], pages: 0, stats: { totalVolume: 0, transactionCount: 0, averageTransaction: 0 } });
-      }
-    } catch (error) {
-      console.error('Error fetching Mikrotik user:', error);
-      return res.status(500).json({ message: 'Error fetching user data.' });
-    }
-  }
-
-  if (searchTerm) {
-    query.$or = [
-      { officialName: { $regex: searchTerm, $options: 'i' } },
-      { referenceNumber: { $regex: searchTerm, $options: 'i' } },
-      { msisdn: { $regex: searchTerm, 'options': 'i' } },
-      { transactionId: { $regex: searchTerm, 'options': 'i' } },
-    ];
-  }
-
-  if (startDate && endDate) {
-    query.transactionDate = {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
-    };
-  }
-
-  const totalCount = await Transaction.countDocuments(query);
-  const totalPages = Math.ceil(totalCount / parseInt(limit));
-
-  const transactions = await Transaction.find(query)
-    .sort({ transactionDate: -1 })
-    .skip((parseInt(page) - 1) * parseInt(limit))
-    .limit(parseInt(limit));
-
-  const totalVolumeResult = await Transaction.aggregate([
-    { $match: query },
-    { $group: { _id: null, totalVolume: { $sum: '$amount' } } },
-  ]);
-
-  const totalVolume = totalVolumeResult.length > 0 ? totalVolumeResult[0].totalVolume : 0;
-  const transactionCount = totalCount;
-  const averageTransaction = transactionCount > 0 ? totalVolume / transactionCount : 0;
-
-  res.status(200).json({
-    transactions,
-    pages: totalPages,
-    stats: {
-      totalVolume,
-      transactionCount,
-      averageTransaction,
-    },
-  });
+const getWalletTransactionById = asyncHandler(async (req, res) => {
+  const transaction = await PaymentService.getWalletTransactionById(req.params.id, req.user.tenant);
+  res.status(200).json(transaction);
 });
 
 const createCashPayment = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   const { userId, amount, comment } = req.body;
-  const amountPaid = parseFloat(amount);
-
-  const user = await MikrotikUser.findOne({ _id: userId, tenant: req.user.tenant });
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
-  }
-
   const transactionId = `CASH-${randomUUID()}`;
-  
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
-  try {
-    await processSubscriptionPayment(userId, amountPaid, 'Cash', transactionId, req.user._id, session);
+  await PaymentService.handleSuccessfulPayment({
+    tenant: req.user.tenant,
+    amount: parseFloat(amount),
+    transactionId,
+    reference: userId, // Pass userId directly as the reference
+    paymentMethod: 'Cash',
+    officialName: null,
+    comment,
+  });
 
-    const transaction = await Transaction.create([{
-      transactionId,
-      amount: amountPaid,
-      referenceNumber: user.username,
-      officialName: user.officialName,
-      msisdn: user.mobileNumber,
-      transactionDate: new Date(),
-      paymentMethod: 'Cash',
-      comment,
-      tenant: req.user.tenant,
-    }], { session });
-
-    await session.commitTransaction();
-    res.status(201).json(transaction[0]);
-
-  } catch (error) {
-    await session.abortTransaction();
-    console.error('Cash payment transaction failed:', error);
-    res.status(500).json({ message: 'Cash payment failed. Transaction was rolled back.' });
-  } finally {
-    session.endSession();
-  }
-});
-
-const getWalletTransactions = asyncHandler(async (req, res) => {
-  const query = { tenant: req.user.tenant };
-
-  if (req.params.id) {
-    query.mikrotikUser = req.params.id;
-  }
-  const transactions = await WalletTransaction.find(query).sort({ createdAt: -1 });
-  res.status(200).json(transactions);
-});
-
-const getWalletTransactionById = asyncHandler(async (req, res) => {
-  const query = { _id: req.params.id, tenant: req.user.tenant };
-
-  const transaction = await WalletTransaction.findOne(query);
-
-  if (transaction) {
-    res.status(200).json(transaction);
-  } else {
-    res.status(404);
-    throw new Error('Transaction not found');
-  }
+  res.status(201).json({ success: true, transactionId });
 });
 
 const createWalletTransaction = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { userId, type, amount, source, comment } = req.body;
-  const parsedAmount = parseFloat(amount);
+  const transaction = await PaymentService.createWalletTransaction({
+    ...req.body,
+    tenant: req.user.tenant
+  }, req.user._id);
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    let updatedUser;
-    const transactionId = `WT-${type.toUpperCase()}-${randomUUID()}`;
-
-    if (type === 'Credit') {
-      updatedUser = await MikrotikUser.findByIdAndUpdate(
-        userId,
-        { $inc: { walletBalance: parsedAmount } },
-        { new: true, session }
-      );
-    } else if (type === 'Debit') {
-      updatedUser = await MikrotikUser.findOneAndUpdate(
-        { _id: userId, walletBalance: { $gte: parsedAmount } },
-        { $inc: { walletBalance: -parsedAmount } },
-        { new: true, session }
-      );
-      if (!updatedUser) {
-        throw new Error('Insufficient wallet balance.');
-      }
-    } else {
-      throw new Error('Invalid transaction type.');
-    }
-
-    if (!updatedUser) {
-      throw new Error('User not found.');
-    }
-
-    const transaction = await WalletTransaction.create([{
-      tenant: req.user.tenant,
-      mikrotikUser: userId,
-      type,
-      amount: parsedAmount,
-      source,
-      comment,
-      transactionId,
-      balanceAfter: updatedUser.walletBalance,
-      processedBy: req.user._id,
-    }], { session });
-
-    await session.commitTransaction();
-
-    res.status(201).json(transaction[0]);
-
-  } catch (error) {
-    await session.abortTransaction();
-    console.error('Wallet transaction failed:', error);
-    res.status(500).json({ message: error.message || 'Wallet transaction failed and was rolled back.' });
-  } finally {
-    session.endSession();
-  }
+  res.status(201).json(transaction);
 });
 
 module.exports = {

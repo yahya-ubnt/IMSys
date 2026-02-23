@@ -12,16 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Save, Wifi, Lock, User, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Save, Wifi, Lock, User, ChevronRight, ChevronLeft, Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { Topbar } from "@/components/topbar";
 import { motion, AnimatePresence } from "framer-motion";
 
-// --- Interface Definitions ---
+import { getBuildings, getDevices, createBuilding, type Building, type Device } from "@/lib/deviceService";
+
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id: string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
-interface Device { _id: string; deviceName: string; ipAddress: string; }
-interface NewMikrotikUserData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
+interface NewMikrotikUserData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -59,6 +60,7 @@ export default function NewMikrotikUserPage() {
     const [mikrotikRouterId, setMikrotikRouterId] = useState("");
     const [serviceType, setServiceType] = useState<"pppoe" | "static" | '' >('');
     const [packageId, setPackageId] = useState("");
+    const [buildingId, setBuildingId] = useState<string | undefined>(undefined);
     const [stationId, setStationId] = useState<string | undefined>(undefined);
     const [username, setUsername] = useState("");
     const [pppoePassword, setPppoePassword] = useState("");
@@ -76,31 +78,48 @@ export default function NewMikrotikUserPage() {
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(new Date());
     const [sendWelcomeSms, setSendWelcomeSms] = useState(true);
 
+    // Dialog State
+    const [isBuildingDialogOpen, setIsBuildingDialogOpen] = useState(false);
+    const [newBuildingName, setNewBuildingName] = useState("");
+    const [isSavingBuilding, setIsSavingBuilding] = useState(false);
+
     // Data & UI State
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
     const [packages, setPackages] = useState<Package[]>([]);
     const [filteredPackages, setFilteredPackages] = useState<Package[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
     const [stations, setStations] = useState<Device[]>([]);
+    const [filteredStations, setFilteredStations] = useState<Device[]>([]);
     const [loading, setLoading] = useState(false);
-    const [dataLoading, setDataLoading] = useState({ routers: true, packages: true, stations: true });
+    const [dataLoading, setDataLoading] = useState({ routers: true, packages: true, stations: true, buildings: true });
 
     // --- Data Fetching Hooks ---
     useEffect(() => {
-        const fetchData = async (url: string, key: keyof typeof dataLoading) => {
+        const fetchAllData = async () => {
             try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Failed to fetch ${key}`);
-                return await response.json();
-            } catch {
-                toast({ title: "Error", description: `Failed to load ${key}.`, variant: "destructive" });
-                return [];
+                // Using placeholders for functions that might not be in deviceService yet
+                const routerPromise = fetch('/api/mikrotik/routers').then(res => res.json()); 
+                const packagePromise = fetch('/api/mikrotik/packages').then(res => res.json());
+                
+                const [routersData, packagesData, buildingsData, stationsData] = await Promise.all([
+                    routerPromise,
+                    packagePromise,
+                    getBuildings(),
+                    getDevices("Station")
+                ]);
+
+                setRouters(routersData || []);
+                setPackages(packagesData || []);
+                setBuildings(buildingsData || []);
+                setStations(stationsData || []);
+
+            } catch (error) {
+                toast({ title: "Error fetching initial data", description: (error instanceof Error) ? error.message : "Unknown error", variant: "destructive" });
             } finally {
-                setDataLoading(prev => ({ ...prev, [key]: false }));
+                setDataLoading({ routers: false, packages: false, stations: false, buildings: false });
             }
         };
-        fetchData("/api/mikrotik/routers", "routers").then(setRouters);
-        fetchData("/api/mikrotik/packages", "packages").then(setPackages);
-        fetchData("/api/devices?deviceType=Station", "stations").then(setStations);
+        fetchAllData();
     }, [toast]);
 
     // --- Form Logic & Prefill ---
@@ -113,6 +132,21 @@ export default function NewMikrotikUserPage() {
             setFilteredPackages([]);
         }
     }, [mikrotikRouterId, serviceType, packages]);
+
+    useEffect(() => {
+        if (buildingId) {
+            const filtered = stations.filter(s => s.serviceArea?.includes(buildingId));
+            setFilteredStations(filtered);
+            setStationId(undefined); // Reset station selection
+
+            // Auto-select station if only one is found
+            if (filtered.length === 1) {
+                setStationId(filtered[0]._id);
+            }
+        } else {
+            setFilteredStations([]); // Clear stations if no building is selected
+        }
+    }, [buildingId, stations]);
 
     useEffect(() => {
         const prefill = (setter: (val: string) => void, key: string) => {
@@ -135,7 +169,7 @@ export default function NewMikrotikUserPage() {
             result = Math.floor(100000 + Math.random() * 900000).toString();
         } else {
             const chars = 'abcdefghijklmnopqrstuvwxyz';
-            for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+            for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * characters.length));
         }
         setter(result);
     };
@@ -153,6 +187,29 @@ export default function NewMikrotikUserPage() {
     const handleBack = () => {
         setDirection(-1);
         setStep(1);
+    };
+
+    const handleCreateBuilding = async () => {
+        if (!newBuildingName.trim()) {
+            toast({ title: "Building name cannot be empty", variant: "destructive" });
+            return;
+        }
+        setIsSavingBuilding(true);
+        try {
+            const newBuilding = await createBuilding({ name: newBuildingName });
+            toast({ title: "Building Created", description: `Successfully created ${newBuilding.name}.` });
+            
+            const updatedBuildings = await getBuildings();
+            setBuildings(updatedBuildings);
+            setBuildingId(newBuilding._id);
+
+            setIsBuildingDialogOpen(false);
+            setNewBuildingName("");
+        } catch (error) {
+            toast({ title: "Error Creating Building", description: (error instanceof Error) ? error.message : "Unknown error", variant: "destructive" });
+        } finally {
+            setIsSavingBuilding(false);
+        }
     };
 
     // --- Form Submission ---
@@ -174,6 +231,7 @@ export default function NewMikrotikUserPage() {
             billingCycle,
             mobileNumber,
             expiryDate,
+            building: buildingId,
             station: stationId,
             sendWelcomeSms,
         };
@@ -236,7 +294,62 @@ export default function NewMikrotikUserPage() {
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                         <div className="space-y-1"><Label className="text-xs">Package</Label><Select onValueChange={setPackageId} value={packageId} disabled={!mikrotikRouterId || !serviceType || filteredPackages.length === 0}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a package" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredPackages.map(p => <SelectItem key={p._id} value={p._id} className="text-sm">{p.name} (KES {p.price})</SelectItem>)}</SelectContent></Select></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Station</Label><Select onValueChange={setStationId} value={stationId} disabled={dataLoading.stations}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a station" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{stations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}</SelectContent></Select></div>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
+                                                        <div className="space-y-1 sm:col-span-2">
+                                                            <Label className="text-xs">Client's Building</Label>
+                                                            <div className="flex items-center gap-2">
+                                                                <Select onValueChange={setBuildingId} value={buildingId} disabled={dataLoading.buildings}>
+                                                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-full"><SelectValue placeholder="Select a building" /></SelectTrigger>
+                                                                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                                        {buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Dialog open={isBuildingDialogOpen} onOpenChange={setIsBuildingDialogOpen}>
+                                                                    <DialogTrigger asChild>
+                                                                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0">
+                                                                            <Plus className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DialogTrigger>
+                                                                    <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700">
+                                                                        <DialogHeader><DialogTitle className="text-white">Create New Building</DialogTitle></DialogHeader>
+                                                                        <div className="grid gap-4 py-4">
+                                                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                                                <Label htmlFor="building-name" className="text-right text-zinc-400">Name</Label>
+                                                                                <Input id="building-name" value={newBuildingName} onChange={(e) => setNewBuildingName(e.target.value)} className="col-span-3 bg-zinc-800 border-zinc-600" />
+                                                                            </div>
+                                                                        </div>
+                                                                        <DialogFooter>
+                                                                            <Button type="button" onClick={handleCreateBuilding} disabled={isSavingBuilding}>
+                                                                                {isSavingBuilding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                                                                Save Building
+                                                                            </Button>
+                                                                        </DialogFooter>
+                                                                    </DialogContent>
+                                                                </Dialog>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {buildingId && filteredStations.length > 0 && (
+                                                            <div className="space-y-1 sm:col-span-2">
+                                                                <Label className="text-xs">Network Connection (Station)</Label>
+                                                                {filteredStations.length === 1 ? (
+                                                                    <div className="h-9 px-3 flex items-center rounded-md border border-zinc-700 bg-zinc-800/50 text-sm">
+                                                                        <span className="text-zinc-400">Auto-selected:</span>
+                                                                        <span className="ml-2 font-medium">{filteredStations[0].deviceName}</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <Select onValueChange={setStationId} value={stationId} disabled={!buildingId}>
+                                                                        <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                                                                            <SelectValue placeholder="Multiple stations found, please select one" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                                            {filteredStations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </motion.div>
                                             ) : (

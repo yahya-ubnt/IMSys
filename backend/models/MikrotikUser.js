@@ -23,6 +23,10 @@ const MikrotikUserSchema = mongoose.Schema(
       ref: 'Package',
       required: true,
     },
+    building: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Building',
+    },
     station: {
       type: mongoose.Schema.ObjectId,
       ref: 'Device',
@@ -121,6 +125,9 @@ const MikrotikUserSchema = mongoose.Schema(
     },
     syncErrorMessage: {
       type: String,
+    },
+    lastSyncedAt: {
+      type: Date,
     },
     pendingPackage: {
       type: mongoose.Schema.ObjectId,

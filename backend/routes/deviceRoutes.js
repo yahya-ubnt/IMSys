@@ -8,6 +8,8 @@ const {
   updateDevice,
   deleteDevice,
   getDeviceDowntimeLogs,
+  pingDevice,
+  enableMonitoring,
 } = require('../controllers/deviceController');
 const { getMikrotikUsersByStation } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
@@ -25,6 +27,8 @@ router.route('/').post(
 ).get(protect, isSuperAdminOrAdmin, getDevices);
 router.route('/:id').get(protect, isSuperAdminOrAdmin, getDeviceById).put(protect, isSuperAdminOrAdmin, updateDevice).delete(protect, isSuperAdminOrAdmin, deleteDevice);
 router.route('/:id/downtime').get(protect, isSuperAdminOrAdmin, getDeviceDowntimeLogs);
+router.route('/:id/ping').post(protect, isSuperAdminOrAdmin, pingDevice);
+router.route('/:id/enable-monitoring').post(protect, isSuperAdminOrAdmin, enableMonitoring);
 router.route('/:stationId/users').get(protect, isSuperAdminOrAdmin, getMikrotikUsersByStation);
 
 module.exports = router;
