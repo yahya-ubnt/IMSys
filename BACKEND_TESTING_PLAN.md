@@ -187,9 +187,28 @@ The goal is to test the interaction between the application and the BullMQ queue
 
 Finally, we will write a few critical E2E tests for the most important user flows. This will involve using a library like `supertest` to make HTTP requests to the running application and assert the responses.
 
--   [ ] User creation and login
--   [ ] Subscription payment and renewal
--   [ ] Creating and resolving a support ticket
+-   [ ] **Authentication:**
+    -   [ ] User registration (Super Admin creates a new tenant and admin user).
+    -   [ ] User login and logout.
+    -   [ ] Token-based authentication for protected routes.
+    -   [ ] Role-based access control (e.g., an admin cannot access super admin routes).
+-   [ ] **User Management (Admin):**
+    -   [ ] Admin can create a new user within their tenant.
+    -   [ ] Admin can view and update users within their tenant.
+    -   [ ] Admin can delete users within their tenant.
+-   [ ] **Mikrotik Management (Admin):**
+    -   [ ] Admin can create, view, update, and delete a Mikrotik router.
+    -   [ ] Admin can create, view, update, and delete a Mikrotik package.
+    -   [ ] Admin can create, view, update, and delete a Mikrotik user.
+-   [ ] **Billing and Payments (Admin):**
+    -   [ ] Admin can create a manual invoice for a user.
+    -   [ ] Admin can view invoices.
+    -   [ ] (Future) Simulate a successful payment and verify that the user's subscription is renewed.
+-   [ ] **Support Tickets (Admin):**
+    -   [ ] Admin can create a new support ticket.
+    -   [ ] Admin can view and update a support ticket.
+    -   [ ] Admin can add a note to a ticket.
+    -   [ ] Admin can resolve and close a ticket.
 
 ---
 This plan provides a clear path forward. We can continue with Phase 1, and once we have good coverage there, we can move on to the next phases.
