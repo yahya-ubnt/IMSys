@@ -156,19 +156,19 @@ The goal is to verify that Express routes are correctly defined and map to the i
 -   [x] `routes/reportRoutes.js`
 -   [x] `routes/scheduledTaskRoutes.js`
 -   [x] `routes/searchRoutes.js`
--   [ ] `routes/settingsRoutes.js`
+-   [x] `routes/settingsRoutes.js`
 -   [x] `routes/smsAcknowledgementRoutes.js`
 -   [x] `routes/smsExpiryScheduleRoutes.js`
 -   [x] `routes/smsProviderRoutes.js`
--   [ ] `routes/smsRoutes.js`
+-   [x] `routes/smsRoutes.js`
 -   [x] `routes/smsTemplateRoutes.js`
 -   [x] `routes/superAdminRoutes.js`
--   [ ] `routes/technicianActivityRoutes.js`
+-   [x] `routes/technicianActivityRoutes.js`
 -   [x] `routes/tenantRoutes.js`
 -   [x] `routes/ticketRoutes.js`
 -   [x] `routes/transactionRoutes.js`
 -   [x] `routes/uploadRoutes.js`
--   [ ] `routes/userRoutes.js`
+-   [x] `routes/userRoutes.js`
 -   [x] `routes/voucherRoutes.js`
 -   [x] `routes/webhookRoutes.js`
 
@@ -178,6 +178,7 @@ The goal is to test the interaction between the application and the BullMQ queue
 
 -   [x] `queues/diagnosticQueue.js`
 -   [x] `queues/mikrotikSyncQueue.js`
+-   [x] `workers/diagnosticWorker.js`
 -   [ ] `workers/mikrotikSyncWorker.js`
 -   [x] `jobs/reconciliationJob.js`
 -   [x] `jobs/scheduleExpiredClientDisconnectsJob.js`

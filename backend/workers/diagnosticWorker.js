@@ -1,5 +1,5 @@
 const { Worker } = require('bullmq');
-const { verifyRootCause } = require('../services/diagnosticTreeService');
+const { verifyRootCause } = require('../services/DiagnosticService');
 const Device = require('../models/Device');
 const { sendConsolidatedAlert } = require('../services/alertingService');
 const connectDB = require('../config/db');

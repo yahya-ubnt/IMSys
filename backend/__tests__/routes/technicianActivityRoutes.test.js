@@ -4,7 +4,6 @@ const express = require('express');
 const technicianActivityRoutes = require('../../routes/technicianActivityRoutes');
 const { protect, isSuperAdminOrAdmin } = require('../../middlewares/protect');
 const technicianActivityController = require('../../controllers/technicianActivityController');
-const { body } = require('express-validator');
 
 // Mock middlewares
 jest.mock('../../middlewares/protect', () => ({
@@ -17,45 +16,12 @@ jest.mock('../../middlewares/protect', () => ({
 
 // Mock controller functions
 jest.mock('../../controllers/technicianActivityController', () => ({
-  createTechnicianActivity: jest.fn((req, res) => res.status(201).json({ message: 'Technician activity created' })),
-  getTechnicianActivities: jest.fn((req, res) => res.status(200).json({ message: 'Get all technician activities' })),
-  getTechnicianActivityById: jest.fn((req, res) => res.status(200).json({ message: `Get technician activity ${req.params.id}` })),
-  updateTechnicianActivity: jest.fn((req, res) => res.status(200).json({ message: `Update technician activity ${req.params.id}` })),
-  deleteTechnicianActivity: jest.fn((req, res) => res.status(200).json({ message: `Delete technician activity ${req.params.id}` })),
+    createTechnicianActivity: jest.fn((req, res) => res.status(201).json({ message: 'Technician activity created' })),
+    getTechnicianActivities: jest.fn((req, res) => res.status(200).json({ message: 'Get all technician activities' })),
+    getTechnicianActivityById: jest.fn((req, res) => res.status(200).json({ message: `Get technician activity ${req.params.id}` })),
+    updateTechnicianActivity: jest.fn((req, res) => res.status(200).json({ message: `Update technician activity ${req.params.id}` })),
+    deleteTechnicianActivity: jest.fn((req, res) => res.status(200).json({ message: `Delete technician activity ${req.params.id}` })),
 }));
-
-// Mock express-validator to bypass actual validation logic in tests
-jest.mock('express-validator', () => {
-  // This function will act as a mock for any chainable method (e.g., isMongoId, not, isEmpty, etc.)
-  const mockChainableMethod = jest.fn().mockReturnThis();
-
-  // This object will represent the chainable API (e.g., body('field').isMongoId()...)
-  const mockChain = {
-    not: jest.fn(() => mockChain),
-    isEmpty: mockChainableMethod,
-    isIn: mockChainableMethod,
-    matches: mockChainableMethod,
-    isISO8601: mockChainableMethod,
-    toDate: mockChainableMethod,
-    optional: mockChainableMethod,
-    isMongoId: mockChainableMethod,
-    if: jest.fn(() => mockChain),
-    equals: mockChainableMethod,
-  };
-
-  // This is the actual middleware function that Express will execute.
-  // It also needs to have the chainable methods attached to it,
-  // because `body('field')` itself returns a middleware function that is also chainable.
-  const mockMiddleware = (req, res, next) => next();
-  Object.assign(mockMiddleware, mockChain);
-
-  return {
-    body: jest.fn(() => mockMiddleware),
-    validationResult: jest.fn(() => ({
-      isEmpty: () => true, // Always pass validation
-    })),
-  };
-});
 
 const app = express();
 app.use(express.json());
@@ -69,7 +35,16 @@ describe('Technician Activity Routes', () => {
   const activityId = 'activity123';
 
   it('POST /api/technician-activities should create a new technician activity', async () => {
-    const res = await request(app).post('/api/technician-activities').send({});
+    const res = await request(app).post('/api/technician-activities').send({
+        technician: 'tech123',
+        activityType: 'Installation',
+        clientName: 'John Doe',
+        clientPhone: '1234567890',
+        activityDate: new Date().toISOString(),
+        description: 'Test activity',
+        installedEquipment: 'Test equipment',
+        installationNotes: 'Test notes'
+    });
     expect(res.statusCode).toEqual(201);
     expect(res.body).toEqual({ message: 'Technician activity created' });
     expect(protect).toHaveBeenCalled();
