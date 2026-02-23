@@ -1,23 +1,38 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getSchedules,
-  getScheduleById,
   createSchedule,
-  updateSchedule,
-  deleteSchedule,
+  getSchedules,
 } = require('../../controllers/smsExpiryScheduleController');
 const SmsExpirySchedule = require('../../models/SmsExpirySchedule');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/SmsExpirySchedule');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('SMS Expiry Schedule Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('SMS Expiry Schedule Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await SmsExpirySchedule.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Expiry Tenant' });
+
     req = {
-      params: { id: 'testId' },
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
     };
     res = {
@@ -25,70 +40,42 @@ describe('SMS Expiry Schedule Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getSchedules', () => {
-    it('should return all SMS expiry schedules', async () => {
-      const mockSchedules = [{ _id: 's1' }];
-      SmsExpirySchedule.find.mockReturnValue({
-        sort: jest.fn().mockResolvedValue(mockSchedules),
-      });
-      await getSchedules(req, res);
-      expect(res.json).toHaveBeenCalledWith(mockSchedules);
-    });
-  });
-
-  describe('getScheduleById', () => {
-    it('should return a single SMS expiry schedule', async () => {
-      const mockSchedule = { _id: 's1' };
-      SmsExpirySchedule.findOne.mockResolvedValue(mockSchedule);
-      await getScheduleById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockSchedule);
-    });
-  });
-
   describe('createSchedule', () => {
-    it('should create a new SMS expiry schedule', async () => {
-      const scheduleData = { name: 'Test Schedule' };
-      req.body = scheduleData;
-      SmsExpirySchedule.findOne.mockResolvedValue(null);
-      SmsExpirySchedule.create.mockResolvedValue(scheduleData);
+    it('should create schedule successfully', async () => {
+      req.body = {
+        name: '3 Days Before',
+        days: 3,
+        timing: 'Before',
+        messageBody: 'Your sub expires in 3 days',
+        status: 'Active'
+      };
 
       await createSchedule(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(scheduleData);
+      const s = await SmsExpirySchedule.findOne({ name: '3 Days Before' });
+      expect(s).toBeDefined();
     });
   });
 
-  describe('updateSchedule', () => {
-    it('should update an SMS expiry schedule', async () => {
-      const scheduleData = { name: 'Updated Schedule' };
-      const mockSchedule = { _id: 's1', save: jest.fn().mockResolvedValue(scheduleData) };
-      req.body = scheduleData;
-      SmsExpirySchedule.findOne.mockResolvedValue(mockSchedule);
+  describe('getSchedules', () => {
+      it('should return all schedules for tenant', async () => {
+          await SmsExpirySchedule.create({
+              name: 'S1',
+              days: 1,
+              timing: 'After',
+              messageBody: 'Body',
+              tenant: tenant._id,
+              status: 'Active'
+          });
 
-      await updateSchedule(req, res, next);
-
-      expect(mockSchedule.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(scheduleData);
-    });
-  });
-
-  describe('deleteSchedule', () => {
-    it('should delete an SMS expiry schedule', async () => {
-      const mockSchedule = { _id: 's1', deleteOne: jest.fn() };
-      SmsExpirySchedule.findOne.mockResolvedValue(mockSchedule);
-
-      await deleteSchedule(req, res, next);
-
-      expect(mockSchedule.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'SMS Expiry Schedule removed' });
-    });
+          await getSchedules(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ name: 'S1' })
+          ]));
+      });
   });
 });

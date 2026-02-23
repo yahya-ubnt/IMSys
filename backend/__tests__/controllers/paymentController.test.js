@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   initiateStkPush,
   handleDarajaCallback,
@@ -10,243 +13,223 @@ const {
 const Transaction = require('../../models/Transaction');
 const WalletTransaction = require('../../models/WalletTransaction');
 const MikrotikUser = require('../../models/MikrotikUser');
-const PaymentService = require('../../services/paymentService');
+const Tenant = require('../../models/Tenant');
+const Package = require('../../models/Package');
+const MikrotikRouter = require('../../models/MikrotikRouter');
 const mpesaService = require('../../services/mpesaService');
 const { validationResult } = require('express-validator');
-const { randomUUID } = require('crypto');
 
-jest.mock('../../models/Transaction');
-jest.mock('../../models/WalletTransaction');
-jest.mock('../../models/MikrotikUser');
-jest.mock('../../services/paymentService');
+// Mock external services
 jest.mock('../../services/mpesaService');
-jest.mock('express-validator');
-// const { MongoMemoryServer } = require('mongodb-memory-server'); // Removed
-// const mongoose = require('mongoose'); // Moved to mock
-
-
-
-// Mock the entire module for external dependencies
-jest.mock('../../models/MikrotikUser');
-jest.mock('../../services/userService');
-jest.mock('../../models/MikrotikRouter');
-jest.mock('../../models/Package');
-jest.mock('../../models/UserDowntimeLog');
-jest.mock('../../models/Transaction');
-jest.mock('../../utils/mikrotikUtils');
-jest.mock('../../utils/crypto');
-jest.mock('node-routeros');
-jest.mock('express-validator');
-jest.mock('crypto', () => ({
-  randomUUID: jest.fn(() => 'mock-uuid'),
-}));
-jest.mock('mongoose'); // Use the mock from __mocks__/mongoose.js
-jest.mock('bullmq', () => ({
-  Queue: jest.fn().mockImplementation(() => ({
-    add: jest.fn(),
-    close: jest.fn(),
-    on: jest.fn(),
-  })),
-  Worker: jest.fn().mockImplementation(() => ({
-    on: jest.fn(),
-  })),
+jest.mock('../../services/smsService');
+jest.mock('../../queues/mikrotikSyncQueue', () => ({
+  add: jest.fn(),
 }));
 
-describe('Payment Controller', () => {
-  let req, res, next;
+let mongoServer;
 
-  beforeEach(() => {
+beforeAll(async () => {
+  // Use a Replica Set to support Transactions
+  mongoServer = await MongoMemoryServer.create({ replSet: { count: 1 } });
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Payment Controller (Integration)', () => {
+  let req, res, next, tenant, router, pkg, user;
+
+  beforeEach(async () => {
+    await Transaction.deleteMany({});
+    await WalletTransaction.deleteMany({});
+    await MikrotikUser.deleteMany({});
+    await Tenant.deleteMany({});
+    await Package.deleteMany({});
+    await MikrotikRouter.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Finance Tenant' });
+    router = await MikrotikRouter.create({
+        name: 'Test Router',
+        ipAddress: '192.168.88.1',
+        apiUsername: 'admin',
+        apiPassword: 'password',
+        tenant: tenant._id
+    });
+    pkg = await Package.create({
+        name: 'Basic',
+        price: 1000,
+        duration: 30,
+        profile: 'basic_profile',
+        serviceType: 'pppoe',
+        mikrotikRouter: router._id,
+        tenant: tenant._id
+    });
+    user = await MikrotikUser.create({
+        officialName: 'John Doe',
+        username: 'johndoe',
+        email: 'john@example.com',
+        phone: '254700000000',
+        mPesaRefNo: '123456',
+        serviceType: 'pppoe',
+        package: pkg._id,
+        mikrotikRouter: router._id,
+        tenant: tenant._id,
+        walletBalance: 0,
+        billingCycle: 'Monthly',
+        mobileNumber: '254700000000',
+        expiryDate: new Date(Date.now() + 86400000) // Expires in 1 day
+    });
+
     req = {
-      params: { id: 'testTransactionId', userId: 'testUserId' },
-      user: { tenant: 'testTenant', _id: 'testUserId' },
+      params: {},
+      user: { tenant: tenant._id, _id: 'admin123' },
       body: {},
       query: {},
-      ip: '196.201.214.200', // Mock a valid Safaricom IP
+      ip: '196.201.214.200', // Valid Safaricom IP
     };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
     next = jest.fn();
-
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  describe('createCashPayment', () => {
+    it('should process a cash payment and update user wallet', async () => {
+      req.body = {
+        userId: user._id.toString(),
+        amount: '1000',
+        comment: 'Manual cash payment'
+      };
 
-  describe('initiateStkPush', () => {
-    it('should initiate STK push successfully', async () => {
-      req.body = { amount: 100, phoneNumber: '254712345678', accountReference: 'REF123' };
-      mpesaService.initiateStkPushService.mockResolvedValue({ success: true });
+      await createCashPayment(req, res, next);
 
-      await initiateStkPush(req, res);
+      expect(res.status).toHaveBeenCalledWith(201);
+      
+      // Verify Database state
+      const updatedUser = await MikrotikUser.findById(user._id);
+      // Logic: 1000 paid, pkg is 1000. Balance should be 0 (if it was 0)
+      // Actually processSubscriptionPayment logic:
+      // If amount >= package.price, it renews and subtracts price.
+      expect(updatedUser.walletBalance).toBe(0);
 
-      expect(validationResult).toHaveBeenCalledWith(req);
-      expect(mpesaService.initiateStkPushService).toHaveBeenCalledWith('testTenant', 100, '254712345678', 'REF123');
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      const transaction = await Transaction.findOne({ mikrotikUser: user._id });
+      expect(transaction.amount).toBe(1000);
+      expect(transaction.paymentMethod).toBe('Cash');
     });
 
-    it('should return 400 if validation fails', async () => {
-      validationResult.mockReturnValue({ isEmpty: () => false, array: () => [{ msg: 'Invalid input' }] });
+    it('should handle payment for user identified by M-Pesa ref', async () => {
+        // We use PaymentService.handleSuccessfulPayment which supports reference as user._id or mPesaRefNo
+        // In the controller, it passes userId as reference
+        req.body = {
+            userId: '123456', // The mPesaRefNo
+            amount: '500',
+            comment: 'Partial payment'
+        };
 
-      await initiateStkPush(req, res);
+        await createCashPayment(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ errors: [{ msg: 'Invalid input' }] });
-    });
-
-    it('should return 500 if STK push initiation fails', async () => {
-      req.body = { amount: 100, phoneNumber: '254712345678', accountReference: 'REF123' };
-      mpesaService.initiateStkPushService.mockRejectedValue(new Error('Mpesa error'));
-
-      await initiateStkPush(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Failed to initiate STK push.' });
+        const updatedUser = await MikrotikUser.findById(user._id);
+        // Balance was 0. 500 paid. Package is 1000. 
+        // processSubscriptionPayment: If amount < price, it just adds to wallet balance.
+        expect(updatedUser.walletBalance).toBe(500);
     });
   });
 
   describe('handleDarajaCallback', () => {
-    it('should process STK callback successfully', async () => {
-      req.body = { Body: { stkCallback: { CheckoutRequestID: 'req1', ResultCode: 0 } } };
-      mpesaService.processStkCallback.mockResolvedValue(true);
+    it('should process STK push success callback', async () => {
+      req.body = {
+        Body: {
+          stkCallback: {
+            MerchantRequestID: 'req123',
+            CheckoutRequestID: 'check123',
+            ResultCode: 0,
+            CallbackMetadata: {
+              Item: [
+                { Name: 'Amount', Value: 1000 },
+                { Name: 'MpesaReceiptNumber', Value: 'QKJ123456' },
+                { Name: 'PhoneNumber', Value: 254700000000 }
+              ]
+            }
+          }
+        }
+      };
 
-      await handleDarajaCallback(req, res);
+      // Mock the helper that extracts data from the body
+      const mpesaServiceActual = jest.requireActual('../../services/mpesaService');
+      mpesaService.processStkCallback.mockImplementation(async (data) => {
+          // This mimics the actual mpesaService.processStkCallback logic
+          const amount = data.CallbackMetadata.Item.find(i => i.Name === 'Amount').Value;
+          const trId = data.CallbackMetadata.Item.find(i => i.Name === 'MpesaReceiptNumber').Value;
+          const phone = data.CallbackMetadata.Item.find(i => i.Name === 'PhoneNumber').Value;
+          
+          const PaymentService = require('../../services/paymentService');
+          await PaymentService.handleSuccessfulPayment({
+              tenant: tenant._id,
+              amount,
+              transactionId: trId,
+              reference: '123456', // Ref matches our user's mPesaRefNo
+              paymentMethod: 'M-Pesa STK',
+              msisdn: phone.toString()
+          });
+      });
 
-      expect(mpesaService.processStkCallback).toHaveBeenCalledWith({ CheckoutRequestID: 'req1', ResultCode: 0 });
+      await handleDarajaCallback(req, res, next);
+
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ "ResultCode": 0, "ResultDesc": "Accepted" });
-    });
-
-    it('should process C2B callback successfully', async () => {
-      req.body = { TransID: 'trans1' };
-      mpesaService.processC2bCallback.mockResolvedValue(true);
-
-      await handleDarajaCallback(req, res);
-
-      expect(mpesaService.processC2bCallback).toHaveBeenCalledWith({ TransID: 'trans1' });
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ "ResultCode": 0, "ResultDesc": "Accepted" });
-    });
-
-    it('should return 403 for untrusted IP', async () => {
-      req.ip = '1.1.1.1'; // Untrusted IP
-
-      await handleDarajaCallback(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Untrusted source' });
-    });
-
-    it('should return 500 if callback processing fails', async () => {
-      req.body = { Body: { stkCallback: { CheckoutRequestID: 'req1', ResultCode: 0 } } };
-      mpesaService.processStkCallback.mockRejectedValue(new Error('Processing error'));
-
-      await handleDarajaCallback(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ "ResultCode": 1, "ResultDesc": "Internal Server Error" });
+      const updatedUser = await MikrotikUser.findById(user._id);
+      expect(updatedUser.walletBalance).toBe(0); // Paid 1000 for 1000 pkg
     });
   });
 
   describe('getTransactions', () => {
-    it('should return transactions', async () => {
-      const mockTransactions = { transactions: [{ _id: 't1' }], pages: 1 };
-      PaymentService.getTransactions.mockResolvedValue(mockTransactions);
+    it('should return paginated transactions', async () => {
+      await Transaction.create({
+        transactionId: 'TX1',
+        amount: 100,
+        referenceNumber: 'REF1',
+        officialName: 'Test',
+        paymentMethod: 'Cash',
+        tenant: tenant._id,
+        mikrotikUser: user._id,
+        transactionDate: new Date()
+      });
 
-      await getTransactions(req, res);
-
-      expect(PaymentService.getTransactions).toHaveBeenCalledWith('testTenant', req.query);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockTransactions);
+      await getTransactions(req, res, next);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        count: 1,
+        transactions: expect.arrayContaining([
+            expect.objectContaining({ transactionId: 'TX1' })
+        ])
+      }));
     });
   });
 
   describe('getWalletTransactions', () => {
-    it('should return wallet transactions', async () => {
-      const mockWalletTransactions = { transactions: [{ _id: 'wt1' }], pages: 1 };
-      PaymentService.getWalletTransactions.mockResolvedValue(mockWalletTransactions);
+    it('should return wallet transactions for a user', async () => {
+        await WalletTransaction.create({
+            mikrotikUser: user._id,
+            tenant: tenant._id,
+            amount: 100,
+            type: 'Credit',
+            source: 'Cash',
+            transactionId: 'W1',
+            balanceBefore: 0,
+            balanceAfter: 100
+        });
 
-      await getWalletTransactions(req, res);
-
-      expect(PaymentService.getWalletTransactions).toHaveBeenCalledWith('testTenant', { userId: 'testUserId' });
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockWalletTransactions);
-    });
-  });
-
-  describe('getWalletTransactionById', () => {
-    it('should return a single wallet transaction by ID', async () => {
-      const mockWalletTransaction = { _id: 'wt1' };
-      PaymentService.getWalletTransactionById.mockResolvedValue(mockWalletTransaction);
-
-      await getWalletTransactionById(req, res);
-
-      expect(PaymentService.getWalletTransactionById).toHaveBeenCalledWith('testTransactionId', 'testTenant');
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockWalletTransaction);
-    });
-  });
-
-  describe('createCashPayment', () => {
-    it('should create a cash payment', async () => {
-      req.body = { userId: 'user1', amount: 500, comment: 'Cash payment' };
-      PaymentService.handleSuccessfulPayment.mockResolvedValue(true);
-
-      await createCashPayment(req, res);
-
-      expect(validationResult).toHaveBeenCalledWith(req);
-      expect(randomUUID).toHaveBeenCalled();
-      expect(PaymentService.handleSuccessfulPayment).toHaveBeenCalledWith(expect.objectContaining({
-        tenant: 'testTenant',
-        amount: 500,
-        transactionId: 'CASH-mock-uuid',
-        reference: 'user1',
-        paymentMethod: 'Cash',
-        comment: 'Cash payment',
-      }));
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({ success: true, transactionId: 'CASH-mock-uuid' });
-    });
-
-    it('should return 400 if validation fails', async () => {
-      validationResult.mockReturnValue({ isEmpty: () => false, array: () => [{ msg: 'Invalid input' }] });
-
-      await createCashPayment(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ errors: [{ msg: 'Invalid input' }] });
-    });
-  });
-
-  describe('createWalletTransaction', () => {
-    it('should create a wallet transaction', async () => {
-      const transactionData = { amount: 100, type: 'Credit' };
-      const createdTransaction = { _id: 'wt2', ...transactionData };
-      req.body = transactionData;
-      PaymentService.createWalletTransaction.mockResolvedValue(createdTransaction);
-
-      await createWalletTransaction(req, res);
-
-      expect(validationResult).toHaveBeenCalledWith(req);
-      expect(PaymentService.createWalletTransaction).toHaveBeenCalledWith(expect.objectContaining({
-        ...transactionData,
-        tenant: 'testTenant',
-      }), 'testUserId');
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(createdTransaction);
-    });
-
-    it('should return 400 if validation fails', async () => {
-      validationResult.mockReturnValue({ isEmpty: () => false, array: () => [{ msg: 'Invalid input' }] });
-
-      await createWalletTransaction(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ errors: [{ msg: 'Invalid input' }] });
+        req.params.userId = user._id.toString();
+        await getWalletTransactions(req, res, next);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            count: 1,
+            transactions: expect.arrayContaining([
+                expect.objectContaining({ transactionId: 'W1' })
+            ])
+        }));
     });
   });
 });

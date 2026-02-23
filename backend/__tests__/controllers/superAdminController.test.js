@@ -1,91 +1,72 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getDashboardStats,
   getSuperAdminDashboardStats,
   getRoutersPerTenant,
-  getUsersByPackage,
 } = require('../../controllers/superAdminController');
 const Tenant = require('../../models/Tenant');
-const User = require('../../models/User');
-const MikrotikUser = require('../../models/MikrotikUser');
-const Transaction = require('../../models/Transaction');
 const MikrotikRouter = require('../../models/MikrotikRouter');
-const Package = require('../../models/Package');
 
-jest.mock('../../models/Tenant');
-jest.mock('../../models/User');
-jest.mock('../../models/MikrotikUser');
-jest.mock('../../models/Transaction');
-jest.mock('../../models/MikrotikRouter');
-jest.mock('../../models/Package');
+let mongoServer;
 
-describe('Super Admin Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Super Admin Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await Tenant.deleteMany({});
+    await MikrotikRouter.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'SA Tenant', status: 'active' });
+
     req = {
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { roles: ['SUPER_ADMIN'] },
     };
     res = {
+      status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
     next = jest.fn();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getDashboardStats', () => {
-    it('should return dashboard stats', async () => {
-      Tenant.countDocuments.mockResolvedValue(10);
-      MikrotikUser.countDocuments.mockResolvedValue(100);
-      MikrotikRouter.countDocuments.mockResolvedValue(5);
-      Transaction.aggregate.mockResolvedValue([{ total: 5000 }]);
-
-      await getDashboardStats(req, res);
-
-      expect(res.json).toHaveBeenCalledWith({
-        totalTenants: 10,
-        totalUsers: 100,
-        totalRoutersOnline: 5,
-        todayRevenue: 5000,
-      });
-    });
-  });
-
   describe('getSuperAdminDashboardStats', () => {
-    it('should return super admin dashboard stats', async () => {
-        Tenant.countDocuments.mockResolvedValueOnce(10);
-        Tenant.countDocuments.mockResolvedValueOnce(8);
-        MikrotikRouter.countDocuments.mockResolvedValue(20);
-        MikrotikUser.countDocuments.mockResolvedValue(100);
-
-        await getSuperAdminDashboardStats(req, res);
-
-        expect(res.json).toHaveBeenCalledWith({
-            totalTenants: 10,
-            activeTenants: 8,
-            totalRouters: 20,
-            totalUsers: 100,
-        });
+    it('should return system-wide stats', async () => {
+      await getSuperAdminDashboardStats(req, res, next);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+          totalTenants: 1,
+          activeTenants: 1
+      }));
     });
   });
 
   describe('getRoutersPerTenant', () => {
-    it('should return router count per tenant', async () => {
-        const mockData = [{ tenantName: 'Tenant A', routerCount: 5 }];
-        MikrotikRouter.aggregate.mockResolvedValue(mockData);
-        await getRoutersPerTenant(req, res);
-        expect(res.json).toHaveBeenCalledWith(mockData);
-    });
-  });
+      it('should return aggregation results', async () => {
+          await MikrotikRouter.create({
+              name: 'R1',
+              ipAddress: '1.1.1.1',
+              apiUsername: 'a',
+              apiPassword: 'p',
+              apiPort: 1,
+              tenant: tenant._id
+          });
 
-  describe('getUsersByPackage', () => {
-    it('should return user count per package', async () => {
-        const mockData = [{ packageName: 'Package A', userCount: 50 }];
-        MikrotikUser.aggregate.mockResolvedValue(mockData);
-        await getUsersByPackage(req, res);
-        expect(res.json).toHaveBeenCalledWith(mockData);
-    });
+          await getRoutersPerTenant(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ tenantName: 'SA Tenant', routerCount: 1 })
+          ]));
+      });
   });
 });

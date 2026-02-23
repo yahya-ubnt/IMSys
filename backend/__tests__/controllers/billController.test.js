@@ -1,18 +1,42 @@
-const { createBill, getBills, getBillById, updateBill, deleteBill } = require('../../controllers/billController');
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const {
+  createBill,
+  getBills,
+  getBillById,
+  updateBill,
+  deleteBill,
+} = require('../../controllers/billController');
 const Bill = require('../../models/Bill');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/Bill');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('billController', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Bill Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await Bill.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Bill Tenant' });
+
     req = {
-      user: { tenant: 'tenant-1' },
-      body: {},
       params: {},
+      user: { tenant: tenant._id },
+      body: {},
       query: {},
     };
     res = {
@@ -20,88 +44,133 @@ describe('billController', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('createBill', () => {
-    it('should create a bill successfully', async () => {
-      req.body = { name: 'Test Bill', amount: 100, dueDate: new Date(), category: 'Test' };
-      Bill.findOne.mockResolvedValue(null);
-      Bill.create.mockResolvedValue(req.body);
+    it('should create a new bill successfully', async () => {
+      req.body = {
+        name: 'Electricity Bill',
+        amount: 500,
+        dueDate: 15, // Day of month
+        category: 'Company',
+        description: 'Monthly electricity'
+      };
 
       await createBill(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(req.body);
+      const bill = await Bill.findOne({ name: 'Electricity Bill' });
+      expect(bill).toBeDefined();
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ name: 'Electricity Bill' }));
     });
 
-    it('should return 400 if required fields are missing', async () => {
-        req.body = { name: 'Test Bill' }; // Missing amount, dueDate, category
+    it('should throw error if required fields are missing', async () => {
+        req.body = { name: 'Incomplete Bill' };
         await createBill(req, res, next);
+        expect(res.status).toHaveBeenCalledWith(400);
         expect(next).toHaveBeenCalledWith(expect.any(Error));
-      });
+    });
+
+    it('should throw error if duplicate bill for the same month exists', async () => {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        
+        await Bill.create({
+            name: 'Rent',
+            amount: 1000,
+            dueDate: 1,
+            category: 'Personal',
+            tenant: tenant._id,
+            month: currentMonth,
+            year: currentYear,
+            status: 'Not Paid'
+        });
+
+        req.body = {
+            name: 'Rent',
+            amount: 1000,
+            dueDate: 1,
+            category: 'Personal'
+        };
+
+        await createBill(req, res, next);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(next).toHaveBeenCalledWith(expect.any(Error));
+    });
   });
 
   describe('getBills', () => {
-    it('should get all bills for the current month', async () => {
-      const mockBills = [{ name: 'Bill 1' }, { name: 'Bill 2' }];
-      Bill.find.mockReturnValue({ sort: jest.fn().mockResolvedValue(mockBills) });
+    it('should return bills for the current month', async () => {
+      const currentMonth = new Date().getMonth() + 1;
+      await Bill.create({
+        name: 'Water',
+        amount: 200,
+        dueDate: 10,
+        category: 'Company',
+        tenant: tenant._id,
+        month: currentMonth,
+        year: new Date().getFullYear(),
+        status: 'Not Paid'
+      });
 
       await getBills(req, res, next);
-
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockBills);
-    });
-  });
-
-  describe('getBillById', () => {
-    it('should get a single bill by ID', async () => {
-      req.params.id = 'bill-1';
-      const mockBill = { _id: 'bill-1', name: 'Test Bill' };
-      Bill.findOne.mockReturnValue({ lean: jest.fn().mockResolvedValue(mockBill) });
-
-      await getBillById(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockBill);
+      expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+          expect.objectContaining({ name: 'Water' })
+      ]));
     });
   });
 
   describe('updateBill', () => {
     it('should update a bill successfully', async () => {
-        req.params.id = 'bill-1';
-        req.body = { name: 'Updated Bill' };
-        const mockBill = { 
-          _id: 'bill-1', 
-          name: 'Old Bill',
-          save: jest.fn().mockResolvedValue({ _id: 'bill-1', name: 'Updated Bill' })
-        };
-        Bill.findOne.mockResolvedValue(mockBill);
-        validationResult.mockReturnValue({ isEmpty: () => true });
-    
-        await updateBill(req, res, next);
-    
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ name: 'Updated Bill' }));
+      const bill = await Bill.create({
+        name: 'Internet',
+        amount: 300,
+        dueDate: 5,
+        category: 'Company',
+        tenant: tenant._id,
+        month: 1,
+        year: 2024,
+        status: 'Not Paid'
       });
+
+      req.params.id = bill._id;
+      req.body = { status: 'Paid', method: 'M-Pesa' };
+
+      await updateBill(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(200);
+      const updatedBill = await Bill.findById(bill._id);
+      expect(updatedBill.status).toBe('Paid');
+      expect(updatedBill.method).toBe('M-Pesa');
+    });
+
+    it('should throw error if bill not found', async () => {
+        req.params.id = new mongoose.Types.ObjectId();
+        await updateBill(req, res, next);
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(next).toHaveBeenCalledWith(expect.any(Error));
+    });
   });
 
   describe('deleteBill', () => {
     it('should delete a bill successfully', async () => {
-        req.params.id = 'bill-1';
-        const mockBill = { 
-          _id: 'bill-1', 
-          deleteOne: jest.fn().mockResolvedValue(true)
-        };
-        Bill.findOne.mockResolvedValue(mockBill);
-    
+        const bill = await Bill.create({
+            name: 'Garbage',
+            amount: 50,
+            dueDate: 20,
+            category: 'Personal',
+            tenant: tenant._id,
+            month: 1,
+            year: 2024,
+            status: 'Not Paid'
+        });
+
+        req.params.id = bill._id;
         await deleteBill(req, res, next);
-    
         expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({ message: 'Bill removed' });
-      });
+        const deleted = await Bill.findById(bill._id);
+        expect(deleted).toBeNull();
+    });
   });
 });

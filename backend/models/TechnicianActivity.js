@@ -62,6 +62,14 @@ const TechnicianActivitySchema = mongoose.Schema(
     configurationChanges: { // e.g., "Changed Wi-Fi password, updated router firmware"
       type: String,
     },
+    unit: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Unit',
+    },
+    building: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Building',
+    },
   },
   {
         timestamps: true,

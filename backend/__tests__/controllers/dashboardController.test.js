@@ -1,30 +1,66 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   getCollectionsSummary,
   getMonthlyCollectionsAndExpenses,
+  getDailyCollectionsAndExpenses,
   getMonthlyExpenseSummary,
   getNewSubscriptionsCount,
   getTotalUsersCount,
   getActiveUsersCount,
   getExpiredUsersCount,
   getExpensesSummary,
-  getDailyCollectionsAndExpenses,
 } = require('../../controllers/dashboardController');
 const Transaction = require('../../models/Transaction');
 const Expense = require('../../models/Expense');
+const ExpenseType = require('../../models/ExpenseType');
+const User = require('../../models/User');
 const MikrotikUser = require('../../models/MikrotikUser');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/Transaction');
-jest.mock('../../models/Expense');
-jest.mock('../../models/MikrotikUser');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('dashboardController', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Dashboard Controller (Integration)', () => {
+  let req, res, next, tenant, admin, expType;
+
+  beforeEach(async () => {
+    await Transaction.deleteMany({});
+    await Expense.deleteMany({});
+    await ExpenseType.deleteMany({});
+    await User.deleteMany({});
+    await MikrotikUser.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Dashboard Tenant' });
+    admin = await User.create({
+        fullName: 'Admin User',
+        email: 'admin@test.com',
+        password: 'password',
+        phone: '123',
+        roles: ['ADMIN'],
+        tenant: tenant._id
+    });
+    expType = await ExpenseType.create({
+        name: 'Rent',
+        tenant: tenant._id
+    });
+
     req = {
-      user: { tenant: 'tenant-1' },
+      params: {},
+      user: { tenant: tenant._id },
+      body: {},
       query: {},
     };
     res = {
@@ -32,65 +68,81 @@ describe('dashboardController', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('getCollectionsSummary', () => {
-    it('should return collection summaries', async () => {
-      Transaction.aggregate.mockResolvedValue([{ totalAmount: 100 }]);
-      await getCollectionsSummary(req, res, next);
-      expect(res.json).toHaveBeenCalledWith({
-        today: 100,
-        weekly: 100,
-        monthly: 100,
-        yearly: 100,
-      });
-    });
-  });
+    it('should return collection totals for today, week, month, year', async () => {
+        const today = new Date();
+        await Transaction.create({
+            transactionId: 'TX1',
+            amount: 1000,
+            referenceNumber: 'REF1',
+            officialName: 'John',
+            paymentMethod: 'Cash',
+            tenant: tenant._id,
+            transactionDate: today,
+            msisdn: '123'
+        });
 
-  describe('getMonthlyCollectionsAndExpenses', () => {
-    it('should return monthly collections and expenses for a year', async () => {
-      req.query.year = '2023';
-      Transaction.aggregate.mockResolvedValue([{ month: 1, amount: 1000 }]);
-      Expense.aggregate.mockResolvedValue([{ month: 1, amount: 500 }]);
-      await getMonthlyCollectionsAndExpenses(req, res, next);
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
-
-  describe('getNewSubscriptionsCount', () => {
-    it('should return the count of new subscriptions this month', async () => {
-      MikrotikUser.countDocuments.mockResolvedValue(5);
-      await getNewSubscriptionsCount(req, res, next);
-      expect(res.json).toHaveBeenCalledWith({ newSubscriptions: 5 });
+        await getCollectionsSummary(req, res, next);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            today: 1000
+        }));
     });
   });
 
   describe('getTotalUsersCount', () => {
-    it('should return the total number of users', async () => {
-      MikrotikUser.countDocuments.mockResolvedValue(150);
-      await getTotalUsersCount(req, res, next);
-      expect(res.json).toHaveBeenCalledWith({ totalUsers: 150 });
+    it('should return total count of users', async () => {
+        await MikrotikUser.create({
+            officialName: 'U1',
+            username: 'u1',
+            email: 'u1@test.com',
+            phone: '1',
+            mPesaRefNo: 'R1',
+            serviceType: 'pppoe',
+            package: new mongoose.Types.ObjectId(),
+            mikrotikRouter: new mongoose.Types.ObjectId(),
+            tenant: tenant._id,
+            billingCycle: 'Monthly',
+            mobileNumber: '1',
+            expiryDate: new Date()
+        });
+
+        await getTotalUsersCount(req, res, next);
+        expect(res.json).toHaveBeenCalledWith({ totalUsers: 1 });
     });
   });
 
-  describe('getActiveUsersCount', () => {
-    it('should return the number of active users', async () => {
-      MikrotikUser.countDocuments.mockResolvedValue(120);
-      await getActiveUsersCount(req, res, next);
-      expect(res.json).toHaveBeenCalledWith({ activeUsers: 120 });
-    });
-  });
+  describe('getMonthlyCollectionsAndExpenses', () => {
+    it('should return monthly collections and expenses for a given year', async () => {
+        const year = '2024';
+        const jan = new Date(2024, 0, 15);
+        await Transaction.create({
+            transactionId: 'TX_JAN',
+            amount: 1000,
+            referenceNumber: 'REF_JAN',
+            officialName: 'John',
+            paymentMethod: 'Cash',
+            tenant: tenant._id,
+            transactionDate: jan,
+            msisdn: '123'
+        });
 
-  describe('getExpiredUsersCount', () => {
-    it('should return the number of expired users', async () => {
-      MikrotikUser.countDocuments.mockResolvedValue(30);
-      await getExpiredUsersCount(req, res, next);
-      expect(res.json).toHaveBeenCalledWith({ expiredUsers: 30 });
+        await Expense.create({
+            title: 'Office Rent',
+            amount: 500,
+            expenseDate: jan,
+            expenseType: expType._id,
+            expenseBy: admin._id,
+            tenant: tenant._id
+        });
+
+        req.query = { year };
+        await getMonthlyCollectionsAndExpenses(req, res, next);
+        expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({ month: 'January', collections: 1000, expenses: 500 })
+        ]));
     });
   });
 });

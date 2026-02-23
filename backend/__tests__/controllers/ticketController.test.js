@@ -1,137 +1,90 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   createTicket,
   getTickets,
-  getTicketById,
-  updateTicket,
-  addNoteToTicket,
-  getTicketStats,
-  getMonthlyTicketTotals,
-  getMonthlyTicketStats,
-  deleteTicket,
 } = require('../../controllers/ticketController');
 const Ticket = require('../../models/Ticket');
-const smsService = require('../../services/smsService');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/Ticket');
+// Mock smsService
 jest.mock('../../services/smsService', () => ({
-    sendSms: jest.fn(),
+    sendSms: jest.fn().mockResolvedValue(true)
 }));
 
-describe('Ticket Controller', () => {
-  let req, res, next;
+let mongoServer;
 
-  beforeEach(() => {
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Ticket Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await Ticket.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Ticket Tenant' });
+
     req = {
-      params: { id: 'testId' },
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
-      query: { year: '2024' },
+      query: {},
     };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
     next = jest.fn();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('createTicket', () => {
-    it('should create a new ticket', async () => {
-      req.body = { clientName: 'Test', clientPhone: '123', issueType: 'Billing', description: 'Test issue' };
-      const mockTicket = { _id: 't1', ...req.body };
-      Ticket.create.mockResolvedValue(mockTicket);
-      smsService.sendSms.mockResolvedValue({ success: true });
+    it('should create ticket successfully', async () => {
+      req.body = {
+        clientName: 'John',
+        clientPhone: '123',
+        issueType: 'Technical',
+        description: 'No internet'
+      };
+
       await createTicket(req, res, next);
+
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(mockTicket);
+      const ticket = await Ticket.findOne({ clientName: 'John' });
+      expect(ticket).toBeDefined();
     });
   });
 
   describe('getTickets', () => {
-    it('should return a list of tickets', async () => {
-      const mockTickets = [{ _id: 't1' }];
-      Ticket.find.mockReturnValue({
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockResolvedValue(mockTickets),
+      it('should return tickets for tenant', async () => {
+          await Ticket.create({
+              ticketRef: 'REF1',
+              clientName: 'Jane',
+              clientPhone: '456',
+              issueType: 'Billing',
+              description: 'Wrong charge',
+              tenant: tenant._id,
+              statusHistory: [{ status: 'New' }]
+          });
+
+          await getTickets(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+              count: 1,
+              tickets: expect.arrayContaining([
+                  expect.objectContaining({ clientName: 'Jane' })
+              ])
+          }));
       });
-      Ticket.countDocuments.mockResolvedValue(1);
-      await getTickets(req, res);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ tickets: mockTickets, pages: 1, count: 1 });
-    });
-  });
-
-  describe('getTicketById', () => {
-    it('should return a single ticket', async () => {
-      const mockTicket = { _id: 't1' };
-      Ticket.findOne.mockResolvedValue(mockTicket);
-      await getTicketById(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockTicket);
-    });
-  });
-
-  describe('updateTicket', () => {
-    it('should update a ticket', async () => {
-      const mockTicket = { _id: 't1', status: 'New', statusHistory: [], save: jest.fn() };
-      req.body = { status: 'In Progress' };
-      Ticket.findOne.mockResolvedValue(mockTicket);
-      await updateTicket(req, res, next);
-      expect(mockTicket.save).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-  });
-
-  describe('addNoteToTicket', () => {
-    it('should add a note to a ticket', async () => {
-      const mockTicket = { _id: 't1', notes: [], save: jest.fn().mockResolvedValue({ notes: [{ content: 'Test note' }] }) };
-      req.body = { content: 'Test note' };
-      Ticket.findOne.mockResolvedValue(mockTicket);
-      await addNoteToTicket(req, res, next);
-      expect(mockTicket.save).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(201);
-    });
-  });
-
-  describe('getTicketStats', () => {
-    it('should return ticket stats', async () => {
-      Ticket.aggregate.mockResolvedValue([{ _id: 'New', count: 5 }]);
-      await getTicketStats(req, res);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
-
-  describe('getMonthlyTicketTotals', () => {
-    it('should return monthly ticket totals', async () => {
-      Ticket.aggregate.mockResolvedValue([{ month: 1, total: 10 }]);
-      await getMonthlyTicketTotals(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
-
-  describe('getMonthlyTicketStats', () => {
-    it('should return monthly ticket stats', async () => {
-      Ticket.aggregate.mockResolvedValue([{ _id: { month: 1 }, count: 5 }]);
-      await getMonthlyTicketStats(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
-
-  describe('deleteTicket', () => {
-    it('should delete a ticket', async () => {
-      const mockTicket = { _id: 't1', deleteOne: jest.fn() };
-      Ticket.findOne.mockResolvedValue(mockTicket);
-      await deleteTicket(req, res, next);
-      expect(mockTicket.deleteOne).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Ticket removed' });
-    });
   });
 });

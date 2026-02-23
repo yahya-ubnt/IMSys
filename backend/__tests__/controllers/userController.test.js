@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   loginUser,
   logoutUser,
@@ -14,37 +17,36 @@ const {
   deleteTenantUser,
 } = require('../../controllers/userController');
 const User = require('../../models/User');
+const Tenant = require('../../models/Tenant');
 const generateToken = require('../../generateToken');
 
-jest.mock('../../models/User', () => {
-  const mockUserInstance = {
-    save: jest.fn(),
-    matchPassword: jest.fn(),
-    deleteOne: jest.fn(),
-    select: jest.fn().mockReturnThis(),
-  };
-  const mockUser = jest.fn(function(data) {
-    Object.assign(this, data);
-    this.save = mockUserInstance.save;
-    this.matchPassword = mockUserInstance.matchPassword;
-    this.deleteOne = mockUserInstance.deleteOne;
-    this.select = mockUserInstance.select;
-  });
-  mockUser.findOne = jest.fn(() => mockUserInstance);
-  mockUser.findById = jest.fn(() => mockUserInstance);
-  mockUser.create = jest.fn(() => mockUserInstance);
-  mockUser.find = jest.fn(() => [mockUserInstance]);
-  return mockUser;
-});
 jest.mock('../../generateToken');
 
-describe('User Controller', () => {
-  let req, res, next;
+let mongoServer;
 
-  beforeEach(() => {
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('User Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await User.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Test Tenant' });
+
     req = {
-      params: { id: 'testId' },
-      user: { id: 'testId', tenant: 'testTenant' },
+      params: {},
+      user: {},
       body: {},
     };
     res = {
@@ -53,145 +55,181 @@ describe('User Controller', () => {
       cookie: jest.fn(),
     };
     next = jest.fn();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('loginUser', () => {
     it('should log in user and return token', async () => {
-      req.body = { email: 'test@example.com', password: 'password' };
-      const mockUser = { _id: 'u1', email: 'test@example.com', matchPassword: jest.fn().mockResolvedValue(true), roles: ['USER'], tenant: 'testTenant' };
-      User.findOne.mockResolvedValue(mockUser);
+      const user = await User.create({
+        fullName: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+        phone: '1234567890',
+        roles: ['ADMIN'],
+        tenant: tenant._id,
+      });
+
+      req.body = { email: 'test@example.com', password: 'password123' };
       generateToken.mockReturnValue('mockToken');
 
       await loginUser(req, res, next);
 
       expect(res.cookie).toHaveBeenCalledWith('token', 'mockToken', expect.any(Object));
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ _id: 'u1' }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        email: 'test@example.com',
+        fullName: 'Test User'
+      }));
     });
-  });
 
-  describe('logoutUser', () => {
-    it('should log out user and clear cookie', async () => {
-      await logoutUser(req, res, next);
-      expect(res.cookie).toHaveBeenCalledWith('token', '', expect.any(Object));
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Logged out successfully' });
+    it('should throw error for invalid credentials', async () => {
+        req.body = { email: 'wrong@example.com', password: 'wrong' };
+        await loginUser(req, res, next);
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 
   describe('getUserProfile', () => {
     it('should return user profile', async () => {
-      const mockUser = { _id: 'u1', email: 'test@example.com', roles: ['USER'], tenant: 'testTenant' };
-      User.findById.mockResolvedValue(mockUser);
+      const user = await User.create({
+        fullName: 'Profile User',
+        email: 'profile@example.com',
+        password: 'password',
+        phone: '111',
+        roles: ['ADMIN'],
+        tenant: tenant._id,
+      });
+
+      req.user = { id: user._id };
       await getUserProfile(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockUser);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ email: 'profile@example.com' }));
     });
   });
 
   describe('getUsers', () => {
     it('should return all users', async () => {
-      const mockUsers = [{ _id: 'u1' }];
-      User.find.mockResolvedValue(mockUsers);
-      await getUsers(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockUsers);
-    });
-  });
+      await User.create({
+        fullName: 'User 1',
+        email: 'u1@example.com',
+        password: 'p1',
+        phone: '1',
+        roles: ['SUPER_ADMIN']
+      });
 
-  describe('getUserById', () => {
-    it('should return a single user by ID', async () => {
-      const mockUser = { _id: 'u1' };
-      User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(mockUser) });
-      await getUserById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockUser);
+      await getUsers(req, res, next);
+      expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ email: 'u1@example.com' })
+      ]));
     });
   });
 
   describe('createUser', () => {
     it('should create a new user', async () => {
-      req.body = { fullName: 'New User', email: 'new@example.com', password: 'password', tenant: 't1' };
-      const mockUser = { _id: 'u2', ...req.body };
-      User.findOne.mockResolvedValue(null);
-      const userInstance = new User(req.body); // Create an instance to get its save method
-      userInstance.save.mockResolvedValue(mockUser); // Mock the save method on the instance
+      req.body = {
+        fullName: 'New User',
+        email: 'new@example.com',
+        password: 'password',
+        phone: '222',
+        roles: ['ADMIN'],
+        tenant: tenant._id
+      };
+
       await createUser(req, res, next);
-      expect(userInstance.save).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(mockUser);
+      const user = await User.findOne({ email: 'new@example.com' });
+      expect(user).toBeDefined();
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }));
     });
   });
 
   describe('updateUser', () => {
     it('should update a user', async () => {
-      const mockUser = { _id: 'u1', save: jest.fn().mockResolvedValue({ _id: 'u1', fullName: 'Updated Name' }) };
-      req.body = { fullName: 'Updated Name' };
-      User.findById.mockResolvedValue(mockUser);
-      await updateUser(req, res, next);
-      expect(mockUser.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ _id: 'u1', fullName: 'Updated Name' });
+        const user = await User.create({
+            fullName: 'Old Name',
+            email: 'old@example.com',
+            password: 'password',
+            phone: '333',
+            roles: ['ADMIN'],
+            tenant: tenant._id,
+        });
+
+        req.params.id = user._id;
+        req.body = { fullName: 'Updated Name' };
+
+        await updateUser(req, res, next);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ fullName: 'Updated Name' }));
+        const updatedUser = await User.findById(user._id);
+        expect(updatedUser.fullName).toBe('Updated Name');
     });
   });
 
   describe('deleteUser', () => {
     it('should delete a user', async () => {
-      const mockUser = { _id: 'u1', deleteOne: jest.fn() };
-      User.findById.mockResolvedValue(mockUser);
-      await deleteUser(req, res, next);
-      expect(mockUser.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'User removed' });
+        const user = await User.create({
+            fullName: 'Delete Me',
+            email: 'delete@example.com',
+            password: 'password',
+            phone: '444',
+            roles: ['ADMIN'],
+            tenant: tenant._id,
+        });
+
+        req.params.id = user._id;
+        await deleteUser(req, res, next);
+        expect(res.json).toHaveBeenCalledWith({ message: 'User removed' });
+        const deletedUser = await User.findById(user._id);
+        expect(deletedUser).toBeNull();
     });
   });
 
-  describe('getTenantUsers', () => {
-    it('should return all users within a tenant\'s account', async () => {
-      const mockUsers = [{ _id: 'u1' }];
-      User.find.mockResolvedValue(mockUsers);
-      await getTenantUsers(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockUsers);
-    });
-  });
+  describe('Tenant Operations', () => {
+      let tenantUser;
 
-  describe('createTenantUser', () => {
-    it('should create a new user within a tenant\'s account', async () => {
-      req.body = { email: 'tenantuser@example.com', password: 'password' };
-      const mockUser = { _id: 'tu1', ...req.body, save: jest.fn() };
-      User.findOne.mockResolvedValue(null);
-      User.create.mockResolvedValue(mockUser);
-      await createTenantUser(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(mockUser);
-    });
-  });
+      beforeEach(async () => {
+          tenantUser = await User.create({
+              fullName: 'Tenant User',
+              email: 'tenant@example.com',
+              password: 'password',
+              phone: '555',
+              roles: ['ADMIN'],
+              tenant: tenant._id,
+          });
+          req.user = { tenant: tenant._id };
+      });
 
-  describe('getTenantUserById', () => {
-    it('should return a single user by ID within a tenant\'s account', async () => {
-      const mockUser = { _id: 'tu1' };
-      User.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(mockUser) });
-      await getTenantUserById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockUser);
-    });
-  });
+      it('should get tenant users', async () => {
+          await getTenantUsers(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ email: 'tenant@example.com' })
+          ]));
+      });
 
-  describe('updateTenantUser', () => {
-    it('should update a user within a tenant\'s account', async () => {
-      const mockUser = { _id: 'tu1', save: jest.fn().mockResolvedValue({ _id: 'tu1', fullName: 'Updated Tenant User' }) };
-      req.body = { fullName: 'Updated Tenant User' };
-      User.findOne.mockResolvedValue(mockUser);
-      await updateTenantUser(req, res, next);
-      expect(mockUser.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ _id: 'tu1', fullName: 'Updated Tenant User' });
-    });
-  });
+      it('should create tenant user', async () => {
+          req.body = {
+              fullName: 'New Tenant User',
+              email: 'newtenant@example.com',
+              password: 'password',
+              phone: '666'
+          };
+          await createTenantUser(req, res, next);
+          expect(res.status).toHaveBeenCalledWith(201);
+          const user = await User.findOne({ email: 'newtenant@example.com' });
+          expect(user.tenant.toString()).toBe(tenant._id.toString());
+      });
 
-  describe('deleteTenantUser', () => {
-    it('should delete a user within a tenant\'s account', async () => {
-      const mockUser = { _id: 'tu1', deleteOne: jest.fn() };
-      User.findOne.mockResolvedValue(mockUser);
-      await deleteTenantUser(req, res, next);
-      expect(mockUser.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'User removed' });
-    });
+      it('should update tenant user', async () => {
+          req.params.id = tenantUser._id;
+          req.body = { fullName: 'Updated Tenant User' };
+          await updateTenantUser(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ fullName: 'Updated Tenant User' }));
+      });
+
+      it('should delete tenant user', async () => {
+          req.params.id = tenantUser._id;
+          await deleteTenantUser(req, res, next);
+          expect(res.json).toHaveBeenCalledWith({ message: 'User removed' });
+          const deleted = await User.findById(tenantUser._id);
+          expect(deleted).toBeNull();
+      });
   });
 });

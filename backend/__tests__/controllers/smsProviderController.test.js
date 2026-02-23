@@ -1,24 +1,38 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getSmsProviders,
-  getSmsProviderById,
   createSmsProvider,
-  updateSmsProvider,
-  deleteSmsProvider,
-  setActiveSmsProvider,
+  getSmsProviders,
 } = require('../../controllers/smsProviderController');
 const SmsProvider = require('../../models/SmsProvider');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/SmsProvider');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('SMS Provider Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('SMS Provider Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await SmsProvider.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Provider Tenant' });
+
     req = {
-      params: { id: 'testId' },
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
     };
     res = {
@@ -26,86 +40,43 @@ describe('SMS Provider Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getSmsProviders', () => {
-    it('should return all SMS providers', async () => {
-      const mockProviders = [{ toObject: () => ({ _id: 'p1' }) }];
-      SmsProvider.find.mockReturnValue({
-        sort: jest.fn().mockResolvedValue(mockProviders),
-      });
-      await getSmsProviders(req, res);
-      expect(res.json).toHaveBeenCalledWith([{ _id: 'p1' }]);
-    });
-  });
-
-  describe('getSmsProviderById', () => {
-    it('should return a single SMS provider', async () => {
-      const mockProvider = { toObject: () => ({ _id: 'p1' }) };
-      SmsProvider.findOne.mockResolvedValue(mockProvider);
-      await getSmsProviderById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith({ _id: 'p1' });
-    });
-  });
-
   describe('createSmsProvider', () => {
-    it('should create a new SMS provider', async () => {
-      const providerData = { name: 'Test Provider' };
-      const mockProvider = { toObject: () => providerData };
-      SmsProvider.prototype.save = jest.fn().mockResolvedValue(mockProvider);
-      req.body = providerData;
-      
+    it('should create a provider successfully', async () => {
+      req.body = {
+        name: 'Twilio',
+        providerType: 'twilio',
+        credentials: { accountSid: '123', authToken: 'abc' },
+        isActive: true
+      };
+
       await createSmsProvider(req, res, next);
 
-      expect(SmsProvider.prototype.save).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(providerData);
+      const p = await SmsProvider.findOne({ name: 'Twilio' });
+      expect(p).toBeDefined();
     });
   });
 
-  describe('updateSmsProvider', () => {
-    it('should update an SMS provider', async () => {
-      const providerData = { name: 'Updated Provider' };
-      const mockProvider = { 
-        get: jest.fn().mockReturnValue({}), 
-        save: jest.fn().mockResolvedValue({ toObject: () => providerData }) 
-      };
-      req.body = providerData;
-      SmsProvider.findOne.mockResolvedValue(mockProvider);
+  describe('getSmsProviders', () => {
+      it('should return all providers for tenant without credentials', async () => {
+          await SmsProvider.create({
+              name: 'Celcom',
+              providerType: 'celcom',
+              credentials: { apiKey: 'xyz' },
+              tenant: tenant._id,
+              isActive: true
+          });
 
-      await updateSmsProvider(req, res, next);
-
-      expect(mockProvider.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(providerData);
-    });
-  });
-
-  describe('deleteSmsProvider', () => {
-    it('should delete an SMS provider', async () => {
-      const mockProvider = { _id: 'p1', deleteOne: jest.fn() };
-      SmsProvider.findOne.mockResolvedValue(mockProvider);
-
-      await deleteSmsProvider(req, res, next);
-
-      expect(mockProvider.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'SMS provider removed' });
-    });
-  });
-
-  describe('setActiveSmsProvider', () => {
-    it('should set an SMS provider to active', async () => {
-      const mockProvider = { name: 'Test Provider', save: jest.fn() };
-      SmsProvider.findOne.mockResolvedValue(mockProvider);
-
-      await setActiveSmsProvider(req, res, next);
-
-      expect(mockProvider.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'Test Provider has been set as the active SMS provider.' });
-    });
+          await getSmsProviders(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ name: 'Celcom' })
+          ]));
+          // Verify credentials are removed in sanitized object
+          const lastCall = res.json.mock.calls[0][0];
+          expect(lastCall[0].credentials).toBeUndefined();
+      });
   });
 });

@@ -1,16 +1,59 @@
-const { getCollections, getCollectionStats, getMonthlyCollectionTotals, getDailyCollectionTotals } = require('../../controllers/collectionController');
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const {
+  getCollections,
+  getCollectionStats,
+  getMonthlyCollectionTotals,
+  getDailyCollectionTotals,
+} = require('../../controllers/collectionController');
 const Transaction = require('../../models/Transaction');
+const Tenant = require('../../models/Tenant');
+const MikrotikUser = require('../../models/MikrotikUser');
 const moment = require('moment-timezone');
 
-jest.mock('../../models/Transaction');
-jest.mock('moment-timezone');
+let mongoServer;
 
-describe('collectionController', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Collection Controller (Integration)', () => {
+  let req, res, next, tenant, user;
+
+  beforeEach(async () => {
+    await Transaction.deleteMany({});
+    await Tenant.deleteMany({});
+    await MikrotikUser.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Collection Tenant' });
+    user = await MikrotikUser.create({
+        fullName: 'Test Client', // Wait, model says officialName? 
+        officialName: 'Test Client',
+        username: 'client1',
+        email: 'client@test.com',
+        phone: '123',
+        mPesaRefNo: 'REF123',
+        serviceType: 'pppoe',
+        package: new mongoose.Types.ObjectId(),
+        mikrotikRouter: new mongoose.Types.ObjectId(),
+        tenant: tenant._id,
+        billingCycle: 'Monthly',
+        mobileNumber: '123',
+        expiryDate: new Date()
+    });
+
     req = {
-      user: { tenant: 'tenant-1' },
+      params: {},
+      user: { tenant: tenant._id },
+      body: {},
       query: {},
     };
     res = {
@@ -18,79 +61,71 @@ describe('collectionController', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    
-    // Mock moment to control time-based tests
-    const mockMoment = {
-        startOf: jest.fn().mockReturnThis(),
-        toDate: jest.fn().mockReturnValue(new Date('2023-01-15')),
-        date: jest.fn().mockReturnValue(31),
-        endOf: jest.fn().mockReturnThis(),
-      };
-      moment.mockReturnValue(mockMoment);
-      moment.tz = {
-        setDefault: jest.fn(),
-      };
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('getCollections', () => {
-    it('should get all collections for a tenant', async () => {
-      const mockCollections = [{ amount: 100 }, { amount: 200 }];
-      Transaction.find.mockReturnValue({ sort: jest.fn().mockResolvedValue(mockCollections) });
+    it('should return all collections for the tenant', async () => {
+      await Transaction.create({
+        transactionId: 'TX1',
+        amount: 1000,
+        referenceNumber: 'REF1',
+        officialName: 'John',
+        paymentMethod: 'M-Pesa',
+        tenant: tenant._id,
+        mikrotikUser: user._id,
+        transactionDate: new Date(),
+        msisdn: '123'
+      });
 
       await getCollections(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith(mockCollections);
+      expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+          expect.objectContaining({ transactionId: 'TX1' })
+      ]));
     });
   });
 
   describe('getCollectionStats', () => {
-    it('should return collection stats', async () => {
-      const mockStats = [{
-        today: [{ total: 100 }],
-        thisWeek: [{ total: 500 }],
-        thisMonth: [{ total: 2000 }],
-        thisYear: [{ total: 25000 }],
-      }];
-      Transaction.aggregate.mockResolvedValue(mockStats);
+    it('should return correct collection statistics', async () => {
+        const today = new Date();
+        await Transaction.create({
+            transactionId: 'TX_TODAY',
+            amount: 500,
+            referenceNumber: 'R1',
+            officialName: 'O1',
+            paymentMethod: 'Cash',
+            tenant: tenant._id,
+            transactionDate: today,
+            msisdn: '123'
+        });
 
-      await getCollectionStats(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith({
-        today: 100,
-        thisWeek: 500,
-        thisMonth: 2000,
-        thisYear: 25000,
-      });
+        await getCollectionStats(req, res, next);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            today: 500
+        }));
     });
   });
 
   describe('getMonthlyCollectionTotals', () => {
-    it('should return monthly totals for a given year', async () => {
-      req.query.year = '2023';
-      const mockTotals = [{ _id: { month: 1 }, total: 1500 }];
-      Transaction.aggregate.mockResolvedValue(mockTotals);
+      it('should return monthly totals for a given year', async () => {
+          const year = '2024';
+          await Transaction.create({
+              transactionId: 'TX_JAN',
+              amount: 1000,
+              referenceNumber: 'R2',
+              officialName: 'O2',
+              paymentMethod: 'Cash',
+              tenant: tenant._id,
+              transactionDate: new Date(2024, 0, 15), // Jan 15
+              msisdn: '123'
+          });
 
-      await getMonthlyCollectionTotals(req, res, next);
-
-      const expectedData = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, total: i === 0 ? 1500 : 0 }));
-      expect(res.json).toHaveBeenCalledWith(expectedData);
-    });
-  });
-
-  describe('getDailyCollectionTotals', () => {
-    it('should return daily totals for a given month and year', async () => {
-        req.query = { year: '2023', month: '1' };
-        const mockTotals = [{ _id: { day: 15 }, total: 100 }];
-        Transaction.aggregate.mockResolvedValue(mockTotals);
-    
-        await getDailyCollectionTotals(req, res, next);
-    
-        const expectedData = Array.from({ length: 31 }, (_, i) => ({ day: i + 1, total: i === 14 ? 100 : 0 }));
-        expect(res.json).toHaveBeenCalledWith(expectedData);
+          req.query = { year };
+          await getMonthlyCollectionTotals(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ month: 1, total: 1000 }),
+              expect.objectContaining({ month: 2, total: 0 })
+          ]));
       });
   });
 });

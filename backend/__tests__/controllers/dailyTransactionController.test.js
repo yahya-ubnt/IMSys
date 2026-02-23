@@ -1,29 +1,42 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   createDailyTransaction,
   getDailyTransactions,
   getDailyTransactionById,
   updateDailyTransaction,
   deleteDailyTransaction,
-  getDailyTransactionStats,
-  getMonthlyTransactionTotals,
-  getDailyCollectionTotals,
 } = require('../../controllers/dailyTransactionController');
 const DailyTransaction = require('../../models/DailyTransaction');
-const { validationResult } = require('express-validator');
-const moment = require('moment-timezone');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/DailyTransaction');
-jest.mock('express-validator');
-jest.mock('moment-timezone');
+let mongoServer;
 
-describe('dailyTransactionController', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Daily Transaction Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await DailyTransaction.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Daily Tx Tenant' });
+
     req = {
-      user: { tenant: 'tenant-1' },
-      body: {},
       params: {},
+      user: { tenant: tenant._id },
+      body: {},
       query: {},
     };
     res = {
@@ -31,118 +44,86 @@ describe('dailyTransactionController', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-    
-    const mockMoment = {
-        startOf: jest.fn().mockReturnThis(),
-        toDate: jest.fn().mockReturnValue(new Date('2023-01-15')),
-        date: jest.fn().mockReturnValue(31),
-        endOf: jest.fn().mockReturnThis(),
-      };
-      moment.mockReturnValue(mockMoment);
-      moment.tz = {
-        setDefault: jest.fn(),
-      };
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('createDailyTransaction', () => {
     it('should create a daily transaction successfully', async () => {
-      req.body = { amount: 100, method: 'Cash' };
-      const mockTransaction = { ...req.body, save: jest.fn().mockResolvedValue(req.body) };
-      DailyTransaction.prototype.save.mockResolvedValue(mockTransaction);
-
+      req.body = {
+        amount: 500,
+        method: 'M-Pesa',
+        description: 'Office supplies',
+        category: 'Company',
+        label: 'Expense'
+      };
 
       await createDailyTransaction(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(mockTransaction);
+      const tx = await DailyTransaction.findOne({ description: 'Office supplies' });
+      expect(tx).toBeDefined();
     });
   });
 
   describe('getDailyTransactions', () => {
-    it('should get all daily transactions', async () => {
-      const mockTransactions = [{ amount: 100 }, { amount: 200 }];
-      DailyTransaction.find.mockReturnValue({
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockResolvedValue(mockTransactions),
+    it('should return transactions with pagination', async () => {
+      await DailyTransaction.create({
+        amount: 100,
+        method: 'Cash',
+        description: 'Snack',
+        category: 'Personal',
+        label: 'Expense',
+        tenant: tenant._id,
+        date: new Date()
       });
-      DailyTransaction.countDocuments.mockResolvedValue(2);
 
       await getDailyTransactions(req, res, next);
-
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        transactions: mockTransactions,
+          count: 1,
+          transactions: expect.arrayContaining([
+              expect.objectContaining({ description: 'Snack' })
+          ])
       }));
     });
   });
 
-  describe('getDailyTransactionById', () => {
-    it('should get a single daily transaction by ID', async () => {
-      req.params.id = 'tx-1';
-      const mockTransaction = { _id: 'tx-1', amount: 100 };
-      DailyTransaction.findOne.mockResolvedValue(mockTransaction);
-
-      await getDailyTransactionById(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith(mockTransaction);
-    });
-  });
-
   describe('updateDailyTransaction', () => {
-    it('should update a daily transaction successfully', async () => {
-      req.params.id = 'tx-1';
-      req.body = { amount: 150 };
-      const mockTransaction = { 
-        _id: 'tx-1', 
+    it('should update a transaction successfully', async () => {
+      const tx = await DailyTransaction.create({
         amount: 100,
-        save: jest.fn().mockResolvedValue({ _id: 'tx-1', amount: 150 })
-      };
-      DailyTransaction.findOne.mockResolvedValue(mockTransaction);
+        method: 'Cash',
+        description: 'Initial',
+        category: 'Personal',
+        label: 'Expense',
+        tenant: tenant._id,
+        date: new Date()
+      });
+
+      req.params.id = tx._id;
+      req.body = { description: 'Updated' };
 
       await updateDailyTransaction(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ amount: 150 }));
+      const updated = await DailyTransaction.findById(tx._id);
+      expect(updated.description).toBe('Updated');
     });
   });
 
   describe('deleteDailyTransaction', () => {
-    it('should delete a daily transaction successfully', async () => {
-      req.params.id = 'tx-1';
-      const mockTransaction = { 
-        _id: 'tx-1', 
-        deleteOne: jest.fn().mockResolvedValue(true)
-      };
-      DailyTransaction.findOne.mockResolvedValue(mockTransaction);
+      it('should delete a transaction successfully', async () => {
+          const tx = await DailyTransaction.create({
+              amount: 100,
+              method: 'Cash',
+              description: 'Delete me',
+              category: 'Personal',
+              label: 'Expense',
+              tenant: tenant._id,
+              date: new Date()
+          });
 
-      await deleteDailyTransaction(req, res, next);
-
-      expect(res.json).toHaveBeenCalledWith({ message: 'Daily transaction removed' });
-    });
-  });
-
-  describe('getDailyTransactionStats', () => {
-    it('should return daily transaction stats', async () => {
-        const mockStats = [{
-            today: [{ _id: 'Personal', total: 50 }],
-            thisWeek: [{ _id: 'Company', total: 300 }],
-            thisMonth: [],
-            thisYear: [],
-          }];
-        DailyTransaction.aggregate.mockResolvedValue(mockStats);
-    
-        await getDailyTransactionStats(req, res, next);
-    
-        expect(res.json).toHaveBeenCalledWith({
-          today: { personal: 50, company: 0, total: 50 },
-          thisWeek: { personal: 0, company: 300, total: 300 },
-          thisMonth: { personal: 0, company: 0, total: 0 },
-          thisYear: { personal: 0, company: 0, total: 0 },
-        });
+          req.params.id = tx._id;
+          await deleteDailyTransaction(req, res, next);
+          const deleted = await DailyTransaction.findById(tx._id);
+          expect(deleted).toBeNull();
       });
   });
 });

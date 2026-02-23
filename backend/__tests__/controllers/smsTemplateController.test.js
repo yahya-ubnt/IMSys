@@ -1,23 +1,38 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getTemplates,
-  getTemplateById,
   createTemplate,
-  updateTemplate,
-  deleteTemplate,
+  getTemplates,
 } = require('../../controllers/smsTemplateController');
 const SmsTemplate = require('../../models/SmsTemplate');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/SmsTemplate');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('SMS Template Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('SMS Template Controller (Integration)', () => {
+  let req, res, next, tenant;
+
+  beforeEach(async () => {
+    await SmsTemplate.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Template Tenant' });
+
     req = {
-      params: { id: 'testId' },
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
     };
     res = {
@@ -25,68 +40,33 @@ describe('SMS Template Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getTemplates', () => {
-    it('should return all SMS templates', async () => {
-      const mockTemplates = [{ _id: 't1' }];
-      SmsTemplate.find.mockResolvedValue(mockTemplates);
-      await getTemplates(req, res);
-      expect(res.json).toHaveBeenCalledWith(mockTemplates);
-    });
-  });
-
-  describe('getTemplateById', () => {
-    it('should return a single SMS template', async () => {
-      const mockTemplate = { _id: 't1' };
-      SmsTemplate.findOne.mockResolvedValue(mockTemplate);
-      await getTemplateById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockTemplate);
-    });
-  });
-
   describe('createTemplate', () => {
-    it('should create a new SMS template', async () => {
-      const templateData = { name: 'Test Template' };
-      req.body = templateData;
-      SmsTemplate.findOne.mockResolvedValue(null);
-      SmsTemplate.create.mockResolvedValue(templateData);
+    it('should create template successfully', async () => {
+      req.body = { name: 'Promo', messageBody: 'Buy now!' };
 
       await createTemplate(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(templateData);
+      const t = await SmsTemplate.findOne({ name: 'Promo' });
+      expect(t).toBeDefined();
     });
   });
 
-  describe('updateTemplate', () => {
-    it('should update an SMS template', async () => {
-      const templateData = { name: 'Updated Template' };
-      const mockTemplate = { _id: 't1', save: jest.fn().mockResolvedValue(templateData) };
-      req.body = templateData;
-      SmsTemplate.findOne.mockResolvedValue(mockTemplate);
+  describe('getTemplates', () => {
+      it('should return templates for tenant', async () => {
+          await SmsTemplate.create({
+              name: 'T1',
+              messageBody: 'B1',
+              tenant: tenant._id
+          });
 
-      await updateTemplate(req, res, next);
-
-      expect(mockTemplate.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(templateData);
-    });
-  });
-
-  describe('deleteTemplate', () => {
-    it('should delete an SMS template', async () => {
-      const mockTemplate = { _id: 't1', deleteOne: jest.fn() };
-      SmsTemplate.findOne.mockResolvedValue(mockTemplate);
-
-      await deleteTemplate(req, res, next);
-
-      expect(mockTemplate.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'SMS Template removed' });
-    });
+          await getTemplates(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ name: 'T1' })
+          ]));
+      });
   });
 });

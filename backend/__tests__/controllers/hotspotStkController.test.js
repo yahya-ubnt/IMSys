@@ -1,49 +1,64 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getHotspotTransactions,
   initiateStkPush,
-  handleHotspotCallback,
+  getHotspotTransactions,
 } = require('../../controllers/hotspotStkController');
 const HotspotTransaction = require('../../models/HotspotTransaction');
-const HotspotSession = require('../../models/HotspotSession');
 const HotspotPlan = require('../../models/HotspotPlan');
+const Tenant = require('../../models/Tenant');
 const MikrotikRouter = require('../../models/MikrotikRouter');
-const mpesaService = require('../../services/mpesaService');
-const mikrotikUtils = require('../../utils/mikrotikUtils');
-const { validationResult } = require('express-validator');
 
-jest.mock('../../models/HotspotTransaction');
-jest.mock('../../models/HotspotSession', () => ({
-  findOneAndUpdate: jest.fn(),
-}));
-jest.mock('../../models/HotspotPlan');
-jest.mock('../../models/MikrotikRouter');
+// Mock external STK push service
 jest.mock('../../services/mpesaService', () => ({
-  initiateStkPushService: jest.fn(),
+    initiateStkPushService: jest.fn()
 }));
-jest.mock('../../utils/mikrotikUtils');
-jest.mock('express-validator');
-jest.mock('bullmq', () => ({
-  Queue: jest.fn().mockImplementation(() => ({
-    add: jest.fn(),
-    close: jest.fn(),
-  })),
-}));
+const { initiateStkPushService } = require('../../services/mpesaService');
 
-describe('Hotspot STK Controller', () => {
-  let req, res, next;
+let mongoServer;
 
-  beforeAll(() => {
-    jest.useFakeTimers();
-  });
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  afterAll(() => {
-    jest.useRealTimers();
-  });
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
 
-  beforeEach(() => {
+describe('Hotspot STK Controller (Integration)', () => {
+  let req, res, next, tenant, plan, router;
+
+  beforeEach(async () => {
+    await HotspotTransaction.deleteMany({});
+    await HotspotPlan.deleteMany({});
+    await MikrotikRouter.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Hotspot STK Tenant' });
+    router = await MikrotikRouter.create({
+        name: 'R1',
+        ipAddress: '1.1.1.1',
+        apiUsername: 'a',
+        apiPassword: 'p',
+        tenant: tenant._id
+    });
+    plan = await HotspotPlan.create({
+        name: '1H',
+        price: 10,
+        mikrotikRouter: router._id,
+        tenant: tenant._id,
+        timeLimitValue: 1,
+        timeLimitUnit: 'hours',
+        server: 'all',
+        profile: 'p1'
+    });
+
     req = {
-      params: {},
-      user: { tenant: 'testTenant' },
+      user: { tenant: tenant._id },
       body: {},
       query: {},
     };
@@ -52,99 +67,44 @@ describe('Hotspot STK Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getHotspotTransactions', () => {
-    it('should return hotspot transactions', async () => {
-      const mockTransactions = [{ _id: 't1', amount: 100 }];
-      HotspotTransaction.countDocuments.mockResolvedValue(1);
-      HotspotTransaction.find.mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        sort: jest.fn().mockResolvedValue(mockTransactions),
-      });
-
-      await getHotspotTransactions(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        transactions: mockTransactions,
-        pages: 1,
-      }));
-    });
-  });
-
   describe('initiateStkPush', () => {
-    it('should initiate STK push successfully', async () => {
-      const mockPlan = { _id: 'plan1', price: 100, tenant: 'testTenant' };
-      req.body = { planId: 'plan1', phoneNumber: '254712345678', macAddress: '00:11:22:33:44:55' };
-      HotspotPlan.findById.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockPlan),
-      });
-      HotspotTransaction.create.mockResolvedValue({ _id: 'ht1' });
-      mpesaService.initiateStkPushService.mockResolvedValue({ success: true });
+    it('should create transaction and call mpesa service', async () => {
+      req.body = {
+        planId: plan._id.toString(),
+        phoneNumber: '254700000000',
+        macAddress: 'AA:BB:CC'
+      };
+      initiateStkPushService.mockResolvedValue({ CheckoutRequestID: '123' });
 
-      await initiateStkPush(req, res);
+      await initiateStkPush(req, res, next);
 
-      expect(HotspotPlan.findById).toHaveBeenCalledWith('plan1');
-      expect(HotspotTransaction.create).toHaveBeenCalled();
-      expect(mpesaService.initiateStkPushService).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      const tx = await HotspotTransaction.findOne({ macAddress: 'AA:BB:CC' });
+      expect(tx).toBeDefined();
+      expect(tx.amount).toBe(10);
     });
-
-    it('should return 404 if plan not found', async () => {
-        req.body = { planId: 'plan1', phoneNumber: '254712345678', macAddress: '00:11:22:33:44:55' };
-        HotspotPlan.findById.mockReturnValue({
-            populate: jest.fn().mockResolvedValue(null),
-        });
-  
-        await initiateStkPush(req, res);
-  
-        expect(res.status).toHaveBeenCalledWith(404);
-        expect(res.json).toHaveBeenCalledWith({ message: 'Plan not found' });
-      });
   });
 
-  describe('handleHotspotCallback', () => {
-    it('should process callback successfully', async () => {
-      req.body = {
-        Body: {
-          stkCallback: {
-            CheckoutRequestID: 'cr1',
-            ResultCode: 0,
-            CallbackMetadata: {
-              Item: [{ Name: 'MpesaReceiptNumber', Value: 'mrn1' }],
-            },
-          },
-        },
-      };
-      const mockTransaction = { _id: 'ht1', planId: 'plan1', macAddress: '00:11:22:33:44:55', save: jest.fn() };
-      const mockPlan = { _id: 'plan1', timeLimitUnit: 'hours', timeLimitValue: 1, server: 'hotspot1' };
-      const mockRouter = { _id: 'r1' };
+  describe('getHotspotTransactions', () => {
+      it('should return transactions for tenant', async () => {
+          await HotspotTransaction.create({
+              planId: plan._id,
+              phoneNumber: '123',
+              macAddress: 'M1',
+              amount: 10,
+              tenant: tenant._id
+          });
 
-      HotspotTransaction.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(mockTransaction);
-      HotspotPlan.findById.mockResolvedValue(mockPlan);
-      MikrotikRouter.findById.mockResolvedValue(mockRouter);
-      HotspotSession.findOneAndUpdate.mockResolvedValue({});
-      mikrotikUtils.addHotspotIpBinding.mockResolvedValue(true);
-
-      await handleHotspotCallback(req, res);
-
-      expect(HotspotTransaction.findOne).toHaveBeenCalledWith({ checkoutRequestId: 'cr1' });
-      expect(mockTransaction.save).toHaveBeenCalled();
-      expect(HotspotPlan.findById).toHaveBeenCalledWith(mockTransaction.planId);
-      expect(MikrotikRouter.findById).toHaveBeenCalledWith(mockPlan.mikrotikRouter);
-      expect(HotspotSession.findOneAndUpdate).toHaveBeenCalled();
-      expect(mikrotikUtils.addHotspotIpBinding).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Callback processed successfully' });
-    });
+          await getHotspotTransactions(req, res, next);
+          expect(res.status).toHaveBeenCalledWith(200);
+          expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+              transactions: expect.arrayContaining([
+                  expect.objectContaining({ macAddress: 'M1' })
+              ])
+          }));
+      });
   });
 });

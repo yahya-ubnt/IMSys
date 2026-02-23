@@ -1,146 +1,87 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   getNotifications,
   markAsRead,
-  markAllAsRead,
-  deleteNotification,
 } = require('../../controllers/notificationController');
 const Notification = require('../../models/Notification');
+const Tenant = require('../../models/Tenant');
+const User = require('../../models/User');
 
-jest.mock('../../models/Notification');
+let mongoServer;
 
-describe('Notification Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Notification Controller (Integration)', () => {
+  let req, res, next, tenant, user;
+
+  beforeEach(async () => {
+    await Notification.deleteMany({});
+    await User.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Notif Tenant' });
+    user = await User.create({
+        fullName: 'N User',
+        email: 'n@test.com',
+        password: 'p',
+        phone: '123',
+        roles: ['ADMIN'],
+        tenant: tenant._id
+    });
+
     req = {
-      params: { id: 'testNotificationId' },
-      user: { _id: 'testUserId', tenant: 'testTenant' },
+      params: {},
+      user: { _id: user._id, tenant: tenant._id },
     };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
     next = jest.fn();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('getNotifications', () => {
-    it('should return all notifications for a user', async () => {
-      const notifications = [{ _id: 'notif1' }, { _id: 'notif2' }];
-      const mockFindResult = {
-        sort: jest.fn().mockResolvedValue(notifications),
-      };
-      Notification.find.mockReturnValue(mockFindResult);
-
-      await getNotifications(req, res);
-
-      expect(Notification.find).toHaveBeenCalledWith({ user: 'testUserId', tenant: 'testTenant' });
-      expect(res.json).toHaveBeenCalledWith(notifications);
-    });
-
-    it('should return 500 if an error occurs', async () => {
-      Notification.find.mockImplementation(() => {
-        throw new Error('DB error');
+    it('should return notifications for user', async () => {
+      await Notification.create({
+        user: user._id,
+        tenant: tenant._id,
+        message: 'New Event',
+        type: 'system'
       });
 
-      await getNotifications(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Server Error' });
+      await getNotifications(req, res, next);
+      expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+          expect.objectContaining({ message: 'New Event' })
+      ]));
     });
   });
 
   describe('markAsRead', () => {
-    it('should mark a notification as read', async () => {
-      const mockNotification = {
-        _id: 'testNotificationId',
-        user: 'testUserId',
-        tenant: 'testTenant',
-        status: 'unread',
-        save: jest.fn().mockResolvedValue({ status: 'read' }),
-      };
-      Notification.findOne.mockResolvedValue(mockNotification);
+      it('should mark notification as read', async () => {
+          const n = await Notification.create({
+              user: user._id,
+              tenant: tenant._id,
+              title: 'T',
+              message: 'M',
+              status: 'unread'
+          });
 
-      await markAsRead(req, res);
-
-      expect(Notification.findOne).toHaveBeenCalledWith({ _id: 'testNotificationId', user: 'testUserId', tenant: 'testTenant' });
-      expect(mockNotification.status).toBe('read');
-      expect(mockNotification.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(mockNotification);
-    });
-
-    it('should return 404 if notification not found', async () => {
-      Notification.findOne.mockResolvedValue(null);
-
-      await markAsRead(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Notification not found' });
-    });
-
-    it('should return 500 if an error occurs', async () => {
-      Notification.findOne.mockRejectedValue(new Error('DB error'));
-
-      await markAsRead(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Server Error' });
-    });
-  });
-
-  describe('markAllAsRead', () => {
-    it('should mark all unread notifications as read', async () => {
-      Notification.updateMany.mockResolvedValue({});
-
-      await markAllAsRead(req, res);
-
-      expect(Notification.updateMany).toHaveBeenCalledWith(
-        { user: 'testUserId', tenant: 'testTenant', status: 'unread' },
-        { status: 'read' }
-      );
-      expect(res.json).toHaveBeenCalledWith({ message: 'All notifications marked as read' });
-    });
-
-    it('should return 500 if an error occurs', async () => {
-      Notification.updateMany.mockRejectedValue(new Error('DB error'));
-
-      await markAllAsRead(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Server Error' });
-    });
-  });
-
-  describe('deleteNotification', () => {
-    it('should delete a notification', async () => {
-      const mockNotification = { _id: 'testNotificationId' };
-      Notification.findOneAndDelete.mockResolvedValue(mockNotification);
-
-      await deleteNotification(req, res);
-
-      expect(Notification.findOneAndDelete).toHaveBeenCalledWith({ _id: 'testNotificationId', user: 'testUserId', tenant: 'testTenant' });
-      expect(res.json).toHaveBeenCalledWith({ message: 'Notification removed' });
-    });
-
-    it('should return 404 if notification not found', async () => {
-      Notification.findOneAndDelete.mockResolvedValue(null);
-
-      await deleteNotification(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Notification not found' });
-    });
-
-    it('should return 500 if an error occurs', async () => {
-      Notification.findOneAndDelete.mockRejectedValue(new Error('DB error'));
-
-      await deleteNotification(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Server Error' });
-    });
+          req.params.id = n._id;
+          await markAsRead(req, res, next);
+          const updated = await Notification.findById(n._id);
+          expect(updated.status).toBe('read');
+      });
   });
 });

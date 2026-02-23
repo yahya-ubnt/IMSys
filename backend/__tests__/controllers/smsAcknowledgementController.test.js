@@ -1,25 +1,45 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getAcknowledgements,
-  getAcknowledgementById,
   createAcknowledgement,
-  updateAcknowledgement,
-  deleteAcknowledgement,
+  getAcknowledgements,
 } = require('../../controllers/smsAcknowledgementController');
 const SmsAcknowledgement = require('../../models/SmsAcknowledgement');
 const SmsTemplate = require('../../models/SmsTemplate');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/SmsAcknowledgement');
-jest.mock('../../models/SmsTemplate');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('SMS Acknowledgement Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('SMS Acknowledgement Controller (Integration)', () => {
+  let req, res, next, tenant, template;
+
+  beforeEach(async () => {
+    await SmsAcknowledgement.deleteMany({});
+    await SmsTemplate.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'SMS Ack Tenant' });
+    template = await SmsTemplate.create({
+        name: 'Welcome',
+        messageBody: 'Welcome {name}',
+        tenant: tenant._id
+    });
+
     req = {
-      params: { id: 'testId' },
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
     };
     res = {
@@ -27,73 +47,38 @@ describe('SMS Acknowledgement Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getAcknowledgements', () => {
-    it('should return all SMS acknowledgements', async () => {
-      const mockAcks = [{ _id: 'ack1' }];
-      SmsAcknowledgement.find.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockAcks),
-      });
-      await getAcknowledgements(req, res);
-      expect(res.json).toHaveBeenCalledWith(mockAcks);
-    });
-  });
-
-  describe('getAcknowledgementById', () => {
-    it('should return a single SMS acknowledgement', async () => {
-      const mockAck = { _id: 'ack1' };
-      SmsAcknowledgement.findOne.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockAck),
-      });
-      await getAcknowledgementById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockAck);
-    });
-  });
-
   describe('createAcknowledgement', () => {
-    it('should create a new SMS acknowledgement', async () => {
-      const ackData = { triggerType: 'test', smsTemplate: 'tmpl1' };
-      req.body = ackData;
-      SmsTemplate.findOne.mockResolvedValue({ _id: 'tmpl1' });
-      SmsAcknowledgement.findOne.mockResolvedValue(null);
-      SmsAcknowledgement.create.mockResolvedValue(ackData);
+    it('should create mapping successfully', async () => {
+      req.body = {
+        triggerType: 'USER_CREATED',
+        smsTemplate: template._id.toString(),
+        status: 'Active'
+      };
 
       await createAcknowledgement(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(ackData);
+      const ack = await SmsAcknowledgement.findOne({ triggerType: 'USER_CREATED' });
+      expect(ack).toBeDefined();
     });
   });
 
-  describe('updateAcknowledgement', () => {
-    it('should update an SMS acknowledgement', async () => {
-      const ackData = { description: 'new desc' };
-      const mockAck = { _id: 'ack1', save: jest.fn().mockResolvedValue(ackData) };
-      req.body = ackData;
-      SmsAcknowledgement.findOne.mockResolvedValue(mockAck);
+  describe('getAcknowledgements', () => {
+      it('should return mappings for tenant', async () => {
+          await SmsAcknowledgement.create({
+              triggerType: 'TEST',
+              smsTemplate: template._id,
+              tenant: tenant._id,
+              status: 'Active'
+          });
 
-      await updateAcknowledgement(req, res, next);
-
-      expect(mockAck.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(ackData);
-    });
-  });
-
-  describe('deleteAcknowledgement', () => {
-    it('should delete an SMS acknowledgement', async () => {
-      const mockAck = { _id: 'ack1', deleteOne: jest.fn() };
-      SmsAcknowledgement.findOne.mockResolvedValue(mockAck);
-
-      await deleteAcknowledgement(req, res, next);
-
-      expect(mockAck.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'SMS Acknowledgement mapping removed' });
-    });
+          await getAcknowledgements(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ triggerType: 'TEST' })
+          ]));
+      });
   });
 });

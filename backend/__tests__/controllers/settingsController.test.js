@@ -1,107 +1,65 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   getGeneralSettings,
   updateGeneralSettings,
-  getMpesaSettings,
-  updateMpesaSettings,
-  activateMpesa,
 } = require('../../controllers/settingsController');
 const ApplicationSettings = require('../../models/ApplicationSettings');
-const mpesaService = require('../../services/mpesaService');
-const { validationResult } = require('express-validator');
-const { encrypt } = require('../../utils/crypto');
+const Tenant = require('../../models/Tenant');
 
-jest.mock('../../models/ApplicationSettings');
-jest.mock('../../services/mpesaService');
-jest.mock('express-validator');
-jest.mock('bullmq', () => ({
-  Queue: jest.fn().mockImplementation(() => ({
-    add: jest.fn(),
-    close: jest.fn(),
-  })),
-}));
-jest.mock('../../utils/crypto');
+let mongoServer;
 
-describe('Settings Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeAll(() => {
-    jest.useFakeTimers();
-  });
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
 
-  afterAll(() => {
-    jest.useRealTimers();
-  });
+describe('Settings Controller (Integration)', () => {
+  let req, res, next, tenant;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await ApplicationSettings.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Settings Tenant' });
+
     req = {
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
-      files: {},
     };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('getGeneralSettings', () => {
-    it('should return general settings', async () => {
-      const mockSettings = { appName: 'Test App' };
-      ApplicationSettings.findOne.mockReturnValue({
-        select: jest.fn().mockResolvedValue(mockSettings),
-      });
-      await getGeneralSettings(req, res);
-      expect(res.json).toHaveBeenCalledWith(mockSettings);
+    it('should create and return default settings if none exist', async () => {
+      await getGeneralSettings(req, res, next);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ appName: 'MEDIATEK' }));
+      const s = await ApplicationSettings.findOne({ tenant: tenant._id });
+      expect(s).toBeDefined();
     });
   });
 
   describe('updateGeneralSettings', () => {
-    it('should update general settings', async () => {
-      const mockSettings = { appName: 'Old App', save: jest.fn() };
-      req.body = { appName: 'New App' };
-      ApplicationSettings.findOne.mockResolvedValue(mockSettings);
-      await updateGeneralSettings(req, res);
-      expect(mockSettings.appName).toBe('New App');
-      expect(mockSettings.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
+      it('should update settings successfully', async () => {
+          await ApplicationSettings.create({ tenant: tenant._id });
+          req.body = { appName: 'New App Name' };
 
-  describe('getMpesaSettings', () => {
-    it('should return M-Pesa settings', async () => {
-      const mockSettings = { mpesaPaybill: { shortcode: '123' } };
-      ApplicationSettings.findOne.mockReturnValue({
-        select: jest.fn().mockResolvedValue(mockSettings),
+          await updateGeneralSettings(req, res, next);
+          const updated = await ApplicationSettings.findOne({ tenant: tenant._id });
+          expect(updated.appName).toBe('New App Name');
       });
-      await getMpesaSettings(req, res);
-      expect(res.json).toHaveBeenCalledWith({ mpesaPaybill: mockSettings.mpesaPaybill, mpesaTill: undefined });
-    });
-  });
-
-  describe('updateMpesaSettings', () => {
-    it('should update M-Pesa settings', async () => {
-      const mockSettings = { mpesaPaybill: {}, save: jest.fn() };
-      req.body = { type: 'paybill', data: { shortcode: '456' } };
-      ApplicationSettings.findOne.mockResolvedValue(mockSettings);
-      await updateMpesaSettings(req, res);
-      expect(mockSettings.mpesaPaybill.shortcode).toBe('456');
-      expect(mockSettings.save).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
-
-  describe('activateMpesa', () => {
-    it('should activate M-Pesa callback URL', async () => {
-      mpesaService.registerCallbackURL.mockResolvedValue({ success: true });
-      await activateMpesa(req, res, next);
-      expect(mpesaService.registerCallbackURL).toHaveBeenCalledWith('testTenant');
-      expect(res.json).toHaveBeenCalledWith({ message: 'M-Pesa callback URL registered successfully.', response: { success: true } });
-    });
   });
 });

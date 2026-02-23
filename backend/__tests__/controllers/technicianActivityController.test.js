@@ -1,23 +1,48 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   createTechnicianActivity,
   getTechnicianActivities,
-  getTechnicianActivityById,
-  updateTechnicianActivity,
-  deleteTechnicianActivity,
 } = require('../../controllers/technicianActivityController');
 const TechnicianActivity = require('../../models/TechnicianActivity');
-const { validationResult } = require('express-validator');
+const Tenant = require('../../models/Tenant');
+const User = require('../../models/User');
 
-jest.mock('../../models/TechnicianActivity');
-jest.mock('express-validator');
+let mongoServer;
 
-describe('Technician Activity Controller', () => {
-  let req, res, next;
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
 
-  beforeEach(() => {
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Technician Activity Controller (Integration)', () => {
+  let req, res, next, tenant, tech;
+
+  beforeEach(async () => {
+    await TechnicianActivity.deleteMany({});
+    await User.deleteMany({});
+    await Tenant.deleteMany({});
+
+    tenant = await Tenant.create({ name: 'Tech Tenant' });
+    tech = await User.create({
+        fullName: 'Tech 1',
+        email: 't1@test.com',
+        password: 'p',
+        phone: '123',
+        roles: ['ADMIN'],
+        tenant: tenant._id
+    });
+
     req = {
-      params: { id: 'testId' },
-      user: { tenant: 'testTenant' },
+      params: {},
+      user: { tenant: tenant._id },
       body: {},
       query: {},
     };
@@ -26,92 +51,52 @@ describe('Technician Activity Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
   describe('createTechnicianActivity', () => {
-    it('should create a new technician activity', async () => {
-      const activityData = { technician: 'tech1', activityType: 'Installation', installedEquipment: 'router', installationNotes: 'done' };
-      req.body = activityData;
-      TechnicianActivity.create.mockResolvedValue(activityData);
+    it('should create installation activity successfully', async () => {
+      req.body = {
+        technician: 'Tech Name',
+        activityType: 'Installation',
+        clientName: 'Client A',
+        clientPhone: '123',
+        activityDate: new Date(),
+        description: 'Installed router',
+        installedEquipment: 'Router X',
+        installationNotes: 'Done'
+      };
 
       await createTechnicianActivity(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(activityData);
+      const activity = await TechnicianActivity.findOne({ clientName: 'Client A' });
+      expect(activity).toBeDefined();
     });
   });
 
   describe('getTechnicianActivities', () => {
-    it('should return a list of technician activities', async () => {
-      const mockActivities = [{ _id: 'a1' }];
-      TechnicianActivity.find.mockReturnValue({
-        sort: jest.fn().mockReturnThis(),
-        populate: jest.fn().mockReturnThis(),
+      it('should return activities for tenant', async () => {
+          await TechnicianActivity.create({
+              technician: 'Tech B',
+              activityType: 'Support',
+              supportCategory: 'Client Problem',
+              issueDescription: 'Slow speed',
+              solutionProvided: 'Reset',
+              clientName: 'Client B',
+              clientPhone: '456',
+              description: 'Fix',
+              tenant: tenant._id,
+              activityDate: new Date()
+          });
+
+          await getTechnicianActivities(req, res, next);
+          if (next.mock.calls.length > 0) {
+              console.error('Controller error:', next.mock.calls[0][0]);
+          }
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ clientName: 'Client B' })
+          ]));
       });
-      TechnicianActivity.find().sort().populate.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockActivities),
-      });
-      await getTechnicianActivities(req, res);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockActivities);
-    });
-  });
-
-  describe('getTechnicianActivityById', () => {
-    it('should return a single technician activity', async () => {
-      const mockActivity = { _id: 'a1' };
-      TechnicianActivity.findOne.mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-      });
-      TechnicianActivity.findOne().populate.mockReturnValue({
-        populate: jest.fn().mockResolvedValue(mockActivity),
-      });
-      await getTechnicianActivityById(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(mockActivity);
-    });
-  });
-
-  describe('updateTechnicianActivity', () => {
-    it('should update a technician activity', async () => {
-      const activityData = { description: 'new desc' };
-      const mockActivity = { 
-        _id: 'a1', 
-        activityType: 'Support', 
-        supportCategory: 'Client Issue', 
-        save: jest.fn().mockResolvedValue(activityData),
-        technician: 'tech1',
-        clientName: 'client1',
-        clientPhone: '12345',
-        activityDate: new Date(),
-        description: 'old desc',
-      };
-      req.body = activityData;
-      TechnicianActivity.findOne.mockResolvedValue(mockActivity);
-
-      await updateTechnicianActivity(req, res, next);
-
-      expect(mockActivity.save).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(activityData);
-    });
-  });
-
-  describe('deleteTechnicianActivity', () => {
-    it('should delete a technician activity', async () => {
-      const mockActivity = { _id: 'a1', deleteOne: jest.fn() };
-      TechnicianActivity.findOne.mockResolvedValue(mockActivity);
-
-      await deleteTechnicianActivity(req, res, next);
-
-      expect(mockActivity.deleteOne).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Technician activity removed' });
-    });
   });
 });

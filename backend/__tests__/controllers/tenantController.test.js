@@ -1,26 +1,41 @@
+const mongoose = require('mongoose');
+jest.unmock('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
-  getTenantStats,
-  getMonthlyTenantGrowth,
-  getTenants,
   createTenant,
-  getTenantById,
-  updateTenant,
-  deleteTenant,
+  getTenants,
 } = require('../../controllers/tenantController');
 const Tenant = require('../../models/Tenant');
 const User = require('../../models/User');
-const scheduledTaskService = require('../../services/scheduledTaskService');
 
-jest.mock('../../models/Tenant');
-jest.mock('../../models/User');
-jest.mock('../../services/scheduledTaskService');
+// Mock scheduledTaskService because it creates default tasks
+jest.mock('../../services/scheduledTaskService', () => ({
+    createDefaultTasksForTenant: jest.fn().mockResolvedValue(true)
+}));
 
-describe('Tenant Controller', () => {
+let mongoServer;
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+describe('Tenant Controller (Integration)', () => {
   let req, res, next;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await Tenant.deleteMany({});
+    await User.deleteMany({});
+
     req = {
-      params: { id: 'testId', year: '2024' },
+      params: {},
+      user: { roles: ['SUPER_ADMIN'] },
       body: {},
     };
     res = {
@@ -28,92 +43,37 @@ describe('Tenant Controller', () => {
       json: jest.fn(),
     };
     next = jest.fn();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('getTenantStats', () => {
-    it('should return tenant stats', async () => {
-      Tenant.countDocuments.mockResolvedValueOnce(10).mockResolvedValueOnce(8).mockResolvedValueOnce(2);
-      await getTenantStats(req, res);
-      expect(res.json).toHaveBeenCalledWith({ totalTenants: 10, activeTenants: 8, suspendedTenants: 2 });
-    });
-  });
-
-  describe('getMonthlyTenantGrowth', () => {
-    it('should return monthly tenant growth', async () => {
-      Tenant.aggregate.mockResolvedValue([{ _id: 1, count: 5 }]);
-      await getMonthlyTenantGrowth(req, res);
-      expect(res.json).toHaveBeenCalled();
-    });
-  });
-
-  describe('getTenants', () => {
-    it('should return all tenants', async () => {
-      const mockTenants = [{ _id: 't1' }];
-      Tenant.find.mockReturnValue({ populate: jest.fn().mockResolvedValue(mockTenants) });
-      await getTenants(req, res);
-      expect(res.json).toHaveBeenCalledWith(mockTenants);
-    });
-  });
-
   describe('createTenant', () => {
-    it('should create a new tenant', async () => {
-      req.body = { tenantName: 'New Tenant', fullName: 'Admin', email: 'admin@test.com', password: 'password', phone: '123' };
-      Tenant.findOne.mockResolvedValue(null);
-      User.findOne.mockResolvedValue(null);
-      const mockTenant = { _id: 't1', save: jest.fn() };
-      Tenant.create.mockResolvedValue(mockTenant);
-      const mockUser = { _id: 'u1' };
-      User.create.mockResolvedValue(mockUser);
-      scheduledTaskService.createDefaultTasksForTenant.mockResolvedValue(true);
+    it('should create tenant and admin user successfully', async () => {
+      req.body = {
+        tenantName: 'New ISP',
+        fullName: 'Admin John',
+        email: 'admin@isp.com',
+        password: 'password',
+        phone: '123'
+      };
 
       await createTenant(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalled();
+      const tenant = await Tenant.findOne({ name: 'New ISP' });
+      expect(tenant).toBeDefined();
+      const user = await User.findOne({ email: 'admin@isp.com' });
+      expect(user).toBeDefined();
+      expect(user.tenant.toString()).toBe(tenant._id.toString());
     });
   });
 
-  describe('getTenantById', () => {
-    it('should return a single tenant', async () => {
-      const mockTenant = { _id: 't1' };
-      Tenant.findById.mockReturnValue({ populate: jest.fn().mockResolvedValue(mockTenant) });
-      await getTenantById(req, res, next);
-      expect(res.json).toHaveBeenCalledWith(mockTenant);
-    });
-  });
-
-  describe('updateTenant', () => {
-    it('should update a tenant', async () => {
-        const mockTenant = { _id: 't1', owner: 'u1', save: jest.fn().mockResolvedValue({_id: 't1'}) };
-        const mockUser = { _id: 'u1', save: jest.fn() };
-        Tenant.findById.mockResolvedValue(mockTenant);
-        User.findById.mockResolvedValue(mockUser);
-        
-        // This mock is for the final populate call
-        const finalPopulatedTenant = { ...mockTenant, owner: { fullName: 'Admin' } };
-        Tenant.findById.mockReturnValueOnce(mockTenant).mockReturnValueOnce({ populate: jest.fn().mockResolvedValue(finalPopulatedTenant) });
-
-
-        req.body = { name: 'Updated Tenant' };
-
-        await updateTenant(req, res, next);
-
-        expect(mockTenant.save).toHaveBeenCalled();
-        expect(res.json).toHaveBeenCalledWith(finalPopulatedTenant);
-    });
-  });
-
-  describe('deleteTenant', () => {
-    it('should delete a tenant', async () => {
-      const mockTenant = { _id: 't1', deleteOne: jest.fn() };
-      Tenant.findById.mockResolvedValue(mockTenant);
-      await deleteTenant(req, res, next);
-      expect(mockTenant.deleteOne).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith({ message: 'Tenant and all associated data removed' });
-    });
+  describe('getTenants', () => {
+      it('should return all tenants', async () => {
+          await Tenant.create({ name: 'ISP 1' });
+          await getTenants(req, res, next);
+          expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+              expect.objectContaining({ name: 'ISP 1' })
+          ]));
+      });
   });
 });

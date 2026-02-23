@@ -53,7 +53,7 @@ exports.createHotspotUser = async (req, res) => {
       location,
       hotspotName,
       hotspotPassword,
-      hotspotPackage,
+      package: hotspotPackage,
       server,
       profile,
       referenceNumber,
