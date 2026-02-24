@@ -67,7 +67,7 @@ test.describe.serial('Device Management End-to-End Flow', () => {
     
     // Select parent and building from prerequisite tests
     await page.click('button:has-text("Select parent device")');
-    await page.locator('label:has-text("Core Routers") + [role="option"]').first().click();
+    await page.locator('div[role="option"]:has-text("AMANI ESTATE MIK")').click();
     
     await page.click('button:has-text("Select primary building")');
     await page.locator(`[role="option"]:has-text("${buildingName}")`).click();
