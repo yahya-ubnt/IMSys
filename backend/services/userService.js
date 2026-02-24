@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
+const Transaction = require('../models/Transaction'); // Import Transaction model
+const UserDowntimeLog = require('../models/UserDowntimeLog'); // Import UserDowntimeLog model
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const { sendAcknowledgementSms } = require('./smsService');
 const smsTriggers = require('../constants/smsTriggers');
