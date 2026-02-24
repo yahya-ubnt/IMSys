@@ -89,6 +89,8 @@ export default function EditPackagePage({ params: paramsPromise }: { params: Pro
                 setStatus(data.status);
             } catch (err: unknown) {
                 setError((err instanceof Error) ? err.message : "Failed to load package data.");
+            } finally {
+                setLoading(false);
             }
         };
         if (id) fetchPackage();
