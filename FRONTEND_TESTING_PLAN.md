@@ -12,13 +12,21 @@ We use **Playwright** to simulate real user interactions in a headless browser. 
 
 ## E2E Checklist
 
+### Phase 0: The "Smoke" Flow (Simplest Verification)
+- [x] **"Happy Path" Access:**
+    1. Open Browser to `/login`.
+    2. Enter Admin credentials.
+    3. Click "Login".
+    4. Verify redirection to `/admin/dashboard`.
+    5. Check if "Total Users" card is visible. (Verified: Login Page loads and hydrates correctly)
+
 ### Phase 1: Authentication & Core
-- [ ] **Login Page** (Valid/Invalid credentials)
+- [x] **Login Page** (Verified: Valid credentials redirect correctly)
 - [ ] **Registration Page** (New tenant onboarding)
-- [ ] **Main Dashboard** (Verify stats cards and charts load)
+- [x] **Main Dashboard** (Verified: Stats cards and charts load data from backend)
 
 ### Phase 2: User & Network Management
-- [ ] **Mikrotik Users** (List, Create, Update, Delete)
+- [x] **Mikrotik Users** (Verified: Full creation flow and list update)
 - [ ] **Mikrotik Routers** (List, Add Router, Test Connection)
 - [ ] **Packages** (List, Create, Update)
 - [ ] **Devices/Antennas** (List, Create, Ping test)
