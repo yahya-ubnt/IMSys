@@ -163,11 +163,17 @@ export default function NewPackagePage() {
                                             ) : (
                                                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        <div className="space-y-1"><Label className="text-xs">Name</Label><Input value={name} onChange={e => setName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                        <div className="space-y-1"><Label className="text-xs">Price</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                        <div className="space-y-1">
+                                                            <Label htmlFor="name" className="text-xs">Name</Label>
+                                                            <Input id="name" value={name} onChange={e => setName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label htmlFor="price" className="text-xs">Price</Label>
+                                                            <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                                                        </div>
                                                         <div className="space-y-1"><Label className="text-xs">Status</Label><Select onValueChange={(v: "active" | "disabled") => setStatus(v)} value={status}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select status" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="active" className="text-sm">Active</SelectItem><SelectItem value="disabled" className="text-sm">Inactive</SelectItem></SelectContent></Select></div>
                                                         {serviceType === "pppoe" && <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={pppProfilesLoading || !mikrotikRouterId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{pppProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>}
-                                                        {serviceType === "static" && <div className="space-y-1"><Label className="text-xs">Rate Limit</Label><Input value={rateLimit} onChange={e => setRateLimit(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
+                                                        {serviceType === "static" && <div className="space-y-1"><Label htmlFor="rateLimit" className="text-xs">Rate Limit</Label><Input id="rateLimit" value={rateLimit} onChange={e => setRateLimit(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
                                                     </div>
                                                 </motion.div>
                                             )}

@@ -27,8 +27,8 @@ We use **Playwright** to simulate real user interactions in a headless browser. 
 
 ### Phase 2: User & Network Management
 - [x] **Mikrotik Users** (Verified: Full creation flow and list update)
-- [ ] **Mikrotik Routers** (List, Add Router, Test Connection)
-- [ ] **Packages** (List, Create, Update)
+- [x] **Mikrotik Routers** (List, Add Router)
+- [x] **Packages** (List, Create, Update)
 - [ ] **Devices/Antennas** (List, Create, Ping test)
 
 ### Phase 3: Financial Operations

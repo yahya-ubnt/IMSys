@@ -169,7 +169,7 @@ export default function NewMikrotikUserPage() {
             result = Math.floor(100000 + Math.random() * 900000).toString();
         } else {
             const chars = 'abcdefghijklmnopqrstuvwxyz';
-            for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * characters.length));
+            for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
         }
         setter(result);
     };

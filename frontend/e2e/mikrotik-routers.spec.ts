@@ -44,8 +44,13 @@ test.describe('Mikrotik Router Management', () => {
 
     // 3. Verify
     await expect(page).toHaveURL('/mikrotik/routers', { timeout: 15000 });
+    
+    // Use search to reliably find the router
+    await page.getByPlaceholder('Search by name or IP...').fill(routerName);
+    
     await expect(page.locator('table')).toContainText(routerName, { timeout: 10000 });
     
     console.log(`✅ Success: Mikrotik Router ${routerName} added and verified.`);
   });
+
 });

@@ -56,8 +56,10 @@ test.describe('Mikrotik User Management', () => {
     // 4. VERIFY REDIRECTION & LISTING
     await expect(page).toHaveURL('/mikrotik/users', { timeout: 15000 });
     
+    // Use search to reliably find the user
+    await page.getByPlaceholder('Search username or name...').fill(testUsername);
+    
     // Check for username in the table
-    // Using a broader locator if the exact text is inside a cell
     await expect(page.locator('table')).toContainText(testUsername, { timeout: 10000 });
     
     console.log(`✅ Functional Test Passed: Mikrotik User ${testUsername} verified.`);
