@@ -29,7 +29,7 @@ We use **Playwright** to simulate real user interactions in a headless browser. 
 - [x] **Mikrotik Users** (Verified: Full creation flow and list update)
 - [x] **Mikrotik Routers** (List, Add Router)
 - [x] **Packages** (List, Create, Update)
-- [ ] **Devices/Antennas** (List, Create, Ping test)
+- [x] **Devices/Antennas** (List, Create, Ping test)
 
 ### Phase 3: Financial Operations
 - [ ] **Bills Page** (Create monthly bill, Mark as paid)

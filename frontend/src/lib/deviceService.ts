@@ -119,7 +119,7 @@ export const getMikrotikRouters = async (): Promise<MikrotikRouter[]> => {
 
 // Fetch Buildings (for dropdowns in device forms)
 export const getBuildings = async (): Promise<any[]> => { // Using any for now, should be replaced with a Building interface
-  const response = await fetch(`/api/buildings`);
+  const response = await fetch(`/api/buildings`, { cache: 'no-store' });
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.message || "Failed to fetch buildings");

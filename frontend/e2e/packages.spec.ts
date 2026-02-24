@@ -46,6 +46,9 @@ test.describe('Package Management', () => {
 
     // 5. Verify
     await expect(page).toHaveURL('/mikrotik/packages', { timeout: 15000 });
+    
+    // Use search to find the new package
+    await page.getByPlaceholder('Search by name or router...').fill(packageName);
     await expect(page.locator('table')).toContainText(packageName, { timeout: 10000 });
     
     console.log(`✅ Success: Package ${packageName} added and verified.`);

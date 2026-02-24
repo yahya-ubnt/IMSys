@@ -116,18 +116,40 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
               ) : (
                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">Device Name</Label><Input value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                    <div className="space-y-1"><Label className="text-xs">Device Model</Label><Input value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                    <div className="space-y-1">
+                        <Label htmlFor="deviceName" className="text-xs">Device Name</Label>
+                        <Input id="deviceName" value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="deviceModel" className="text-xs">Device Model</Label>
+                        <Input id="deviceModel" value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
                     {/* Building selection is now handled on the parent new/edit page */}
-                    <div className="space-y-1"><Label className="text-xs">IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                    <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                    <div className="space-y-1"><Label className="text-xs">Login Username</Label><Input value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                    <div className="space-y-1"><Label className="text-xs">Login Password</Label><Input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                    <div className="space-y-1"><Label className="text-xs">{deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"}</Label>
-                      {deviceType === 'Access' ? <Input value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    <div className="space-y-1">
+                        <Label htmlFor="ipAddress" className="text-xs">IP Address</Label>
+                        <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="macAddress" className="text-xs">MAC Address</Label>
+                        <Input id="macAddress" value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="loginUsername" className="text-xs">Login Username</Label>
+                        <Input id="loginUsername" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="loginPassword" className="text-xs">Login Password</Label>
+                        <Input id="loginPassword" type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="ssid" className="text-xs">{deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"}</Label>
+                      {deviceType === 'Access' ? <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
                         : <Select onValueChange={setSsid} value={ssid} disabled={accessPointsLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap.ssid || ap.deviceName || ''} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select>}
                     </div>
-                    <div className="space-y-1"><Label className="text-xs">{deviceType === 'Access' ? "WPA2 Key" : "Pre-shared Key"}</Label><Input type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                    <div className="space-y-1">
+                        <Label htmlFor="wirelessPassword" className="text-xs">{deviceType === 'Access' ? "WPA2 Key" : "Pre-shared Key"}</Label>
+                        <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                    </div>
                   </div>
                 </motion.div>
               )}
