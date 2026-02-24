@@ -35,7 +35,28 @@ Simulate real user scenarios across the entire application.
 - **E2E Testing:** Cypress (to be confirmed)
 - **Mocking:** Jest's mocking capabilities
 
-## 5. Test File Structure
+## 5. Environment Setup
+
+### 5.1 Installation
+To run the tests, you first need to install the project dependencies. From the `frontend` directory, run:
+```bash
+npm install
+```
+
+### 5.2 Running Tests
+Tests can be run using the following command in the `frontend` directory:
+```bash
+npm test
+```
+This will execute all test files located in the `frontend/__tests__` directory.
+
+### 5.3 Configuration
+Test configurations are located in the following files at the root of the `frontend` directory:
+- `jest.config.js`: Jest's main configuration file.
+- `jest.setup.js`: A file to set up the testing environment for each test (e.g., mocking global objects).
+- `babel.config.js`: Babel configuration, necessary for transpiling JavaScript/TypeScript.
+
+## 6. Test File Structure
 Following the project's existing conventions, frontend tests will be organized in a `__tests__` directory at the root of the `frontend` folder, mirroring the structure of the `src` directory.
 
 Example:
@@ -69,7 +90,7 @@ frontend/
 │       └───utils.test.ts
 ```
 
-## 6. Test Standards and Best Practices
+## 7. Test Standards and Best Practices
 - **Descriptive Test Names:** Test names should clearly describe what is being tested.
 - **Arrange-Act-Assert (AAA) Pattern:** Structure tests with clear setup, action, and assertion phases.
 - **Avoid Implementation Details:** Test the public API of components, not their internal workings.
@@ -77,71 +98,105 @@ frontend/
 - **Code Coverage:** Aim for a reasonable code coverage percentage (e.g., 80%), focusing on critical paths.
 - **Regular Maintenance:** Keep tests up-to-date with code changes.
 
-## 7. Test Scope - Detailed Checklist
+## 8. Test Scope - Detailed Checklist
 
-### 7.1 Pages (`app/**/*.tsx`)
+### 8.1 Pages (`app/**/*.tsx`)
 - [ ] `app/admin/scheduled-tasks/page.tsx`
 - [ ] `app/bills/[id]/edit/page.tsx`
 - [ ] `app/bills/[id]/page.tsx`
+- [ ] `app/bills/columns.tsx`
 - [ ] `app/bills/company/new/page.tsx`
 - [ ] `app/bills/company/page.tsx`
 - [ ] `app/bills/personal/new/page.tsx`
 - [ ] `app/bills/personal/page.tsx`
+- [ ] `app/devices/[id]/columns.tsx`
+- [ ] `app/devices/[id]/connected-stations-columns.tsx`
+- [ ] `app/devices/[id]/connected-users-columns.tsx`
 - [ ] `app/devices/[id]/page.tsx`
+- [ ] `app/devices/columns.tsx`
 - [ ] `app/devices/edit/[id]/page.tsx`
 - [ ] `app/devices/new/page.tsx`
 - [ ] `app/devices/page.tsx`
+- [ ] `app/expenses/all/columns.tsx`
 - [ ] `app/expenses/all/page.tsx`
+- [ ] `app/expenses/types/columns.tsx`
 - [ ] `app/expenses/types/page.tsx`
+- [ ] `app/head.tsx`
+- [ ] `app/hotspot/plans/columns.tsx`
+- [ ] `app/hotspot/plans/hotspot-plan-form.tsx`
 - [ ] `app/hotspot/plans/new/page.tsx`
 - [ ] `app/hotspot/plans/page.tsx`
 - [ ] `app/hotspot/portal/page.tsx`
+- [ ] `app/hotspot/users/columns.tsx`
+- [ ] `app/hotspot/users/hotspot-user-form.tsx`
 - [ ] `app/hotspot/users/new/page.tsx`
 - [ ] `app/hotspot/users/page.tsx`
+- [ ] `app/hotspot/vouchers/columns.tsx`
 - [ ] `app/hotspot/vouchers/new/page.tsx`
 - [ ] `app/hotspot/vouchers/page.tsx`
+- [ ] `app/hotspot/vouchers/voucher-form.tsx`
 - [ ] `app/invoices/[id]/page.tsx`
+- [ ] `app/invoices/components/invoice-columns.tsx`
 - [ ] `app/invoices/new/page.tsx`
 - [ ] `app/invoices/page.tsx`
+- [ ] `app/layout.tsx`
 - [ ] `app/leads/[id]/page.tsx`
+- [ ] `app/leads/columns.tsx`
 - [ ] `app/leads/edit/[id]/page.tsx`
 - [ ] `app/leads/new/page.tsx`
 - [ ] `app/leads/page.tsx`
 - [ ] `app/login/page.tsx`
 - [ ] `app/mikrotik/packages/[id]/page.tsx`
+- [ ] `app/mikrotik/packages/columns.tsx`
+- [ ] `app/mikrotik/packages/layout.tsx`
 - [ ] `app/mikrotik/packages/new/page.tsx`
+- [ ] `app/mikrotik/packages/package-form.tsx`
 - [ ] `app/mikrotik/packages/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/dhcp-leases/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/firewall/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/interfaces/page.tsx`
+- [ ] `app/mikrotik/routers/[id]/dashboard/layout.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/logs/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/overview/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/pppoe/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/queues/page.tsx`
 - [ ] `app/mikrotik/routers/[id]/dashboard/terminal/page.tsx`
+- [ ] `app/mikrotik/routers/[id]/layout.tsx`
 - [ ] `app/mikrotik/routers/[id]/page.tsx`
+- [ ] `app/mikrotik/routers/columns.tsx`
 - [ ] `app/mikrotik/routers/dashboard/[id]/page.tsx`
 - [ ] `app/mikrotik/routers/new/page.tsx`
 - [ ] `app/mikrotik/routers/page.tsx`
+- [ ] `app/mikrotik/users/[id]/details/mpesa-columns.tsx`
 - [ ] `app/mikrotik/users/[id]/details/page.tsx`
+- [ ] `app/mikrotik/users/[id]/details/wallet-columns.tsx`
 - [ ] `app/mikrotik/users/[id]/diagnostics/[logId]/page.tsx`
 - [ ] `app/mikrotik/users/[id]/page.tsx`
+- [ ] `app/mikrotik/users/columns.tsx`
+- [ ] `app/mikrotik/users/layout.tsx`
 - [ ] `app/mikrotik/users/new/page.tsx`
 - [ ] `app/mikrotik/users/page.tsx`
 - [ ] `app/notifications/page.tsx`
-- [ ] `app/page.tsx` (Root Dashboard)
+- [ ] `app/page.tsx`
 - [ ] `app/payments/cash-purchase/page.tsx`
+- [ ] `app/payments/hotspot-transactions/columns.tsx`
 - [ ] `app/payments/hotspot-transactions/page.tsx`
 - [ ] `app/payments/page.tsx`
 - [ ] `app/payments/stk-push/page.tsx`
+- [ ] `app/payments/transactions/columns.tsx`
 - [ ] `app/payments/transactions/page.tsx`
+- [ ] `app/payments/wallet-transactions/columns.tsx`
 - [ ] `app/payments/wallet-transactions/page.tsx`
 - [ ] `app/register/page.tsx`
 - [ ] `app/reports/delayed-payments/[id]/stats/page.tsx`
+- [ ] `app/reports/delayed-payments/columns.tsx`
 - [ ] `app/reports/delayed-payments/page.tsx`
+- [ ] `app/reports/location/columns.tsx`
 - [ ] `app/reports/location/page.tsx`
+- [ ] `app/reports/mpesa-alert/columns.tsx`
 - [ ] `app/reports/mpesa-alert/page.tsx`
+- [ ] `app/reports/mpesa-report/columns.tsx`
 - [ ] `app/reports/mpesa-report/page.tsx`
 - [ ] `app/reports/page.tsx`
 - [ ] `app/settings/email/page.tsx`
@@ -150,32 +205,46 @@ frontend/
 - [ ] `app/settings/page.tsx`
 - [ ] `app/settings/sms/page.tsx`
 - [ ] `app/settings/whatsapp/page.tsx`
+- [ ] `app/sms/acknowledgements/columns.tsx`
 - [ ] `app/sms/acknowledgements/page.tsx`
+- [ ] `app/sms/acknowledgements/sms-acknowledgement-form.tsx`
 - [ ] `app/sms/compose/page.tsx`
+- [ ] `app/sms/expiry/columns.tsx`
 - [ ] `app/sms/expiry/page.tsx`
+- [ ] `app/sms/expiry/sms-expiry-schedule-form.tsx`
+- [ ] `app/sms/sent/columns.tsx`
 - [ ] `app/sms/sent/page.tsx`
+- [ ] `app/sms/templates/columns.tsx`
 - [ ] `app/sms/templates/page.tsx`
+- [ ] `app/sms/templates/sms-template-form.tsx`
 - [ ] `app/stk-push/page.tsx`
 - [ ] `app/superadmin/dashboard/page.tsx`
+- [ ] `app/superadmin/tenants/columns.tsx`
 - [ ] `app/superadmin/tenants/page.tsx`
 - [ ] `app/technician-activities/[id]/edit/page.tsx`
 - [ ] `app/technician-activities/[id]/page.tsx`
+- [ ] `app/technician-activities/columns.tsx`
 - [ ] `app/technician-activities/installations/new/page.tsx`
 - [ ] `app/technician-activities/installations/page.tsx`
 - [ ] `app/technician-activities/support/new/page.tsx`
 - [ ] `app/technician-activities/support/page.tsx`
 - [ ] `app/tickets/[id]/edit/page.tsx`
 - [ ] `app/tickets/[id]/page.tsx`
+- [ ] `app/tickets/components/ticket-columns.tsx`
+- [ ] `app/tickets/components/ticket-toolbar.tsx`
 - [ ] `app/tickets/new/page.tsx`
 - [ ] `app/tickets/page.tsx`
 - [ ] `app/transactions/[id]/edit/page.tsx`
 - [ ] `app/transactions/[id]/page.tsx`
 - [ ] `app/transactions/company/page.tsx`
+- [ ] `app/transactions/components/transaction-columns.tsx`
+- [ ] `app/transactions/components/transaction-list.tsx`
 - [ ] `app/transactions/new/company/page.tsx`
 - [ ] `app/transactions/new/personal/page.tsx`
+- [ ] `app/transactions/page.tsx`
 - [ ] `app/transactions/personal/page.tsx`
 
-### 7.2 Components (`components/**/*.tsx`)
+### 8.2 Components (`components/**/*.tsx`)
 - [ ] `components/app-layout-content.tsx`
 - [ ] `components/app-sidebar.tsx`
 - [ ] `components/auth-provider.tsx`
@@ -275,14 +344,14 @@ frontend/
 - [ ] `components/ui/use-toast.ts`
 - [ ] `components/wallet-transactions-table.tsx`
 
-### 7.3 Hooks (`hooks/**/*.ts`)
+### 8.3 Hooks (`hooks/**/*.ts`)
 - [ ] `hooks/use-debounce.ts`
 - [ ] `hooks/use-mobile.ts`
 - [ ] `hooks/use-settings.tsx`
 - [ ] `hooks/use-toast.ts`
 - [ ] `hooks/useTerminalWebSocket.ts`
 
-### 7.4 Utilities (`lib/**/*.ts`)
+### 8.4 Utilities (`lib/**/*.ts`)
 - [ ] `lib/api.ts`
 - [ ] `lib/api/sms.ts`
 - [ ] `lib/api/utils.ts`
@@ -301,48 +370,15 @@ frontend/
 - [ ] `lib/transactionService.ts`
 - [ ] `lib/utils.ts`
 
-### 7.5 Contexts (`context/**/*.tsx`)
+### 8.5 Contexts (`context/**/*.tsx`)
 - [ ] `context/NotificationContext.tsx`
 
-### 7.6 Services (`services/**/*.ts`)
+### 8.6 Services (`services/**/*.ts`)
 - [ ] `services/hotspotService.ts`
 - [ ] `services/settingsService.ts`
 - [ ] `services/socketService.js`
 
-### 7.7 Columns Definitions (`app/**/columns.tsx`)
-- [ ] `app/bills/columns.tsx`
-- [ ] `app/devices/[id]/columns.tsx`
-- [ ] `app/devices/[id]/connected-stations-columns.tsx`
-- [ ] `app/devices/[id]/connected-users-columns.tsx`
-- [ ] `app/devices/columns.tsx`
-- [ ] `app/expenses/all/columns.tsx`
-- [ ] `app/expenses/types/columns.tsx`
-- [ ] `app/hotspot/plans/columns.tsx`
-- [ ] `app/hotspot/users/columns.tsx`
-- [ ] `app/hotspot/vouchers/columns.tsx`
-- [ ] `app/invoices/components/invoice-columns.tsx`
-- [ ] `app/leads/columns.tsx`
-- [ ] `app/mikrotik/packages/columns.tsx`
-- [ ] `app/mikrotik/routers/columns.tsx`
-- [ ] `app/mikrotik/users/[id]/details/mpesa-columns.tsx`
-- [ ] `app/mikrotik/users/[id]/details/wallet-columns.tsx`
-- [ ] `app/mikrotik/users/columns.tsx`
-- [ ] `app/reports/delayed-payments/columns.tsx`
-- [ ] `app/reports/location/columns.tsx`
-- [ ] `app/reports/mpesa-alert/columns.tsx`
-- [ ] `app/reports/mpesa-report/columns.tsx`
-- [ ] `app/sms/acknowledgements/columns.tsx`
-- [ ] `app/sms/expiry/columns.tsx`
-- [ ] `app/sms/sent/columns.tsx`
-- [ ] `app/sms/templates/columns.tsx`
-- [ ] `app/superadmin/tenants/columns.tsx`
-- [ ] `app/technician-activities/columns.tsx`
-- [ ] `app/tickets/components/ticket-columns.tsx`
-- [ ] `app/payments/hotspot-transactions/columns.tsx`
-- [ ] `app/payments/transactions/columns.tsx`
-- [ ] `app/payments/wallet-transactions/columns.tsx`
-
-### 7.8 Types (`types/**/*.ts`)
+### 8.7 Types (`types/**/*.ts`)
 - [ ] `types/bill.d.ts`
 - [ ] `types/caretaker-agent.d.ts`
 - [ ] `types/daily-transaction.ts`
@@ -367,14 +403,5 @@ frontend/
 - [ ] `types/users.ts`
 - [ ] `types/voucher.ts`
 
-### 7.9 Layouts (`app/**/layout.tsx`)
-- [ ] `app/mikrotik/packages/layout.tsx`
-- [ ] `app/mikrotik/routers/[id]/dashboard/layout.tsx`
-- [ ] `app/mikrotik/routers/[id]/layout.tsx`
-- [ ] `app/mikrotik/users/layout.tsx`
-- [ ] `app/layout.tsx`
-
-### 7.10 Root Files
-- [ ] `app/head.tsx`
-- [ ] `app/page.tsx`
+### 8.8 Root Files
 - [ ] `middleware.ts` (Not in `src` but important)
