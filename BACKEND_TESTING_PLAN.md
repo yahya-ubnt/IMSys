@@ -148,9 +148,44 @@ Verified with shallow mocks (URL mapping only).
 -   [x] `queues/diagnosticQueue.js`
 -   [x] `queues/mikrotikSyncQueue.js`
 -   [x] `workers/diagnosticWorker.js`
+    -   [ ] **Scenario: Root Cause Identification (Station is Down):**
+        -   Given: A mock network hierarchy: `Core Router -> Sector -> Station -> User`.
+        -   And: A mock `ping` utility configured so the `Station` IP fails but the `Sector` IP succeeds.
+        -   When: The diagnostic service is triggered for the `User`.
+        -   Then: A `DiagnosticLog` is created where the `Station` is identified as the `rootCause`.
+        -   And: The report steps show `Core[UP]`, `Sector[UP]`, `Station[DOWN]`.
 -   [x] `workers/mikrotikSyncWorker.js` (FIXED: Resolved missing import bug and verified functional sync logic)
 -   [x] `jobs/reconciliationJob.js`
+    -   [ ] **Scenario: Successful Payment Reconciliation:**
+        -   Given: A valid M-Pesa payload is received for an existing user.
+        -   When: The `reconciliationJob` is processed.
+        -   Then: A `Transaction` record is created with `status: 'completed'`.
+        -   And: The `MikrotikUser`'s balance or expiry date is correctly updated.
+    -   [ ] **Scenario: Payment to Non-Existent User (Wrong Account):**
+        -   Given: An M-Pesa payload with an invalid `BillRefNumber` (user account).
+        -   When: The `reconciliationJob` is processed.
+        -   Then: A `SuspenseTransaction` record (or equivalent flagging) is created for manual review.
+        -   And: No `Transaction` record is created for any user.
+    -   [ ] **Scenario: Payment Amount Mismatch:**
+        -   Given: An M-Pesa payload where the amount doesn't match the expected invoice amount.
+        -   When: The `reconciliationJob` is processed.
+        -   Then: The transaction is flagged for review (e.g., creates a `SuspenseTransaction`).
 -   [x] `jobs/scheduleExpiredClientDisconnectsJob.js`
+    -   [ ] **Scenario: User Disconnection on Expiry:**
+        -   Given: A `MikrotikUser` whose `expiryDate` is in the past.
+        -   When: The `scheduleExpiredClientDisconnectsJob` runs.
+        -   Then: The user's `status` is set to 'expired'.
+        -   And: The mock Mikrotik API is called to disable the user's PPP profile.
+-   [ ] **Onboarding Worker (Welcome SMS):** (Assuming a dedicated worker or logic in user creation)
+    -   [ ] **Scenario: Welcome SMS Triggered on User Creation:**
+        -   Given: A new `MikrotikUser` is created with `sendWelcomeSms: true`.
+        -   When: The relevant worker processes the user creation event.
+        -   Then: The mock SMS gateway is called with the correct welcome message template and user's phone number.
+-   [ ] **Generic Queue/Worker Retry Logic:**
+    -   [ ] **Scenario: Third-Party API Failure and Retry:**
+        -   Given: A job that calls an external (mocked) API is configured to temporarily fail.
+        -   When: The worker attempts to process the job.
+        -   Then: The job's state in BullMQ is updated to `waiting` with an increased attempt count and a delayed execution time, as per retry configuration.
 
 ### Phase 7: End-to-End Tests (Upcoming)
 
@@ -159,3 +194,44 @@ Verified with shallow mocks (URL mapping only).
 -   [ ] **Mikrotik Management Flow**
 -   [ ] **Billing and Payments Flow**
 -   [ ] **Support Tickets Flow**
+
+### Phase 8: System Integration Tests (SIT)
+
+This phase verifies actual interaction with real (or sandbox) external services and hardware in a dedicated staging/pre-production environment. These tests are less frequent and serve to confirm live API contracts and physical device interaction.
+
+-   [ ] **Mikrotik Hardware Integration:**
+    -   [ ] **Scenario: User Provisioning:**
+        -   Given: A test Mikrotik router is connected to the staging environment.
+        -   When: A `MikrotikUser` is created in the IMSys staging UI.
+        -   Then: Verify (via direct Mikrotik API call or manual check) that the user's PPP profile is correctly provisioned on the real test router.
+    -   [ ] **Scenario: User Disconnection:**
+        -   Given: An active `MikrotikUser` on the test router.
+        -   When: The user is suspended/disconnected in IMSys.
+        -   Then: Verify the user is actually disconnected from the real test router.
+    -   [ ] **Scenario: Diagnostic Pings:**
+        -   Given: A test network setup (router, station).
+        -   When: A diagnostic is run in IMSys for a user/device.
+        -   Then: Verify that actual pings/checks are performed through the real test router (observing Mikrotik logs if possible).
+
+-   [ ] **SMS Provider Integration:**
+    -   [ ] **Scenario: Successful SMS Delivery (e.g., Welcome SMS):**
+        -   Given: A `MikrotikUser` is created with `sendWelcomeSms: true` in the staging environment.
+        -   When: The welcome SMS is triggered.
+        -   Then: Verify the SMS is received on a real test phone number.
+        -   And: Verify the SMS log in IMSys reflects a 'sent' or 'delivered' status from the provider.
+    -   [ ] **Scenario: SMS Send Failure (e.g., Invalid Number):**
+        -   Given: An attempt to send an SMS to an intentionally invalid test phone number in the staging environment.
+        -   When: The SMS send is triggered.
+        -   Then: Verify the SMS log in IMSys correctly captures an 'error' or 'failed' status from the provider.
+        -   And: No SMS is received on a real phone.
+
+-   [ ] **M-Pesa Sandbox Integration (STK Push & C2B):**
+    -   [ ] **Scenario: STK Push:**
+        -   Given: A user initiates an STK Push payment in the IMSys staging UI.
+        -   When: The STK Push is processed.
+        -   Then: Verify the M-Pesa prompt appears on a real test phone number.
+        -   And: Verify a successful transaction reflects in IMSys after completing the push on the test phone.
+    -   [ ] **Scenario: C2B Payment (Paybill/Till):**
+        -   Given: A C2B payment is initiated directly from a real test phone to the IMSys M-Pesa Paybill/Till number (sandbox).
+        -   When: The M-Pesa callback is received by IMSys staging.
+        -   Then: Verify the transaction is correctly reconciled and applied to the corresponding `MikrotikUser` in IMSys.
