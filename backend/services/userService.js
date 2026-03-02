@@ -97,6 +97,7 @@ const UserService = {
   getPopulatedMikrotikUsers: async (tenantId) => {
     const query = { tenant: tenantId };
     const users = await MikrotikUser.find(query)
+      .sort({ createdAt: -1 })
       .populate('mikrotikRouter')
       .populate('package')
       .populate('station');
@@ -108,7 +109,8 @@ const UserService = {
     const user = await MikrotikUser.findOne(query)
       .populate('mikrotikRouter')
       .populate('package')
-      .populate('station');
+      .populate('station')
+      .populate('building');
     return user;
   },
 

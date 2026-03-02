@@ -17,10 +17,10 @@ import { Topbar } from "@/components/topbar";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Interface Definitions ---
+import { getBuildings, getDevices, createBuilding, type Building, type Device } from "@/lib/deviceService";
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
-interface Device { _id: string; deviceName: string; ipAddress: string; }
-import { Package } from "@/types/mikrotik-package";
-interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; officialName: string; emailAddress?: string; apartment_house_number?: string; door_number_unit_label?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; }
+interface Package { _id: string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
+interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; ipAddress?: string; macAddress?: string; officialName: string; emailAddress?: string; door_number_unit_label?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; building?: string | { _id: string; name: string }; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -52,7 +52,6 @@ export default function EditMikrotikUserPage() {
     const [packageId, setPackageId] = useState("");
     const [username, setUsername] = useState("");
     const [pppoePassword, setPppoePassword] = useState("");
-    const [remoteAddress, setRemoteAddress] = useState("");
     const [ipAddress, setIpAddress] = useState("");
     const [macAddress, setMacAddress] = useState("");
     const [officialName, setOfficialName] = useState("");
@@ -63,7 +62,7 @@ export default function EditMikrotikUserPage() {
     const [mobileNumber, setMobileNumber] = useState("");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
     const [stationId, setStationId] = useState("");
-    const [apartmentHouseNumber, setApartmentHouseNumber] = useState("");
+    const [buildingId, setBuildingId] = useState("");
     const [doorNumberUnitLabel, setDoorNumberUnitLabel] = useState("");
 
     // Data & UI State
@@ -71,6 +70,8 @@ export default function EditMikrotikUserPage() {
     const [packages, setPackages] = useState<Package[]>([]);
     const [filteredPackages, setFilteredPackages] = useState<Package[]>([]);
     const [stations, setStations] = useState<Device[]>([]);
+    const [filteredStations, setFilteredStations] = useState<Device[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const { toast } = useToast();
@@ -82,11 +83,12 @@ export default function EditMikrotikUserPage() {
         const fetchInitialData = async () => {
             try {
                 // Fetch user, routers, packages, stations in parallel
-                const [userRes, routerRes, packageRes, stationRes] = await Promise.all([
+                const [userRes, routerRes, packageRes, stationRes, buildingsRes] = await Promise.all([
                     fetch(`/api/mikrotik/users/${id}`),
                     fetch("/api/mikrotik/routers"),
                     fetch("/api/mikrotik/packages"),
-                    fetch("/api/devices?deviceType=Station")
+                    fetch("/api/devices?deviceType=Station"),
+                    getBuildings()
                 ]);
 
                 if (!userRes.ok) throw new Error("Failed to fetch user");
@@ -98,6 +100,7 @@ export default function EditMikrotikUserPage() {
                 setRouters(routerData);
                 setPackages(packageData);
                 setStations(stationData);
+                setBuildings(buildingsRes);
 
                 // Populate form state
                 setMikrotikRouterId(typeof userData.mikrotikRouter === 'string' ? userData.mikrotikRouter : userData.mikrotikRouter._id);
@@ -105,12 +108,10 @@ export default function EditMikrotikUserPage() {
                 setPackageId(typeof userData.package === 'string' ? userData.package : userData.package._id);
                 setUsername(userData.username);
                 setPppoePassword(userData.pppoePassword || "");
-                setRemoteAddress(userData.remoteAddress || "");
                 setIpAddress(userData.ipAddress || "");
                 setMacAddress(userData.macAddress || "");
                 setOfficialName(userData.officialName);
                 setEmailAddress(userData.emailAddress || "");
-                setApartmentHouseNumber(userData.apartment_house_number || "");
                 setDoorNumberUnitLabel(userData.door_number_unit_label || "");
                 setMPesaRefNo(userData.mPesaRefNo);
                 setInstallationFee(userData.installationFee?.toString() || "");
@@ -119,6 +120,9 @@ export default function EditMikrotikUserPage() {
                 setExpiryDate(userData.expiryDate ? new Date(userData.expiryDate) : undefined);
                 if (userData.station && typeof userData.station !== 'string') {
                     setStationId(userData.station._id);
+                }
+                if (userData.building && typeof userData.building !== 'string') {
+                    setBuildingId(userData.building._id);
                 }
             } catch {
                 toast({ title: "Error", description: "Failed to load initial data.", variant: "destructive" });
@@ -138,6 +142,15 @@ export default function EditMikrotikUserPage() {
             setFilteredPackages([]);
         }
     }, [mikrotikRouterId, serviceType, packages]);
+
+    useEffect(() => {
+        if (buildingId) {
+            const filtered = stations.filter(s => s.serviceArea?.includes(buildingId));
+            setFilteredStations(filtered);
+        } else {
+            setFilteredStations([]);
+        }
+    }, [buildingId, stations]);
 
     // --- Event Handlers ---
     const handleNext = () => {
@@ -161,7 +174,6 @@ export default function EditMikrotikUserPage() {
             username,
             officialName,
             emailAddress,
-            apartment_house_number: apartmentHouseNumber,
             door_number_unit_label: doorNumberUnitLabel,
             mPesaRefNo,
             installationFee: installationFee ? parseFloat(installationFee) : undefined,
@@ -169,7 +181,8 @@ export default function EditMikrotikUserPage() {
             mobileNumber,
             expiryDate,
             station: stationId,
-            ...(serviceType === 'pppoe' && { pppoePassword, remoteAddress }),
+            building: buildingId,
+            ...(serviceType === 'pppoe' && { pppoePassword }),
             ...(serviceType === 'static' && { ipAddress, macAddress }),
         };
 
@@ -229,8 +242,8 @@ export default function EditMikrotikUserPage() {
                                                         <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
                                                         <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType || undefined}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent></Select></div>
                                                     </div>
-                                                    <div className="space-y-1"><Label className="text-xs">Package</Label><Select onValueChange={setPackageId} value={packageId} disabled={filteredPackages.length === 0}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredPackages.map(p => <SelectItem key={p._id} value={p._id} className="text-sm">{p.name} (KES {p.price})</SelectItem>)}</SelectContent></Select></div>
-                                                    <div className="space-y-1"><Label className="text-xs">Station</Label><Select onValueChange={setStationId} value={stationId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{stations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}</SelectContent></Select></div>
+                                                    <div className="space-y-1"><Label className="text-xs">Building</Label><Select onValueChange={(value) => { setBuildingId(value); setStationId(""); }} value={buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select></div>
+                                                    <div className="space-y-1"><Label className="text-xs">Station</Label><Select onValueChange={setStationId} value={stationId} disabled={!buildingId || filteredStations.length === 0}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredStations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}</SelectContent></Select></div>
                                                 </motion.div>
                                             ) : (
                                                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5">
@@ -247,10 +260,10 @@ export default function EditMikrotikUserPage() {
                                                         <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> Personal & Billing</CardTitle>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                             <div className="space-y-1"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                            <div className="space-y-1"><Label className="text-xs">Apartment/House Number</Label><Input value={apartmentHouseNumber} onChange={e => setApartmentHouseNumber(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                            <div className="space-y-1"><Label className="text-xs">Email Address</Label><Input value={emailAddress} onChange={e => setEmailAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Door Number/Unit Label</Label><Input value={doorNumberUnitLabel} onChange={e => setDoorNumberUnitLabel(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                                            <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><Input value={mPesaRefNo} disabled className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                                            <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Billing Cycle</Label><Select onValueChange={setBillingCycle} value={billingCycle} required><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="monthly" className="text-sm">Monthly</SelectItem><SelectItem value="quarterly" className="text-sm">Quarterly</SelectItem><SelectItem value="annually" className="text-sm">Annually</SelectItem></SelectContent></Select></div>
                                                             <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
                                                         </div>

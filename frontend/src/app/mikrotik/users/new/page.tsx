@@ -69,7 +69,6 @@ export default function NewMikrotikUserPage() {
     const [remoteAddress, setRemoteAddress] = useState("");
     const [officialName, setOfficialName] = useState("");
     const [emailAddress, setEmailAddress] = useState("");
-    const [apartmentHouseNumber, setApartmentHouseNumber] = useState("");
     const [doorNumberUnitLabel, setDoorNumberUnitLabel] = useState("");
     const [mPesaRefNo, setMPesaRefNo] = useState("");
     const [billingCycle, setBillingCycle] = useState("monthly");
@@ -224,7 +223,6 @@ export default function NewMikrotikUserPage() {
             username,
             officialName,
             emailAddress,
-            apartment_house_number: apartmentHouseNumber,
             door_number_unit_label: doorNumberUnitLabel,
             mPesaRefNo,
             installationFee: installationFee ? parseFloat(installationFee) : 0,
@@ -359,7 +357,6 @@ export default function NewMikrotikUserPage() {
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                             <div className="space-y-1"><Label className="text-xs">Username</Label><Input value={username} onChange={e => setUsername(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div></div>}
-                                                            {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">Remote Address</Label><Input value={remoteAddress} onChange={e => setRemoteAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
                                                             {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} readOnly placeholder="Dynamically Assigned" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
                                                             {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 00:11:22:33:44:55" /></div>}
                                                         </div>
@@ -369,7 +366,6 @@ export default function NewMikrotikUserPage() {
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                             <div className="space-y-1"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Email Address</Label><Input value={emailAddress} onChange={e => setEmailAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-															<div className="space-y-1"><Label className="text-xs">Apartment/House Number</Label><Input value={apartmentHouseNumber} onChange={e => setApartmentHouseNumber(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
 															<div className="space-y-1"><Label className="text-xs">Door Number/Unit Label</Label><Input value={doorNumberUnitLabel} onChange={e => setDoorNumberUnitLabel(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                                             <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div></div>

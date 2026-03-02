@@ -22,7 +22,7 @@ import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
 import { ConnectDisconnectButtons } from "@/components/mikrotik/ConnectDisconnectButtons"; // Import the new component
 
 // --- Interface Definitions ---
-interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; apartment_house_number?: string; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; isManuallyDisconnected?: boolean; }
+interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; building?: { _id: string; name: string }; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; isManuallyDisconnected?: boolean; }
 interface PaymentStats { totalSpentMpesa: number; lastMpesaPaymentDate: string | null; totalMpesaTransactions: number; averageMpesaTransaction: number; mpesaTransactionHistory: MpesaTransaction[]; }
 interface SmsLog { _id: string; message: string; messageType: string; smsStatus: 'Success' | 'Failed' | 'Pending'; createdAt: string; }
 interface SmsStats { total: number; acknowledgement: number; expiry: number; composed: number; system: number; }
@@ -201,7 +201,7 @@ export default function MikrotikUserDetailsPage() {
                                             <DetailItem icon={Wifi} label="Service Type" value={userData.serviceType.toUpperCase()} />
                                             <DetailItem icon={RouterIcon} label="Mikrotik Router" value={userData.mikrotikRouter.name} />
                                             <DetailItem icon={RouterIcon} label="Station" value={userData.station?.deviceName} href={userData.station?._id ? `/devices/${userData.station._id}` : undefined} />
-                                            <DetailItem icon={Building} label="Apartment/House Number" value={userData.apartment_house_number} />
+                                            <DetailItem icon={Building} label="Building" value={userData.building?.name} />
                                             <DetailItem icon={Home} label="Door Number/Unit Label" value={userData.door_number_unit_label} />
                                             {userData.serviceType === 'pppoe' && <DetailItem icon={Lock} label="PPPoE Password" value={userData.pppoePassword} isPassword />}
                                             {userData.serviceType === 'static' && <DetailItem icon={Hash} label="IP Address" value={userData.ipAddress} />}

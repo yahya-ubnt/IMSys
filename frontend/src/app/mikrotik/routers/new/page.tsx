@@ -58,6 +58,7 @@ export default function NewRouterPage() {
 
   const [name, setName] = useState("");
   const [ipAddress, setIpAddress] = useState("");
+  const [location, setLocation] = useState("");
   const [apiUsername, setApiUsername] = useState("");
   const [apiPassword, setApiPassword] = useState("");
   const [apiPort, setApiPort] = useState("8728");
@@ -92,6 +93,7 @@ export default function NewRouterPage() {
     const routerData = {
       name,
       ipAddress,
+      location,
       apiUsername,
       apiPassword,
       apiPort: parseInt(apiPort, 10),
@@ -170,6 +172,13 @@ export default function NewRouterPage() {
                                 <Input id="ipAddress" type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} required className="h-9 pl-9 text-sm bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 192.168.88.1" />
                               </div>
                             </div>
+                             <div className="space-y-1">
+                              <Label htmlFor="location" className="text-xs text-zinc-300">Location</Label>
+                              <div className="relative">
+                                <Server className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                                <Input id="location" type="text" value={location} onChange={(e) => setLocation(e.target.value)} required className="h-9 pl-9 text-sm bg-zinc-800 text-white border-zinc-700 placeholder-zinc-500 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Nairobi" />
+                              </div>
+                            </div>
                           </div>
                         </motion.div>
                       )}
@@ -235,3 +244,4 @@ export default function NewRouterPage() {
     </div>
   );
 }
+
