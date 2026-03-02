@@ -66,7 +66,6 @@ export default function NewMikrotikUserPage() {
     const [pppoePassword, setPppoePassword] = useState("");
     const [ipAddress, setIpAddress] = useState("");
     const [macAddress, setMacAddress] = useState("");
-    const [remoteAddress, setRemoteAddress] = useState("");
     const [officialName, setOfficialName] = useState("");
     const [emailAddress, setEmailAddress] = useState("");
     const [doorNumberUnitLabel, setDoorNumberUnitLabel] = useState("");
@@ -236,7 +235,6 @@ export default function NewMikrotikUserPage() {
 
         if (serviceType === 'pppoe') {
             userData.pppoePassword = pppoePassword;
-            userData.remoteAddress = remoteAddress;
         } else if (serviceType === 'static') {
             userData.ipAddress = ipAddress;
             userData.macAddress = macAddress;

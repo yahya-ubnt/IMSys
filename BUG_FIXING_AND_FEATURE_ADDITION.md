@@ -34,3 +34,9 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 
 ## 9. Automatic Station Assignment
 - [x] When a station is created and linked to a building, automatically assign that station to all users in the building who do not have a station assigned.
+
+## 10. Device Management
+- [x] The "Parent Device (Uplink)" dropdown is missing from the device edit page.
+- [x] The "Physical Location (Building)" dropdown is missing from the device edit page.
+- [x] The "Additionally Serves" section is missing from the device edit page.
+- [x] The "AP to connect to" dropdown should be removed from all device CRUD operations and replaced with the "Parent Device" dropdown.

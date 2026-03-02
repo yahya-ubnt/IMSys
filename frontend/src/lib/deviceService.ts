@@ -12,6 +12,7 @@ export interface Device {
   lastSeen?: string;
   physicalBuilding?: string | Building;
   serviceArea?: string[];
+  parentId?: string;
   deviceName?: string;
   deviceModel?: string;
   loginUsername?: string;
@@ -118,7 +119,7 @@ export const getMikrotikRouters = async (): Promise<MikrotikRouter[]> => {
 };
 
 // Fetch Buildings (for dropdowns in device forms)
-export const getBuildings = async (): Promise<any[]> => { // Using any for now, should be replaced with a Building interface
+export const getBuildings = async (): Promise<Building[]> => {
   const response = await fetch(`/api/buildings`, { cache: 'no-store' });
   if (!response.ok) {
     const errorData = await response.json();

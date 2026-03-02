@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
 import { createContext, useContext, useEffect, useState, useMemo } from "react"
+import { usePathname } from "next/navigation"
 import { fetchApi } from "@/lib/api"
 
 interface User {
@@ -12,7 +12,7 @@ interface User {
   avatar?: string
   tenant?: {
     _id: string;
-    name: string;
+    name:string;
   };
 }
 
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null) // Add token state
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -51,6 +52,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Get token from cookie
         const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
         setToken(cookieToken || null);
+
+        if (!cookieToken) {
+          setIsLoading(false);
+          return;
+        }
 
         const data = await fetchApi<UserProfile>('/users/profile', { token: cookieToken });
         const user: User = {
@@ -69,9 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    checkAuth()
-  }, [])
-
+    if (pathname !== '/login' && pathname !== '/register') {
+      checkAuth()
+    } else {
+      setIsLoading(false)
+    }
+  }, [pathname])
+  
   const login = (userData: Omit<User, 'name' | 'roles'> & { fullName: string; roles: string[], tenant?: { _id: string; name: string; } }) => {
     const { fullName, ...rest } = userData
     const user: User = { ...rest, name: fullName, roles: userData.roles, tenant: userData.tenant, loginMethod: 'email' }

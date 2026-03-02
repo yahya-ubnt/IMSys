@@ -17,7 +17,7 @@ import { Topbar } from "@/components/topbar";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Interface Definitions ---
-import { getBuildings, getDevices, createBuilding, type Building, type Device } from "@/lib/deviceService";
+import { getBuildings, type Building, type Device } from "@/lib/deviceService";
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id: string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
 interface MikrotikUser { _id: string; mikrotikRouter: string | { _id: string; name: string }; serviceType: 'pppoe' | 'static'; package: string | { _id: string; name: string; price: number }; username: string; pppoePassword?: string; ipAddress?: string; macAddress?: string; officialName: string; emailAddress?: string; door_number_unit_label?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate: string; station?: string | { _id: string; deviceName: string; ipAddress: string }; building?: string | { _id: string; name: string }; }

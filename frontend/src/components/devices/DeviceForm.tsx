@@ -1,15 +1,16 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Device, MikrotikRouter } from "@/lib/deviceService";
+import { Device, MikrotikRouter, Building, getBuildings } from "@/lib/deviceService";
 import { useToast } from "@/hooks/use-toast";
 import { Save, HardDrive, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -51,12 +52,34 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [loginPassword, setLoginPassword] = useState("");
   const [ssid, setSsid] = useState(initialData?.ssid || "");
   const [wirelessPassword, setWirelessPassword] = useState("");
+  const [parentId, setParentId] = useState(initialData?.parentId || "");
 
-  const [routers] = useState<MikrotikRouter[]>([]);
-  const [routersLoading] = useState(true);
-  const [accessPoints] = useState<Device[]>([]);
-  const [accessPointsLoading] = useState(true);
+  const [routers, setRouters] = useState<MikrotikRouter[]>([]);
+  const [accessPoints, setAccessPoints] = useState<Device[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [dataLoading, setDataLoading] = useState({ routers: true, accessPoints: true, buildings: true });
+
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchFormData = async () => {
+      try {
+        const [routersData, accessPointsData, buildingsData] = await Promise.all([
+          fetch('/api/mikrotik/routers').then(res => res.json()),
+          fetch('/api/devices?deviceType=Access').then(res => res.json()),
+          getBuildings(),
+        ]);
+        setRouters(routersData);
+        setAccessPoints(accessPointsData);
+        setBuildings(buildingsData);
+      } catch (error) {
+        toast({ title: "Error fetching form data", description: "Could not load routers, access points, or buildings.", variant: "destructive" });
+      } finally {
+        setDataLoading({ routers: false, accessPoints: false, buildings: false });
+      }
+    };
+    fetchFormData();
+  }, [toast]);
   const handleNext = () => {
     if (routerId && deviceType) {
         setDirection(1);
@@ -77,13 +100,31 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
       return;
     }
     const deviceData: Partial<Device> = {
-      router: { _id: routerId, name: '' }, deviceType, monitoringMode, deviceName, deviceModel, physicalBuilding: physicalBuildingId, serviceArea, ipAddress,
-      macAddress, loginUsername, ssid,
+      router: { _id: routerId, name: '' }, 
+      deviceType, 
+      monitoringMode, 
+      deviceName, 
+      deviceModel, 
+      physicalBuilding: physicalBuildingId, 
+      serviceArea, 
+      ipAddress,
+      macAddress, 
+      loginUsername, 
     };
+
+    if (deviceType === 'Station') {
+      deviceData.parentId = parentId;
+    } else {
+      deviceData.ssid = ssid;
+    }
+
     if (loginPassword) deviceData.loginPassword = loginPassword;
     if (wirelessPassword) deviceData.wirelessPassword = wirelessPassword;
     onSubmit(deviceData);
   };
+
+  const buildingOptions = buildings.map(b => ({ value: b._id, label: b.name }));
+
 
   return (
     <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
@@ -96,7 +137,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                 <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
                   <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Initial Setup</CardTitle>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={routersLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={dataLoading.routers}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-1"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select></div>
                     <div className="space-y-1 sm:col-span-2">
                       <Label className="text-xs">Monitoring Mode</Label>
@@ -124,7 +165,8 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                         <Label htmlFor="deviceModel" className="text-xs">Device Model</Label>
                         <Input id="deviceModel" value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
                     </div>
-                    {/* Building selection is now handled on the parent new/edit page */}
+                    <div className="space-y-1"><Label className="text-xs">Physical Location (Building)</Label><Select onValueChange={setPhysicalBuildingId} value={physicalBuildingId} disabled={dataLoading.buildings}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select></div>
+                    {deviceType === 'Station' && <div className="space-y-1"><Label className="text-xs">Parent Device (Uplink)</Label><Select onValueChange={setParentId} value={parentId} disabled={dataLoading.accessPoints}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap._id} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select></div>}
                     <div className="space-y-1">
                         <Label htmlFor="ipAddress" className="text-xs">IP Address</Label>
                         <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
@@ -141,15 +183,40 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                         <Label htmlFor="loginPassword" className="text-xs">Login Password</Label>
                         <Input id="loginPassword" type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="ssid" className="text-xs">{deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"}</Label>
-                      {deviceType === 'Access' ? <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                        : <Select onValueChange={setSsid} value={ssid} disabled={accessPointsLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap.ssid || ap.deviceName || ''} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select>}
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="wirelessPassword" className="text-xs">{deviceType === 'Access' ? "WPA2 Key" : "Pre-shared Key"}</Label>
-                        <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
+                    {deviceType === 'Access' && (
+                      <>
+                        <div className="space-y-1">
+                          <Label htmlFor="ssid" className="text-xs">Broadcasted SSID</Label>
+                          <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="wirelessPassword" className="text-xs">WPA2 Key</Label>
+                            <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <Label className="text-xs">Additionally Serves (Buildings)</Label>
+                          <MultiSelect
+                              options={buildingOptions}
+                              value={serviceArea}
+                              onValueChange={setServiceArea}
+                              className="w-full"
+                              placeholder="Select buildings this AP serves"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {deviceType === 'Station' && (
+                        <div className="space-y-1 sm:col-span-2">
+                            <Label className="text-xs">Additionally Serves (Wired Neighbours)</Label>
+                            <MultiSelect
+                                options={buildingOptions}
+                                value={serviceArea}
+                                onValueChange={setServiceArea}
+                                className="w-full"
+                                placeholder="Select buildings this station serves"
+                            />
+                        </div>
+                    )}
                   </div>
                 </motion.div>
               )}
