@@ -417,6 +417,10 @@ const UserService = {
       needsSync = true;
     }
 
+    if (updateData.station === '') {
+      updateData.station = null;
+    }
+
     // Apply updates
     Object.assign(user, updateData);
 
