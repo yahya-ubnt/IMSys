@@ -40,3 +40,6 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 - [x] The "Physical Location (Building)" dropdown is missing from the device edit page.
 - [x] The "Additionally Serves" section is missing from the device edit page.
 - [x] The "AP to connect to" dropdown should be removed from all device CRUD operations and replaced with the "Parent Device" dropdown.
+
+## 11. Authentication
+- [x] Fix an issue where opening a new tab would log the user out. This was caused by the client-side code being unable to read the `httpOnly` cookie. The fix was to rely on the browser to send the cookie automatically.

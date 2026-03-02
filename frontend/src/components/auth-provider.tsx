@@ -49,27 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Get token from cookie
-        const cookieToken = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-        setToken(cookieToken || null);
-
-        if (!cookieToken) {
-          setIsLoading(false);
-          return;
-        }
-
-        const data = await fetchApi<UserProfile>('/users/profile', { token: cookieToken });
+        const data = await fetchApi<UserProfile>('/users/profile');
         const user: User = {
           name: data.fullName,
           email: data.email,
           roles: data.roles,
-          tenant: data.tenant, // Add tenant to the user object
-          loginMethod: 'email', // Assuming email login
+          tenant: data.tenant,
+          loginMethod: 'email',
         };
         setUser(user);
       } catch (error) {
         setUser(null);
-        console.error('Error checking auth status:', error);
       } finally {
         setIsLoading(false);
       }

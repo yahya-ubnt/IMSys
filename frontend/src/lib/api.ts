@@ -17,9 +17,7 @@ export async function fetchApi<T>(
   endpoint: string,
   options?: ApiOptions
 ): Promise<T> {
-  const { token, isFormData, body, headers, ...customConfig } = options || {};
-
-  const authToken = token || getCookie('token'); // Get token from props or cookie
+  const { isFormData, body, headers, ...customConfig } = options || {};
 
   const config: RequestInit = {
     method: options?.method || 'GET',
@@ -27,7 +25,6 @@ export async function fetchApi<T>(
     ...customConfig,
     headers: {
       ...headers,
-      ...(authToken && { Authorization: `Bearer ${authToken}` }),
       ...(!isFormData && { 'Content-Type': 'application/json' }),
     },
   };
