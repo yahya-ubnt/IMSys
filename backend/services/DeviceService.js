@@ -43,6 +43,17 @@ const DeviceService = {
     });
 
     const createdDevice = await device.save();
+
+    if (createdDevice.deviceType === 'Station' && createdDevice.serviceArea && createdDevice.serviceArea.length > 0) {
+      const MikrotikUser = require('../models/MikrotikUser');
+      for (const buildingId of createdDevice.serviceArea) {
+        await MikrotikUser.updateMany(
+          { building: buildingId, station: { $exists: false }, tenant: tenantId },
+          { $set: { station: createdDevice._id } }
+        );
+      }
+    }
+
     return createdDevice;
   },
 
@@ -109,6 +120,8 @@ const DeviceService = {
       throw error;
     }
 
+    const oldServiceArea = device.serviceArea.map(id => id.toString());
+
     // Update fields
     device.router = updateData.router || device.router;
     device.ipAddress = updateData.ipAddress || device.ipAddress;
@@ -130,6 +143,20 @@ const DeviceService = {
     }
 
     const updatedDevice = await device.save();
+
+    const newServiceArea = updatedDevice.serviceArea.map(id => id.toString());
+    const addedBuildings = newServiceArea.filter(id => !oldServiceArea.includes(id));
+
+    if (updatedDevice.deviceType === 'Station' && addedBuildings.length > 0) {
+      const MikrotikUser = require('../models/MikrotikUser');
+      for (const buildingId of addedBuildings) {
+        await MikrotikUser.updateMany(
+          { building: buildingId, station: { $exists: false }, tenant: tenantId },
+          { $set: { station: updatedDevice._id } }
+        );
+      }
+    }
+
     return updatedDevice;
   },
 

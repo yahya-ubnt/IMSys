@@ -31,3 +31,6 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 
 ## 8. Email Address Field
 - [x] The "Email Address" field is missing on the user edit page. It should be there as well.
+
+## 9. Automatic Station Assignment
+- [x] When a station is created and linked to a building, automatically assign that station to all users in the building who do not have a station assigned.
