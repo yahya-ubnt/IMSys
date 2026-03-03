@@ -1,7 +1,13 @@
 // backend/middlewares/errorHandler.js
 
 const errorHandler = (err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+
+  // If the error object has a statusCode, use it
+  if (err.statusCode) {
+    statusCode = err.statusCode;
+  }
+
   res.status(statusCode);
   res.json({
     message: err.message,

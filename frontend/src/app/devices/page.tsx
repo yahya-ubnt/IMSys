@@ -143,7 +143,6 @@ export default function DevicesPage() {
               <DataTable
                 table={table}
                 columns={columns}
-                onRowClick={(row) => window.location.href = `/devices/${row._id}`}
               />
             </div>
             <DataTablePagination table={table} />

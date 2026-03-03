@@ -10,9 +10,19 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ArrowLeft, Save, HardDrive, ChevronRight, ChevronLeft, Loader2, Plus } from "lucide-react";
 import { Topbar } from "@/components/topbar";
-import { createDevice, getMikrotikRouters, getDevices, getBuildings, createBuilding, type MikrotikRouter, type Device, type Building } from "@/lib/deviceService";
+import { createDevice, getMikrotikRouters, getDevices, getBuildings, createBuilding, enableMonitoring, type MikrotikRouter, type Device, type Building } from "@/lib/deviceService";
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Step Indicator ---
