@@ -120,6 +120,10 @@ const DeviceService = {
       throw error;
     }
 
+    const oldIpAddress = device.ipAddress;
+    const newIpAddress = updateData.ipAddress;
+    const ipAddressChanged = newIpAddress && newIpAddress !== oldIpAddress;
+
     const oldServiceArea = device.serviceArea.map(id => id.toString());
 
     // Update fields
@@ -144,6 +148,14 @@ const DeviceService = {
     }
 
     const updatedDevice = await device.save();
+
+    if (ipAddressChanged && updatedDevice.monitoringMode === 'SNITCH') {
+        await mikrotikSyncQueue.add('updateNetwatch', {
+          deviceId: updatedDevice._id,
+          tenantId: tenantId,
+          oldIpAddress: oldIpAddress,
+        });
+    }
 
     const newServiceArea = updatedDevice.serviceArea.map(id => id.toString());
     const addedBuildings = newServiceArea.filter(id => !oldServiceArea.includes(id));

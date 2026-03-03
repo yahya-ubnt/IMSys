@@ -59,6 +59,7 @@ export default function NewDevicePage() {
     const [isBuildingDialogOpen, setIsBuildingDialogOpen] = useState(false);
     const [newBuildingName, setNewBuildingName] = useState("");
     const [isSavingBuilding, setIsSavingBuilding] = useState(false);
+    const [isMonitoringEnableAlertOpen, setIsMonitoringEnableAlertOpen] = useState(false);
 
     // Data & UI State
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
@@ -133,8 +134,7 @@ export default function NewDevicePage() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const proceedWithSubmit = async () => {
         if (!deviceType) { toast({ title: "Device Type is required", variant: "destructive" }); return; }
         if (!physicalBuildingId) { toast({ title: "Physical Location is required", variant: "destructive" }); return; }
         setLoading(true);
@@ -156,6 +156,10 @@ export default function NewDevicePage() {
             const newDevice = await createDevice(finalDeviceData);
             toast({ title: "Device Created Successfully" });
             
+            if (newDevice.monitoringMode === 'SNITCH') {
+                await enableMonitoring(newDevice._id);
+            }
+
             const redirectBack = searchParams.get('redirectBackToUserCreation');
             if (redirectBack === 'true' && newDevice.deviceType === 'Station') {
                 router.push(`/mikrotik/users/new?newStationId=${newDevice._id}`);
@@ -167,11 +171,34 @@ export default function NewDevicePage() {
         } finally {
             setLoading(false);
         }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (monitoringMode === 'SNITCH') {
+            setIsMonitoringEnableAlertOpen(true);
+        } else {
+            proceedWithSubmit();
+        }
     };
 
     return (
         <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
       <Topbar />
+      <AlertDialog open={isMonitoringEnableAlertOpen} onOpenChange={setIsMonitoringEnableAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Enable Monitoring</AlertDialogTitle>
+                <AlertDialogDescription>
+                    You are about to enable Netwatch monitoring for this device. This action will inject a script into the router to monitor this device. Are you sure you want to continue?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={proceedWithSubmit}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex-1 p-6 space-y-6">
                 <div className="flex items-center gap-4">
                     <Link href="/devices"><Button variant="ghost" size="icon" className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"><ArrowLeft className="h-4 w-4" /></Button></Link>

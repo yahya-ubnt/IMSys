@@ -50,6 +50,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [direction, setDirection] = useState(1);
   const [isIpChangeAlertOpen, setIsIpChangeAlertOpen] = useState(false);
   const [isMonitoringDisableAlertOpen, setIsMonitoringDisableAlertOpen] = useState(false);
+  const [isMonitoringEnableAlertOpen, setIsMonitoringEnableAlertOpen] = useState(false);
   const [stagedDeviceData, setStagedDeviceData] = useState<Partial<Device> | null>(null);
 
 
@@ -151,6 +152,8 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
       setIsIpChangeAlertOpen(true);
     } else if (isEditMode && initialData?.monitoringMode === 'SNITCH' && monitoringMode === 'NONE') {
       setIsMonitoringDisableAlertOpen(true);
+    } else if (isEditMode && initialData?.monitoringMode === 'NONE' && monitoringMode === 'SNITCH') {
+        setIsMonitoringEnableAlertOpen(true);
     } else {
       proceedWithSubmit(deviceData);
     }
@@ -199,6 +202,20 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => proceedWithSubmit(stagedDeviceData)}>Continue</AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isMonitoringEnableAlertOpen} onOpenChange={setIsMonitoringEnableAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Enable Monitoring</AlertDialogTitle>
+                <AlertDialogDescription>
+                    You are about to enable Netwatch monitoring for this device. This action will inject a script into the router to monitor this device. Are you sure you want to continue?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => proceedWithSubmit(stagedDeviceData)}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">

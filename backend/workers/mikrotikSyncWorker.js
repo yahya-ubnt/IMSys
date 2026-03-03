@@ -44,9 +44,9 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
 
     switch (jobType) {
       case 'enableNetwatch':
-        device = await Device.findById(deviceId).populate('router');
+        device = await Device.findById(deviceId);
         if (!device) throw new Error(`Device ${deviceId} not found.`);
-        router = device.router;
+        router = await MikrotikRouter.findById(device.router);
         if (!router) throw new Error(`Router not found for device ${device.deviceName}`);
         
         await injectNetwatchScript(router, device);
@@ -54,13 +54,38 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         break;
 
       case 'disableNetwatch':
-        device = await Device.findById(deviceId).populate('router');
+        device = await Device.findById(deviceId);
         if (!device) throw new Error(`Device ${deviceId} not found.`);
-        router = device.router;
+        router = await MikrotikRouter.findById(device.router);
         if (!router) throw new Error(`Router not found for device ${device.deviceName}`);
 
         await removeNetwatchScript(router, device);
         console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Netwatch removed for ${device.deviceName}`);
+        break;
+    
+      case 'updateNetwatch':
+        try {
+            const { deviceId, oldIpAddress } = job.data;
+            const device = await Device.findById(deviceId);
+            if (!device) {
+                throw new Error(`Device not found for deviceId: ${deviceId}`);
+            }
+            const router = await MikrotikRouter.findById(device.router);
+            if (!router) {
+                throw new Error(`Router not found for device ${device.deviceName}`);
+            }
+
+            // Create a temporary device object with the old IP to remove the script
+            const oldDevice = { ...device.toObject(), ipAddress: oldIpAddress };
+            await removeNetwatchScript(router, oldDevice);
+
+            // Inject the new script
+            await injectNetwatchScript(router, device);
+            console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Netwatch updated for ${device.deviceName}`);
+        } catch (error) {
+            console.error(`[${new Date().toISOString()}] MikroTik Sync Worker: Error processing updateNetwatch job for deviceId: ${job.data.deviceId}`, error);
+            throw error;
+        }
         break;
 
       case 'addUser':
