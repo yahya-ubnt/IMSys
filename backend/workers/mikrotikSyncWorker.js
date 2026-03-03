@@ -6,7 +6,7 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const Device = require('../models/Device');
 const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
-const { getMikrotikApiClient, injectNetwatchScript, injectPPPProfileScripts, syncMikrotikUser } = require('../utils/mikrotikUtils'); // Assuming this utility exists
+const { getMikrotikApiClient, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
 const { processExpiredClientDisconnectScheduler } = require('../jobs/scheduleExpiredClientDisconnectsJob'); // Import the scheduler processor
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
@@ -51,6 +51,16 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         
         await injectNetwatchScript(router, device);
         console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Netwatch injected for ${device.deviceName}`);
+        break;
+
+      case 'disableNetwatch':
+        device = await Device.findById(deviceId).populate('router');
+        if (!device) throw new Error(`Device ${deviceId} not found.`);
+        router = device.router;
+        if (!router) throw new Error(`Router not found for device ${device.deviceName}`);
+
+        await removeNetwatchScript(router, device);
+        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Netwatch removed for ${device.deviceName}`);
         break;
 
       case 'addUser':

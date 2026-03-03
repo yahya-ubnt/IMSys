@@ -168,6 +168,18 @@ export const enableMonitoring = async (id: string): Promise<{ success: boolean; 
   return response.json();
 };
 
+// Disable Netwatch monitoring for a device
+export const disableMonitoring = async (id: string): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`/api/devices/${id}/disable-monitoring`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to disable monitoring");
+  }
+  return response.json();
+};
+
 // Fetch Downtime Logs for a specific device
 export const getDeviceDowntimeLogs = async (deviceId: string): Promise<DowntimeLog[]> => {
   const response = await fetch(`/api/devices/${deviceId}/downtime`);

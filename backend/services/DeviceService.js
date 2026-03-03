@@ -127,6 +127,7 @@ const DeviceService = {
     device.ipAddress = updateData.ipAddress || device.ipAddress;
     device.macAddress = updateData.macAddress || device.macAddress;
     device.deviceType = updateData.deviceType || device.deviceType;
+    device.monitoringMode = updateData.monitoringMode || device.monitoringMode;
     device.physicalBuilding = updateData.physicalBuilding || device.physicalBuilding;
     device.serviceArea = updateData.serviceArea || device.serviceArea;
     device.parentId = updateData.parentId || device.parentId;
@@ -172,6 +173,13 @@ const DeviceService = {
       const error = new Error('Device not found');
       error.statusCode = 404;
       throw error;
+    }
+
+    if (device.monitoringMode === 'SNITCH') {
+      await mikrotikSyncQueue.add('disableNetwatch', {
+        deviceId: device._id,
+        tenantId: tenantId
+      });
     }
 
     await DowntimeLog.deleteMany({ device: device._id });
@@ -241,6 +249,22 @@ const DeviceService = {
     });
 
     return { success: true, message: 'Monitoring injection queued successfully.' };
+  },
+
+  disableMonitoring: async (deviceId, tenantId) => {
+    const device = await Device.findOne({ _id: deviceId, tenant: tenantId });
+    if (!device) {
+      const error = new Error('Device not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    await mikrotikSyncQueue.add('disableNetwatch', {
+      deviceId: device._id,
+      tenantId: tenantId
+    });
+
+    return { success: true, message: 'Monitoring removal queued successfully.' };
   },
 };
 

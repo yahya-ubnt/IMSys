@@ -47,3 +47,7 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 ## 12. Device Creation/Editing Wizard
 - [x] When creating a device and the type is "Access Point", the "Parent Device (Uplink)" in the next step of the wizard should be automatically selected to be the same as the "MikroTik Router" and be made uneditable.
 - [x] When editing an "Access Point" device, if the "MikroTik Router" is changed, the "Parent Device (Uplink)" should also be updated to the new router.
+- [x] When creating a "Station" device, the "Parent Device (Uplink)" dropdown should only show "Access Points".
+
+## 13. Netwatch Monitoring
+- [ ] When editing a device with Netwatch monitoring enabled, if the IP address is changed, prompt the user for confirmation before updating the Netwatch script on the router.

@@ -237,6 +237,34 @@ const injectNetwatchScript = async (router, targetDevice) => {
   }
 };
 
+const removeNetwatchScript = async (router, targetDevice) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    // Find the netwatch rule for the device's IP address
+    const existingNetwatch = await client.write('/tool/netwatch/print', [`?host=${targetDevice.ipAddress}`]);
+
+    if (existingNetwatch && existingNetwatch.length > 0) {
+      const netwatchId = existingNetwatch[0]['.id'];
+      console.log(`Removing Netwatch for ${targetDevice.ipAddress}.`);
+      await client.write('/tool/netwatch/remove', [`=.id=${netwatchId}`]);
+      console.log(`Successfully removed Netwatch script for ${targetDevice.deviceName} on router ${router.name}`);
+    } else {
+      console.log(`No Netwatch script found for ${targetDevice.ipAddress}. Nothing to remove.`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Failed to remove Netwatch script for ${targetDevice.deviceName} on router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
 const injectPPPProfileScripts = async (router) => {
   const client = await getMikrotikApiClient(router);
   if (!client) return false;
@@ -406,4 +434,4 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
   return true;
 };
 
-module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };
+module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };

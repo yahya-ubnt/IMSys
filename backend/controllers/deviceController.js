@@ -71,6 +71,11 @@ const enableMonitoring = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+const disableMonitoring = asyncHandler(async (req, res) => {
+  const result = await DeviceService.disableMonitoring(req.params.id, req.user.tenant);
+  res.status(200).json(result);
+});
+
 module.exports = {
   createDevice,
   getDevices,
@@ -80,4 +85,5 @@ module.exports = {
   getDeviceDowntimeLogs,
   pingDevice,
   enableMonitoring,
+  disableMonitoring,
 };

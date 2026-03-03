@@ -6,11 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Device, MikrotikRouter, Building, getBuildings } from "@/lib/deviceService";
+import { Device, MikrotikRouter, Building, getBuildings, enableMonitoring, disableMonitoring } from "@/lib/deviceService";
 import { useToast } from "@/hooks/use-toast";
 import { Save, HardDrive, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MultiSelect } from "@/components/ui/multi-select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -38,6 +48,10 @@ interface DeviceFormProps {
 export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: DeviceFormProps) {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
+  const [isIpChangeAlertOpen, setIsIpChangeAlertOpen] = useState(false);
+  const [isMonitoringDisableAlertOpen, setIsMonitoringDisableAlertOpen] = useState(false);
+  const [stagedDeviceData, setStagedDeviceData] = useState<Partial<Device> | null>(null);
+
 
   const [routerId, setRouterId] = useState(typeof initialData?.router === 'object' ? initialData?.router?._id || "" : initialData?.router || "");
   const [deviceType, setDeviceType] = useState<"Access" | "Station" | undefined>(initialData?.deviceType || undefined);
@@ -106,21 +120,18 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deviceType) {
-      toast({ title: "Device Type is required", variant: "destructive" });
-      return;
-    }
+
     const deviceData: Partial<Device> = {
-      router: { _id: routerId, name: '' }, 
-      deviceType, 
-      monitoringMode, 
-      deviceName, 
-      deviceModel, 
-      physicalBuilding: physicalBuildingId, 
-      serviceArea, 
+      router: { _id: routerId, name: '' },
+      deviceType,
+      monitoringMode,
+      deviceName,
+      deviceModel,
+      physicalBuilding: physicalBuildingId,
+      serviceArea,
       ipAddress,
-      macAddress, 
-      loginUsername, 
+      macAddress,
+      loginUsername,
     };
 
     if (deviceType === 'Station' || deviceType === 'Access') {
@@ -133,6 +144,27 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
 
     if (loginPassword) deviceData.loginPassword = loginPassword;
     if (wirelessPassword) deviceData.wirelessPassword = wirelessPassword;
+
+    setStagedDeviceData(deviceData);
+
+    if (isEditMode && initialData?.ipAddress !== ipAddress && monitoringMode === 'SNITCH') {
+      setIsIpChangeAlertOpen(true);
+    } else if (isEditMode && initialData?.monitoringMode === 'SNITCH' && monitoringMode === 'NONE') {
+      setIsMonitoringDisableAlertOpen(true);
+    } else {
+      proceedWithSubmit(deviceData);
+    }
+  };
+
+  const proceedWithSubmit = (deviceData: Partial<Device> | null) => {
+    if (!deviceData) return;
+
+    if (isEditMode && initialData?.monitoringMode === 'SNITCH' && deviceData.monitoringMode === 'NONE') {
+      disableMonitoring(initialData?._id as string);
+    } else if (isEditMode && initialData?.monitoringMode === 'NONE' && deviceData.monitoringMode === 'SNITCH') {
+      enableMonitoring(initialData?._id as string);
+    }
+
     onSubmit(deviceData);
   };
 
@@ -140,110 +172,140 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
 
 
   return (
-    <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
-      <Card className="bg-transparent border-none">
-        <CardHeader className="p-4 border-b border-zinc-800"><StepIndicator currentStep={step} /></CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="p-5">
-            <AnimatePresence mode="wait" custom={direction}>
-              {step === 1 ? (
-                <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
-                  <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Initial Setup</CardTitle>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={dataLoading.routers}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-1"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-1 sm:col-span-2">
-                      <Label className="text-xs">Monitoring Mode</Label>
-                      <Select onValueChange={(v: "SNITCH" | "NONE") => setMonitoringMode(v)} value={monitoringMode}>
-                        <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
-                          <SelectValue placeholder="Select monitoring mode" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                          <SelectItem value="SNITCH" className="text-sm">Netwatch (Snitch) - Automatic Alerts</SelectItem>
-                          <SelectItem value="NONE" className="text-sm">None - Manual Diagnostic Only</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[10px] text-zinc-500 mt-1">SNITCH mode enables instant automated failure reporting via the router.</p>
+    <>
+      <AlertDialog open={isIpChangeAlertOpen} onOpenChange={setIsIpChangeAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm IP Address Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have changed the IP address of a device with Netwatch monitoring enabled. This action will update the Netwatch script on the router. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => proceedWithSubmit(stagedDeviceData)}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isMonitoringDisableAlertOpen} onOpenChange={setIsMonitoringDisableAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Disable Monitoring</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to disable monitoring for this device. This action will remove the Netwatch script from the router. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => proceedWithSubmit(stagedDeviceData)}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
+        <Card className="bg-transparent border-none">
+          <CardHeader className="p-4 border-b border-zinc-800"><StepIndicator currentStep={step} /></CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="p-5">
+              <AnimatePresence mode="wait" custom={direction}>
+                {step === 1 ? (
+                  <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
+                    <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Initial Setup</CardTitle>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={dataLoading.routers}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-1"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select></div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label className="text-xs">Monitoring Mode</Label>
+                        <Select onValueChange={(v: "SNITCH" | "NONE") => setMonitoringMode(v)} value={monitoringMode}>
+                          <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                            <SelectValue placeholder="Select monitoring mode" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                            <SelectItem value="SNITCH" className="text-sm">Netwatch (Snitch) - Automatic Alerts</SelectItem>
+                            <SelectItem value="NONE" className="text-sm">None - Manual Diagnostic Only</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-zinc-500 mt-1">SNITCH mode enables instant automated failure reporting via the router.</p>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                        <Label htmlFor="deviceName" className="text-xs">Device Name</Label>
-                        <Input id="deviceName" value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="deviceModel" className="text-xs">Device Model</Label>
-                        <Input id="deviceModel" value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
-                    <div className="space-y-1"><Label className="text-xs">Physical Location (Building)</Label><Select onValueChange={setPhysicalBuildingId} value={physicalBuildingId} disabled={dataLoading.buildings}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select></div>
-                    {deviceType === 'Station' && <div className="space-y-1"><Label className="text-xs">Parent Device (Uplink)</Label><Select onValueChange={setParentId} value={parentId} disabled={dataLoading.accessPoints}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap._id} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select></div>}
-                    <div className="space-y-1">
-                        <Label htmlFor="ipAddress" className="text-xs">IP Address</Label>
-                        <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="macAddress" className="text-xs">MAC Address</Label>
-                        <Input id="macAddress" value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="loginUsername" className="text-xs">Login Username</Label>
-                        <Input id="loginUsername" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="loginPassword" className="text-xs">Login Password</Label>
-                        <Input id="loginPassword" type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                    </div>
-                    {deviceType === 'Access' && (
-                      <>
-                        <div className="space-y-1">
-                          <Label htmlFor="ssid" className="text-xs">Broadcasted SSID</Label>
-                          <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <Label htmlFor="wirelessPassword" className="text-xs">WPA2 Key</Label>
-                            <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <Label className="text-xs">Additionally Serves (Buildings)</Label>
-                          <MultiSelect
-                              options={buildingOptions}
-                              value={serviceArea}
-                              onValueChange={setServiceArea}
-                              className="w-full"
-                              placeholder="Select buildings this AP serves"
-                          />
-                        </div>
-                      </>
-                    )}
-                    {deviceType === 'Station' && (
-                        <div className="space-y-1 sm:col-span-2">
-                            <Label className="text-xs">Additionally Serves (Wired Neighbours)</Label>
+                  </motion.div>
+                ) : (
+                  <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                          <Label htmlFor="deviceName" className="text-xs">Device Name</Label>
+                          <Input id="deviceName" value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="deviceModel" className="text-xs">Device Model</Label>
+                          <Input id="deviceModel" value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                      </div>
+                      <div className="space-y-1"><Label className="text-xs">Physical Location (Building)</Label><Select onValueChange={setPhysicalBuildingId} value={physicalBuildingId} disabled={dataLoading.buildings}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select></div>
+                      {deviceType === 'Station' && <div className="space-y-1"><Label className="text-xs">Parent Device (Uplink)</Label><Select onValueChange={setParentId} value={parentId} disabled={dataLoading.accessPoints}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap._id} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select></div>}
+                      <div className="space-y-1">
+                          <Label htmlFor="ipAddress" className="text-xs">IP Address</Label>
+                          <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="macAddress" className="text-xs">MAC Address</Label>
+                          <Input id="macAddress" value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="loginUsername" className="text-xs">Login Username</Label>
+                          <Input id="loginUsername" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="loginPassword" className="text-xs">Login Password</Label>
+                          <Input id="loginPassword" type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                      </div>
+                      {deviceType === 'Access' && (
+                        <>
+                          <div className="space-y-1">
+                            <Label htmlFor="ssid" className="text-xs">Broadcasted SSID</Label>
+                            <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                              <Label htmlFor="wirelessPassword" className="text-xs">WPA2 Key</Label>
+                              <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                          </div>
+                          <div className="space-y-1 sm:col-span-2">
+                            <Label className="text-xs">Additionally Serves (Buildings)</Label>
                             <MultiSelect
                                 options={buildingOptions}
                                 value={serviceArea}
                                 onValueChange={setServiceArea}
                                 className="w-full"
-                                placeholder="Select buildings this station serves"
+                                placeholder="Select buildings this AP serves"
                             />
-                        </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-          <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
-            <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
-            <div>
-              {step === 1 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="mr-1 h-4 w-4" /></Button>}
-              {step === 2 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Device"}</Button>}
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
-    </motion.div>
+                          </div>
+                        </>
+                      )}
+                      {deviceType === 'Station' && (
+                          <div className="space-y-1 sm:col-span-2">
+                              <Label className="text-xs">Additionally Serves (Wired Neighbours)</Label>
+                              <MultiSelect
+                                  options={buildingOptions}
+                                  value={serviceArea}
+                                  onValueChange={setServiceArea}
+                                  className="w-full"
+                                  placeholder="Select buildings this station serves"
+                              />
+                          </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </CardContent>
+            <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
+              <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
+              <div>
+                {step === 1 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="mr-1 h-4 w-4" /></Button>}
+                {step === 2 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Device"}</Button>}
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+      </motion.div>
+    </>
   );
 }
