@@ -80,14 +80,25 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
     };
     fetchFormData();
   }, [toast]);
+
+  useEffect(() => {
+    if (deviceType === 'Access') {
+      setParentId(routerId);
+    }
+  }, [routerId, deviceType]);
+
   const handleNext = () => {
     if (routerId && deviceType) {
+        if (deviceType === 'Access') {
+            setParentId(routerId);
+        }
         setDirection(1);
         setStep(2);
     } else {
         toast({ title: "Missing Information", description: "Please select a router and device type.", variant: "destructive" });
     }
   };
+
 
   const handleBack = () => {
       setDirection(-1);
@@ -112,9 +123,11 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
       loginUsername, 
     };
 
-    if (deviceType === 'Station') {
+    if (deviceType === 'Station' || deviceType === 'Access') {
       deviceData.parentId = parentId;
-    } else {
+    }
+
+    if (deviceType === 'Access') {
       deviceData.ssid = ssid;
     }
 

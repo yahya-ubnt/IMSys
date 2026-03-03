@@ -94,6 +94,9 @@ export default function NewDevicePage() {
 
     const handleNext = () => {
         if (routerId && deviceType) {
+            if (deviceType === 'Access') {
+                setParentId(routerId);
+            }
             setDirection(1);
             setStep(2);
         } else {
@@ -220,7 +223,7 @@ export default function NewDevicePage() {
                                                         </div>
                                                         <div className="space-y-1 sm:col-span-2">
                                                             <Label className="text-xs">Parent Device (Uplink)</Label>
-                                                            <Select onValueChange={setParentId} value={parentId} disabled={accessPointsLoading || routersLoading}>
+                                                            <Select onValueChange={setParentId} value={parentId} disabled={accessPointsLoading || routersLoading || deviceType === 'Access'}>
                                                                 <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select parent device" /></SelectTrigger>
                                                                 <SelectContent className="bg-zinc-800 text-white border-zinc-700">
                                                                     <Label className="px-3 text-xs text-zinc-400">Access Points</Label>
