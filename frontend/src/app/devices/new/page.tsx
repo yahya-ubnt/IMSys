@@ -228,8 +228,12 @@ export default function NewDevicePage() {
                                                                 <SelectContent className="bg-zinc-800 text-white border-zinc-700">
                                                                     <Label className="px-3 text-xs text-zinc-400">Access Points</Label>
                                                                     {accessPoints.map(d => <SelectItem key={d._id} value={d._id} className="text-sm">{d.deviceName}</SelectItem>)}
-                                                                    <Label className="px-3 text-xs text-zinc-400">Core Routers</Label>
-                                                                    {routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}
+                                                                    {deviceType !== 'Station' && (
+                                                                        <>
+                                                                            <Label className="px-3 text-xs text-zinc-400">Core Routers</Label>
+                                                                            {routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}
+                                                                        </>
+                                                                    )}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
