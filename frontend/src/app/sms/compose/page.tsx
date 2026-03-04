@@ -29,10 +29,15 @@ interface MikrotikUser {
   apartment_house_number?: string;
 }
 
+type Building = {
+  _id: string;
+  name: string;
+}
+
 const TABS = [
     { id: "users", label: "Users", icon: Users },
     { id: "mikrotik", label: "Mikrotik Group", icon: Router },
-    { id: "location", label: "Location", icon: Building },
+    { id: "building", label: "Building", icon: Building },
     { id: "unregistered", label: "Unregistered", icon: Phone },
 ];
 
@@ -47,35 +52,35 @@ export default function ComposeSmsPage() {
   const [message, setMessage] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [selectedRouters, setSelectedRouters] = useState<string[]>([])
-  const [selectedApartmentHouseNumbers, setSelectedApartmentHouseNumbers] = useState<string[]>([])
   const [unregisteredPhone, setUnregisteredPhone] = useState("")
-  const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
+  const [buildings, setBuildings] = useState<Building[]>([])
+  const [selectedBuildings, setSelectedBuildings] = useState<string[]>([])
   const [sendToActiveOnly, setSendToActiveOnly] = useState(false);
   const [sendToExpiredOnly, setSendToExpiredOnly] = useState(false);
   const [sendToMikrotikActiveOnly, setSendToMikrotikActiveOnly] = useState(false);
   const [sendToMikrotikExpiredOnly, setSendToMikrotikExpiredOnly] = useState(false);
   const [mikrotikUsersForSelectedRouters, setMikrotikUsersForSelectedRouters] = useState<User[]>([]);
+  const [sendToBuildingActiveOnly, setSendToBuildingActiveOnly] = useState(false);
+  const [sendToBuildingExpiredOnly, setSendToBuildingExpiredOnly] = useState(false);
+  const [mikrotikUsersForSelectedBuildings, setMikrotikUsersForSelectedBuildings] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [usersRes, routersRes, mikrotikUsersDataRes] = await Promise.all([
+        const [usersRes, routersRes, buildingsRes] = await Promise.all([
           fetch("/api/mikrotik/users/clients-for-sms"),
           fetch("/api/mikrotik/routers"),
-          fetch("/api/mikrotik/users"), // Fetch all mikrotik users to get apartment_house_number
+          fetch("/api/buildings"), // Fetch buildings
         ])
 
-        if (!usersRes.ok || !routersRes.ok || !mikrotikUsersDataRes.ok) {
+        if (!usersRes.ok || !routersRes.ok || !buildingsRes.ok) {
           throw new Error("Failed to fetch required data")
         }
 
-        const mikrotikUsersData = await mikrotikUsersDataRes.json();
         setUsers(await usersRes.json())
         setMikrotikRouters(await routersRes.json())
-
-        const uniqueApartmentHouseNumbers = Array.from(new Set(mikrotikUsersData.map((user: MikrotikUser) => user.apartment_house_number).filter(Boolean)));
-        setApartmentHouseNumbers(uniqueApartmentHouseNumbers as string[]);
+        setBuildings((await buildingsRes.json()).data) // Set buildings
 
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -122,6 +127,37 @@ export default function ComposeSmsPage() {
     fetchMikrotikUsersByRouters();
   }, [selectedRouters, toast]);
 
+  useEffect(() => {
+    const fetchMikrotikUsersByBuildings = async () => {
+      if (selectedBuildings.length === 0) {
+        setMikrotikUsersForSelectedBuildings([]);
+        return;
+      }
+      try {
+        const response = await fetch("/api/mikrotik/users/by-buildings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ buildingIds: selectedBuildings }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch MikroTik users by buildings");
+        }
+        const data = await response.json();
+        setMikrotikUsersForSelectedBuildings(data);
+      } catch (error) {
+        console.error("Error fetching MikroTik users by buildings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load MikroTik users for selected buildings.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchMikrotikUsersByBuildings();
+  }, [selectedBuildings, toast]);
+
   const userOptions = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
@@ -136,7 +172,7 @@ export default function ComposeSmsPage() {
   }, [users, sendToActiveOnly, sendToExpiredOnly]);
 
   const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
-  const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
+  const buildingOptions = buildings.map(building => ({ value: building._id, label: building.name }));
 
   const mikrotikUserOptions = useMemo(() => {
     const today = new Date();
@@ -150,6 +186,19 @@ export default function ComposeSmsPage() {
     }
     return filtered.map(user => ({ value: user._id, label: user.officialName }));
   }, [mikrotikUsersForSelectedRouters, sendToMikrotikActiveOnly, sendToMikrotikExpiredOnly]);
+
+  const buildingUserOptions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let filtered = mikrotikUsersForSelectedBuildings;
+    if (sendToBuildingActiveOnly) {
+      filtered = mikrotikUsersForSelectedBuildings.filter(user => user.expiryDate && new Date(user.expiryDate) >= today);
+    } else if (sendToBuildingExpiredOnly) {
+      filtered = mikrotikUsersForSelectedBuildings.filter(user => user.expiryDate && new Date(user.expiryDate) < today);
+    }
+    return filtered.map(user => ({ value: user._id, label: user.officialName }));
+  }, [mikrotikUsersForSelectedBuildings, sendToBuildingActiveOnly, sendToBuildingExpiredOnly]);
 
   const handleSelectAllUsers = (isChecked: boolean | 'indeterminate') => {
     if (isChecked) {
@@ -235,19 +284,53 @@ export default function ComposeSmsPage() {
     }
   };
 
+  const handleSelectAllBuildingUsers = (isChecked: boolean | 'indeterminate') => {
+    if (isChecked) {
+      setSendToBuildingActiveOnly(false);
+      setSendToBuildingExpiredOnly(false);
+      setSelectedUsers(buildingUserOptions.map(u => u.value));
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleBuildingActiveOnlyChange = (isChecked: boolean | 'indeterminate') => {
+    const checked = !!isChecked;
+    setSendToBuildingActiveOnly(checked);
+    if (checked) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSendToBuildingExpiredOnly(false); // Uncheck the other filter
+      const activeUserIds = mikrotikUsersForSelectedBuildings
+        .filter(user => user.expiryDate && new Date(user.expiryDate) >= today)
+        .map(user => user._id);
+      setSelectedUsers(activeUserIds);
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleBuildingExpiredOnlyChange = (isChecked: boolean | 'indeterminate') => {
+    const checked = !!isChecked;
+    setSendToBuildingExpiredOnly(checked);
+    if (checked) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSendToBuildingActiveOnly(false); // Uncheck the other filter
+      const expiredUserIds = mikrotikUsersForSelectedBuildings
+        .filter(user => user.expiryDate && new Date(user.expiryDate) < today)
+        .map(user => user._id);
+      setSelectedUsers(expiredUserIds);
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
   const handleSelectAllRouters = (isChecked: boolean | 'indeterminate') => {
     if (isChecked) {
       setSelectedRouters(routerOptions.map(r => r.value));
     } else {
       setSelectedRouters([]);
-    }
-  };
-
-  const handleSelectAllLocations = (isChecked: boolean | 'indeterminate') => {
-    if (isChecked) {
-      setSelectedApartmentHouseNumbers(locationOptions.map(l => l.value));
-    } else {
-      setSelectedApartmentHouseNumbers([]);
     }
   };
 
@@ -258,11 +341,10 @@ export default function ComposeSmsPage() {
     let payload: { 
       message: string; 
       sendToType: string; 
-      userIds?: string[]; 
-      mikrotikRouterIds?: string[]; 
-      apartmentHouseNumbers?: string[]; 
-      unregisteredMobileNumber?: string; 
-    } = { message, sendToType: activeTab }
+            userIds?: string[];
+            mikrotikRouterIds?: string[];
+            buildingIds?: string[];
+            unregisteredMobileNumber?: string;    } = { message, sendToType: activeTab }
 
     switch (activeTab) {
       case "users":
@@ -272,8 +354,9 @@ export default function ComposeSmsPage() {
         payload.userIds = selectedUsers;
         payload.mikrotikRouterIds = selectedRouters;
         break
-      case "location":
-        payload.apartmentHouseNumbers = selectedApartmentHouseNumbers;
+      case "building":
+        payload.userIds = selectedUsers;
+        payload.buildingIds = selectedBuildings;
         break
       case "unregistered":
         payload.unregisteredMobileNumber = unregisteredPhone;
@@ -460,25 +543,55 @@ export default function ComposeSmsPage() {
                                     </div>
                               </div>
                           )}
-                          {activeTab === "location" && (
+                          {activeTab === "building" && (
                               <div className="space-y-2">
-                                  <Label htmlFor="location" className="text-zinc-300">Select Apartment/House Number(s)</Label>
+                                  <Label htmlFor="building" className="text-zinc-300">Select Building(s)</Label>
                                   <MultiSelect
-                                    options={locationOptions}
-                                    onValueChange={setSelectedApartmentHouseNumbers}
-                                    value={selectedApartmentHouseNumbers}
-                                    placeholder="Select locations..."
+                                    options={buildingOptions}
+                                    onValueChange={setSelectedBuildings}
+                                    value={selectedBuildings}
+                                    placeholder="Select buildings..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
-                                  <div className="flex items-center space-x-2 mt-2">
-                                    <Checkbox
-                                      id="select-all-locations"
-                                      onCheckedChange={handleSelectAllLocations}
-                                      checked={selectedApartmentHouseNumbers.length === locationOptions.length && locationOptions.length > 0}
+                                  <div className="space-y-2 pt-2">
+                                    <Label htmlFor="building-users" className="text-zinc-300">Select User(s) in selected buildings</Label>
+                                    <MultiSelect
+                                      options={buildingUserOptions}
+                                      onValueChange={setSelectedUsers}
+                                      value={selectedUsers}
+                                      placeholder="Select users..."
+                                      className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                     />
-                                    <Label htmlFor="select-all-locations" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                      Send to all locations
-                                    </Label>
+                                    <div className="flex items-center space-x-2 pt-2">
+                                      <Checkbox
+                                        id="select-all-building-users"
+                                        onCheckedChange={handleSelectAllBuildingUsers}
+                                        checked={!sendToBuildingActiveOnly && !sendToBuildingExpiredOnly && selectedUsers.length === buildingUserOptions.length && buildingUserOptions.length > 0}
+                                      />
+                                      <Label htmlFor="select-all-building-users" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        Send to all users in selected Building(s)
+                                      </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2 pt-2">
+                                      <Checkbox
+                                        id="send-to-building-active"
+                                        onCheckedChange={handleBuildingActiveOnlyChange}
+                                        checked={sendToBuildingActiveOnly}
+                                      />
+                                      <Label htmlFor="send-to-building-active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        Send to active users in selected Building(s) only
+                                      </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2 pt-2">
+                                      <Checkbox
+                                        id="send-to-building-expired"
+                                        onCheckedChange={handleBuildingExpiredOnlyChange}
+                                        checked={sendToBuildingExpiredOnly}
+                                      />
+                                      <Label htmlFor="send-to-building-expired" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        Send to expired users in selected Building(s) only
+                                      </Label>
+                                    </div>
                                   </div>
                               </div>
                           )}

@@ -312,6 +312,12 @@ const UserService = {
     return users;
   },
 
+  getMikrotikUsersByBuildings: async (buildingIds, tenantId) => {
+    const query = { building: { $in: buildingIds }, tenant: tenantId };
+    const users = await MikrotikUser.find(query).select('_id officialName mobileNumber expiryDate');
+    return users;
+  },
+
   getDowntimeLogs: async (userId, tenantId) => {
     const query = { _id: userId, tenant: tenantId };
 
