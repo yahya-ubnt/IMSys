@@ -326,14 +326,6 @@ export default function ComposeSmsPage() {
     }
   };
 
-  const handleSelectAllRouters = (isChecked: boolean | 'indeterminate') => {
-    if (isChecked) {
-      setSelectedRouters(routerOptions.map(r => r.value));
-    } else {
-      setSelectedRouters([]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
