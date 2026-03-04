@@ -306,6 +306,12 @@ const UserService = {
     return users;
   },
 
+  getMikrotikUsersByRouters: async (routerIds, tenantId) => {
+    const query = { mikrotikRouter: { $in: routerIds }, tenant: tenantId };
+    const users = await MikrotikUser.find(query).select('_id officialName mobileNumber expiryDate');
+    return users;
+  },
+
   getDowntimeLogs: async (userId, tenantId) => {
     const query = { _id: userId, tenant: tenantId };
 

@@ -130,6 +130,19 @@ const getMikrotikUsersByStation = asyncHandler(async (req, res) => {
   res.status(200).json(users);
 });
 
+// @desc    Get all Mikrotik Users for a specific set of routers
+// @route   POST /api/mikrotik/users/by-routers
+// @access  Private
+const getMikrotikUsersByRouters = asyncHandler(async (req, res) => {
+  const { routerIds } = req.body;
+  if (!routerIds || !Array.isArray(routerIds)) {
+    res.status(400);
+    throw new Error('routerIds array is required in the request body');
+  }
+  const users = await UserService.getMikrotikUsersByRouters(routerIds, req.user.tenant);
+  res.status(200).json(users);
+});
+
 // @desc    Get Downtime Logs for a Mikrotik User
 // @route   GET /api/mikrotik/users/:userId/downtime-logs
 // @access  Private/Admin
@@ -174,4 +187,5 @@ module.exports = {
   getMikrotikUsersByStation,
   manualDisconnectUser,
   manualConnectUser,
+  getMikrotikUsersByRouters,
 };

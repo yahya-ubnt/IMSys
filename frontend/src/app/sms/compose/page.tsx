@@ -52,22 +52,25 @@ export default function ComposeSmsPage() {
   const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
   const [sendToActiveOnly, setSendToActiveOnly] = useState(false);
   const [sendToExpiredOnly, setSendToExpiredOnly] = useState(false);
+  const [sendToMikrotikActiveOnly, setSendToMikrotikActiveOnly] = useState(false);
+  const [sendToMikrotikExpiredOnly, setSendToMikrotikExpiredOnly] = useState(false);
+  const [mikrotikUsersForSelectedRouters, setMikrotikUsersForSelectedRouters] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [usersRes, routersRes, mikrotikUsersRes] = await Promise.all([
+        const [usersRes, routersRes, mikrotikUsersDataRes] = await Promise.all([
           fetch("/api/mikrotik/users/clients-for-sms"),
           fetch("/api/mikrotik/routers"),
-          fetch("/api/mikrotik/users"),
+          fetch("/api/mikrotik/users"), // Fetch all mikrotik users to get apartment_house_number
         ])
 
-        if (!usersRes.ok || !routersRes.ok || !mikrotikUsersRes.ok) {
+        if (!usersRes.ok || !routersRes.ok || !mikrotikUsersDataRes.ok) {
           throw new Error("Failed to fetch required data")
         }
 
-        const mikrotikUsersData = await mikrotikUsersRes.json();
+        const mikrotikUsersData = await mikrotikUsersDataRes.json();
         setUsers(await usersRes.json())
         setMikrotikRouters(await routersRes.json())
 
@@ -88,6 +91,37 @@ export default function ComposeSmsPage() {
     fetchData()
   }, [toast])
 
+  useEffect(() => {
+    const fetchMikrotikUsersByRouters = async () => {
+      if (selectedRouters.length === 0) {
+        setMikrotikUsersForSelectedRouters([]);
+        return;
+      }
+      try {
+        const response = await fetch("/api/mikrotik/users/by-routers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ routerIds: selectedRouters }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch MikroTik users by routers");
+        }
+        const data = await response.json();
+        setMikrotikUsersForSelectedRouters(data);
+      } catch (error) {
+        console.error("Error fetching MikroTik users by routers:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load MikroTik users for selected routers.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchMikrotikUsersByRouters();
+  }, [selectedRouters, toast]);
+
   const userOptions = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
@@ -103,6 +137,19 @@ export default function ComposeSmsPage() {
 
   const routerOptions = mikrotikRouters.map(router => ({ value: router._id, label: router.name }));
   const locationOptions = apartmentHouseNumbers.map(ahn => ({ value: ahn, label: ahn }));
+
+  const mikrotikUserOptions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let filtered = mikrotikUsersForSelectedRouters;
+    if (sendToMikrotikActiveOnly) {
+      filtered = mikrotikUsersForSelectedRouters.filter(user => user.expiryDate && new Date(user.expiryDate) >= today);
+    } else if (sendToMikrotikExpiredOnly) {
+      filtered = mikrotikUsersForSelectedRouters.filter(user => user.expiryDate && new Date(user.expiryDate) < today);
+    }
+    return filtered.map(user => ({ value: user._id, label: user.officialName }));
+  }, [mikrotikUsersForSelectedRouters, sendToMikrotikActiveOnly, sendToMikrotikExpiredOnly]);
 
   const handleSelectAllUsers = (isChecked: boolean | 'indeterminate') => {
     if (isChecked) {
@@ -146,6 +193,48 @@ export default function ComposeSmsPage() {
     }
   };
 
+  const handleSelectAllMikrotikUsers = (isChecked: boolean | 'indeterminate') => {
+    if (isChecked) {
+      setSendToMikrotikActiveOnly(false);
+      setSendToMikrotikExpiredOnly(false);
+      setSelectedUsers(mikrotikUserOptions.map(u => u.value));
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleMikrotikActiveOnlyChange = (isChecked: boolean | 'indeterminate') => {
+    const checked = !!isChecked;
+    setSendToMikrotikActiveOnly(checked);
+    if (checked) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSendToMikrotikExpiredOnly(false); // Uncheck the other filter
+      const activeUserIds = mikrotikUsersForSelectedRouters
+        .filter(user => user.expiryDate && new Date(user.expiryDate) >= today)
+        .map(user => user._id);
+      setSelectedUsers(activeUserIds);
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
+  const handleMikrotikExpiredOnlyChange = (isChecked: boolean | 'indeterminate') => {
+    const checked = !!isChecked;
+    setSendToMikrotikExpiredOnly(checked);
+    if (checked) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSendToMikrotikActiveOnly(false); // Uncheck the other filter
+      const expiredUserIds = mikrotikUsersForSelectedRouters
+        .filter(user => user.expiryDate && new Date(user.expiryDate) < today)
+        .map(user => user._id);
+      setSelectedUsers(expiredUserIds);
+    } else {
+      setSelectedUsers([]);
+    }
+  };
+
   const handleSelectAllRouters = (isChecked: boolean | 'indeterminate') => {
     if (isChecked) {
       setSelectedRouters(routerOptions.map(r => r.value));
@@ -180,6 +269,7 @@ export default function ComposeSmsPage() {
         payload.userIds = selectedUsers;
         break
       case "mikrotik":
+        payload.userIds = selectedUsers;
         payload.mikrotikRouterIds = selectedRouters;
         break
       case "location":
@@ -245,7 +335,15 @@ export default function ComposeSmsPage() {
                           <button
                               key={tab.id}
                               type="button"
-                              onClick={() => setActiveTab(tab.id)}
+                              onClick={() => {
+                                  setActiveTab(tab.id);
+                                  // Reset selected users and filters when changing tabs
+                                  setSelectedUsers([]);
+                                  setSendToActiveOnly(false);
+                                  setSendToExpiredOnly(false);
+                                  setSendToMikrotikActiveOnly(false);
+                                  setSendToMikrotikExpiredOnly(false);
+                              }}
                               className={'relative rounded-md px-4 py-2 text-sm font-medium text-white transition focus-visible:outline-2 text-center' + (activeTab === tab.id ? "" : " hover:text-white/60")}
                               style={{ WebkitTapHighlightColor: "transparent" }}
                           >
@@ -320,16 +418,46 @@ export default function ComposeSmsPage() {
                                     placeholder="Select routers..."
                                     className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
                                   />
-                                  <div className="flex items-center space-x-2 mt-2">
-                                    <Checkbox
-                                      id="select-all-routers"
-                                      onCheckedChange={handleSelectAllRouters}
-                                      checked={selectedRouters.length === routerOptions.length && routerOptions.length > 0}
-                                    />
-                                    <Label htmlFor="select-all-routers" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                      Send to all routers
-                                    </Label>
-                                  </div>
+                                    <div className="space-y-2 pt-2">
+                                      <Label htmlFor="mikrotik-users" className="text-zinc-300">Select User(s) in selected routers</Label>
+                                      <MultiSelect
+                                        options={mikrotikUserOptions}
+                                        onValueChange={setSelectedUsers}
+                                        value={selectedUsers}
+                                        placeholder="Select users..."
+                                        className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500"
+                                      />
+                                      <div className="flex items-center space-x-2 pt-2">
+                                        <Checkbox
+                                          id="select-all-mikrotik-users"
+                                          onCheckedChange={handleSelectAllMikrotikUsers}
+                                          checked={!sendToMikrotikActiveOnly && !sendToMikrotikExpiredOnly && selectedUsers.length === mikrotikUserOptions.length && mikrotikUserOptions.length > 0}
+                                        />
+                                        <Label htmlFor="select-all-mikrotik-users" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                          Send to all users in selected MikroTik routers
+                                        </Label>
+                                      </div>
+                                      <div className="flex items-center space-x-2 pt-2">
+                                        <Checkbox
+                                          id="send-to-mikrotik-active"
+                                          onCheckedChange={handleMikrotikActiveOnlyChange}
+                                          checked={sendToMikrotikActiveOnly}
+                                        />
+                                        <Label htmlFor="send-to-mikrotik-active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                          Send to active users in selected MikroTik routers only
+                                        </Label>
+                                      </div>
+                                      <div className="flex items-center space-x-2 pt-2">
+                                        <Checkbox
+                                          id="send-to-mikrotik-expired"
+                                          onCheckedChange={handleMikrotikExpiredOnlyChange}
+                                          checked={sendToMikrotikExpiredOnly}
+                                        />
+                                        <Label htmlFor="send-to-mikrotik-expired" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                          Send to expired users in selected MikroTik routers only
+                                        </Label>
+                                      </div>
+                                    </div>
                               </div>
                           )}
                           {activeTab === "location" && (

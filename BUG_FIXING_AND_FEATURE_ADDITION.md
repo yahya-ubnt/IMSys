@@ -50,4 +50,4 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 - [x] When creating a "Station" device, the "Parent Device (Uplink)" dropdown should only show "Access Points".
 
 ## 13. Netwatch Monitoring
-- [ ] When editing a device with Netwatch monitoring enabled, if the IP address is changed, prompt the user for confirmation before updating the Netwatch script on the router.
+- [x] When editing a device with Netwatch monitoring enabled, if the IP address is changed, prompt the user for confirmation before updating the Netwatch script on the router.

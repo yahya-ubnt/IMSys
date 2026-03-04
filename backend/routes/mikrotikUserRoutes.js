@@ -18,6 +18,7 @@ const {
   getUserPaymentStats,
   manualDisconnectUser,
   manualConnectUser,
+  getMikrotikUsersByRouters,
 } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 const diagnosticRoutes = require('./diagnosticRoutes');
@@ -25,6 +26,7 @@ const Package = require('../models/Package'); // Import Package model
 
 // More specific routes should come before more general ones
 router.route('/clients-for-sms').get(protect, isSuperAdminOrAdmin, getMikrotikClientsForSms);
+router.route('/by-routers').post(protect, isSuperAdminOrAdmin, getMikrotikUsersByRouters);
 router.route('/delayed-payments').get(protect, isSuperAdminOrAdmin, getDelayedPayments);
 
 router.route('/stats/monthly-new-subscribers').get(protect, isSuperAdminOrAdmin, getMonthlyNewSubscribers);
