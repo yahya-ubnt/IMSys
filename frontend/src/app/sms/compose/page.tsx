@@ -372,9 +372,9 @@ export default function ComposeSmsPage() {
       }
 
       toast({ title: "SMS Sent", description: "Your message has been queued for sending." })
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      // setTimeout(() => {
+      //   window.location.reload();
+      // }, 2000);
     } catch (error: unknown) {
       toast({
         title: "Error Sending SMS",

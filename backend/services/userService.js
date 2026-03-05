@@ -115,8 +115,10 @@ const UserService = {
   },
 
   getMikrotikClientsForSms: async (tenantId) => {
+    console.log(`[UserService] getMikrotikClientsForSms called for tenantId: ${tenantId}`);
     const query = { tenant: tenantId };
     const clients = await MikrotikUser.find(query).select('_id officialName mobileNumber expiryDate');
+    console.log(`[UserService] Found ${clients.length} clients for SMS for tenantId: ${tenantId}`);
     return clients;
   },
 
