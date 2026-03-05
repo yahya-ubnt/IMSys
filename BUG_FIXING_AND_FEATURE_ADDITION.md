@@ -51,3 +51,9 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 
 ## 13. Netwatch Monitoring
 - [x] When editing a device with Netwatch monitoring enabled, if the IP address is changed, prompt the user for confirmation before updating the Netwatch script on the router.
+
+## 14. Sent SMS Log
+- [x] Added `ID` and `Message ID` columns to the sent SMS log page.
+- [x] The `ID` is a sequential number for better readability.
+- [x] The `Message ID` is extracted from the provider's response.
+- [x] Added an "Actions" column with an eye icon to view the full message in a modal.

@@ -20,6 +20,7 @@ import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast"
 import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { SmsDetailsModal } from "@/components/SmsDetailsModal"
 
 // --- TYPE DEFINITIONS ---
 export type SmsLog = {
@@ -29,6 +30,9 @@ export type SmsLog = {
   smsStatus: 'Success' | 'Failed' | 'Pending' | 'Submitted';
   messageType: 'Acknowledgement' | 'Expiry Alert' | 'Manual';
   createdAt: string;
+  providerResponse: {
+    message?: string;
+  };
 };
 
 // --- MAIN COMPONENT ---
@@ -39,6 +43,10 @@ export default function SentSmsLogPage() {
   const [data, setData] = useState<SmsLog[]>([])
   const [stats, setStats] = useState({ total: 0, success: 0, failed: 0 })
   const [pageCount, setPageCount] = useState(0)
+
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedSms, setSelectedSms] = useState<SmsLog | null>(null)
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState("")
@@ -52,6 +60,11 @@ export default function SentSmsLogPage() {
     pageSize: 10,
   })
   const [sorting, setSorting] = useState<SortingState>([])
+
+  const handleViewDetails = (sms: SmsLog) => {
+    setSelectedSms(sms)
+    setIsModalOpen(true)
+  }
 
   // --- DATA FETCHING ---
   const fetchSmsLogs = useCallback(async () => {
@@ -84,7 +97,7 @@ export default function SentSmsLogPage() {
 
   const table = useReactTable({
     data,
-    columns,
+    columns: columns(handleViewDetails),
     pageCount,
     state: {
       sorting,
@@ -180,13 +193,18 @@ export default function SentSmsLogPage() {
             <CardContent className="p-4 space-y-4">
               <DataTableToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
               <div className="overflow-x-auto">
-                <DataTable columns={columns} table={table} />
+                <DataTable columns={columns(handleViewDetails)} table={table} />
               </div>
               <DataTablePagination table={table} />
             </CardContent>
           </Card>
         </div>
       </main>
+      <SmsDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        sms={selectedSms}
+      />
     </div>
   )
 }

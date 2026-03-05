@@ -3,9 +3,23 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { SmsLog } from "./page"
-import { CheckCircle, XCircle } from "lucide-react"
+import { CheckCircle, XCircle, Eye } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-export const columns: ColumnDef<SmsLog>[] = [
+export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>[] => [
+  {
+    header: "ID",
+    cell: ({ row }) => row.index + 1,
+  },
+  {
+    accessorKey: "providerResponse",
+    header: "Message ID",
+    cell: ({ row }) => {
+      const message = row.original.providerResponse?.message || "";
+      const match = message.match(/Message ID: (.*)/);
+      return match ? match[1] : "N/A";
+    },
+  },
   {
     accessorKey: "mobileNumber",
     header: "Mobile Number",
@@ -65,5 +79,13 @@ export const columns: ColumnDef<SmsLog>[] = [
     accessorKey: "createdAt",
     header: "Sent At",
     cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => (
+      <Button variant="ghost" size="icon" onClick={() => onViewDetails(row.original)}>
+        <Eye className="h-4 w-4" />
+      </Button>
+    ),
   },
 ]
