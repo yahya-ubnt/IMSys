@@ -61,16 +61,9 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
     header: "Message Type",
     cell: ({ row }) => {
       const messageType = row.original.messageType;
-      let displayType = messageType;
-      if (messageType === 'Manual') {
-        displayType = 'Manual';
-      } else if (messageType === 'Expiry Alert') {
-        displayType = 'Expiry Alert';
-      }
-
       return (
         <div className="flex items-center">
-          <span>{displayType}</span>
+          <span>{messageType}</span>
         </div>
       );
     },

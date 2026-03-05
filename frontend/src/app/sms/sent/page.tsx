@@ -28,7 +28,7 @@ export type SmsLog = {
   mobileNumber: string;
   message: string;
   smsStatus: 'Success' | 'Failed' | 'Pending' | 'Submitted';
-  messageType: 'Acknowledgement' | 'Expiry Alert' | 'Manual';
+  messageType: 'Acknowledgement' | 'Expiry Alert' | 'Compose';
   createdAt: string;
   providerResponse: {
     message?: string;
@@ -237,7 +237,7 @@ const DataTableToolbar = (props: { searchQuery: string; setSearchQuery: (value: 
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="Acknowledgement">Acknowledgement</SelectItem>
             <SelectItem value="Expiry Alert">Expiry Alert</SelectItem>
-            <SelectItem value="Manual">Manual</SelectItem>
+            <SelectItem value="Compose">Compose</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>

@@ -12,8 +12,8 @@ const smsLogSchema = mongoose.Schema(
     },
     messageType: {
       type: String,
-      enum: ['Acknowledgement', 'Expiry Alert', 'Compose New Message', 'System'],
-      default: 'System',
+      enum: ['Acknowledgement', 'Expiry Alert', 'Compose'],
+      default: 'Compose',
     },
     smsStatus: {
       type: String,

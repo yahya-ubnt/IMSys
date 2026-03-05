@@ -57,3 +57,4 @@ This document tracks the bug fixes and feature additions for the ISP Management 
 - [x] The `ID` is a sequential number for better readability.
 - [x] The `Message ID` is extracted from the provider's response.
 - [x] Added an "Actions" column with an eye icon to view the full message in a modal.
+- [x] Aligned the `messageType` in the database with the filter options on the frontend, replacing "Manual" with "Compose" and removing the "System" type.

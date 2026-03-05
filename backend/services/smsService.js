@@ -161,7 +161,7 @@ exports.sendBulkSms = async (message, sendToType, recipientIds, tenantId, unregi
     const log = await SmsLog.create({
       mobileNumber: user.mobileNumber,
       message: message,
-      messageType: 'Compose New Message',
+      messageType: 'Compose',
       smsStatus: 'Pending',
       tenant: tenantId,
       mikrotikUser: user._id,
