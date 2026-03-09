@@ -7,21 +7,21 @@ const tasks = [
   {
     name: 'Automated Monthly Billing',
     description: 'Generates a Debit transaction for each user\'s monthly bill.',
-    scriptPath: 'scripts/generateMonthlyDebits.js',
+    scriptPath: 'scripts/triggerBillingWorker.js',
     schedule: '5 0 * * *', // Every day at 12:05 AM
     isEnabled: true,
   },
   {
     name: 'Automated Disconnection of Expired Users',
     description: 'Disconnects users from the network whose expiryDate has passed.',
-    scriptPath: 'scripts/disconnectExpiredClients.js',
+    scriptPath: 'scripts/triggerDisconnectWorker.js',
     schedule: '59 23 * * *', // Every day at 11:59 PM
     isEnabled: true,
   },
   {
     name: 'Automated Payment Reminders',
     description: 'Sends SMS reminders to customers whose subscription is expiring in 3 days.',
-    scriptPath: 'scripts/sendPaymentReminders.js',
+    scriptPath: 'scripts/triggerReminderWorker.js',
     schedule: '0 8 * * *', // Every day at 8:00 AM
     isEnabled: true,
   },

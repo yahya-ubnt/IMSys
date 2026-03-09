@@ -54,6 +54,7 @@ const invoiceRoutes = require('./routes/invoiceRoutes'); // Import invoice route
 
 const { setupExpiredClientDisconnectScheduler, processExpiredClientDisconnectScheduler } = require('./jobs/scheduleExpiredClientDisconnectsJob');
 const { setupReconciliationScheduler, processReconciliationScheduler } = require('./jobs/reconciliationJob');
+const { setupSmsReconciliationScheduler } = require('./jobs/smsReconciliationJob');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -64,6 +65,7 @@ connectDB();
 // Setup BullMQ repeatable jobs
 setupExpiredClientDisconnectScheduler();
 setupReconciliationScheduler();
+setupSmsReconciliationScheduler();
 
 // Middleware
 app.use(helmet());
@@ -213,6 +215,8 @@ process.on('uncaughtException', (err) => {
 const terminalService = require('./services/terminalService');
 terminalService.init(server);
 require('./scripts/masterScheduler');
+require('./workers/smsWorker');
+require('./workers/scheduledTaskWorker');
 
 module.exports = app; // For testing purposes
 
