@@ -8,7 +8,6 @@ const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
 const { getMikrotikApiClient, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
-const { processExpiredClientDisconnectScheduler } = require('../jobs/scheduleExpiredClientDisconnectsJob'); // Import the scheduler processor
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
 
 // Connect to DB once for the worker
@@ -106,43 +105,6 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         }
         await user.save();
         console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} synced successfully.`);
-        break;
-
-      case 'scheduleExpiredClientDisconnects':
-        // This job type is processed by the scheduler itself, which then adds
-        // 'processExpiredClientsForTenant' jobs.
-        // The logic for this is in processExpiredClientDisconnectScheduler.
-        await processExpiredClientDisconnectScheduler(job);
-        break;
-
-      case 'processExpiredClientsForTenant':
-        // Logic from the original disconnectExpiredClientsWorker.js
-        const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
-
-        const cursor = MikrotikUser.find({
-          tenant: tenantId,
-          expiryDate: { $lte: currentDate },
-          isSuspended: false,
-        }).cursor();
-
-        await cursor.eachAsync(async (expiredUser) => {
-          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Found expired user: ${expiredUser.username} (ID: ${expiredUser._id}) for tenant ${tenantId}`);
-
-          // Update user in DB to pending suspension
-          expiredUser.isSuspended = true;
-          expiredUser.syncStatus = 'pending';
-          await expiredUser.save();
-
-          // Add a job to the mikrotikSyncQueue to disconnect this specific user
-          await mikrotikSyncQueue.add('disconnectUser', {
-            mikrotikUserId: expiredUser._id,
-            tenantId: tenantId,
-            reason: 'expired',
-          });
-          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Queued disconnect job for user: ${expiredUser.username}`);
-        });
-        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Finished processing expired clients for tenant: ${tenantId}`);
         break;
 
       case 'scheduleReconciliation':

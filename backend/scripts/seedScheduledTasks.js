@@ -46,13 +46,17 @@ const seedTasks = async () => {
     }
 
     for (const taskData of tasks) {
-      // Use findOneAndUpdate with upsert to avoid creating duplicates
-      await ScheduledTask.findOneAndUpdate(
-        { name: taskData.name, tenantOwner: superAdmin._id },
-        { ...taskData, tenantOwner: superAdmin._id },
-        { new: true, upsert: true, runValidators: true }
+      // Find all tasks with this name, regardless of tenant, and update their scriptPath.
+      const result = await ScheduledTask.updateMany(
+        { name: taskData.name },
+        { $set: { scriptPath: taskData.scriptPath } }
       );
-      console.log(`Successfully created/updated task: "${taskData.name}"`);
+
+      if (result.modifiedCount > 0) {
+        console.log(`Successfully updated ${result.modifiedCount} instance(s) of task: "${taskData.name}"`);
+      } else {
+        console.log(`No existing tasks found for "${taskData.name}". This may be expected if it's a new setup.`);
+      }
     }
 
     console.log('\nSeeding complete. All scheduled tasks have been added to the database.');

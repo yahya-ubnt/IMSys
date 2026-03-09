@@ -43,24 +43,29 @@ const executeScript = (scriptPath, tenantId) => {
 };
 
 const executeTask = async (task) => {
-    const taskDoc = await ScheduledTask.findById(task._id);
-    if (!taskDoc) return;
+    // RE-FETCH THE TASK TO GET THE LATEST VERSION. This is the fix.
+    const freshTask = await ScheduledTask.findById(task._id);
+    if (!freshTask || !freshTask.isEnabled) {
+      console.log(`[${new Date().toISOString()}] Task '${task.name}' is no longer enabled or has been deleted. Skipping execution.`);
+      unscheduleTask(task._id); // Clean up the job from memory
+      return;
+    }
 
-    taskDoc.lastRun = new Date();
-    taskDoc.lastStatus = 'Running';
-    await taskDoc.save();
+    freshTask.lastRun = new Date();
+    freshTask.lastStatus = 'Running';
+    await freshTask.save();
 
     try {
-        const output = await executeScript(path.join(__dirname, '..', task.scriptPath), task.tenant);
-        taskDoc.lastStatus = 'Success';
-        taskDoc.logOutput = output;
-        await taskDoc.save();
-        console.log(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenant} finished successfully.`);
+        const output = await executeScript(path.join(__dirname, '..', freshTask.scriptPath), freshTask.tenant);
+        freshTask.lastStatus = 'Success';
+        freshTask.logOutput = output;
+        await freshTask.save();
+        console.log(`[${new Date().toISOString()}] Task '${freshTask.name}' for tenant ${freshTask.tenant} finished successfully.`);
     } catch (error) {
-        taskDoc.lastStatus = 'Failed';
-        taskDoc.logOutput = error.message;
-        await taskDoc.save();
-        console.error(`[${new Date().toISOString()}] Task '${task.name}' for tenant ${task.tenant} failed: ${error.message}`);
+        freshTask.lastStatus = 'Failed';
+        freshTask.logOutput = error.message;
+        await freshTask.save();
+        console.error(`[${new Date().toISOString()}] Task '${freshTask.name}' for tenant ${freshTask.tenant} failed: ${error.message}`);
     }
 };
 

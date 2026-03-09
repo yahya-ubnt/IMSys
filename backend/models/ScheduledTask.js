@@ -4,8 +4,11 @@ const ScheduledTaskSchema = new mongoose.Schema(
   {
     tenant: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
       ref: 'Tenant',
+    },
+    tenantOwner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
     name: {
       type: String,
