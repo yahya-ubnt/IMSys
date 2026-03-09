@@ -32,6 +32,13 @@ const tasks = [
     schedule: '5 3 * * 0', // Every Sunday at 3:05 AM
     isEnabled: true,
   },
+  {
+    name: 'SMS Expiry Notification',
+    description: 'Sends SMS reminders to customers whose subscription is expiring.',
+    scriptPath: 'scripts/triggerReminderWorker.js',
+    schedule: '0 8 * * *', // Default schedule
+    isEnabled: true,
+  },
 ];
 
 const seedTasks = async () => {
@@ -46,16 +53,25 @@ const seedTasks = async () => {
     }
 
     for (const taskData of tasks) {
-      // Find all tasks with this name, regardless of tenant, and update their scriptPath.
-      const result = await ScheduledTask.updateMany(
-        { name: taskData.name },
-        { $set: { scriptPath: taskData.scriptPath } }
-      );
+      // Use a more robust find-loop-save strategy to ensure all documents are updated.
+      const tasksToUpdate = await ScheduledTask.find({ name: taskData.name });
 
-      if (result.modifiedCount > 0) {
-        console.log(`Successfully updated ${result.modifiedCount} instance(s) of task: "${taskData.name}"`);
+      if (tasksToUpdate.length > 0) {
+        let updatedCount = 0;
+        for (const task of tasksToUpdate) {
+          if (task.scriptPath !== taskData.scriptPath) {
+            task.scriptPath = taskData.scriptPath;
+            await task.save();
+            updatedCount++;
+          }
+        }
+        if (updatedCount > 0) {
+          console.log(`Successfully updated ${updatedCount} instance(s) of task: "${taskData.name}"`);
+        } else {
+          console.log(`All instances of "${taskData.name}" were already up-to-date.`);
+        }
       } else {
-        console.log(`No existing tasks found for "${taskData.name}". This may be expected if it's a new setup.`);
+        console.log(`No existing tasks found for "${taskData.name}".`);
       }
     }
 
