@@ -26,6 +26,13 @@ const tasks = [
     isEnabled: true,
   },
   {
+    name: 'Disconnect Expired Hotspot Clients',
+    description: 'Removes IP bindings for hotspot users whose session has expired.',
+    scriptPath: 'scripts/triggerDisconnectHotspotWorker.js',
+    schedule: '* * * * *', // Every minute - for testing
+    isEnabled: true,
+  },
+  {
     name: 'Automated Database Log Cleanup',
     description: 'Archives or deletes old log records to maintain database performance.',
     scriptPath: 'scripts/cleanupOldLogs.js',
@@ -59,8 +66,16 @@ const seedTasks = async () => {
       if (tasksToUpdate.length > 0) {
         let updatedCount = 0;
         for (const task of tasksToUpdate) {
+          let changed = false;
           if (task.scriptPath !== taskData.scriptPath) {
             task.scriptPath = taskData.scriptPath;
+            changed = true;
+          }
+          if (task.schedule !== taskData.schedule) { // Add this condition
+            task.schedule = taskData.schedule;
+            changed = true;
+          }
+          if (changed) {
             await task.save();
             updatedCount++;
           }

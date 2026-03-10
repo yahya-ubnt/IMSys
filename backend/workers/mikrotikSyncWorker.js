@@ -6,7 +6,7 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const Device = require('../models/Device');
 const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
-const { getMikrotikApiClient, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser } = require('../utils/mikrotikUtils'); // Assuming this utility exists
+const { getMikrotikApiClient, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser, removeHotspotIpBinding } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
 
@@ -105,6 +105,24 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         }
         await user.save();
         console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} synced successfully.`);
+        break;
+
+      case 'removeHotspotBinding':
+        try {
+            const { macAddress, routerId } = job.data;
+            if (!macAddress || !routerId) {
+                throw new Error('macAddress and routerId are required for removeHotspotBinding job');
+            }
+            const routerToRemove = await MikrotikRouter.findById(routerId);
+            if (!routerToRemove) {
+                throw new Error(`Router not found for routerId: ${routerId}`);
+            }
+            await removeHotspotIpBinding(routerToRemove, macAddress);
+            console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Hotspot IP Binding removed for ${macAddress}`);
+        } catch (error) {
+            console.error(`[${new Date().toISOString()}] MikroTik Sync Worker: Error processing removeHotspotBinding job for macAddress: ${job.data.macAddress}`, error);
+            throw error;
+        }
         break;
 
       case 'scheduleReconciliation':

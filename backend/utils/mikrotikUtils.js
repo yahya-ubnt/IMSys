@@ -73,6 +73,30 @@ const addHotspotIpBinding = async (router, macAddress, server) => {
   }
 };
 
+const removeHotspotIpBinding = async (router, macAddress) => {
+  const client = await getMikrotikApiClient(router);
+  if (!client) return false;
+
+  try {
+    const bindings = await client.write('/ip/hotspot/ip-binding/print', [`?mac-address=${macAddress}`]);
+    if (bindings.length > 0) {
+      const bindingId = bindings[0]['.id'];
+      await client.write('/ip/hotspot/ip-binding/remove', [`=.id=${bindingId}`]);
+      console.log(`Successfully removed hotspot IP binding for ${macAddress} from router ${router.name}`);
+    } else {
+      console.log(`No hotspot IP binding found for ${macAddress} on router ${router.name}. Nothing to remove.`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`Failed to remove hotspot IP binding for ${macAddress} from router ${router.name}`, error);
+    return false;
+  } finally {
+    if (client.connected) {
+      client.close();
+    }
+  }
+};
+
 const removeHotspotUser = async (router, username) => {
   const client = await getMikrotikApiClient(router);
   if (!client) return false;
@@ -434,4 +458,4 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
   return true;
 };
 
-module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };
+module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };

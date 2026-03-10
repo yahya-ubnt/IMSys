@@ -44,25 +44,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import cronstrue from 'cronstrue';
 
-// --- Helper Functions for Time Conversion ---
-const cronToTime = (cronString: string): string => {
-    try {
-        const parts = cronString.split(' ');
-        const minute = parseInt(parts[0], 10);
-        const hour = parseInt(parts[1], 10);
-
-        if (isNaN(minute) || isNaN(hour)) return "Invalid Schedule";
-
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-        const displayMinute = minute < 10 ? `0${minute}` : minute;
-
-        return `${displayHour}:${displayMinute} ${ampm}`;
-    } catch {
-        return "Invalid Schedule";
-    }
-};
-
 interface ScheduledTask {
     _id: string;
     name: string;
@@ -194,7 +175,13 @@ export default function ScheduledTasksPage() {
         { 
             accessorKey: "schedule", 
             header: "Scheduled Time",
-            cell: ({ row }) => cronToTime(row.original.schedule)
+            cell: ({ row }) => {
+                try {
+                    return cronstrue.toString(row.original.schedule);
+                } catch {
+                    return row.original.schedule;
+                }
+            }
         },
         { 
             accessorKey: "lastStatus", 

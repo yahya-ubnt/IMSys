@@ -3,6 +3,7 @@ const connectDB = require('../config/db');
 const Tenant = require('../models/Tenant');
 const MikrotikUser = require('../models/MikrotikUser');
 const SmsLog = require('../models/SmsLog');
+const HotspotSession = require('../models/HotspotSession');
 const Bill = require('../models/Bill'); // Import Bill model
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const smsQueue = require('../queues/smsQueue');
@@ -55,6 +56,35 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
           });
         });
         console.log(`[Orchestrator] Finished queueing disconnection jobs for tenant: ${tenantId}`);
+        break;
+
+      case 'disconnectExpiredHotspotUsers':
+        console.log(`[Orchestrator] Finding expired hotspot sessions and queueing disconnection jobs.`);
+        
+        const expiredSessions = await HotspotSession.find({
+          endTime: { $lte: new Date() },
+        }).populate({
+          path: 'planId',
+          select: 'mikrotikRouter'
+        });
+
+        for (const session of expiredSessions) {
+          if (session.planId && session.planId.mikrotikRouter) {
+            console.log(`[Orchestrator] Found expired hotspot session for MAC: ${session.macAddress}. Queueing for disconnection.`);
+
+            await mikrotikSyncQueue.add('removeHotspotBinding', {
+              macAddress: session.macAddress,
+              routerId: session.planId.mikrotikRouter,
+            });
+
+            // After successfully queueing, remove the session
+            await HotspotSession.findByIdAndDelete(session._id);
+          } else {
+            console.warn(`[Orchestrator] Found expired hotspot session for MAC: ${session.macAddress} but could not find router information. Deleting session to prevent requeueing.`);
+            await HotspotSession.findByIdAndDelete(session._id);
+          }
+        }
+        console.log(`[Orchestrator] Finished queueing hotspot disconnection jobs.`);
         break;
 
       case 'sendPaymentReminders':
