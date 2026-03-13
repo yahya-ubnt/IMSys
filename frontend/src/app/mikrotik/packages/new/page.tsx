@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // --- Interface Definitions ---
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
-interface NewPackageData { mikrotikRouter: string; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status: 'active' | 'disabled'; }
+interface NewPackageData { mikrotikRouter: string; serviceType: 'pppoe' | 'static'; name: string; price: number; durationInDays: number; profile?: string; rateLimit?: string; status: 'active' | 'disabled'; }
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
@@ -47,6 +47,7 @@ export default function NewPackagePage() {
     const [serviceType, setServiceType] = useState<"pppoe" | "static" | '' >('');
     const [name, setName] = useState("");
     const [price, setPrice] = useState("");
+    const [durationInDays, setDurationInDays] = useState("");
     const [profile, setProfile] = useState("");
     const [rateLimit, setRateLimit] = useState("");
     const [status, setStatus] = useState<"active" | "disabled">("active");
@@ -113,7 +114,7 @@ export default function NewPackagePage() {
             return;
         }
         setLoading(true);
-        const packageData: NewPackageData = { mikrotikRouter: mikrotikRouterId, serviceType, name, price: parseFloat(price), profile, rateLimit, status };
+        const packageData: NewPackageData = { mikrotikRouter: mikrotikRouterId, serviceType, name, price: parseFloat(price), durationInDays: parseInt(durationInDays, 10), profile, rateLimit, status };
         try {
             const response = await fetch("/api/mikrotik/packages", {
                 method: "POST",
@@ -170,6 +171,10 @@ export default function NewPackagePage() {
                                                         <div className="space-y-1">
                                                             <Label htmlFor="price" className="text-xs">Price</Label>
                                                             <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <Label htmlFor="duration" className="text-xs">Duration (in days)</Label>
+                                                            <Input id="duration" type="number" value={durationInDays} onChange={e => setDurationInDays(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
                                                         </div>
                                                         <div className="space-y-1"><Label className="text-xs">Status</Label><Select onValueChange={(v: "active" | "disabled") => setStatus(v)} value={status}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select status" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="active" className="text-sm">Active</SelectItem><SelectItem value="disabled" className="text-sm">Inactive</SelectItem></SelectContent></Select></div>
                                                         {serviceType === "pppoe" && <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={pppProfilesLoading || !mikrotikRouterId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{pppProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>}

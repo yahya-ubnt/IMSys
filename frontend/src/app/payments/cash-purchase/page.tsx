@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Topbar } from "@/components/topbar"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Search, DollarSign, User } from "lucide-react"
+import { ArrowLeft, Search, DollarSign, User, Package as PackageIcon } from "lucide-react"
 
 // --- TYPE DEFINITIONS ---
 interface User {
@@ -17,7 +17,13 @@ interface User {
   officialName: string;
   username: string;
   mobileNumber: string;
-  package?: { price: number };
+  package?: { _id: string; price: number; };
+}
+interface Package {
+  _id: string;
+  name: string;
+  price: number;
+  durationInDays: number;
 }
 
 // --- MAIN COMPONENT ---
@@ -26,11 +32,13 @@ export default function CashPurchasePage() {
 
   // Data states
   const [users, setUsers] = useState<User[]>([])
+  const [packages, setPackages] = useState<Package[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
   
   // UI states
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form states
@@ -40,19 +48,24 @@ export default function CashPurchasePage() {
 
   // --- DATA FETCHING ---
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch('/api/mikrotik/users')
-        if (!response.ok) throw new Error('Failed to fetch users.')
-        setUsers(await response.json())
+        const [usersRes, packagesRes] = await Promise.all([
+          fetch('/api/mikrotik/users'),
+          fetch('/api/mikrotik/packages')
+        ]);
+        if (!usersRes.ok) throw new Error('Failed to fetch users.');
+        if (!packagesRes.ok) throw new Error('Failed to fetch packages.');
+        setUsers(await usersRes.json());
+        setPackages(await packagesRes.json());
       } catch (error) {
         toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' })
       } finally {
         setIsLoading(false)
       }
     }
-    fetchUsers()
+    fetchData()
   }, [toast])
 
   // --- EVENT HANDLERS ---
@@ -60,12 +73,32 @@ export default function CashPurchasePage() {
     if (!selectedUserId) return toast({ title: 'Error', description: 'Please select a user.', variant: 'destructive' })
     const user = users.find(u => u._id === selectedUserId)
     setSelectedUser(user || null)
-    setAmount(user?.package?.price?.toString() || '')
+
+    // Auto-select package and set amount if user has a current package
+    if (user?.package?._id) {
+      const userPackage = packages.find(p => p._id === user.package?._id);
+      if (userPackage) {
+        setSelectedPackageId(userPackage._id);
+        setAmount(userPackage.price.toString());
+      }
+    } else {
+      setSelectedPackageId(null);
+      setAmount('');
+    }
+  }
+
+  const handlePackageSelect = (packageId: string) => {
+    setSelectedPackageId(packageId);
+    const pkg = packages.find(p => p._id === packageId);
+    setAmount(pkg?.price?.toString() || '');
   }
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedUser) return
+    if (!selectedUser || !selectedPackageId) {
+      toast({ title: 'Error', description: 'Please select a user and a package.', variant: 'destructive' })
+      return;
+    }
 
     setIsSubmitting(true)
     try {
@@ -74,6 +107,7 @@ export default function CashPurchasePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedUser._id,
+          packageId: selectedPackageId,
           amount: parseFloat(amount),
           transactionId,
           comment,
@@ -85,6 +119,7 @@ export default function CashPurchasePage() {
       // Reset form
       setSelectedUser(null)
       setSelectedUserId(null)
+      setSelectedPackageId(null)
       setAmount('')
       setTransactionId('')
       setComment('')
@@ -131,7 +166,7 @@ export default function CashPurchasePage() {
                       </Select>
                     </div>
                     <Button onClick={handleUserSelect} disabled={!selectedUserId || isLoading} className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
-                      <Search className="mr-2 h-4 w-4" /> Fetch Details
+                      <Search className="mr-2 h-4 w-4" /> Continue to Payment
                     </Button>
                   </CardContent>
                 </motion.div>
@@ -144,10 +179,7 @@ export default function CashPurchasePage() {
                         <CardDescription className="text-zinc-400">For {selectedUser.officialName}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="sm:hidden bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => setSelectedUser(null)}>
-                          <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" className="hidden sm:flex bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => setSelectedUser(null)}>
+                        <Button variant="outline" size="sm" className="bg-transparent border-zinc-700 hover:bg-zinc-800" onClick={() => setSelectedUser(null)}>
                           <ArrowLeft className="mr-2 h-4 w-4" /> Change User
                         </Button>
                       </div>
@@ -155,27 +187,38 @@ export default function CashPurchasePage() {
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmitPayment} className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3 bg-zinc-800/50 rounded-lg">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-zinc-800/50 rounded-lg">
                         <div><Label className="text-xs text-zinc-400">Account #</Label><p className="font-mono text-sm">{selectedUser.username}</p></div>
                         <div><Label className="text-xs text-zinc-400">Mobile #</Label><p className="font-mono text-sm">{selectedUser.mobileNumber}</p></div>
-                        <div><Label className="text-xs text-zinc-400">Monthly Bill</Label><p className="font-mono text-sm">KES {selectedUser.package?.price || 'N/A'}</p></div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="package-select" className="text-zinc-300">Package</Label>
+                          <Select onValueChange={handlePackageSelect} value={selectedPackageId || ''} required>
+                            <SelectTrigger id="package-select" className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
+                              <SelectValue placeholder="Select a package..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                              {isLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : 
+                              packages.map(pkg => <SelectItem key={pkg._id} value={pkg._id}>{pkg.name} (KES {pkg.price})</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-2">
                           <Label htmlFor="amount" className="text-zinc-300">Amount Received</Label>
                           <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="transactionId" className="text-zinc-300">Transaction ID</Label>
-                          <Input id="transactionId" type="text" value={transactionId} onChange={e => setTransactionId(e.target.value)} placeholder="e.g., Cash-..." required className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
-                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="transactionId" className="text-zinc-300">Transaction ID (Optional)</Label>
+                        <Input id="transactionId" type="text" value={transactionId} onChange={e => setTransactionId(e.target.value)} placeholder="e.g., Cash-..." className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="comment" className="text-zinc-300">Comment (Optional)</Label>
                         <Input id="comment" type="text" value={comment} onChange={e => setComment(e.target.value)} className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500" />
                       </div>
                       <div className="pt-4 border-t border-zinc-800 flex justify-end">
-                        <Button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                        <Button type="submit" disabled={isSubmitting || !selectedPackageId} className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
                           {isSubmitting ? 'Submitting...' : 'Submit Payment'}
                         </Button>
                       </div>

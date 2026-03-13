@@ -74,7 +74,7 @@ const createCashPayment = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { userId, amount, comment } = req.body;
+  const { userId, amount, packageId, comment } = req.body;
   const transactionId = `CASH-${randomUUID()}`;
 
   await PaymentService.handleSuccessfulPayment({
@@ -82,6 +82,7 @@ const createCashPayment = asyncHandler(async (req, res) => {
     amount: parseFloat(amount),
     transactionId,
     reference: userId, // Pass userId directly as the reference
+    packageId: packageId, // Pass the packageId
     paymentMethod: 'Cash',
     officialName: null,
     comment,

@@ -9,6 +9,7 @@ const MpesaAlert = require('../models/MpesaAlert');
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const { sendAcknowledgementSms } = require('./smsService');
 const smsTriggers = require('../constants/smsTriggers');
+const { activateUserSubscription } = require('./subscriptionService');
 
 /**
  * High-level service for handling payments and account renewals.
@@ -28,62 +29,52 @@ const PaymentService = {
    * Now supports finding user by _id, mPesaRefNo, or invoice number.
    */
   handleSuccessfulPayment: async (params) => {
-    const { tenant, amount, transactionId, reference, paymentMethod, msisdn, officialName, comment } = params;
+    const { tenant, amount, transactionId, reference, packageId, paymentMethod, msisdn, officialName, comment } = params;
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    if (!packageId) {
+      throw new Error('packageId is required to handle a successful payment.');
+    }
+    if (!reference) {
+      throw new Error('A user reference (_id or mPesaRefNo) is required.');
+    }
 
     try {
       let userToCredit;
-      let finalComment = comment;
 
-      if (reference.startsWith('INV-')) {
-        const invoice = await Invoice.findOne({ 
-          invoiceNumber: reference, 
-          status: { $in: ['Unpaid', 'Overdue'] }, 
-          tenant: tenant 
-        }).session(session).populate('mikrotikUser');
-
-        if (!invoice) throw new Error(`Invoice not found or already paid: ${reference}`);
-        
-        invoice.status = 'Paid';
-        invoice.paidDate = new Date();
-        await invoice.save({ session });
-        
-        userToCredit = invoice.mikrotikUser;
-        finalComment = `Payment for Invoice #${reference}`;
-      } else if (mongoose.Types.ObjectId.isValid(reference)) {
-        // Handle direct user ID reference (for cash payments)
-        userToCredit = await MikrotikUser.findById(reference).session(session);
+      // Find user by _id or mPesaRefNo
+      if (mongoose.Types.ObjectId.isValid(reference)) {
+        userToCredit = await MikrotikUser.findById(reference);
       } else {
-        // Fallback to M-Pesa reference number
-        userToCredit = await MikrotikUser.findOne({ mPesaRefNo: reference, tenant: tenant }).session(session);
+        userToCredit = await MikrotikUser.findOne({ mPesaRefNo: reference, tenant: tenant });
       }
 
-      if (!userToCredit) throw new Error(`User not found for reference: ${reference}`);
+      if (!userToCredit) {
+        throw new Error(`User not found for reference: ${reference}`);
+      }
 
-      await PaymentService.processSubscriptionPayment(userToCredit._id, amount, paymentMethod, transactionId, null, session);
+      // 1. Activate or extend the subscription
+      await activateUserSubscription(userToCredit._id, packageId);
 
-      await Transaction.create([{
+      // 2. Create a generic transaction record for the payment
+      await Transaction.create({
         transactionId,
         amount,
         referenceNumber: reference,
         officialName: officialName || userToCredit.officialName,
-        msisdn,
+        msisdn: msisdn || userToCredit.mobileNumber, // Fallback to user's mobile number
         transactionDate: new Date(),
         paymentMethod,
         tenant,
         mikrotikUser: userToCredit._id,
-        comment: finalComment,
-      }], { session });
+        comment: comment || `Payment for package ${packageId}`,
+      });
 
-      await session.commitTransaction();
+      console.log(`[PaymentService] Successfully processed payment for user ${userToCredit.username} and package ${packageId}.`);
+
     } catch (error) {
-      await session.abortTransaction();
       console.error(`[PaymentService] Processing failed for TX ${transactionId}:`, error.message);
       await MpesaAlert.create({ message: error.message, transactionId, amount, referenceNumber: reference, tenant, paymentDate: new Date() });
-    } finally {
-      session.endSession();
+      throw error;
     }
   },
 

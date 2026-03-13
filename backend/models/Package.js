@@ -26,6 +26,11 @@ const PackageSchema = mongoose.Schema(
       type: Number,
       required: [true, 'Please add a price for the package'],
     },
+    durationInDays: {
+      type: Number,
+      required: [true, 'Please add a duration in days for the package'],
+      min: [1, 'Duration must be at least 1 day'],
+    },
     status: {
       type: String,
       enum: ['active', 'disabled'],

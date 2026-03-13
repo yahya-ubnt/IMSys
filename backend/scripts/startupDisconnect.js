@@ -7,7 +7,6 @@
 
 const Tenant = require('../models/Tenant');
 const MikrotikUser = require('../models/MikrotikUser');
-const MikrotikUser = require('../models/MikrotikUser');
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 
 const runStartupDisconnect = async () => {

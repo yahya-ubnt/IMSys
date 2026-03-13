@@ -6,11 +6,11 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 // @route   POST /api/mikrotik/packages
 // @access  Private
 const createPackage = asyncHandler(async (req, res) => {
-  const { mikrotikRouter, serviceType, name, price, status, profile, rateLimit } = req.body;
+  const { mikrotikRouter, serviceType, name, price, durationInDays, status, profile, rateLimit } = req.body;
 
-  if (!mikrotikRouter || !serviceType || !name || !price || !status) {
+  if (!mikrotikRouter || !serviceType || !name || !price || !durationInDays || !status) {
     res.status(400);
-    throw new Error('Please add all required fields: mikrotikRouter, serviceType, name, price, status');
+    throw new Error('Please add all required fields: mikrotikRouter, serviceType, name, price, durationInDays, status');
   }
 
   // Check if Mikrotik Router exists and belongs to the user
@@ -52,6 +52,7 @@ const createPackage = asyncHandler(async (req, res) => {
     serviceType,
     name,
     price,
+    durationInDays,
     status,
     profile,
     rateLimit,
@@ -96,7 +97,7 @@ const getPackageById = asyncHandler(async (req, res) => {
 // @route   PUT /api/mikrotik/packages/:id
 // @access  Private
 const updatePackage = asyncHandler(async (req, res) => {
-  const { mikrotikRouter, serviceType, name, price, status, profile, rateLimit } = req.body;
+  const { mikrotikRouter, serviceType, name, price, durationInDays, status, profile, rateLimit } = req.body;
 
   const packageToUpdate = await Package.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
@@ -133,6 +134,7 @@ const updatePackage = asyncHandler(async (req, res) => {
 
   packageToUpdate.name = name !== undefined ? name : packageToUpdate.name;
   packageToUpdate.price = price !== undefined ? price : packageToUpdate.price;
+  packageToUpdate.durationInDays = durationInDays !== undefined ? durationInDays : packageToUpdate.durationInDays;
   packageToUpdate.status = status !== undefined ? status : packageToUpdate.status;
   packageToUpdate.mikrotikRouter = mikrotikRouter !== undefined ? mikrotikRouter : packageToUpdate.mikrotikRouter;
   

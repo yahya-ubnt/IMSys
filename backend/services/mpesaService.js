@@ -158,6 +158,7 @@ const processStkCallback = async (callbackData) => {
       amount: amount,
       transactionId: transactionId,
       reference: stkRequest.accountReference,
+      packageId: stkRequest.planId, // <-- Pass the packageId from the original request
       paymentMethod: 'M-Pesa (STK)',
       msisdn: msisdn,
       officialName: null,
