@@ -215,6 +215,7 @@ terminalService.init(server);
 require('./scripts/masterScheduler');
 require('./workers/smsWorker');
 require('./workers/scheduledTaskWorker');
+require('./scripts/startupDisconnect.js');
 
 module.exports = app; // For testing purposes
 
