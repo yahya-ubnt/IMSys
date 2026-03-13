@@ -29,7 +29,6 @@ const { sendSMS } = require('./services/smsService'); // Import SMS service
 
 
 
-const billRoutes = require('./routes/billRoutes'); // Import bill routes
 const technicianActivityRoutes = require('./routes/technicianActivityRoutes'); // Import technician activity routes
 const settingsRoutes = require('./routes/settingsRoutes'); // ADDED
 const smsProviderRoutes = require('./routes/smsProviderRoutes'); // Import SMS provider routes
@@ -47,7 +46,6 @@ const expenseTypeRoutes = require('./routes/expenseTypeRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const ticketRoutes = require('./routes/ticketRoutes'); // Import ticket routes
 const notificationRoutes = require('./routes/notificationRoutes');
-const invoiceRoutes = require('./routes/invoiceRoutes'); // Import invoice routes
 // const issueTypeRoutes = require('./routes/issueTypeRoutes'); // Import issue type routes
 
 
@@ -136,8 +134,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/daily-transactions', dailyTransactionRoutes);
-app.use('/api/bills', billRoutes);
-app.use('/api/invoices', invoiceRoutes);
 app.use('/api/technician-activities', technicianActivityRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/settings/sms-providers', smsProviderRoutes);
