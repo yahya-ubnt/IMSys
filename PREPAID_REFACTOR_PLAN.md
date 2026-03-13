@@ -47,6 +47,12 @@ This refactor will be conducted in phases to ensure a smooth transition.
 *   **[INVESTIGATION UPDATE]** Our investigation confirmed that the `MikrotikUser` model **already contains** the necessary field: `expiryDate: { type: Date, required: true }`.
 *   **Conclusion:** No database model changes are required for this phase.
 
+### Phase 1.5: Schema Correction [COMPLETED]
+*   **[INVESTIGATION UPDATE]** Further investigation revealed that the `Package` model was missing a field to define the duration of the subscription. This is a critical gap, as the subscription logic relies on packages having a defined duration.
+*   **Action:** Add a `durationInDays: { type: Number, required: true }` field to the `Package` schema in `backend/models/Package.js`.
+*   **Action:** Update the `packageController.js` to support creating and editing the new `durationInDays` field.
+*   **Conclusion:** These changes ensure that the data model can support the core requirements of the prepaid refactor.
+
 ### Phase 2: Core Logic Implementation [THIS IS OUR FOCUS]
 1.  **Create `SubscriptionService`:**
     *   **Action:** Create a new service file to encapsulate the subscription logic. This centralizes the core business rule.
@@ -115,6 +121,8 @@ Our investigation confirmed the existence of a "Reconciliation Engine" (`backend
 *   **Modified Files:**
     *   `backend/controllers/paymentController.js` (complete overhaul of payment success logic)
     *   `backend/server.js` (to execute the startup script)
+    *   `backend/models/Package.js` (to add `durationInDays`)
+    *   `backend/controllers/packageController.js` (to support `durationInDays`)
 *   **Deprecated/Removed Files:**
     *   `backend/controllers/billController.js`
     *   `backend/controllers/invoiceController.js`
@@ -126,6 +134,7 @@ Our investigation confirmed the existence of a "Reconciliation Engine" (`backend
     *   The user dashboard should show **"Service expires on [date]"** or **"X Days Remaining"** instead of bill-related information.
     *   Payment sections should be a simple "Buy/Renew Subscription" flow rather than a list of unpaid bills.
     *   All references to "Invoices" and "Bills" in the user-facing context should be removed or changed to "Payment History".
+    *   **Standardize Duration Input:** The method for setting subscription durations will be standardized. On pages where a duration is set (e.g., creating/editing packages, creating users), the UI will be updated to use a consistent component: a number input for a value and a dropdown for the unit (Days, Weeks, Months, Years). This replaces inconsistent inputs like manual date pickers or simple text fields.
 
 ### Data Migration
 *   **A one-time data migration script will be required.**

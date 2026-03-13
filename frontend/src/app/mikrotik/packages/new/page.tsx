@@ -47,7 +47,8 @@ export default function NewPackagePage() {
     const [serviceType, setServiceType] = useState<"pppoe" | "static" | '' >('');
     const [name, setName] = useState("");
     const [price, setPrice] = useState("");
-    const [durationInDays, setDurationInDays] = useState("");
+    const [durationValue, setDurationValue] = useState("1");
+    const [durationUnit, setDurationUnit] = useState("days");
     const [profile, setProfile] = useState("");
     const [rateLimit, setRateLimit] = useState("");
     const [status, setStatus] = useState<"active" | "disabled">("active");
@@ -107,6 +108,11 @@ export default function NewPackagePage() {
         setStep(1);
     };
 
+    const handleUnitChange = (unit: string) => {
+        setDurationUnit(unit);
+        setDurationValue("1");
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!serviceType) {
@@ -114,7 +120,17 @@ export default function NewPackagePage() {
             return;
         }
         setLoading(true);
-        const packageData: NewPackageData = { mikrotikRouter: mikrotikRouterId, serviceType, name, price: parseFloat(price), durationInDays: parseInt(durationInDays, 10), profile, rateLimit, status };
+
+        let durationInDays = 0;
+        const value = parseInt(durationValue, 10);
+        switch (durationUnit) {
+            case 'days': durationInDays = value; break;
+            case 'weeks': durationInDays = value * 7; break;
+            case 'months': durationInDays = value * 30; break;
+            case 'years': durationInDays = value * 365; break;
+        }
+
+        const packageData: NewPackageData = { mikrotikRouter: mikrotikRouterId, serviceType, name, price: parseFloat(price), durationInDays, profile, rateLimit, status };
         try {
             const response = await fetch("/api/mikrotik/packages", {
                 method: "POST",
@@ -172,9 +188,22 @@ export default function NewPackagePage() {
                                                             <Label htmlFor="price" className="text-xs">Price</Label>
                                                             <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <Label htmlFor="duration" className="text-xs">Duration (in days)</Label>
-                                                            <Input id="duration" type="number" value={durationInDays} onChange={e => setDurationInDays(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                                                        <div className="space-y-1 col-span-2">
+                                                            <Label className="text-xs">Duration</Label>
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <Select onValueChange={handleUnitChange} value={durationUnit}>
+                                                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm col-span-1">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                                        <SelectItem value="days">Days</SelectItem>
+                                                                        <SelectItem value="weeks">Weeks</SelectItem>
+                                                                        <SelectItem value="months">Months</SelectItem>
+                                                                        <SelectItem value="years">Years</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Input type="number" value={durationValue} onChange={e => setDurationValue(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm col-span-2" />
+                                                            </div>
                                                         </div>
                                                         <div className="space-y-1"><Label className="text-xs">Status</Label><Select onValueChange={(v: "active" | "disabled") => setStatus(v)} value={status}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select status" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="active" className="text-sm">Active</SelectItem><SelectItem value="disabled" className="text-sm">Inactive</SelectItem></SelectContent></Select></div>
                                                         {serviceType === "pppoe" && <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={pppProfilesLoading || !mikrotikRouterId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{pppProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>}
