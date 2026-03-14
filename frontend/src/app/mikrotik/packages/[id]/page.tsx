@@ -10,9 +10,16 @@ import { Topbar } from "@/components/topbar";
 import { MikrotikPackageForm, MikrotikPackageFormData } from "@/components/mikrotik/MikrotikPackageForm";
 
 interface MikrotikRouter { _id: string; name: string; }
-interface PackageResponse extends MikrotikPackageFormData {
+interface PackageResponse {
     _id: string;
     mikrotikRouter: { _id: string; name: string; };
+    serviceType: 'pppoe' | 'static';
+    name: string;
+    price: number;
+    durationInDays: number;
+    profile?: string;
+    rateLimit?: string;
+    status: 'active' | 'disabled';
 }
 
 export default function EditPackagePage() {
