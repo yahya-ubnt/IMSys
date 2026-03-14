@@ -32,13 +32,20 @@ const DeviceService = {
     }
 
     const device = new Device({
-      ...deviceData,
-      deviceName: sanitizeString(deviceName),
-      deviceModel: sanitizeString(deviceModel),
-      loginUsername: sanitizeString(loginUsername),
-      loginPassword,
-      ssid: sanitizeString(ssid),
-      wirelessPassword,
+      router: deviceData.router,
+      ipAddress: deviceData.ipAddress,
+      macAddress: deviceData.macAddress,
+      monitoringMode: deviceData.monitoringMode,
+      deviceType: deviceData.deviceType,
+      physicalBuilding: deviceData.physicalBuilding || undefined, // Set to undefined if empty string
+      serviceArea: deviceData.serviceArea,
+      parentId: deviceData.parentId || undefined, // Set to undefined if empty string
+      deviceName: sanitizeString(deviceData.deviceName),
+      deviceModel: sanitizeString(deviceData.deviceModel),
+      loginUsername: sanitizeString(deviceData.loginUsername),
+      loginPassword: deviceData.loginPassword,
+      ssid: sanitizeString(deviceData.ssid),
+      wirelessPassword: deviceData.wirelessPassword,
       tenant: tenantId,
     });
 
