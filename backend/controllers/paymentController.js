@@ -16,10 +16,10 @@ const initiateStkPush = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { amount, phoneNumber, accountReference } = req.body;
+  const { amount, phoneNumber, accountReference, packageId } = req.body;
 
   try {
-    const response = await initiateStkPushService(req.user.tenant, amount, phoneNumber, accountReference);
+    const response = await initiateStkPushService(req.user.tenant, amount, phoneNumber, accountReference, 'SUBSCRIPTION', packageId);
     res.status(200).json(response);
   } catch (error) {
     console.error('Error initiating STK push:', error);
@@ -28,7 +28,8 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 });
 
 const handleDarajaCallback = asyncHandler(async (req, res) => {
-  const safaricomIps = ['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208'];
+  const safaricomIpsFromEnv = process.env.SAFARICOM_IPS ? process.env.SAFARICOM_IPS.split(',') : [];
+  const safaricomIps = [...new Set([...['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208', '196.201.212.138', '196.201.212.69'], ...safaricomIpsFromEnv])];
   const requestIp = req.ip;
   if (!safaricomIps.includes(requestIp)) {
     console.warn(`[SECURITY] Callback from untrusted IP rejected: ${requestIp}`);

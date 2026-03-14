@@ -59,6 +59,8 @@ const PORT = process.env.PORT || 5000;
 // Connect to database
 connectDB();
 
+app.set('trust proxy', true); // Trust proxy headers to get the real IP
+
 // Setup BullMQ repeatable jobs
 setupReconciliationScheduler();
 setupSmsReconciliationScheduler();
