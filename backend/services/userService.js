@@ -52,6 +52,7 @@ const UserService = {
       ...userData,
       mPesaRefNo,
       tenant: tenantId,
+      expiryDate: new Date(), // Set expiry date to now, so user is created as "expired"
       provisionedOnMikrotik: false,
       syncStatus: 'pending',
     });
