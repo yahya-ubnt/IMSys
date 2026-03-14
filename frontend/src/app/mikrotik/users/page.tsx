@@ -59,6 +59,7 @@ export default function MikrotikUsersPage() {
   const [newThisMonth, setNewThisMonth] = useState(0);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  const [globalFilter, setGlobalFilter] = useState('');
 
   // Table states
   const [sorting, setSorting] = useState<SortingState>([])
@@ -131,6 +132,8 @@ export default function MikrotikUsersPage() {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter, // Add this line
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -140,6 +143,7 @@ export default function MikrotikUsersPage() {
       sorting,
       columnFilters,
       pagination,
+      globalFilter,
     },
   })
 
@@ -278,9 +282,9 @@ const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<Mi
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
       <Input
-        placeholder="Search username or name..."
-        value={(table.getColumn("username")?.getFilterValue() as string) ?? ""}
-        onChange={(event) => table.getColumn("username")?.setFilterValue(event.target.value)}
+        placeholder="Search all columns..." // Changed placeholder
+        value={(table.getState().globalFilter as string) ?? ""} // Use globalFilter
+        onChange={(event) => table.setGlobalFilter(event.target.value)} // Set globalFilter
         className="pl-10 h-9 bg-zinc-800 border-zinc-700"
       />
     </div>
@@ -297,4 +301,28 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
     );
   }
   return null;
+};
+
+// Custom fuzzy filter function for global search
+const fuzzyFilter = (row: any, columnId: string, filterValue: string) => {
+  const search = filterValue.toLowerCase();
+
+  // Fields to search across
+  const username = row.original.username?.toLowerCase() || '';
+  const officialName = row.original.officialName?.toLowerCase() || '';
+  const mobileNumber = row.original.mobileNumber?.toLowerCase() || '';
+  const packageName = row.original.package?.name?.toLowerCase() || '';
+  const mikrotikRouterName = row.original.mikrotikRouter?.name?.toLowerCase() || '';
+  const stationName = row.original.station?.deviceName?.toLowerCase() || '';
+  const buildingName = row.original.building?.name?.toLowerCase() || '';
+
+  return (
+    username.includes(search) ||
+    officialName.includes(search) ||
+    mobileNumber.includes(search) ||
+    packageName.includes(search) ||
+    mikrotikRouterName.includes(search) ||
+    stationName.includes(search) ||
+    buildingName.includes(search)
+  );
 };

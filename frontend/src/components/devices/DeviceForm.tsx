@@ -74,7 +74,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [loginPassword, setLoginPassword] = useState("");
   const [ssid, setSsid] = useState(initialData?.ssid || "");
   const [wirelessPassword, setWirelessPassword] = useState("");
-  const [parentId, setParentId] = useState(initialData?.parentId || "");
+  const [parentId, setParentId] = useState(typeof initialData?.parentId === 'object' ? initialData.parentId._id : initialData?.parentId || "");
 
   const [routers, setRouters] = useState<MikrotikRouter[]>([]);
   const [accessPoints, setAccessPoints] = useState<Device[]>([]);

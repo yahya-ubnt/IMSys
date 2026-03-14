@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,10 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table";
 import { columns as downtimeColumns } from "./columns";
 import { connectedStationsColumns } from "./connected-stations-columns";
-import { getConnectedUserColumns } from "./connected-users-columns";
-import { motion } from "framer-motion";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { getColumns } from "@/app/mikrotik/users/columns"; // Import getColumns from mikrotik users
 import { MikrotikUser } from "@/app/mikrotik/users/page";
+import { useAuth } from "@/components/auth-provider"; // Import useAuth to pass to getColumns
+import { motion } from "framer-motion"; // Re-add this import
+import * as TabsPrimitive from "@radix-ui/react-tabs"; // Re-add this import
 
 // --- Sub-components ---
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number | undefined; }) => (
@@ -146,9 +147,15 @@ export default function DeviceDetailsPage() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  const { user, isLoggingOut } = useAuth();
+
+  // ... other states and effects ...
+
+  const userColumns = useMemo(() => getColumns(user), [user]); // Add useMemo here
+
   const usersTable = useReactTable({
     data: users,
-    columns: getConnectedUserColumns(),
+    columns: userColumns, // Use the memoized columns
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -167,8 +174,6 @@ export default function DeviceDetailsPage() {
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading device profile...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-red-400">{error}</div>;
   if (!device) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Device not found.</div>;
-
-  const userColumns = getConnectedUserColumns();
 
   const tabs = [
     { id: "overview", label: "Overview", icon: HardDrive },

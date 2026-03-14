@@ -101,8 +101,8 @@ const UserService = {
       .sort({ createdAt: -1 })
       .populate('mikrotikRouter')
       .populate('package')
-      .populate('station')
-      .populate('building', 'name');
+      .populate('station') // Populate entire station object
+      .populate('building'); // Populate entire building object
     return users;
   },
 
@@ -306,7 +306,9 @@ const UserService = {
 
     const users = await MikrotikUser.find(query)
       .populate('package')
-      .populate('mikrotikRouter', 'name');
+      .populate('mikrotikRouter', 'name')
+      .populate('station') // Populate entire station object
+      .populate('building'); // Populate entire building object
     return users;
   },
 
