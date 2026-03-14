@@ -4,29 +4,41 @@ const MikrotikUser = require('../models/MikrotikUser');
 const Package = require('../models/Package');
 const MpesaAlert = require('../models/MpesaAlert');
 const Transaction = require('../models/Transaction');
+const Building = require('../models/Building'); // Add this line
 
 // @desc    Get location-based revenue report
 // @route   POST /api/reports/location
 // @access  Private
 const getLocationReport = asyncHandler(async (req, res) => {
-  const { startDate, endDate, apartment_house_number } = req.body;
+  const { startDate, endDate, buildingName } = req.body;
 
-  if (!startDate || !endDate || !apartment_house_number) {
+  if (!startDate || !endDate || !buildingName) {
     res.status(400);
-    throw new Error('Please provide start date, end date, and an apartment/house number.');
+    throw new Error('Please provide start date, end date, and a building name.');
   }
 
   const query = { 
-    apartment_house_number: apartment_house_number,
     tenant: req.user.tenant 
   };
 
-  query.createdAt = {
+  // Re-enable expiryDate filter
+  query.expiryDate = {
     $gte: new Date(startDate),
     $lte: new Date(endDate),
   };
 
-  const mikrotikUsers = await MikrotikUser.find(query).populate('package', 'price');
+  if (buildingName !== 'All') {
+    // Step 1: Find Building documents that match the buildingName
+    const matchingBuildings = await Building.find({ name: { $regex: buildingName, '$options': 'i' }, tenant: req.user.tenant });
+    const matchingBuildingIds = matchingBuildings.map(b => b._id);
+
+    // Step 2: Filter MikrotikUser documents by the IDs of the matching buildings
+    query.building = { $in: matchingBuildingIds };
+  }
+
+  const mikrotikUsers = await MikrotikUser.find(query)
+    .populate('package', 'price')
+    .populate('building', 'name');
 
   if (!mikrotikUsers || mikrotikUsers.length === 0) {
     res.json({

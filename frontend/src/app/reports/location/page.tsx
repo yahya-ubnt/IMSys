@@ -24,13 +24,14 @@ interface MikrotikUser {
     _id: string;
     officialName: string;
     apartment_house_number?: string;
+    building?: { _id: string; name: string; }; // Added this line
   }
 
 export default function LocationReportPage() {
   const { toast } = useToast()
   const [date, setDate] = useState<DateRange | undefined>()
-  const [apartmentHouseNumbers, setApartmentHouseNumbers] = useState<string[]>([])
-  const [selectedApartmentHouseNumber, setSelectedApartmentHouseNumber] = useState('')
+  const [buildingNames, setBuildingNames] = useState<string[]>([])
+  const [selectedBuildingName, setSelectedBuildingName] = useState('')
   const [reportData, setReportData] = useState<ReportData[]>([])
   const [totalAmount, setTotalAmount] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -41,8 +42,8 @@ export default function LocationReportPage() {
         const response = await fetch('/api/mikrotik/users')
         if (!response.ok) throw new Error('Failed to fetch users')
         const users: MikrotikUser[] = await response.json()
-        const uniqueApartmentHouseNumbers = ['All', ...Array.from(new Set(users.map(user => user.apartment_house_number).filter(Boolean)))];
-        setApartmentHouseNumbers(uniqueApartmentHouseNumbers as string[]);
+        const uniqueBuildingNames = ['All', ...Array.from(new Set(users.map(user => user.building?.name).filter(Boolean)))];
+        setBuildingNames(uniqueBuildingNames as string[]);
       } catch {
         toast({ title: 'Error', description: 'Failed to load locations.', variant: 'destructive' })
       }
@@ -51,7 +52,7 @@ export default function LocationReportPage() {
   }, [toast])
 
   const handleGenerateReport = async () => {
-    if (!date?.from || !date?.to || !selectedApartmentHouseNumber) {
+    if (!date?.from || !date?.to || !selectedBuildingName) {
       toast({ title: 'Missing Information', description: 'Please select a date range and location.', variant: 'destructive' })
       return
     }
@@ -60,7 +61,7 @@ export default function LocationReportPage() {
       const response = await fetch('/api/reports/location', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate: date.from, endDate: date.to, apartment_house_number: selectedApartmentHouseNumber }),
+        body: JSON.stringify({ startDate: date.from, endDate: date.to, buildingName: selectedBuildingName }),
       })
       if (!response.ok) throw new Error('Failed to generate report')
       const { reportData, totalAmount } = await response.json()
@@ -104,12 +105,12 @@ export default function LocationReportPage() {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="location-select">Location</Label>
-                  <Select value={selectedApartmentHouseNumber || ''} onValueChange={setSelectedApartmentHouseNumber}>
+                  <Select value={selectedBuildingName || ''} onValueChange={setSelectedBuildingName}>
                     <SelectTrigger id="location-select" className="bg-zinc-800 border-zinc-700 focus:ring-cyan-500">
                       <SelectValue placeholder="Select a location" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                      {apartmentHouseNumbers.map((ahn) => <SelectItem key={ahn} value={ahn} className="focus:bg-zinc-800">{ahn}</SelectItem>)}
+                      {buildingNames.map((bn) => <SelectItem key={bn} value={bn} className="focus:bg-zinc-800">{bn}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -132,7 +133,7 @@ export default function LocationReportPage() {
                 <CardHeader>
                   <CardTitle className="text-cyan-400">Report Results</CardTitle>
                   <CardDescription className="text-zinc-400">
-                    Total revenue from {selectedApartmentHouseNumber} from {date?.from ? date.from.toLocaleDateString() : 'N/A'} to {date?.to ? date.to.toLocaleDateString() : 'N/A'} is KES {totalAmount.toLocaleString()}.
+                    Total revenue from {selectedBuildingName} from {date?.from ? date.from.toLocaleDateString() : 'N/A'} to {date?.to ? date.to.toLocaleDateString() : 'N/A'} is KES {totalAmount.toLocaleString()}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
