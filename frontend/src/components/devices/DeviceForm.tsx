@@ -60,7 +60,14 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [deviceName, setDeviceName] = useState(initialData?.deviceName || "");
   const [deviceModel, setDeviceModel] = useState(initialData?.deviceModel || "");
   const [physicalBuildingId, setPhysicalBuildingId] = useState(typeof initialData?.physicalBuilding === 'object' ? initialData.physicalBuilding._id : initialData?.physicalBuilding || "");
-  const [serviceArea, setServiceArea] = useState(initialData?.serviceArea || []);
+  const [serviceArea, setServiceArea] = useState<string[]>(() => {
+    const initialServiceAreas = initialData?.serviceArea || [];
+    const initialPhysicalBuilding = typeof initialData?.physicalBuilding === 'object' ? initialData.physicalBuilding._id : initialData?.physicalBuilding;
+    if (initialPhysicalBuilding && !initialServiceAreas.includes(initialPhysicalBuilding)) {
+        return [...initialServiceAreas, initialPhysicalBuilding];
+    }
+    return initialServiceAreas;
+  });
   const [ipAddress, setIpAddress] = useState(initialData?.ipAddress || "");
   const [macAddress, setMacAddress] = useState(initialData?.macAddress || "");
   const [loginUsername, setLoginUsername] = useState(initialData?.loginUsername || "");
@@ -101,6 +108,18 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
       setParentId(routerId);
     }
   }, [routerId, deviceType]);
+
+  // Effect to automatically include physicalBuildingId in serviceArea
+  useEffect(() => {
+    if (physicalBuildingId) {
+      setServiceArea(prevServiceArea => {
+        if (!prevServiceArea.includes(physicalBuildingId)) {
+          return [...prevServiceArea, physicalBuildingId];
+        }
+        return prevServiceArea;
+      });
+    }
+  }, [physicalBuildingId]);
 
   const handleNext = () => {
     if (routerId && deviceType) {
@@ -289,7 +308,17 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                             <MultiSelect
                                 options={buildingOptions}
                                 value={serviceArea}
-                                onValueChange={setServiceArea}
+                                onValueChange={(selectedValues: string[]) => {
+                                    if (physicalBuildingId && !selectedValues.includes(physicalBuildingId)) {
+                                        toast({
+                                            title: "Cannot remove physical building",
+                                            description: "The physical location of the device must remain in the service area.",
+                                            variant: "destructive",
+                                        });
+                                    } else {
+                                        setServiceArea(selectedValues);
+                                    }
+                                }}
                                 className="w-full"
                                 placeholder="Select buildings this AP serves"
                             />
@@ -302,7 +331,17 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                               <MultiSelect
                                   options={buildingOptions}
                                   value={serviceArea}
-                                  onValueChange={setServiceArea}
+                                  onValueChange={(selectedValues: string[]) => {
+                                      if (physicalBuildingId && !selectedValues.includes(physicalBuildingId)) {
+                                          toast({
+                                              title: "Cannot remove physical building",
+                                              description: "The physical location of the device must remain in the service area.",
+                                              variant: "destructive",
+                                          });
+                                      } else {
+                                          setServiceArea(selectedValues);
+                                      }
+                                  }}
                                   className="w-full"
                                   placeholder="Select buildings this station serves"
                               />
