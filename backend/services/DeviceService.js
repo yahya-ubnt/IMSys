@@ -92,7 +92,8 @@ const DeviceService = {
     const query = { _id: deviceId, tenant: tenantId };
     const device = await Device.findOne(query)
       .populate('router', 'name ipAddress')
-      .populate('physicalBuilding', 'name');
+      .populate('physicalBuilding', 'name')
+      .populate('parentId', 'deviceName ipAddress');
 
     if (!device) {
       const error = new Error('Device not found');
@@ -102,8 +103,8 @@ const DeviceService = {
 
     let responseDevice = device.toObject();
 
-    if (responseDevice.deviceType === 'Access' && responseDevice.ssid) {
-      const connectedStations = await Device.find({ deviceType: 'Station', ssid: responseDevice.ssid, tenant: tenantId });
+    if (responseDevice.deviceType === 'Access') { // No need to check for ssid here
+      const connectedStations = await Device.find({ deviceType: 'Station', parentId: responseDevice._id, tenant: tenantId });
       responseDevice.connectedStations = connectedStations;
     } else if (responseDevice.deviceType === 'Station' && responseDevice.ssid) {
       const connectedAccessPoint = await Device.findOne({ deviceType: 'Access', ssid: responseDevice.ssid, tenant: tenantId });

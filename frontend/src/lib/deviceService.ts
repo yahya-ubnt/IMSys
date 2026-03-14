@@ -12,7 +12,7 @@ export interface Device {
   lastSeen?: string;
   physicalBuilding?: string | Building;
   serviceArea?: string[];
-  parentId?: string;
+  parentId?: string | { _id: string; deviceName: string; ipAddress: string; };
   deviceName?: string;
   deviceModel?: string;
   loginUsername?: string;

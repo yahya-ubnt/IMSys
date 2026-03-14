@@ -227,7 +227,7 @@ export default function DeviceDetailsPage() {
                     <DetailItem icon={MapPin} label="Physical Location" value={typeof device.physicalBuilding === 'object' ? device.physicalBuilding.name : device.physicalBuilding} />
                     <DetailItem icon={Network} label="MAC Address" value={device.macAddress} />
                     <DetailItem icon={Server} label="Monitoring Router" value={typeof device.router === 'object' && device.router ? device.router.name : device.router || 'N/A'} />
-                    <DetailItem icon={Wifi} label={device.deviceType === 'Access' ? "Broadcasted SSID" : "AP to Connect To"} value={device.ssid} />
+                    <DetailItem icon={Wifi} label={device.deviceType === 'Access' ? "Broadcasted SSID" : "Parent Device (Uplink)"} value={typeof device.parentId === 'object' && device.parentId ? `${device.parentId.deviceName} (${device.parentId.ipAddress})` : 'N/A'} />
                     <DetailItem icon={Lock} label="Login Username" value={device.loginUsername} />
                   </div>
                 </TabsPrimitive.Content>
