@@ -234,15 +234,15 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             <Label className="text-xs">Client's Building</Label>
                                             <div className="flex items-center gap-2">
                                                 <Select onValueChange={setBuildingId} value={buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-full"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select>
-                                                {!isEditMode && (
-                                                    <Dialog open={isBuildingDialogOpen} onOpenChange={setIsBuildingDialogOpen}>
-                                                        <DialogTrigger asChild><Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0"><Plus className="h-4 w-4" /></Button></DialogTrigger>
-                                                        <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700"><DialogHeader><DialogTitle className="text-white">Create New Building</DialogTitle></DialogHeader>
-                                                            <div className="grid gap-4 py-4"><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="building-name" className="text-right text-zinc-400">Name</Label><Input id="building-name" value={newBuildingName} onChange={(e) => setNewBuildingName(e.target.value)} className="col-span-3 bg-zinc-800 border-zinc-600" /></div></div>
-                                                            <DialogFooter><Button type="button" onClick={handleCreateBuilding} disabled={isSavingBuilding}>{isSavingBuilding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save Building</Button></DialogFooter>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                )}
+                                                <Dialog open={isBuildingDialogOpen} onOpenChange={setIsBuildingDialogOpen}>
+                                                    <DialogTrigger asChild>
+                                                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700"><DialogHeader><DialogTitle className="text-white">Create New Building</DialogTitle></DialogHeader>
+                                                        <div className="grid gap-4 py-4"><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="building-name" className="text-right text-zinc-400">Name</Label><Input id="building-name" value={newBuildingName} onChange={(e) => setNewBuildingName(e.target.value)} className="col-span-3 bg-zinc-800 border-zinc-600" /></div></div>
+                                                        <DialogFooter><Button type="button" onClick={handleCreateBuilding} disabled={isSavingBuilding}>{isSavingBuilding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save Building</Button></DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
                                             </div>
                                         </div>
                                         {buildingId && filteredStations.length > 0 && (
