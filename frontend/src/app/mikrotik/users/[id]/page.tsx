@@ -67,8 +67,8 @@ export default function EditMikrotikUserPage() {
                     billingCycle: userData.billingCycle,
                     mobileNumber: userData.mobileNumber,
                     expiryDate: userData.expiryDate ? new Date(userData.expiryDate) : undefined,
-                    station: typeof userData.station === 'object' ? userData.station._id : userData.station,
-                    building: typeof userData.building === 'object' ? userData.building._id : userData.building,
+                    station: userData.station && typeof userData.station === 'object' ? userData.station._id : userData.station,
+                    building: userData.building && typeof userData.building === 'object' ? userData.building._id : userData.building,
                 };
                 
                 setInitialData(normalizedData);

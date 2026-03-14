@@ -124,16 +124,22 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
 
     useEffect(() => {
         if (buildingId) {
-            const filtered = stations.filter(s => s.serviceArea?.includes(buildingId));
+            setStationId(undefined); // Explicitly reset stationId when buildingId changes
+
+            // Filter stations based on physicalBuilding matching the selected buildingId
+            // OR if the buildingId is included in the station's serviceArea
+            const filtered = stations.filter(s => s.physicalBuilding === buildingId || s.serviceArea?.includes(buildingId));
             setFilteredStations(filtered);
-            if (!isEditMode) {
-                setStationId(undefined); // Reset station selection
-                if (filtered.length === 1) setStationId(filtered[0]._id); // Auto-select
+            
+            // Auto-select if only one station is found
+            if (filtered.length === 1) {
+                setStationId(filtered[0]._id);
             }
         } else {
             setFilteredStations([]);
+            setStationId(undefined); // Also clear stationId if buildingId is cleared
         }
-    }, [buildingId, stations, isEditMode]);
+    }, [buildingId, stations]);
 
     const generateValue = (setter: (val: string) => void, type: 'number' | 'letter') => {
         let result = '';
@@ -248,7 +254,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                         {buildingId && filteredStations.length > 0 && (
                                             <div className="space-y-1 sm:col-span-2">
                                                 <Label className="text-xs">Network Connection (Station)</Label>
-                                                {filteredStations.length === 1 && !isEditMode ? (
+                                                {filteredStations.length === 1 ? (
                                                     <div className="h-9 px-3 flex items-center rounded-md border border-zinc-700 bg-zinc-800/50 text-sm"><span className="text-zinc-400">Auto-selected:</span><span className="ml-2 font-medium">{filteredStations[0].deviceName}</span></div>
                                                 ) : (
                                                     <Select onValueChange={setStationId} value={stationId} disabled={!buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder={isEditMode ? "Select a station" : "Multiple stations found, please select one"} /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredStations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}</SelectContent></Select>
