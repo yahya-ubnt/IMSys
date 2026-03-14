@@ -86,6 +86,17 @@ export const getColumns = (
         return 'N/A';
       },
     },
+    { // New Building Column
+      accessorKey: "building.name",
+      header: "Location",
+      cell: ({ row }) => {
+        const building = row.original.building;
+        if (building) {
+          return building.name;
+        }
+        return 'N/A';
+      },
+    },
     {
       accessorKey: "expiryDate",
       header: "Expiry Date",

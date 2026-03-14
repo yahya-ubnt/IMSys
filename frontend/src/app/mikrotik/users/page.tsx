@@ -41,6 +41,7 @@ export interface MikrotikUser {
   expiryDate: string;
   isOnline: boolean;
   station?: { _id: string; deviceName: string };
+  building?: { _id: string; name: string; }; // Added this line
   tenant?: {
     _id: string;
     fullName: string;

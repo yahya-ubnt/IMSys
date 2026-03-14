@@ -101,7 +101,8 @@ const UserService = {
       .sort({ createdAt: -1 })
       .populate('mikrotikRouter')
       .populate('package')
-      .populate('station');
+      .populate('station')
+      .populate('building', 'name');
     return users;
   },
 
