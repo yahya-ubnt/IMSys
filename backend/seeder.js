@@ -75,6 +75,19 @@ const importData = async () => {
     });
     console.log('Tenant 3 and its admin user created.');
 
+    // --- Create Meak 2 Tenant and its Admin User ---
+    console.log('Creating Meak 2 Tenant...');
+    const meak2Tenant = await Tenant.create({ name: 'Meak 2 Tenant' });
+    await User.create({
+      fullName: 'Meak 2 Admin',
+      email: 'meak2@example.com',
+      phone: '+254711223344', // Placeholder phone number
+      password: '1234',
+      roles: ['ADMIN'],
+      tenant: meak2Tenant._id,
+    });
+    console.log('Meak 2 Tenant and its admin user created.');
+
     // --- Create data for Tenant 1 ---
     console.log('Creating production router for Tenant 1...');
     const router = await MikrotikRouter.create({
@@ -95,6 +108,7 @@ const importData = async () => {
       name: 'Test Package',
       price: 1000,
       profile: 'Test Package',
+      durationInDays: 30, // Added durationInDays
     });
     console.log('Test package created:', testPackage.name);
 

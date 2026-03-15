@@ -9,8 +9,10 @@ const HotspotSession = require('../models/HotspotSession');
 const HotspotTransaction = require('../models/HotspotTransaction');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const MpesaAlert = require('../models/MpesaAlert');
+const MikrotikUser = require('../models/MikrotikUser');
 const PaymentService = require('./paymentService');
 const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
+const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 const { DARAJA_CALLBACK_URL } = require('../config/env');
 const { formatPhoneNumber } = require('../utils/formatters');
 
@@ -153,17 +155,52 @@ const processStkCallback = async (callbackData) => {
   } 
   // --- INVOICE & SUBSCRIPTION LOGIC ---
   else {
-    await PaymentService.handleSuccessfulPayment({
-      tenant: stkRequest.tenant,
-      amount: amount,
-      transactionId: transactionId,
-      reference: stkRequest.accountReference,
-      packageId: stkRequest.planId, // <-- Pass the packageId from the original request
-      paymentMethod: 'M-Pesa (STK)',
-      msisdn: msisdn,
-      officialName: null,
-      comment: null,
-    });
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      // Find user by _id or mPesaRefNo
+      let userToCredit;
+      if (mongoose.Types.ObjectId.isValid(stkRequest.accountReference)) {
+        userToCredit = await MikrotikUser.findById(stkRequest.accountReference).session(session);
+      } else {
+        userToCredit = await MikrotikUser.findOne({ mPesaRefNo: stkRequest.accountReference, tenant: stkRequest.tenant }).session(session);
+      }
+
+      if (!userToCredit) {
+        throw new Error(`User not found for reference: ${stkRequest.accountReference}`);
+      }
+
+      await processSubscriptionPayment(
+        userToCredit._id,
+        amount,
+        'M-Pesa (STK)',
+        transactionId,
+        null, // adminId
+        session
+      );
+
+      await Transaction.create([{
+        transactionId,
+        amount,
+        referenceNumber: stkRequest.accountReference,
+        officialName: userToCredit.officialName,
+        msisdn,
+        transactionDate: new Date(),
+        paymentMethod: 'M-Pesa (STK)',
+        tenant: stkRequest.tenant,
+        mikrotikUser: userToCredit._id,
+      }], { session });
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      console.error(`[MpesaService] STK processing failed for TX ${transactionId}:`, error.message);
+      // Optionally create an alert
+      await MpesaAlert.create({ message: error.message, transactionId, amount, referenceNumber: stkRequest.accountReference, tenant: stkRequest.tenant, paymentDate: new Date() });
+      throw error; // Re-throw to be handled by caller if necessary
+    } finally {
+      session.endSession();
+    }
   }
 
   await StkRequest.deleteOne({ _id: stkRequest._id });
@@ -190,16 +227,49 @@ const processC2bCallback = async (callbackData) => {
     return;
   }
 
-  await PaymentService.handleSuccessfulPayment({
-    tenant: settings.tenant,
-    amount: TransAmount,
-    transactionId: TransID,
-    reference: BillRefNumber,
-    paymentMethod: 'M-Pesa (C2B)',
-    msisdn: MSISDN,
-    officialName: `${FirstName} ${LastName}`.trim(),
-    comment: null,
-  });
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const userToCredit = await MikrotikUser.findOne({ mPesaRefNo: BillRefNumber, tenant: settings.tenant }).session(session);
+
+    if (!userToCredit) {
+      const alertMessage = `C2B payment received, but user with M-Pesa Ref '${BillRefNumber}' not found in tenant '${settings.tenant}'.`;
+      await MpesaAlert.create({ message: alertMessage, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenant: settings.tenant, paymentDate: new Date() });
+      // We still commit because the alert creation should persist. The actual payment hasn't been processed.
+      await session.commitTransaction(); 
+      return;
+    }
+
+    await processSubscriptionPayment(
+      userToCredit._id,
+      TransAmount,
+      'M-Pesa (C2B)',
+      TransID,
+      null, // adminId
+      session
+    );
+
+    await Transaction.create([{
+      transactionId: TransID,
+      amount: TransAmount,
+      referenceNumber: BillRefNumber,
+      officialName: userToCredit.officialName,
+      msisdn: MSISDN,
+      transactionDate: new Date(),
+      paymentMethod: 'M-Pesa (C2B)',
+      tenant: settings.tenant,
+      mikrotikUser: userToCredit._id,
+    }], { session });
+
+    await session.commitTransaction();
+  } catch (error) {
+    await session.abortTransaction();
+    console.error(`[MpesaService] C2B processing failed for TX ${TransID}:`, error.message);
+    await MpesaAlert.create({ message: error.message, transactionId: TransID, amount: TransAmount, referenceNumber: BillRefNumber, tenant: settings.tenant, paymentDate: new Date() });
+    throw error;
+  } finally {
+    session.endSession();
+  }
 };
 
 module.exports = {

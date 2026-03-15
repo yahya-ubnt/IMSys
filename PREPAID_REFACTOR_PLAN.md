@@ -53,7 +53,9 @@ This refactor will be conducted in phases to ensure a smooth transition.
 *   **Action:** Update the `packageController.js` to support creating and editing the new `durationInDays` field.
 *   **Conclusion:** These changes ensure that the data model can support the core requirements of the prepaid refactor.
 
-### Phase 2: Core Logic Implementation [THIS IS OUR FOCUS]
+### Phase 2: Core Logic Implementation [SUPERSEDED]
+> **Note:** The direct activation approach outlined in this phase was successfully implemented and served as a critical first step away from the post-paid model. However, it resulted in two parallel payment systems (Direct Activation and Wallet-Based). The project has since evolved to a superior single architecture, as detailed in **Phase 5**, which unifies all payments under the more flexible wallet-centric model.
+
 1.  **Create `SubscriptionService`:**
     *   **Action:** Create a new service file to encapsulate the subscription logic. This centralizes the core business rule.
     *   **File:** `backend/services/subscriptionService.js`.
@@ -100,6 +102,14 @@ This refactor will be conducted in phases to ensure a smooth transition.
 3.  **Remove Old Models (Optional):**
     *   **Action:** The `Bill` and `Invoice` models can eventually be removed after ensuring no other part of the system relies on them for historical reporting. This should be done with caution.
 
+### Phase 5: Unification to a Wallet-Centric Architecture [COMPLETED]
+*   **Objective:** To complete the prepaid refactor by unifying the parallel payment systems (Direct Activation and Wallet-Based) into a single, robust architecture.
+*   **Problem:** The state after Phase 2 resulted in inconsistent payment handling. Cash and STK payments bypassed the user wallet, while C2B payments used it. This created complexity and could not gracefully handle scenarios like overpayments or partial payments for certain payment types.
+*   **Solution:** The system was refactored to a **Unified Wallet-Centric Architecture**.
+    *   **New Principle:** All payment sources (Cash, M-Pesa STK, M-Pesa C2B) now exclusively credit the user's `walletBalance`.
+    *   **Sole Authority:** The `processSubscriptionPayment` utility (in `backend/utils/paymentProcessing.js`) is now the single source of truth for all subscription logic. It activates or extends subscriptions based on the user's wallet balance, after first settling any outstanding one-time fees (like `installationFee`).
+*   **Conclusion:** This final phase completes the transition to a true prepaid model, providing maximum flexibility, consistency, and maintainability.
+
 ---
 
 ## 5. The Reconciliation Safety Net [INVESTIGATION UPDATE]
@@ -116,14 +126,16 @@ Our investigation confirmed the existence of a "Reconciliation Engine" (`backend
 
 ### Backend
 *   **Created Files:**
-    *   `backend/services/subscriptionService.js`
     *   `backend/scripts/startupDisconnect.js`
 *   **Modified Files:**
     *   `backend/controllers/paymentController.js` (complete overhaul of payment success logic)
+    *   `backend/services/mpesaService.js` (to use the unified wallet system)
+    *   `backend/utils/paymentProcessing.js` (to handle installation fees)
     *   `backend/server.js` (to execute the startup script)
     *   `backend/models/Package.js` (to add `durationInDays`)
     *   `backend/controllers/packageController.js` (to support `durationInDays`)
 *   **Deprecated/Removed Files:**
+    *   `backend/services/subscriptionService.js`
     *   `backend/controllers/billController.js`
     *   `backend/controllers/invoiceController.js`
     *   The database entry for the "Generate Monthly Billing" scheduled task.

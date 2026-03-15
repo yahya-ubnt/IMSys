@@ -9,73 +9,17 @@ const MpesaAlert = require('../models/MpesaAlert');
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const { sendAcknowledgementSms } = require('./smsService');
 const smsTriggers = require('../constants/smsTriggers');
-const { activateUserSubscription } = require('./subscriptionService');
 
 /**
  * High-level service for handling payments and account renewals.
  */
 const PaymentService = {
-  
-  /**
-   * Processes a subscription payment with a priority-based logic.
-   * (Existing logic remains the same)
-   */
-  processSubscriptionPayment: async (mikrotikUserId, amountPaid, paymentSource, externalTransactionId, adminId = null, session) => {
-    // ... existing implementation
-  },
 
   /**
-   * Orchestrates a successful payment from any source (STK, C2B, Cash).
-   * Now supports finding user by _id, mPesaRefNo, or invoice number.
+   * @deprecated This function is deprecated. Use the processSubscriptionPayment utility from /utils/paymentProcessing.js instead.
    */
   handleSuccessfulPayment: async (params) => {
-    const { tenant, amount, transactionId, reference, packageId, paymentMethod, msisdn, officialName, comment } = params;
-
-    if (!packageId) {
-      throw new Error('packageId is required to handle a successful payment.');
-    }
-    if (!reference) {
-      throw new Error('A user reference (_id or mPesaRefNo) is required.');
-    }
-
-    try {
-      let userToCredit;
-
-      // Find user by _id or mPesaRefNo
-      if (mongoose.Types.ObjectId.isValid(reference)) {
-        userToCredit = await MikrotikUser.findById(reference);
-      } else {
-        userToCredit = await MikrotikUser.findOne({ mPesaRefNo: reference, tenant: tenant });
-      }
-
-      if (!userToCredit) {
-        throw new Error(`User not found for reference: ${reference}`);
-      }
-
-      // 1. Activate or extend the subscription
-      await activateUserSubscription(userToCredit._id, packageId);
-
-      // 2. Create a generic transaction record for the payment
-      await Transaction.create({
-        transactionId,
-        amount,
-        referenceNumber: reference,
-        officialName: officialName || userToCredit.officialName,
-        msisdn: msisdn || userToCredit.mobileNumber, // Fallback to user's mobile number
-        transactionDate: new Date(),
-        paymentMethod,
-        tenant,
-        mikrotikUser: userToCredit._id,
-        comment: comment || `Payment for package ${packageId}`,
-      });
-
-      console.log(`[PaymentService] Successfully processed payment for user ${userToCredit.username} and package ${packageId}.`);
-
-    } catch (error) {
-      console.error(`[PaymentService] Processing failed for TX ${transactionId}:`, error.message);
-      await MpesaAlert.create({ message: error.message, transactionId, amount, referenceNumber: reference, tenant, paymentDate: new Date() });
-      throw error;
-    }
+    throw new Error('handleSuccessfulPayment is deprecated and should not be used. All payments must now go through the unified wallet system via processSubscriptionPayment.');
   },
 
   /**
@@ -83,7 +27,64 @@ const PaymentService = {
    * (Existing logic remains the same)
    */
   createWalletTransaction: async (params, adminId) => {
-    // ... existing implementation
+    const { tenant, mikrotikUser, type, amount, source, comment } = params;
+
+    if (!mikrotikUser || !type || !amount || !source) {
+      const error = new Error('Missing required fields for wallet transaction.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await MikrotikUser.findById(mikrotikUser).session(session);
+      if (!user) {
+        throw new Error('User not found for wallet transaction.');
+      }
+
+      const balanceBefore = user.walletBalance;
+      let balanceAfter;
+
+      // Calculate the new balance
+      if (type === 'Credit') {
+        balanceAfter = balanceBefore + amount;
+      } else if (type === 'Debit') {
+        balanceAfter = balanceBefore - amount;
+      } else { // For 'Adjustment' or other types
+        const error = new Error('Invalid transaction type for automatic balance adjustment.');
+        error.statusCode = 400;
+        throw error;
+      }
+      
+      user.walletBalance = balanceAfter;
+
+      const transactionId = `WT-${type.toUpperCase()}-${randomUUID()}`;
+      const transaction = new WalletTransaction({
+        tenant,
+        mikrotikUser,
+        transactionId,
+        type,
+        amount,
+        source,
+        balanceAfter,
+        comment,
+        processedBy: adminId,
+      });
+
+      await transaction.save({ session });
+      await user.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return transaction;
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
   },
 
   /**

@@ -7,6 +7,7 @@ const WalletTransaction = require('../models/WalletTransaction');
 const MikrotikUser = require('../models/MikrotikUser');
 const PaymentService = require('../services/paymentService');
 const { initiateStkPushService } = require('../services/mpesaService');
+const { processSubscriptionPayment } = require('../utils/paymentProcessing');
 
 // ... (initiateStkPush and handleDarajaCallback logic remains same, but calls PaymentService)
 
@@ -75,21 +76,44 @@ const createCashPayment = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { userId, amount, packageId, comment } = req.body;
-  const transactionId = `CASH-${randomUUID()}`;
+  const { userId, amount, comment } = req.body;
+  const externalTransactionId = `CASH-${randomUUID()}`;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  await PaymentService.handleSuccessfulPayment({
-    tenant: req.user.tenant,
-    amount: parseFloat(amount),
-    transactionId,
-    reference: userId, // Pass userId directly as the reference
-    packageId: packageId, // Pass the packageId
-    paymentMethod: 'Cash',
-    officialName: null,
-    comment,
-  });
+  try {
+    await processSubscriptionPayment(
+      userId,
+      parseFloat(amount),
+      'Cash',
+      externalTransactionId,
+      req.user._id, // adminId
+      session
+    );
 
-  res.status(201).json({ success: true, transactionId });
+    // We can still create a generic transaction record for reporting if desired
+    await Transaction.create([{
+      transactionId: externalTransactionId,
+      amount: parseFloat(amount),
+      referenceNumber: userId,
+      officialName: 'N/A', // May need to fetch user to get this
+      msisdn: 'N/A', // May need to fetch user to get this
+      transactionDate: new Date(),
+      paymentMethod: 'Cash',
+      tenant: req.user.tenant,
+      mikrotikUser: userId,
+      comment,
+    }], { session });
+
+    await session.commitTransaction();
+    res.status(201).json({ success: true, message: 'Cash payment processed successfully.' });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Cash payment processing failed:', error);
+    res.status(500).json({ message: 'Failed to process cash payment.' });
+  } finally {
+    session.endSession();
+  }
 });
 
 const createWalletTransaction = asyncHandler(async (req, res) => {

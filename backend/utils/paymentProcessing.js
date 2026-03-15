@@ -48,6 +48,26 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   }], { session });
   console.log(`[${new Date().toISOString()}] Wallet transaction (credit) created.`);
 
+  // Priority 1: Pay off outstanding installation fee
+  if (user.installationFee > 0 && user.walletBalance >= user.installationFee) {
+    const fee = user.installationFee;
+    console.log(`[${new Date().toISOString()}] Paying installation fee of ${fee}.`);
+    user.walletBalance -= fee;
+    user.installationFee = 0;
+
+    await WalletTransaction.create([{
+      tenant: user.tenant,
+      mikrotikUser: user._id,
+      transactionId: `DEBIT-INSTALL-${randomUUID()}`,
+      type: 'Debit',
+      amount: fee,
+      source: 'Installation Fee',
+      balanceAfter: user.walletBalance,
+      comment: 'Payment for one-time installation fee.',
+    }], { session });
+    console.log(`[${new Date().toISOString()}] Wallet transaction (installation fee debit) created.`);
+  }
+
   if (!user.package || !user.package.price || user.package.price <= 0) {
     console.warn(`[${new Date().toISOString()}] User ${user.username} has no valid package price. Amount credited to wallet.`);
     // No need to save here, as the final save will handle it.

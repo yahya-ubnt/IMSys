@@ -1,3 +1,6 @@
+volumes:
+  mongodb_data:
+
 services:
   backend:
     build:
@@ -12,8 +15,10 @@ services:
       - /usr/src/app/node_modules
     command: npm run dev
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   worker:
     build:
@@ -26,8 +31,10 @@ services:
       - /usr/src/app/node_modules
     command: npm run worker:start
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   frontend:
     build:
@@ -50,10 +57,20 @@ services:
 
   mongo:
     image: mongo:latest
+    container_name: imsys-mongo
+    hostname: imsys-mongo
     ports:
       - "27018:27017"
     volumes:
-      - /var/lib/mongodb:/data/db
+      - mongodb_data:/data/db
+      - ./mongo-entrypoint.sh:/usr/local/bin/mongo-entrypoint.sh
+    entrypoint: [ "/usr/local/bin/mongo-entrypoint.sh" ]
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "rs.status().ok && rs.status().myState == 1 ? quit(0) : quit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   redis:
     image: redis:alpine
