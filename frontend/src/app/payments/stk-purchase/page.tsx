@@ -17,6 +17,7 @@ interface User {
   officialName: string;
   username: string;
   mobileNumber: string;
+  mPesaRefNo: string;
   package?: { _id: string; price: number; };
 }
 interface Package {
@@ -108,7 +109,7 @@ export default function StkPurchasePage() {
         body: JSON.stringify({
           amount: parseFloat(amount),
           phoneNumber,
-          accountReference: selectedUser.username,
+          accountReference: selectedUser.mPesaRefNo,
           packageId: selectedPackageId,
         }),
       })
