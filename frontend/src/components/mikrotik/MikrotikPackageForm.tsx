@@ -50,7 +50,7 @@ const formVariants = {
 };
 
 const deconstructDuration = (days: number | undefined) => {
-    if (days === undefined) return { value: "30", unit: 'days' };
+    if (days === undefined) return { value: "1", unit: 'months' };
     if (days % 365 === 0) return { value: (days / 365).toString(), unit: 'years' };
     if (days % 30 === 0) return { value: (days / 30).toString(), unit: 'months' };
     if (days % 7 === 0) return { value: (days / 7).toString(), unit: 'weeks' };
