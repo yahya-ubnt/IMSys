@@ -272,7 +272,7 @@ const menuCategories: MenuCategory[] = [
       {
         title: "STK Push",
         icon: CreditCard,
-        url: "/payments/stk-push",
+        url: "/payments/stk-purchase",
       },
     ],
   },
