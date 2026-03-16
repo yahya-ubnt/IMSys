@@ -66,10 +66,10 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
 
     // Form Fields State
     const [mikrotikRouterId, setMikrotikRouterId] = useState(initialData?.mikrotikRouter || "");
-    const [serviceType, setServiceType] = useState<"pppoe" | "static" | undefined>(initialData?.serviceType);
+    const [serviceType, setServiceType] = useState<"pppoe" | "static" | "">(initialData?.serviceType || "");
     const [packageId, setPackageId] = useState(initialData?.package || "");
-    const [buildingId, setBuildingId] = useState<string | undefined>(initialData?.building || undefined);
-    const [stationId, setStationId] = useState<string | undefined>(initialData?.station || undefined);
+    const [buildingId, setBuildingId] = useState(initialData?.building || "");
+    const [stationId, setStationId] = useState(initialData?.station || "");
     const [username, setUsername] = useState(initialData?.username || "");
     const [pppoePassword, setPppoePassword] = useState(initialData?.pppoePassword || "");
     const [ipAddress, setIpAddress] = useState(initialData?.ipAddress || "");
@@ -142,7 +142,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
 
     useEffect(() => {
         if (buildingId) {
-            setStationId(undefined); // Explicitly reset stationId when buildingId changes
+            setStationId(""); // Explicitly reset stationId when buildingId changes
 
             // Filter stations based on physicalBuilding matching the selected buildingId
             // OR if the buildingId is included in the station's serviceArea
@@ -155,7 +155,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             }
         } else {
             setFilteredStations([]);
-            setStationId(undefined); // Also clear stationId if buildingId is cleared
+            setStationId(""); // Also clear stationId if buildingId is cleared
         }
     }, [buildingId, stations]);
 
@@ -210,7 +210,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
         e.preventDefault();
         const userData: Partial<MikrotikUserFormData> = {
             mikrotikRouter: mikrotikRouterId,
-            serviceType: serviceType === "" ? undefined : serviceType,
+            serviceType: serviceType || undefined,
             package: packageId,
             username,
             officialName,
@@ -221,8 +221,8 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             customPackagePrice: customPackagePrice ? parseFloat(customPackagePrice) : undefined,
             mobileNumber,
             expiryDate,
-            building: buildingId,
-            station: stationId,
+            building: buildingId || undefined,
+            station: stationId || undefined,
             sendWelcomeSms: isEditMode ? undefined : sendWelcomeSms,
         };
 
