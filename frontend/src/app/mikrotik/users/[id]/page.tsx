@@ -64,7 +64,6 @@ export default function EditMikrotikUserPage() {
                     door_number_unit_label: userData.door_number_unit_label,
                     mPesaRefNo: userData.mPesaRefNo,
                     installationFee: userData.installationFee,
-                    billingCycle: userData.billingCycle,
                     mobileNumber: userData.mobileNumber,
                     expiryDate: userData.expiryDate ? new Date(userData.expiryDate) : undefined,
                     station: userData.station && typeof userData.station === 'object' ? userData.station._id : userData.station,
