@@ -76,18 +76,18 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   console.log(`[${new Date().toISOString()}] Package price: ${user.package.price}`);
 
   const packagePrice = user.package.price;
-  let monthsExtended = 0;
+  let daysExtended = 0; // Changed from monthsExtended
   const now = moment();
   let newExpiryDate = moment(user.expiryDate || now);
   console.log(`[${new Date().toISOString()}] Initial expiry date: ${newExpiryDate.toISOString()}`);
 
-  // Pay for one month if expired and has funds
+  // Pay for one package duration if expired and has funds
   if (newExpiryDate.isBefore(now) && user.walletBalance >= packagePrice) {
-    console.log(`[${new Date().toISOString()}] User expired. Renewing for 1 month.`);
+    console.log(`[${new Date().toISOString()}] User expired. Renewing for ${user.package.durationInDays} days.`);
     user.walletBalance -= packagePrice;
-    newExpiryDate = now.add(1, 'months');
+    newExpiryDate = now.add(user.package.durationInDays, 'days'); // Use durationInDays
     user.expiryDate = newExpiryDate.toDate();
-    monthsExtended += 1;
+    daysExtended += user.package.durationInDays; // Track days extended
 
     await WalletTransaction.create([{
       tenant: user.tenant,
@@ -97,32 +97,33 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
       amount: packagePrice,
       source: 'Subscription Renewal',
       balanceAfter: user.walletBalance,
-      comment: 'Automatic renewal of 1 month.',
+      comment: `Automatic renewal of ${user.package.durationInDays} days.`,
     }], { session });
     console.log(`[${new Date().toISOString()}] Wallet transaction (renewal debit) created. New expiry: ${user.expiryDate}`);
   }
 
-  // Buy future months with remaining balance
+  // Buy future package durations with remaining balance
   if (user.walletBalance >= packagePrice) {
-    const futureMonthsToBuy = Math.floor(user.walletBalance / packagePrice);
-    if (futureMonthsToBuy > 0) {
-      const costOfFutureMonths = futureMonthsToBuy * packagePrice;
-      console.log(`[${new Date().toISOString()}] Purchasing ${futureMonthsToBuy} future month(s).`);
+    const futureDurationsToBuy = Math.floor(user.walletBalance / packagePrice); // Calculate how many full package durations can be bought
+    if (futureDurationsToBuy > 0) {
+      const costOfFutureDurations = futureDurationsToBuy * packagePrice;
+      const totalDaysToAdd = futureDurationsToBuy * user.package.durationInDays;
+      console.log(`[${new Date().toISOString()}] Purchasing ${futureDurationsToBuy} future package durations (${totalDaysToAdd} days).`);
       
       let currentExpiry = moment(user.expiryDate);
-      user.expiryDate = currentExpiry.add(futureMonthsToBuy, 'months').toDate();
-      monthsExtended += futureMonthsToBuy;
-      user.walletBalance -= costOfFutureMonths;
+      user.expiryDate = currentExpiry.add(totalDaysToAdd, 'days').toDate(); // Use totalDaysToAdd
+      daysExtended += totalDaysToAdd; // Track days extended
+      user.walletBalance -= costOfFutureDurations;
 
       await WalletTransaction.create([{
         tenant: user.tenant,
         mikrotikUser: user._id,
         transactionId: `DEBIT-FUTURE-${randomUUID()}`,
         type: 'Debit',
-        amount: costOfFutureMonths,
-        source: 'Subscription Purchase',
-        balanceAfter: user.walletBalance,
-        comment: `Automatic purchase of ${futureMonthsToBuy} future month(s).`,
+        amount: costOfFutureDurations,
+      source: 'Subscription Purchase',
+      balanceAfter: user.walletBalance,
+      comment: `Automatic purchase of ${futureDurationsToBuy} future package durations (${totalDaysToAdd} days).`,
       }], { session });
       console.log(`[${new Date().toISOString()}] Wallet transaction (future purchase debit) created. New expiry: ${user.expiryDate}`);
     }
@@ -131,7 +132,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   await user.save({ session });
   console.log(`[${new Date().toISOString()}] User saved. Final expiry: ${user.expiryDate}, final balance: ${user.walletBalance}`);
 
-  if (monthsExtended > 0 && !user.isManuallyDisconnected) {
+  if (daysExtended > 0 && !user.isManuallyDisconnected) { // Changed from monthsExtended
     console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username} via state-based sync.`);
     user.isSuspended = false;
     user.syncStatus = 'pending';
