@@ -75,7 +75,9 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   }
   console.log(`[${new Date().toISOString()}] Package price: ${user.package.price}`);
 
-  const packagePrice = user.package.price;
+  const packagePrice = user.customPackagePrice !== undefined && user.customPackagePrice !== null
+    ? user.customPackagePrice
+    : user.package.price;
   let daysExtended = 0; // Changed from monthsExtended
   const now = moment();
   let newExpiryDate = moment(user.expiryDate || now);

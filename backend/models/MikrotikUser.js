@@ -84,6 +84,10 @@ const MikrotikUserSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    customPackagePrice: { // New field for user-specific package price
+      type: Number,
+      min: [0, 'Custom package price cannot be negative'],
+    },
       expiryDate: {
     type: Date,
     required: true,

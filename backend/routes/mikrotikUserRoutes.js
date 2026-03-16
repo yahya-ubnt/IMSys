@@ -44,7 +44,6 @@ router.route('/').get(protect, isSuperAdminOrAdmin, getMikrotikUsers).post(
     body('package', 'Package ID is required').isMongoId(),
     body('username', 'Username is required and can only contain alphanumeric characters, hyphens, and underscores').not().isEmpty().matches(/^[a-zA-Z0-9_-]+$/),
     body('officialName', 'Official name is required').not().isEmpty(),
-    body('billingCycle', 'Billing cycle is required').not().isEmpty(),
     body('mobileNumber', 'Mobile number is required').not().isEmpty(),
     body('expiryDate', 'Expiry date is required and must be a valid date').isISO8601().toDate(),
     body('pppoePassword', 'PPPoE password is required for PPPoE users').if(body('serviceType').equals('pppoe')).not().isEmpty(),
@@ -89,7 +88,6 @@ router
       body('package', 'Package ID is invalid').optional().isMongoId(),
       body('username', 'Username can only contain alphanumeric characters, hyphens, and underscores').optional().matches(/^[a-zA-Z0-9_-]+$/),
       body('officialName', 'Official name must be a string').optional().isString(),
-      body('billingCycle', 'Billing cycle must be a string').optional().isString(),
       body('mobileNumber', 'Mobile number is invalid').optional().isString(), // More specific phone validation can be added
       body('expiryDate', 'Expiry date must be a valid date').optional().isISO8601().toDate(),
       body('pppoePassword', 'PPPoE password must be a string').if(body('serviceType').equals('pppoe')).optional().not().isEmpty(),

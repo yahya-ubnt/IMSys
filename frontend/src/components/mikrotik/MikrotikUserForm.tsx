@@ -20,7 +20,7 @@ import { createBuilding, type Building, type Device } from "@/lib/deviceService"
 // --- Interface Definitions ---
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id:string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
-export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
+export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; customPackagePrice?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
 
 interface MikrotikUserFormProps {
   isEditMode: boolean;
@@ -66,7 +66,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
 
     // Form Fields State
     const [mikrotikRouterId, setMikrotikRouterId] = useState(initialData?.mikrotikRouter || "");
-    const [serviceType, setServiceType] = useState<"pppoe" | "static" | ''>(initialData?.serviceType || '');
+    const [serviceType, setServiceType] = useState<"pppoe" | "static" | undefined>(initialData?.serviceType);
     const [packageId, setPackageId] = useState(initialData?.package || "");
     const [buildingId, setBuildingId] = useState<string | undefined>(initialData?.building || undefined);
     const [stationId, setStationId] = useState<string | undefined>(initialData?.station || undefined);
@@ -80,6 +80,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
     const [mPesaRefNo, setMPesaRefNo] = useState(initialData?.mPesaRefNo || "");
     const [mobileNumber, setMobileNumber] = useState(initialData?.mobileNumber || "");
     const [installationFee, setInstallationFee] = useState(initialData?.installationFee?.toString() || "");
+    const [customPackagePrice, setCustomPackagePrice] = useState(initialData?.customPackagePrice?.toString() || "");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(initialData?.expiryDate ? new Date(initialData.expiryDate) : new Date());
     const [sendWelcomeSms, setSendWelcomeSms] = useState(initialData?.sendWelcomeSms ?? true);
 
@@ -120,6 +121,24 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             setFilteredPackages([]);
         }
     }, [mikrotikRouterId, serviceType, packages, isEditMode]);
+
+    // New useEffect to handle package selection and custom price
+    useEffect(() => {
+        if (packageId) {
+            const selectedPackage = packages.find(p => p._id === packageId);
+            if (selectedPackage) {
+                // If in edit mode and initialData has a custom price, use that
+                // Otherwise, default to the selected package's price
+                if (isEditMode && initialData?.customPackagePrice !== undefined) {
+                    setCustomPackagePrice(initialData.customPackagePrice.toString());
+                } else {
+                    setCustomPackagePrice(selectedPackage.price.toString());
+                }
+            }
+        } else {
+            setCustomPackagePrice(""); // Clear custom price if no package is selected
+        }
+    }, [packageId, packages, isEditMode, initialData?.customPackagePrice]);
 
     useEffect(() => {
         if (buildingId) {
@@ -199,6 +218,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             door_number_unit_label: doorNumberUnitLabel,
             mPesaRefNo,
             installationFee: installationFee ? parseFloat(installationFee) : 0,
+            customPackagePrice: customPackagePrice ? parseFloat(customPackagePrice) : undefined,
             mobileNumber,
             expiryDate,
             building: buildingId,
@@ -228,7 +248,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                     <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Wifi size={18} /> Service Setup</CardTitle>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
-                                        <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType || undefined}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent></Select></div>
+                                        <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent></Select></div>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1"><Label className="text-xs">Package</Label><Select onValueChange={setPackageId} value={packageId} disabled={!mikrotikRouterId || !serviceType || filteredPackages.length === 0}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a package" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredPackages.map(p => <SelectItem key={p._id} value={p._id} className="text-sm">{p.name} (KES {p.price})</SelectItem>)}</SelectContent></Select></div>
@@ -281,6 +301,18 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                             <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div></div>
                                             <div className="space-y-1"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                            {packageId && (
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs">Custom Package Price</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={customPackagePrice}
+                                                        onChange={e => setCustomPackagePrice(e.target.value)}
+                                                        className="h-9 bg-zinc-800 border-zinc-700 text-sm"
+                                                        placeholder="Defaults to package price"
+                                                    />
+                                                </div>
+                                            )}
                                             <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
                                         </div>
                                         {!isEditMode && (
