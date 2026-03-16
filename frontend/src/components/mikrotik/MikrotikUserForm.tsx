@@ -20,7 +20,7 @@ import { createBuilding, type Building, type Device } from "@/lib/deviceService"
 // --- Interface Definitions ---
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id:string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
-export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; customPackagePrice?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
+export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; customPackagePrice?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; rateLimit?: string; profile?: string; }
 
 interface MikrotikUserFormProps {
   isEditMode: boolean;
@@ -81,8 +81,12 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
     const [mobileNumber, setMobileNumber] = useState(initialData?.mobileNumber || "");
     const [installationFee, setInstallationFee] = useState(initialData?.installationFee?.toString() || "");
     const [customPackagePrice, setCustomPackagePrice] = useState(initialData?.customPackagePrice?.toString() || "");
+    const [customRateLimit, setCustomRateLimit] = useState(initialData?.rateLimit || "");
+    const [pppoeProfile, setPppoeProfile] = useState(initialData?.profile || "");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(initialData?.expiryDate ? new Date(initialData.expiryDate) : new Date());
     const [sendWelcomeSms, setSendWelcomeSms] = useState(initialData?.sendWelcomeSms ?? true);
+    const [internalPppoeProfiles, setInternalPppoeProfiles] = useState<string[]>([]);
+    const [internalIsPppoeProfilesLoading, setInternalIsPppoeProfilesLoading] = useState(false);
 
     // Dialog State
     const [isBuildingDialogOpen, setIsBuildingDialogOpen] = useState(false);
@@ -140,6 +144,53 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
         }
     }, [packageId, packages, isEditMode, initialData?.customPackagePrice]);
 
+    // NEW useEffect for customRateLimit and pppoeProfile
+    useEffect(() => {
+        // Reset when packageId is cleared
+        if (!packageId) {
+            setCustomRateLimit("");
+            setPppoeProfile("");
+            return;
+        }
+
+        const selectedPackage = packages.find(p => p._id === packageId);
+        if (!selectedPackage) {
+            setCustomRateLimit("");
+            setPppoeProfile("");
+            return;
+        }
+
+        // Logic for customRateLimit
+        if (serviceType === 'static') {
+            // If in edit mode and the package hasn't changed from initialData,
+            // and initialData had a rateLimit, use that.
+            if (isEditMode && initialData?.package === packageId && initialData?.rateLimit !== undefined) {
+                setCustomRateLimit(initialData.rateLimit);
+            } else if (selectedPackage.rateLimit) {
+                setCustomRateLimit(selectedPackage.rateLimit);
+            } else {
+                setCustomRateLimit("");
+            }
+        } else {
+            setCustomRateLimit(""); // Clear if serviceType is not static
+        }
+
+        // Logic for pppoeProfile
+        if (serviceType === 'pppoe') {
+            // Similar logic for profile
+            if (isEditMode && initialData?.package === packageId && initialData?.profile !== undefined) {
+                setPppoeProfile(initialData.profile);
+            } else if (selectedPackage.profile) {
+                setPppoeProfile(selectedPackage.profile);
+            } else {
+                setPppoeProfile("");
+            }
+        } else {
+            setPppoeProfile(""); // Clear if serviceType is not pppoe
+        }
+
+    }, [packageId, packages, serviceType, isEditMode, initialData?.package, initialData?.rateLimit, initialData?.profile]);
+
     useEffect(() => {
         if (buildingId) {
             setStationId(""); // Explicitly reset stationId when buildingId changes
@@ -158,6 +209,32 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             setStationId(""); // Also clear stationId if buildingId is cleared
         }
     }, [buildingId, stations]);
+
+    // NEW useEffect for conditional fetching of PPPoE profiles
+    useEffect(() => {
+        if (serviceType === 'pppoe' && mikrotikRouterId) {
+            const fetchPppoeProfiles = async () => {
+                setInternalIsPppoeProfilesLoading(true);
+                try {
+                    const response = await fetch(`/api/mikrotik/ppp-profiles?routerId=${mikrotikRouterId}`);
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch PPPoE profiles");
+                    }
+                    const profiles = await response.json();
+                    setInternalPppoeProfiles(profiles || []);
+                } catch (error) {
+                    toast({ title: "Error", description: (error instanceof Error) ? error.message : "Failed to fetch PPPoE profiles.", variant: "destructive" });
+                    setInternalPppoeProfiles([]); // Clear profiles on error
+                } finally {
+                    setInternalIsPppoeProfilesLoading(false);
+                }
+            };
+            fetchPppoeProfiles();
+        } else {
+            setInternalPppoeProfiles([]); // Clear profiles if not PPPoE service type or no router selected
+            setInternalIsPppoeProfilesLoading(false);
+        }
+    }, [serviceType, mikrotikRouterId, toast]);
 
     const generateValue = (setter: (val: string) => void, type: 'number' | 'letter') => {
         let result = '';
@@ -223,6 +300,8 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             expiryDate,
             building: buildingId || undefined,
             station: stationId || undefined,
+            rateLimit: customRateLimit || undefined,
+            profile: pppoeProfile || undefined,
             sendWelcomeSms: isEditMode ? undefined : sendWelcomeSms,
         };
 
@@ -290,6 +369,30 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Leave blank to keep current" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div></div>}
                                             {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} readOnly placeholder="Dynamically Assigned" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
                                             {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 00:11:22:33:44:55" /></div>}
+                                            {serviceType === 'pppoe' && (
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs">PPPoE Profile</Label>
+                                                    <Select onValueChange={setPppoeProfile} value={pppoeProfile} disabled={internalIsPppoeProfilesLoading}>
+                                                        <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                                                            <SelectValue placeholder="Select a profile" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                            {internalPppoeProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
+                                            {serviceType === 'static' && (
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs">Custom Rate Limit</Label>
+                                                    <Input
+                                                        value={customRateLimit}
+                                                        onChange={e => setCustomRateLimit(e.target.value)}
+                                                        className="h-9 bg-zinc-800 border-zinc-700 text-sm"
+                                                        placeholder="e.g., 1M/2M"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-3">
