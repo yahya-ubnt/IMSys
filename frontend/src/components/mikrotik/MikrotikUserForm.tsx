@@ -20,7 +20,7 @@ import { createBuilding, type Building, type Device } from "@/lib/deviceService"
 // --- Interface Definitions ---
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id:string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
-export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; billingCycle: string; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
+export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; }
 
 interface MikrotikUserFormProps {
   isEditMode: boolean;
@@ -78,7 +78,6 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
     const [emailAddress, setEmailAddress] = useState(initialData?.emailAddress || "");
     const [doorNumberUnitLabel, setDoorNumberUnitLabel] = useState(initialData?.door_number_unit_label || "");
     const [mPesaRefNo, setMPesaRefNo] = useState(initialData?.mPesaRefNo || "");
-    const [billingCycle, setBillingCycle] = useState(initialData?.billingCycle || "monthly");
     const [mobileNumber, setMobileNumber] = useState(initialData?.mobileNumber || "");
     const [installationFee, setInstallationFee] = useState(initialData?.installationFee?.toString() || "");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(initialData?.expiryDate ? new Date(initialData.expiryDate) : new Date());
@@ -200,7 +199,6 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             door_number_unit_label: doorNumberUnitLabel,
             mPesaRefNo,
             installationFee: installationFee ? parseFloat(installationFee) : 0,
-            billingCycle,
             mobileNumber,
             expiryDate,
             building: buildingId,
@@ -283,7 +281,6 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                             <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div></div>
                                             <div className="space-y-1"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            <div className="space-y-1"><Label className="text-xs">Billing Cycle</Label><Select onValueChange={setBillingCycle} value={billingCycle} required><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select cycle" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="monthly" className="text-sm">Monthly</SelectItem><SelectItem value="quarterly" className="text-sm">Quarterly</SelectItem><SelectItem value="annually" className="text-sm">Annually</SelectItem></SelectContent></Select></div>
                                             <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
                                         </div>
                                         {!isEditMode && (

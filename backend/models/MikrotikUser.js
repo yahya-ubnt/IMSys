@@ -80,10 +80,6 @@ const MikrotikUserSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
-    billingCycle: {
-      type: String,
-      required: true,
-    },
     mobileNumber: {
       type: String,
       required: true,
