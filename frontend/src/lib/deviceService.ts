@@ -126,7 +126,7 @@ export const getBuildings = async (): Promise<Building[]> => {
     throw new Error(errorData.message || "Failed to fetch buildings");
   }
   const data = await response.json();
-  return data.data; // The buildings are in the 'data' property
+  return data.data.filter((building: Building | null) => building);
 };
 
 // Create a new building

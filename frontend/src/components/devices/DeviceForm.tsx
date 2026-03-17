@@ -54,12 +54,12 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [stagedDeviceData, setStagedDeviceData] = useState<Partial<Device> | null>(null);
 
 
-  const [routerId, setRouterId] = useState(typeof initialData?.router === 'object' ? initialData?.router?._id || "" : initialData?.router || "");
+  const [routerId, setRouterId] = useState(typeof initialData?.router === 'object' && initialData.router ? initialData.router._id : initialData?.router || "");
   const [deviceType, setDeviceType] = useState<"Access" | "Station" | undefined>(initialData?.deviceType || undefined);
   const [monitoringMode, setMonitoringMode] = useState<"SNITCH" | "NONE">(initialData?.monitoringMode || 'NONE');
   const [deviceName, setDeviceName] = useState(initialData?.deviceName || "");
   const [deviceModel, setDeviceModel] = useState(initialData?.deviceModel || "");
-  const [physicalBuildingId, setPhysicalBuildingId] = useState(typeof initialData?.physicalBuilding === 'object' ? initialData.physicalBuilding._id : initialData?.physicalBuilding || "");
+  const [physicalBuildingId, setPhysicalBuildingId] = useState(typeof initialData?.physicalBuilding === 'object' && initialData.physicalBuilding ? initialData.physicalBuilding._id : initialData?.physicalBuilding || "");
   const [serviceArea, setServiceArea] = useState<string[]>(() => {
     const initialServiceAreas = initialData?.serviceArea || [];
     const initialPhysicalBuilding = typeof initialData?.physicalBuilding === 'object' ? initialData.physicalBuilding._id : initialData?.physicalBuilding;
@@ -74,7 +74,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [loginPassword, setLoginPassword] = useState("");
   const [ssid, setSsid] = useState(initialData?.ssid || "");
   const [wirelessPassword, setWirelessPassword] = useState("");
-  const [parentId, setParentId] = useState(typeof initialData?.parentId === 'object' ? initialData.parentId._id : initialData?.parentId || "");
+  const [parentId, setParentId] = useState(typeof initialData?.parentId === 'object' && initialData.parentId ? initialData.parentId._id : initialData?.parentId || "");
 
   const [routers, setRouters] = useState<MikrotikRouter[]>([]);
   const [accessPoints, setAccessPoints] = useState<Device[]>([]);
