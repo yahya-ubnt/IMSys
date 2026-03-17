@@ -458,4 +458,50 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
   return true;
 };
 
-module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser };
+const removeMikrotikUser = async (client, user) => {
+  if (user.serviceType === 'static') {
+    // Remove Simple Queue
+    const queues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
+    for (const queue of queues) {
+      console.log(`[Remove] Removing Simple Queue for ${user.username}`);
+      await client.write('/queue/simple/remove', [`=.id=${queue['.id']}`]);
+    }
+
+    // Remove DHCP Lease
+    if (user.macAddress) {
+      const leases = await client.write('/ip/dhcp-server/lease/print', [`?mac-address=${user.macAddress}`]);
+      for (const lease of leases) {
+        console.log(`[Remove] Removing DHCP Lease for ${user.macAddress}`);
+        await client.write('/ip/dhcp-server/lease/remove', [`=.id=${lease['.id']}`]);
+      }
+    }
+
+    // Remove from Firewall Address List
+    if (user.ipAddress) {
+      const listEntries = await client.write('/ip/firewall/address-list/print', [
+        `?address=${user.ipAddress}`,
+        `?list=BLOCKED_USERS`
+      ]);
+      for (const entry of listEntries) {
+        console.log(`[Remove] Removing ${user.ipAddress} from BLOCKED_USERS`);
+        await client.write('/ip/firewall/address-list/remove', [`=.id=${entry['.id']}`]);
+      }
+    }
+  } else if (user.serviceType === 'pppoe') {
+    // Remove PPP Secret
+    const secrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
+    for (const secret of secrets) {
+      console.log(`[Remove] Removing PPP Secret for ${user.username}`);
+      await client.write('/ppp/secret/remove', [`=.id=${secret['.id']}`]);
+    }
+    // Disconnect active session
+    const activeSessions = await client.write('/ppp/active/print', [`?name=${user.username}`]);
+    for (const session of activeSessions) {
+      console.log(`[Remove] Terminating active session for ${user.username}`);
+      await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
+    }
+  }
+  return true;
+};
+
+module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser, removeMikrotikUser };

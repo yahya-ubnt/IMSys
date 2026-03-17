@@ -471,6 +471,8 @@ const UserService = {
       username: user.username,
       serviceType: user.serviceType,
       routerId: user.mikrotikRouter,
+      macAddress: user.macAddress,
+      ipAddress: user.ipAddress,
       tenantId,
     });
 

@@ -6,7 +6,7 @@ const MikrotikRouter = require('../models/MikrotikRouter');
 const Device = require('../models/Device');
 const Package = require('../models/Package');
 const { decrypt } = require('../utils/crypto');
-const { getMikrotikApiClient, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser, removeHotspotIpBinding } = require('../utils/mikrotikUtils'); // Assuming this utility exists
+const { getMikrotikApiClient, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser, removeHotspotIpBinding, removeMikrotikUser } = require('../utils/mikrotikUtils'); // Assuming this utility exists
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue'); // Import the queue
 const { processReconciliationScheduler } = require('../jobs/reconciliationJob'); // Import the reconciliation scheduler processor
 
@@ -105,6 +105,29 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         }
         await user.save();
         console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} synced successfully.`);
+        break;
+
+      case 'removeUser':
+        const { routerId: removeRouterId, ...userToRemove } = job.data;
+        if (!removeRouterId) {
+          throw new Error('routerId is required for removeUser job');
+        }
+        const routerForRemoval = await MikrotikRouter.findById(removeRouterId);
+        if (!routerForRemoval) {
+          throw new Error(`Router not found for routerId: ${removeRouterId}`);
+        }
+        const removalClient = await getMikrotikApiClient(routerForRemoval);
+        if (!removalClient) {
+          throw new Error(`Failed to connect to MikroTik router ${routerForRemoval.ipAddress} for user removal.`);
+        }
+        try {
+          await removeMikrotikUser(removalClient, userToRemove);
+          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${userToRemove.username} removed from router successfully.`);
+        } finally {
+          if (removalClient) {
+            removalClient.close();
+          }
+        }
         break;
 
       case 'removeHotspotBinding':
