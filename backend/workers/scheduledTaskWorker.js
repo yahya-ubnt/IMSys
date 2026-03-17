@@ -37,14 +37,14 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
         const cursor = MikrotikUser.find({
           tenant: tenantId,
           expiryDate: { $lte: currentDate },
-          isSuspended: false,
+          status: 'active',
         }).cursor();
 
         await cursor.eachAsync(async (expiredUser) => {
           console.log(`[Orchestrator] Found expired user: ${expiredUser.username} (ID: ${expiredUser._id}). Queueing for disconnection.`);
 
           // Update user in DB to pending suspension
-          expiredUser.isSuspended = true;
+          expiredUser.status = 'suspended';
           expiredUser.syncStatus = 'pending';
           await expiredUser.save();
 

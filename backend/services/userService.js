@@ -48,14 +48,20 @@ const UserService = {
     }
 
     // 2. Create User in DB
-    const mikrotikUser = await MikrotikUser.create({
+    const newUser = {
       ...userData,
       mPesaRefNo,
       tenant: tenantId,
       expiryDate: new Date(), // Set expiry date to now, so user is created as "expired"
       provisionedOnMikrotik: false,
       syncStatus: 'pending',
-    });
+    };
+
+    if (newUser.serviceType === 'static' && !newUser.macAddress) {
+      newUser.status = 'pending_mac_assignment';
+    }
+
+    const mikrotikUser = await MikrotikUser.create(newUser);
 
     // 3. Handle Installation Fee
     if (installationFee && parseFloat(installationFee) > 0) {
@@ -431,7 +437,7 @@ const UserService = {
     if (updateData.username && user.username !== updateData.username) {
         needsSync = true;
     }
-    if (updateData.isSuspended !== undefined && user.isSuspended !== updateData.isSuspended) {
+    if (updateData.status && user.status !== updateData.status) {
       needsSync = true;
     }
 

@@ -55,7 +55,7 @@ const deleteMikrotikUser = asyncHandler(async (req, res) => {
 
 const manualDisconnectUser = asyncHandler(async (req, res) => {
   const updatedUser = await UserService.updateUser(req.params.id, {
-    isSuspended: true,
+    status: 'suspended',
     isManuallyDisconnected: true,
   }, req.user.tenant);
 
@@ -64,7 +64,7 @@ const manualDisconnectUser = asyncHandler(async (req, res) => {
 
 const manualConnectUser = asyncHandler(async (req, res) => {
   const updatedUser = await UserService.updateUser(req.params.id, {
-    isSuspended: false,
+    status: 'active',
     isManuallyDisconnected: false,
   }, req.user.tenant);
 

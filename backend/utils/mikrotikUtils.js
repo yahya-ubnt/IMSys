@@ -344,8 +344,9 @@ const syncMikrotikUser = async (client, user) => {
 
 const ensurePppSecret = async (client, user) => {
   const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-  const desiredProfile = user.isSuspended ? 'Disconnect' : user.package.profile;
-  const desiredDisabled = user.isSuspended ? 'yes' : 'no';
+  const isSuspended = user.status === 'suspended';
+  const desiredProfile = isSuspended ? 'Disconnect' : user.package.profile;
+  const desiredDisabled = isSuspended ? 'yes' : 'no';
   const comment = `Synced by IMSys at ${new Date().toISOString()}`;
 
   const secretArgs = [
@@ -378,7 +379,7 @@ const ensurePppSecret = async (client, user) => {
   }
 
   // Handle active session if suspended
-  if (user.isSuspended) {
+  if (isSuspended) {
     const activeSessions = await client.write('/ppp/active/print', [`?name=${user.username}`]);
     for (const session of activeSessions) {
       console.log(`[Sync] Terminating active session for suspended user ${user.username}`);
@@ -390,7 +391,7 @@ const ensurePppSecret = async (client, user) => {
 };
 
 const ensureStaticLeaseAndQueue = async (client, user) => {
-  // 1. Ensure DHCP Lease
+  // 1. Ensure DHCP Lease (only make static if MAC is present)
   if (user.macAddress) {
     const leases = await client.write('/ip/dhcp-server/lease/print', [`?mac-address=${user.macAddress}`]);
     const leaseArgs = [
@@ -400,22 +401,27 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
     ];
 
     if (leases.length === 0) {
-      console.log(`[Sync] Creating missing DHCP lease for ${user.username}`);
+      console.log(`[Sync] Creating missing static DHCP lease for ${user.username}`);
       await client.write('/ip/dhcp-server/lease/add', leaseArgs);
     } else {
       const existing = leases[0];
-      if (existing.address !== user.ipAddress) {
-        console.log(`[Sync] Updating DHCP lease address for ${user.username}`);
-        await client.write('/ip/dhcp-server/lease/set', [`=.id=${existing['.id']}`, `=address=${user.ipAddress}`]);
+      if (existing.address !== user.ipAddress || !existing.comment.includes('IMSys:')) {
+        console.log(`[Sync] Updating static DHCP lease for ${user.username}`);
+        await client.write('/ip/dhcp-server/lease/set', [`=.id=${existing['.id']}`, ...leaseArgs]);
       }
+    }
+  } else {
+    // If no macAddress, ensure no static lease exists for this IP, as it should be dynamic
+    const leases = await client.write('/ip/dhcp-server/lease/print', [`?address=${user.ipAddress}`, '?dynamic=false']);
+    for (const lease of leases) {
+        console.log(`[Sync] Warning: Found unexpected static lease for ${user.ipAddress} without a MAC in DB. Removing it.`);
+        await client.write('/ip/dhcp-server/lease/remove', [`=.id=${lease['.id']}`]);
     }
   }
 
   // 2. Ensure Simple Queue
   const queues = await client.write('/queue/simple/print', [`?name=${user.username}`]);
   const desiredLimit = user.package.rateLimit;
-  // Note: For static users, we currently use 'BLOCKED_USERS' address list for suspension,
-  // but we should still ensure the queue exists and is configured correctly.
   const queueArgs = [
     `=name=${user.username}`,
     `=target=${user.ipAddress}`,
@@ -435,24 +441,37 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
     }
   }
 
-  // 3. Ensure Firewall Address List (Suspension)
+  // 3. Ensure Firewall Address List (Walled Garden Logic)
   const listEntries = await client.write('/ip/firewall/address-list/print', [
     `?address=${user.ipAddress}`,
-    `?list=BLOCKED_USERS`
+    `?list=ALLOWED_USERS`
   ]);
 
-  if (user.isSuspended && listEntries.length === 0) {
-    console.log(`[Sync] Blocking static user ${user.username} (adding to BLOCKED_USERS)`);
+  const isAllowed = user.status === 'active';
+  const currentlyInList = listEntries.length > 0;
+
+  if (isAllowed && !currentlyInList) {
+    console.log(`[Sync] Granting internet access to ${user.username} (adding to ALLOWED_USERS)`);
     await client.write('/ip/firewall/address-list/add', [
-      '=list=BLOCKED_USERS',
+      '=list=ALLOWED_USERS',
       `=address=${user.ipAddress}`,
-      `=comment=Suspended by IMSys at ${new Date().toISOString()}`
+      `=comment=IMSys: ${user.username}`
     ]);
-  } else if (!user.isSuspended && listEntries.length > 0) {
-    console.log(`[Sync] Unblocking static user ${user.username} (removing from BLOCKED_USERS)`);
+  } else if (!isAllowed && currentlyInList) {
+    console.log(`[Sync] Revoking internet access for ${user.username} (removing from ALLOWED_USERS)`);
     for (const entry of listEntries) {
       await client.write('/ip/firewall/address-list/remove', [`=.id=${entry['.id']}`]);
     }
+  }
+  
+  // Cleanup: Remove from the old BLOCKED_USERS list if present
+  const oldBlockedEntries = await client.write('/ip/firewall/address-list/print', [
+    `?address=${user.ipAddress}`,
+    `?list=BLOCKED_USERS`
+  ]);
+  for (const entry of oldBlockedEntries) {
+      console.log(`[Sync] Cleaning up old BLOCKED_USERS entry for ${user.username}`);
+      await client.write('/ip/firewall/address-list/remove', [`=.id=${entry['.id']}`]);
   }
 
   return true;

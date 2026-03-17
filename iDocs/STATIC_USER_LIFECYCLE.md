@@ -97,9 +97,10 @@ This plan outlines the steps to implement the secure, automated system.
     -   Create a new firewall filter rule: `/ip firewall filter add action=drop chain=forward src-address-list=!ALLOWED_USERS comment="IMSys: Walled Garden - Deny all traffic from non-allowed IPs"`
     -   **Important:** This rule must be placed correctly in the filter chain to be effective.
 
-3.  **Update Backend `syncUser` Logic:**
+3.  **Update Backend `syncUser` Logic for Static Users:**
     -   **File:** `backend/utils/mikrotikUtils.js`
-    -   **Change:** Modify the `ensureStaticLeaseAndQueue` function as follows:
+    -   **Function:** `ensureStaticLeaseAndQueue`
+    -   **Change:** Modify the function as follows:
         *   **DHCP Lease Management:**
             *   The current logic for creating/updating the DHCP lease is mostly fine.
             *   **Crucial Addition:** If `user.macAddress` is `null` or `undefined`, the DHCP lease should *not* be made static. It should remain dynamic until a MAC address is discovered and assigned. The `ensureStaticLeaseAndQueue` function should only attempt to create/update a *static* DHCP lease if `user.macAddress` is present. If `user.macAddress` is missing, it should ensure no static lease exists for that IP.
@@ -115,14 +116,20 @@ This plan outlines the steps to implement the secure, automated system.
                 3.  **If `user.status === 'suspended'` OR `user.status === 'pending_mac_assignment'`:**
                     *   If the user's `ipAddress` *is* currently in `ALLOWED_USERS`, remove it: `/ip firewall address-list remove .id=entry_id`
 
-4.  **Create New Auto-Discovery Worker:**
+4.  **Update Backend `syncUser` Logic for PPPoE Users:**
+    -   **File:** `backend/utils/mikrotikUtils.js`
+    -   **Function:** `ensurePppSecret`
+    -   **Change:** The core disconnection mechanism (changing profile, disabling secret) will remain the same. The trigger will be updated to use the new `status` field.
+        *   Replace all instances of `user.isSuspended` with a check for `user.status === 'suspended'`.
+
+5.  **Create New Auto-Discovery Worker:**
     -   **File:** `backend/workers/macAddressDiscoveryWorker.js` (new file)
     -   **Logic:** Implement the "matchmaking" logic described in Step 3 of the new lifecycle. This worker should run on a schedule (e.g., every minute).
 
-5.  **Update Backend Service Logic:**
+6.  **Update Backend Service Logic:**
     -   **File:** `backend/services/userService.js`
     -   **Change:** Modify `createMikrotikUser`. If a static user is created without a MAC address, set their initial status to `pending_mac_assignment`.
 
-6.  **Update Frontend UI:**
+7.  **Update Frontend UI:**
     -   **File:** `frontend/src/components/mikrotik/MikrotikUserForm.tsx`
     -   **Change:** Make the `macAddress` input field optional. The admin can either provide it for immediate activation or leave it blank to trigger the auto-discovery flow.

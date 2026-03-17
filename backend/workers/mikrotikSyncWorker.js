@@ -199,20 +199,21 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
                 if (!matchingSecret) {
                   needsSync = true;
                 } else {
-                  const desiredProfile = dbUser.isSuspended ? 'Disconnect' : dbUser.package.profile;
-                  const desiredDisabled = dbUser.isSuspended ? 'yes' : 'no';
+                  const isSuspended = dbUser.status === 'suspended';
+                  const desiredProfile = isSuspended ? 'Disconnect' : dbUser.package.profile;
+                  const desiredDisabled = isSuspended ? 'yes' : 'no';
                   if (matchingSecret.profile !== desiredProfile || matchingSecret.disabled !== desiredDisabled || matchingSecret.password !== dbUser.pppoePassword) {
                     needsSync = true;
                   }
                 }
               } else if (dbUser.serviceType === 'static') {
                 const matchingQueue = routerSimpleQueues.find(queue => queue.name === dbUser.username);
-                const isInBlockedList = routerAddressLists.some(listEntry => 
-                  listEntry.address === dbUser.ipAddress && listEntry.list === 'BLOCKED_USERS'
+                const isInAllowedList = routerAddressLists.some(listEntry => 
+                  listEntry.address === dbUser.ipAddress && listEntry.list === 'ALLOWED_USERS'
                 );
-                const shouldBeBlocked = dbUser.isSuspended;
+                const shouldBeAllowed = dbUser.status === 'active';
 
-                if (!matchingQueue || isInBlockedList !== shouldBeBlocked || matchingQueue['max-limit'] !== dbUser.package.rateLimit) {
+                if (!matchingQueue || isInAllowedList !== shouldBeAllowed || matchingQueue['max-limit'] !== dbUser.package.rateLimit) {
                   needsSync = true;
                 }
               }

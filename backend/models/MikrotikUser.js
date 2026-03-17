@@ -99,9 +99,10 @@ const MikrotikUserSchema = mongoose.Schema(
   },
 
     // System-managed fields
-    isSuspended: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: String,
+      enum: ['pending_mac_assignment', 'active', 'suspended'],
+      default: 'active',
     },
     isManuallyDisconnected: {
       type: Boolean,

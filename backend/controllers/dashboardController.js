@@ -217,7 +217,7 @@ const getActiveUsersCount = asyncHandler(async (req, res) => {
   const query = { tenant: req.user.tenant };
 
   query.expiryDate = { $gte: today };
-  query.isSuspended = false;
+  query.status = 'active';
 
   const count = await MikrotikUser.countDocuments(query);
   res.json({ activeUsers: count });
@@ -230,10 +230,7 @@ const getExpiredUsersCount = asyncHandler(async (req, res) => {
   const today = new Date();
   const query = { tenant: req.user.tenant };
 
-  query.$or = [
-    { expiryDate: { $lt: today } },
-    { isSuspended: true },
-  ];
+  query.status = 'suspended';
 
   const count = await MikrotikUser.countDocuments(query);
   res.json({ expiredUsers: count });
