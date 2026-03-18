@@ -59,3 +59,31 @@ export const mikrotikRouterFormSchema = z.object({
 });
 
 export type MikrotikRouterFormSchema = z.infer<typeof mikrotikRouterFormSchema>;
+
+export const mikrotikPackageFormSchema = z.object({
+  mikrotikRouter: z.string().min(1, "Mikrotik router is required"),
+  serviceType: z.enum(['pppoe', 'static'], { message: "Service type is required" }),
+  name: z.string().min(1, "Package name is required"),
+  price: z.coerce.number().min(0, "Price must be a positive number"),
+  durationInDays: z.coerce.number().min(1, "Duration must be at least 1 day"),
+  profile: z.string().optional(),
+  rateLimit: z.string().optional(),
+  status: z.enum(['active', 'disabled'], { message: "Status is required" }),
+}).superRefine((data, ctx) => {
+  if (data.serviceType === 'pppoe' && !data.profile) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['profile'],
+      message: 'Profile is required for PPPoE service type',
+    });
+  }
+  if (data.serviceType === 'static' && !data.rateLimit) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['rateLimit'],
+      message: 'Rate Limit is required for Static IP service type',
+    });
+  }
+});
+
+export type MikrotikPackageFormSchema = z.infer<typeof mikrotikPackageFormSchema>;

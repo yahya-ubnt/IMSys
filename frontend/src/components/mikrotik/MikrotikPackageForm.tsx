@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { mikrotikPackageFormSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 // --- Interface Definitions ---
 export interface MikrotikPackageFormData {
@@ -62,6 +64,7 @@ export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmi
     const { toast } = useToast();
     const [step, setStep] = useState(1);
     const [direction, setDirection] = useState(1);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // --- State Management ---
     const [mikrotikRouterId, setMikrotikRouterId] = useState(initialData?.mikrotikRouter || "");
@@ -74,13 +77,62 @@ export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmi
     const [rateLimit, setRateLimit] = useState(initialData?.rateLimit || "");
     const [status, setStatus] = useState<'active' | 'disabled'>(initialData?.status || "active");
 
+    const getFormData = (): Partial<MikrotikPackageFormData> => {
+        let durationInDays = 0;
+        const value = parseInt(durationValue, 10);
+        switch (durationUnit) {
+            case 'days': durationInDays = value; break;
+            case 'weeks': durationInDays = value * 7; break;
+            case 'months': durationInDays = value * 30; break;
+            case 'years': durationInDays = value * 365; break;
+        }
+
+        return {
+            mikrotikRouter: mikrotikRouterId,
+            serviceType: serviceType || undefined,
+            name,
+            price: parseFloat(price),
+            durationInDays,
+            profile,
+            rateLimit,
+            status,
+        };
+    };
+
+    const validateStep = (step: number) => {
+        const formData = getFormData();
+        let schema;
+        if (step === 1) {
+            schema = mikrotikPackageFormSchema.pick({ mikrotikRouter: true, serviceType: true });
+        } else {
+            schema = mikrotikPackageFormSchema;
+        }
+
+        try {
+            schema.parse(formData);
+            setErrors({});
+            return true;
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const newErrors: Record<string, string> = {};
+                const flattenedErrors = error.flatten();
+                const fieldErrors: Record<string, string[]> = flattenedErrors.fieldErrors;
+                for (const key in fieldErrors) {
+                    if (Object.prototype.hasOwnProperty.call(fieldErrors, key)) {
+                        newErrors[key] = fieldErrors[key][0];
+                    }
+                }
+                setErrors(newErrors);
+            }
+            return false;
+        }
+    };
+
     // --- Event Handlers ---
     const handleNext = () => {
-        if (mikrotikRouterId && serviceType) {
+        if (validateStep(step)) {
             setDirection(1);
             setStep(2);
-        } else {
-            toast({ title: "Missing Information", description: "Please select a router and service type.", variant: "destructive" });
         }
     };
 
@@ -91,22 +143,9 @@ export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmi
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!serviceType) {
-            toast({ title: "Validation Error", description: "Please select a service type.", variant: "destructive" });
-            return;
+        if (validateStep(2)) {
+            await onSubmit(getFormData() as MikrotikPackageFormData);
         }
-
-        let durationInDays = 0;
-        const value = parseInt(durationValue, 10);
-        switch (durationUnit) {
-            case 'days': durationInDays = value; break;
-            case 'weeks': durationInDays = value * 7; break;
-            case 'months': durationInDays = value * 30; break;
-            case 'years': durationInDays = value * 365; break;
-        }
-
-        const packageData: MikrotikPackageFormData = { mikrotikRouter: mikrotikRouterId, serviceType, name, price: parseFloat(price), durationInDays, profile, rateLimit, status };
-        await onSubmit(packageData);
     };
 
     return (
@@ -119,25 +158,81 @@ export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmi
                             {step === 1 ? (
                                 <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId} disabled={isEditMode}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
-                                        <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType} disabled={isEditMode}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent></Select></div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Mikrotik Router</Label>
+                                            <Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId} disabled={isEditMode}>
+                                                <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger>
+                                                <SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent>
+                                            </Select>
+                                            {errors.mikrotikRouter && <p className="text-red-500 text-xs mt-1">{errors.mikrotikRouter}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Service Type</Label>
+                                            <Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType} disabled={isEditMode}>
+                                                <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger>
+                                                <SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent>
+                                            </Select>
+                                            {errors.serviceType && <p className="text-red-500 text-xs mt-1">{errors.serviceType}</p>}
+                                        </div>
                                     </div>
                                 </motion.div>
                             ) : (
-                                <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
+                                <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1"><Label className="text-xs">Name</Label><Input value={name} onChange={e => setName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                        <div className="space-y-1"><Label className="text-xs">Price</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                        <div className="space-y-1 col-span-2">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Name</Label>
+                                            <Input value={name} onChange={e => setName(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., Basic 10Mbps" />
+                                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Price</Label>
+                                            <Input type="number" value={price} onChange={e => setPrice(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 1500" />
+                                            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                                        </div>
+                                        <div className="space-y-2 col-span-2">
                                             <Label className="text-xs">Duration</Label>
                                             <div className="grid grid-cols-3 gap-2">
-                                                <Select onValueChange={setDurationUnit} value={durationUnit}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm col-span-1"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="days">Days</SelectItem><SelectItem value="weeks">Weeks</SelectItem><SelectItem value="months">Months</SelectItem><SelectItem value="years">Years</SelectItem></SelectContent></Select>
-                                                <Input type="number" value={durationValue} onChange={e => setDurationValue(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm col-span-2" />
+                                                <Select onValueChange={setDurationUnit} value={durationUnit}>
+                                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm col-span-1"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                        <SelectItem value="days">Days</SelectItem>
+                                                        <SelectItem value="weeks">Weeks</SelectItem>
+                                                        <SelectItem value="months">Months</SelectItem>
+                                                        <SelectItem value="years">Years</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <Input type="number" value={durationValue} onChange={e => setDurationValue(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm col-span-2" placeholder="e.g., 30" />
                                             </div>
+                                            {errors.durationInDays && <p className="text-red-500 text-xs mt-1">{errors.durationInDays}</p>}
                                         </div>
-                                        <div className="space-y-1"><Label className="text-xs">Status</Label><Select onValueChange={(v: "active" | "disabled") => setStatus(v)} value={status}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select status" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="active" className="text-sm">Active</SelectItem><SelectItem value="disabled" className="text-sm">Inactive</SelectItem></SelectContent></Select></div>
-                                        {serviceType === "pppoe" && <div className="space-y-1"><Label className="text-xs">Profile</Label><Select onValueChange={setProfile} value={profile} disabled={isPppProfilesLoading}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{pppProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent></Select></div>}
-                                        {serviceType === "static" && <div className="space-y-1"><Label className="text-xs">Rate Limit</Label><Input value={rateLimit} onChange={e => setRateLimit(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Status</Label>
+                                            <Select onValueChange={(v: "active" | "disabled") => setStatus(v)} value={status}>
+                                                <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select status" /></SelectTrigger>
+                                                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                                    <SelectItem value="active" className="text-sm">Active</SelectItem>
+                                                    <SelectItem value="disabled" className="text-sm">Inactive</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+                                        </div>
+                                        {serviceType === "pppoe" && (
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Profile</Label>
+                                                <Select onValueChange={setProfile} value={profile} disabled={isPppProfilesLoading}>
+                                                    <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a profile" /></SelectTrigger>
+                                                    <SelectContent className="bg-zinc-800 text-white border-zinc-700">{pppProfiles.map(p => <SelectItem key={p} value={p} className="text-sm">{p}</SelectItem>)}</SelectContent>
+                                                </Select>
+                                                {errors.profile && <p className="text-red-500 text-xs mt-1">{errors.profile}</p>}
+                                            </div>
+                                        )}
+                                        {serviceType === "static" && (
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Rate Limit</Label>
+                                                <Input value={rateLimit} onChange={e => setRateLimit(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 1M/2M" />
+                                                {errors.rateLimit && <p className="text-red-500 text-xs mt-1">{errors.rateLimit}</p>}
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
