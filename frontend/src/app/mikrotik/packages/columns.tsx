@@ -44,7 +44,12 @@ export const getColumns = (
     },
     {
       accessorKey: "mikrotikRouter",
-      header: "Router",
+      id: "mikrotikRouter", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Router
+        </Button>
+      ),
       cell: ({ row }) => {
         const router = row.original.mikrotikRouter;
         if (!router || typeof router === 'string') return "N/A";
@@ -53,26 +58,51 @@ export const getColumns = (
     },
     {
       accessorKey: "serviceType",
-      header: "Service Type",
+      id: "serviceType", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Service Type
+        </Button>
+      ),
     },
     {
       accessorKey: "price",
-      header: "Price",
+      id: "price", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Price
+        </Button>
+      ),
       cell: ({ row }) => `KES ${row.original.price.toLocaleString()}`,
     },
     {
       accessorKey: "profile",
-      header: "Profile (PPPoE)",
+      id: "profile", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Profile (PPPoE)
+        </Button>
+      ),
       cell: ({ row }) => row.original.profile || "N/A",
     },
     {
       accessorKey: "rateLimit",
-      header: "Rate Limit (Static)",
+      id: "rateLimit", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Rate Limit (Static)
+        </Button>
+      ),
       cell: ({ row }) => row.original.rateLimit || "N/A",
     },
     {
       accessorKey: "status",
-      header: "Status",
+      id: "status", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Status
+        </Button>
+      ),
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
         const color = status === "active" 

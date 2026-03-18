@@ -56,24 +56,49 @@ export const getColumns = (
     },
     {
       accessorKey: "officialName",
-      header: "Official Name",
+      id: "officialName", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Official Name
+        </Button>
+      ),
     },
     {
       accessorKey: "mobileNumber",
-      header: "Mobile Number",
+      id: "mobileNumber", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Mobile Number
+        </Button>
+      ),
     },
     {
       accessorKey: "package.name",
-      header: "Package",
+      id: "packageName", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Package
+        </Button>
+      ),
       cell: ({ row }) => row.original.package?.name || 'N/A',
     },
     {
       accessorKey: "mikrotikRouter.name",
-      header: "Mikrotik Router",
+      id: "mikrotikRouterName", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Mikrotik Router
+        </Button>
+      ),
     },
     {
       accessorKey: "station.deviceName",
-      header: "Station",
+      id: "stationName", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Station
+        </Button>
+      ),
       cell: ({ row }) => {
         const station = row.original.station;
         if (station) {
@@ -88,7 +113,12 @@ export const getColumns = (
     },
     { // New Building Column
       accessorKey: "building.name",
-      header: "Location",
+      id: "buildingName", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Location
+        </Button>
+      ),
       cell: ({ row }) => {
         const building = row.original.building;
         if (building) {
@@ -99,17 +129,30 @@ export const getColumns = (
     },
     {
       accessorKey: "expiryDate",
-      header: "Expiry Date",
+      id: "expiryDate", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Expiry Date
+        </Button>
+      ),
       cell: ({ row }) => new Date(row.getValue("expiryDate")).toLocaleDateString(),
     },
     {
       id: "remainingDays",
-      header: "Days Left",
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Days Left
+        </Button>
+      ),
       cell: ({ row }) => calculateDaysRemaining(row.original.expiryDate).toString(),
     },
     {
       id: "accountStatus",
-      header: "Status",
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Status
+        </Button>
+      ),
       cell: ({ row }) => {
         const { status, color } = getMikrotikUserStatus(row.original);
         return <Badge variant="outline" className={`capitalize ${color}`}>{status}</Badge>;
@@ -121,7 +164,11 @@ export const getColumns = (
     },
     {
       id: "onlineStatus",
-      header: "Online",
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Online
+        </Button>
+      ),
       cell: ({ row }) => {
         return row.original.isOnline 
           ? <Badge variant="outline" className="border-green-500/30 bg-green-500/20 text-green-400">Online</Badge>

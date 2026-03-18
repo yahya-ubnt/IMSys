@@ -38,11 +38,21 @@ export const getColumns = (
   },
   {
     accessorKey: "ipAddress",
-    header: "IP Address",
+    id: "ipAddress", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        IP Address
+      </Button>
+    ),
   },
   {
     accessorKey: "deviceType",
-    header: "Type",
+    id: "deviceType", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Type
+      </Button>
+    ),
     cell: ({ row }) => {
       const deviceType = row.original.deviceType;
       const color = deviceType === 'Access' 
@@ -53,11 +63,21 @@ export const getColumns = (
   },
   {
     accessorKey: "macAddress",
-    header: "MAC Address",
+    id: "macAddress", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        MAC Address
+      </Button>
+    ),
   },
   {
     accessorKey: "status",
-    header: "Status",
+    id: "status", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Status
+      </Button>
+    ),
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       const color = status === "UP" 
@@ -68,12 +88,22 @@ export const getColumns = (
   },
   {
     accessorKey: "router.name",
-    header: "Router",
+    id: "routerName", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Router
+      </Button>
+    ),
     cell: ({ row }) => (typeof row.original.router === 'object' && row.original.router ? row.original.router.name : row.original.router || 'N/A'),
   },
   {
     accessorKey: "lastSeen",
-    header: "Last Seen",
+    id: "lastSeen", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Last Seen
+      </Button>
+    ),
     cell: ({ row }) => formatDate(row.original.lastSeen),
   },
   {
