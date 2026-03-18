@@ -37,14 +37,22 @@ interface MikrotikUserFormProps {
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
     <div className="flex items-center justify-center gap-3">
+        {/* Step 1 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>1</div>
             <span className={`text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Service Setup</span>
         </div>
-        <div className={`w-12 h-px transition-colors ${currentStep === 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
+        <div className={`w-12 h-px transition-colors ${currentStep >= 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
+        {/* Step 2 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>2</div>
-            <span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>User Details</span>
+            <span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Package Setup</span>
+        </div>
+        <div className={`w-12 h-px transition-colors ${currentStep >= 3 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
+        {/* Step 3 */}
+        <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>3</div>
+            <span className={`text-sm transition-colors ${currentStep === 3 ? 'text-blue-400' : 'text-zinc-500'}`}>User Details</span>
         </div>
     </div>
 );
@@ -249,17 +257,26 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
 
     // --- Step Navigation ---
     const handleNext = () => {
-        if (mikrotikRouterId && serviceType && packageId) {
-            setDirection(1);
-            setStep(2);
-        } else {
-            toast({ title: "Missing Information", description: "Please complete all service setup fields to continue.", variant: "destructive" });
+        if (step === 1) {
+            if (mikrotikRouterId && serviceType) {
+                setDirection(1);
+                setStep(2);
+            } else {
+                toast({ title: "Missing Information", description: "Please select a router and service type to continue.", variant: "destructive" });
+            }
+        } else if (step === 2) {
+            if (packageId) {
+                setDirection(1);
+                setStep(3);
+            } else {
+                toast({ title: "Missing Information", description: "Please select a package to continue.", variant: "destructive" });
+            }
         }
     };
 
     const handleBack = () => {
         setDirection(-1);
-        setStep(1);
+        setStep(prev => prev - 1);
     };
 
     const handleCreateBuilding = async () => {
@@ -329,46 +346,25 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                         <div className="space-y-1"><Label className="text-xs">Mikrotik Router</Label><Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
                                         <div className="space-y-1"><Label className="text-xs">Service Type</Label><Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="pppoe" className="text-sm">PPPoE</SelectItem><SelectItem value="static" className="text-sm">Static IP</SelectItem></SelectContent></Select></div>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1"><Label className="text-xs">Package</Label><Select onValueChange={setPackageId} value={packageId} disabled={!mikrotikRouterId || !serviceType || filteredPackages.length === 0}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a package" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredPackages.map(p => <SelectItem key={p._id} value={p._id} className="text-sm">{p.name} (KES {p.price})</SelectItem>)}</SelectContent></Select></div>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
-                                        <div className="space-y-1 sm:col-span-2">
-                                            <Label className="text-xs">Client's Building</Label>
-                                            <div className="flex items-center gap-2">
-                                                <Select onValueChange={setBuildingId} value={buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-full"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select>
-                                                <Dialog open={isBuildingDialogOpen} onOpenChange={setIsBuildingDialogOpen}>
-                                                    <DialogTrigger asChild>
-                                                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700"><DialogHeader><DialogTitle className="text-white">Create New Building</DialogTitle></DialogHeader>
-                                                        <div className="grid gap-4 py-4"><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="building-name" className="text-right text-zinc-400">Name</Label><Input id="building-name" value={newBuildingName} onChange={(e) => setNewBuildingName(e.target.value)} className="col-span-3 bg-zinc-800 border-zinc-600" /></div></div>
-                                                        <DialogFooter><Button type="button" onClick={handleCreateBuilding} disabled={isSavingBuilding}>{isSavingBuilding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save Building</Button></DialogFooter>
-                                                    </DialogContent>
-                                                </Dialog>
-                                            </div>
-                                        </div>
-                                        {buildingId && filteredStations.length > 0 && (
-                                            <div className="space-y-1 sm:col-span-2">
-                                                <Label className="text-xs">Network Connection (Station)</Label>
-                                                {filteredStations.length === 1 ? (
-                                                    <div className="h-9 px-3 flex items-center rounded-md border border-zinc-700 bg-zinc-800/50 text-sm"><span className="text-zinc-400">Auto-selected:</span><span className="ml-2 font-medium">{filteredStations[0].deviceName}</span></div>
-                                                ) : (
-                                                    <Select onValueChange={setStationId} value={stationId} disabled={!buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder={isEditMode ? "Select a station" : "Multiple stations found, please select one"} /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredStations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}</SelectContent></Select>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
                                 </motion.div>
-                            ) : (
-                                <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5">
-                                    <div className="space-y-3">
-                                        <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><Lock size={18} /> Connection Details</CardTitle>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-1"><Label className="text-xs">Username</Label><Input value={username} onChange={e => setUsername(e.target.value)} required disabled={isEditMode} className="h-9 bg-zinc-800 border-zinc-700 text-sm disabled:opacity-70" /></div>
-                                            {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Leave blank to keep current" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div></div>}
-                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required placeholder="e.g., 192.168.10.50" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
-                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="Optional, will be auto-discovered" /></div>}
+                            ) : step === 2 ? (
+                                <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
+                                    <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Lock size={18} /> Package Setup</CardTitle>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Package</Label><Select onValueChange={setPackageId} value={packageId} disabled={!mikrotikRouterId || !serviceType || filteredPackages.length === 0}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a package" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredPackages.map(p => <SelectItem key={p._id} value={p._id} className="text-sm">{p.name} (KES {p.price})</SelectItem>)}</SelectContent></Select></div>
+                                    </div>
+                                    {packageId && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Custom Package Price</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={customPackagePrice}
+                                                    onChange={e => setCustomPackagePrice(e.target.value)}
+                                                    className="h-9 bg-zinc-800 border-zinc-700 text-sm"
+                                                    placeholder="Defaults to package price"
+                                                />
+                                            </div>
                                             {serviceType === 'pppoe' && (
                                                 <div className="space-y-1">
                                                     <Label className="text-xs">PPPoE Profile</Label>
@@ -394,28 +390,53 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    )}
+                                </motion.div>
+                            ) : (
+                                <motion.div key={3} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5">
                                     <div className="space-y-3">
-                                        <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> Personal & Billing</CardTitle>
+                                        <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> User Details</CardTitle>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div className="space-y-1"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                            <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                             <div className="space-y-1"><Label className="text-xs">Email Address</Label><Input value={emailAddress} onChange={e => setEmailAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
 											<div className="space-y-1"><Label className="text-xs">Door Number/Unit Label</Label><Input value={doorNumberUnitLabel} onChange={e => setDoorNumberUnitLabel(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div></div>
-                                            <div className="space-y-1"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            {packageId && (
-                                                <div className="space-y-1">
-                                                    <Label className="text-xs">Custom Package Price</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={customPackagePrice}
-                                                        onChange={e => setCustomPackagePrice(e.target.value)}
-                                                        className="h-9 bg-zinc-800 border-zinc-700 text-sm"
-                                                        placeholder="Defaults to package price"
-                                                    />
+                                            <div className="space-y-1 sm:col-span-2">
+                                                <Label className="text-xs">Client's Building</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Select onValueChange={setBuildingId} value={buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-full"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select>
+                                                    <Dialog open={isBuildingDialogOpen} onOpenChange={setIsBuildingDialogOpen}>
+                                                        <DialogTrigger asChild>
+                                                            <Button type="button" variant="outline" size="icon" className="h-9 w-9 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-700"><DialogHeader><DialogTitle className="text-white">Create New Building</DialogTitle></DialogHeader>
+                                                            <div className="grid gap-4 py-4"><div className="grid grid-cols-4 items-center gap-4"><Label htmlFor="building-name" className="text-right text-zinc-400">Name</Label><Input id="building-name" value={newBuildingName} onChange={(e) => setNewBuildingName(e.target.value)} className="col-span-3 bg-zinc-800 border-zinc-600" /></div></div>
+                                                            <DialogFooter><Button type="button" onClick={handleCreateBuilding} disabled={isSavingBuilding}>{isSavingBuilding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save Building</Button></DialogFooter>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                </div>
+                                            </div>
+                                            {buildingId && filteredStations.length > 0 && (
+                                                <div className="space-y-1 sm:col-span-2">
+                                                    <Label className="text-xs">Network Connection (Station)</Label>
+                                                    {filteredStations.length === 1 ? (
+                                                        <div className="h-9 px-3 flex items-center rounded-md border border-zinc-700 bg-zinc-800/50 text-sm"><span className="text-zinc-400">Auto-selected:</span><span className="ml-2 font-medium">{filteredStations[0].deviceName}</span></div>
+                                                    ) : (
+                                                        <Select onValueChange={setStationId} value={stationId} disabled={!buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder={isEditMode ? "Select a station" : "Multiple stations found, please select one"} /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{filteredStations.map(s => <SelectItem key={s._id} value={s._id} className="text-sm">{s.deviceName}</SelectItem>)}</SelectContent></Select>
+                                                    )}
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3 pt-4 border-t border-zinc-800">
+                                        <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><Lock size={18} /> Connection & Billing</CardTitle>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1"><Label className="text-xs">Username</Label><Input value={username} onChange={e => setUsername(e.target.value)} required disabled={isEditMode} className="h-9 bg-zinc-800 border-zinc-700 text-sm disabled:opacity-70" /></div>
+                                            {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Leave blank to keep current" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div></div>}
+                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required placeholder="e.g., 192.168.10.50" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>}
+                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="Optional, will be auto-discovered" /></div>}
+                                            <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div></div>
+                                            <div className="space-y-1"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                             <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
                                         </div>
                                         {!isEditMode && (
@@ -432,8 +453,8 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                     <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
                         <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
                         <div>
-                            {step === 1 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
-                            {step === 2 && <Button type="submit" size="sm" disabled={isSubmitting} className="bg-gradient-to-r from-blue-600 to-cyan-500">{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isSubmitting ? "Saving..." : (isEditMode ? "Save Changes" : "Save User")}</Button>}
+                            {step < 3 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
+                            {step === 3 && <Button type="submit" size="sm" disabled={isSubmitting} className="bg-gradient-to-r from-blue-600 to-cyan-500">{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isSubmitting ? "Saving..." : (isEditMode ? "Save Changes" : "Save User")}</Button>}
                         </div>
                     </CardFooter>
                 </form>
