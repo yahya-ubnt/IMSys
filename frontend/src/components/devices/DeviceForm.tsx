@@ -143,7 +143,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
 
     const deviceData: Partial<Device> = {
       router: routerId,
-      deviceType,
+      deviceType: deviceType || undefined,
       monitoringMode,
       deviceName,
       deviceModel,
