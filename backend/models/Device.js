@@ -19,7 +19,7 @@ const deviceSchema = new mongoose.Schema(
     },
     macAddress: {
       type: String,
-      required: [true, 'Please provide a MAC address'],
+      required: false,
     },
     monitoringMode: {
       type: String,
@@ -99,7 +99,7 @@ deviceSchema.pre('save', function (next) {
 });
 
 deviceSchema.index({ tenant: 1 });
-deviceSchema.index({ tenant: 1, macAddress: 1 }, { unique: true });
+deviceSchema.index({ tenant: 1, macAddress: 1 }, { unique: true, partialFilterExpression: { macAddress: { $exists: true, $ne: null, $ne: "" } } });
 
 const Device = mongoose.model('Device', deviceSchema);
 

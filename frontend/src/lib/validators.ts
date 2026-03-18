@@ -87,3 +87,37 @@ export const mikrotikPackageFormSchema = z.object({
 });
 
 export type MikrotikPackageFormSchema = z.infer<typeof mikrotikPackageFormSchema>;
+
+export const deviceFormSchema = z.object({
+  router: z.string().min(1, "Mikrotik router is required"),
+  deviceType: z.enum(['Access', 'Station'], { message: "Device type is required" }),
+  monitoringMode: z.enum(['SNITCH', 'NONE'], { message: "Monitoring mode is required" }),
+  deviceName: z.string().min(1, "Device name is required"),
+  deviceModel: z.string().optional(),
+  physicalBuilding: z.string().optional(),
+  serviceArea: z.array(z.string()).optional(),
+  ipAddress: z.string().regex(ipAddressRegex, "Invalid IP address format (e.g., 192.168.1.1)"),
+  macAddress: z.string().regex(/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/, "Invalid MAC address format (e.g., AA:BB:CC:DD:EE:FF)").optional(),
+  loginUsername: z.string().optional(),
+  loginPassword: z.string().optional(),
+  ssid: z.string().optional(),
+  wirelessPassword: z.string().optional(),
+  parentId: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.deviceType === 'Station' && !data.parentId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['parentId'],
+      message: 'Parent device is required for Station type',
+    });
+  }
+  if (data.deviceType === 'Access' && !data.ssid) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['ssid'],
+      message: 'SSID is required for Access Point type',
+    });
+  }
+});
+
+export type DeviceFormSchema = z.infer<typeof deviceFormSchema>;

@@ -21,7 +21,6 @@ router.route('/').post(
   [
     body('router', 'Router ID is required').not().isEmpty(),
     body('ipAddress', 'IP address is required').not().isEmpty(),
-    body('macAddress', 'MAC address is required').not().isEmpty(),
     body('deviceType', 'Device type is required').isIn(['Access', 'Station']),
   ],
   createDevice

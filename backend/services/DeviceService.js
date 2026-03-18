@@ -24,11 +24,13 @@ const DeviceService = {
       throw error;
     }
 
-    const deviceExists = await Device.findOne({ macAddress, tenant: tenantId });
-    if (deviceExists) {
-      const error = new Error('Device with this MAC address already exists');
-      error.statusCode = 400;
-      throw error;
+    if (macAddress) { // Only check for existence if macAddress is provided
+      const deviceExists = await Device.findOne({ macAddress, tenant: tenantId });
+      if (deviceExists) {
+        const error = new Error('Device with this MAC address already exists');
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
     const device = new Device({

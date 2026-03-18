@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Device, MikrotikRouter, Building, getBuildings, enableMonitoring, disableMonitoring } from "@/lib/deviceService";
 import { useToast } from "@/hooks/use-toast";
-import { Save, HardDrive, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Save, HardDrive, ChevronRight, ChevronLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
@@ -21,13 +21,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { deviceFormSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 // --- Step Indicator ---
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
     <div className="flex items-center justify-center gap-3">
-        <div className="flex items-center gap-2"><div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>1</div><span className={`text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Initial Setup</span></div>
-        <div className={`w-12 h-px transition-colors ${currentStep === 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
-        <div className="flex items-center gap-2"><div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>2</div><span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Device Details</span></div>
+        {/* Step 1 */}
+        <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>1</div>
+            <span className={`text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Device Type & Monitoring</span>
+        </div>
+        <div className={`w-12 h-px transition-colors ${currentStep >= 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
+        {/* Step 2 */}
+        <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>2</div>
+            <span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Network Configuration</span>
+        </div>
+        <div className={`w-12 h-px transition-colors ${currentStep >= 3 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
+        {/* Step 3 */}
+        <div className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>3</div>
+            <span className={`text-sm transition-colors ${currentStep === 3 ? 'text-blue-400' : 'text-zinc-500'}`}>Administrative Details</span>
+        </div>
     </div>
 );
 
@@ -52,6 +68,8 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
   const [isMonitoringDisableAlertOpen, setIsMonitoringDisableAlertOpen] = useState(false);
   const [isMonitoringEnableAlertOpen, setIsMonitoringEnableAlertOpen] = useState(false);
   const [stagedDeviceData, setStagedDeviceData] = useState<Partial<Device> | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
 
 
   const [routerId, setRouterId] = useState(typeof initialData?.router === 'object' && initialData.router ? initialData.router._id : initialData?.router || "");
@@ -121,46 +139,102 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
     }
   }, [physicalBuildingId]);
 
-  const handleNext = () => {
-    if (routerId && deviceType) {
+  const getFormData = (): Partial<Device> => ({
+    router: routerId,
+    deviceType: deviceType || undefined,
+    monitoringMode,
+    deviceName,
+    deviceModel,
+    physicalBuilding: physicalBuildingId,
+    serviceArea,
+    ipAddress,
+    macAddress,
+    loginUsername,
+    loginPassword,
+    ssid,
+    wirelessPassword,
+    parentId,
+  });
+
+  const validateStep = (currentStep: number) => {
+    switch (currentStep) {
+      case 1:
+        if (!routerId) {
+          toast({ description: 'Please select a router.', variant: 'destructive' });
+          return false;
+        }
+        if (!deviceType) {
+          toast({ description: 'Please select a device type.', variant: 'destructive' });
+          return false;
+        }
+        if (!monitoringMode) {
+          toast({ description: 'Please select a monitoring mode.', variant: 'destructive' });
+          return false;
+        }
+        break;
+      case 2:
+        if (!deviceName) {
+          toast({ description: 'Please enter a device name.', variant: 'destructive' });
+          return false;
+        }
+        if (!ipAddress) {
+          toast({ description: 'Please enter an IP address.', variant: 'destructive' });
+          return false;
+        }
         if (deviceType === 'Access') {
+          if (!parentId) {
+            toast({ description: 'Please select a parent device for Access Point.', variant: 'destructive' });
+            return false;
+          }
+          if (!ssid) {
+            toast({ description: 'Please enter an SSID for Access Point.', variant: 'destructive' });
+            return false;
+          }
+        }
+        break;
+      case 3:
+        // Only validate loginUsername and loginPassword if not in edit mode
+        // or if the fields are not empty (meaning user intends to change them)
+        if (!isEditMode) {
+          if (!loginUsername) {
+            toast({ description: 'Please enter a login username.', variant: 'destructive' });
+            return false;
+          }
+          if (!loginPassword) {
+            toast({ description: 'Please enter a login password.', variant: 'destructive' });
+            return false;
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep(step)) {
+        if (step === 1 && deviceType === 'Access') {
             setParentId(routerId);
         }
         setDirection(1);
-        setStep(2);
-    } else {
-        toast({ title: "Missing Information", description: "Please select a router and device type.", variant: "destructive" });
+        setStep(prev => prev + 1);
     }
   };
 
 
   const handleBack = () => {
       setDirection(-1);
-      setStep(1);
+      setStep(prev => prev - 1);
   };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const deviceData: Partial<Device> = {
-      router: routerId,
-      deviceType: deviceType || undefined,
-      monitoringMode,
-      deviceName,
-      deviceModel,
-      physicalBuilding: physicalBuildingId,
-      serviceArea,
-      ipAddress,
-      macAddress,
-      loginUsername,
-    };
-
-    if (deviceType === 'Station' || deviceType === 'Access') {
-      deviceData.parentId = parentId;
+    if (!validateStep(step)) {
+        return;
     }
 
-    if (deviceType === 'Access') {
-      deviceData.ssid = ssid;
-    }
+    const deviceData: Partial<Device> = getFormData();
 
     if (loginPassword) deviceData.loginPassword = loginPassword;
     if (wirelessPassword) deviceData.wirelessPassword = wirelessPassword;
@@ -243,120 +317,154 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
           <form onSubmit={handleSubmit}>
             <CardContent className="p-5">
               <AnimatePresence mode="wait" custom={direction}>
-                {step === 1 ? (
-                  <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
-                    <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Initial Setup</CardTitle>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={dataLoading.routers}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select></div>
-                      <div className="space-y-1"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select></div>
-                      <div className="space-y-1 sm:col-span-2">
-                        <Label className="text-xs">Monitoring Mode</Label>
-                        <Select onValueChange={(v: "SNITCH" | "NONE") => setMonitoringMode(v)} value={monitoringMode}>
-                          <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
-                            <SelectValue placeholder="Select monitoring mode" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                            <SelectItem value="SNITCH" className="text-sm">Netwatch (Snitch) - Automatic Alerts</SelectItem>
-                            <SelectItem value="NONE" className="text-sm">None - Manual Diagnostic Only</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-[10px] text-zinc-500 mt-1">SNITCH mode enables instant automated failure reporting via the router.</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                          <Label htmlFor="deviceName" className="text-xs">Device Name</Label>
-                          <Input id="deviceName" value={deviceName} onChange={e => setDeviceName(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                          <Label htmlFor="deviceModel" className="text-xs">Device Model</Label>
-                          <Input id="deviceModel" value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                      </div>
-                      <div className="space-y-1"><Label className="text-xs">Physical Location (Building)</Label><Select onValueChange={setPhysicalBuildingId} value={physicalBuildingId} disabled={dataLoading.buildings}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select></div>
-                      {deviceType === 'Station' && <div className="space-y-1"><Label className="text-xs">Parent Device (Uplink)</Label><Select onValueChange={setParentId} value={parentId} disabled={dataLoading.accessPoints}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap._id} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select></div>}
-                      <div className="space-y-1">
-                          <Label htmlFor="ipAddress" className="text-xs">IP Address</Label>
-                          <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                          <Label htmlFor="macAddress" className="text-xs">MAC Address</Label>
-                          <Input id="macAddress" value={macAddress} onChange={e => setMacAddress(e.target.value)} required className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                          <Label htmlFor="loginUsername" className="text-xs">Login Username</Label>
-                          <Input id="loginUsername" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                      </div>
-                      <div className="space-y-1">
-                          <Label htmlFor="loginPassword" className="text-xs">Login Password</Label>
-                          <Input id="loginPassword" type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
-                      </div>
-                      {deviceType === 'Access' && (
-                        <>
-                          <div className="space-y-1">
-                            <Label htmlFor="ssid" className="text-xs">Broadcasted SSID</Label>
-                            <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                {(() => {
+                  switch (step) {
+                    case 1:
+                      return (
+                        <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
+                          <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Device Type & Monitoring</CardTitle>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-2"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={dataLoading.routers}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select>{errors.router && <p className="text-red-500 text-xs mt-1">{errors.router}</p>}</div>
+                            <div className="space-y-2"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select>{errors.deviceType && <p className="text-red-500 text-xs mt-1">{errors.deviceType}</p>}</div>
+                            <div className="space-y-2 sm:col-span-2">
+                              <Label className="text-xs">Monitoring Mode</Label>
+                              <Select onValueChange={(v: "SNITCH" | "NONE") => setMonitoringMode(v)} value={monitoringMode}>
+                                <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
+                                  <SelectValue placeholder="Select monitoring mode" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
+                                  <SelectItem value="SNITCH" className="text-sm">Netwatch (Snitch) - Automatic Alerts</SelectItem>
+                                  <SelectItem value="NONE" className="text-sm">None - Manual Diagnostic Only</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {errors.monitoringMode && <p className="text-red-500 text-xs mt-1">{errors.monitoringMode}</p>}
+                              <p className="text-[10px] text-zinc-500 mt-1">SNITCH mode enables instant automated failure reporting via the router.</p>
+                            </div>
                           </div>
-                          <div className="space-y-1">
-                              <Label htmlFor="wirelessPassword" className="text-xs">WPA2 Key</Label>
-                              <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                        </motion.div>
+                      );
+                    case 2:
+                      return (
+                        <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
+                          <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Network Configuration</CardTitle>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="deviceName" className="text-xs">Device Name</Label>
+                                <Input id="deviceName" value={deviceName} onChange={e => setDeviceName(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., Sector AP 1" />
+                                {errors.deviceName && <p className="text-red-500 text-xs mt-1">{errors.deviceName}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="deviceModel" className="text-xs">Device Model</Label>
+                                <Input id="deviceModel" value={deviceModel} onChange={e => setDeviceModel(e.target.value)} placeholder="e.g., NanoStation M5" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                            </div>
+                            <div className="space-y-2"><Label className="text-xs">Physical Location (Building)</Label><Select onValueChange={setPhysicalBuildingId} value={physicalBuildingId} disabled={dataLoading.buildings}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select>{errors.physicalBuilding && <p className="text-red-500 text-xs mt-1">{errors.physicalBuilding}</p>}</div>
+                            {deviceType === 'Station' && <div className="space-y-2"><Label className="text-xs">Parent Device (Uplink)</Label><Select onValueChange={setParentId} value={parentId} disabled={dataLoading.accessPoints}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select an Access Point" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{accessPoints.map(ap => <SelectItem key={ap._id} value={ap._id} className="text-sm">{ap.deviceName}</SelectItem>)}</SelectContent></Select>{errors.parentId && <p className="text-red-500 text-xs mt-1">{errors.parentId}</p>}</div>}
+                            <div className="space-y-2">
+                                <Label htmlFor="ipAddress" className="text-xs">IP Address</Label>
+                                <Input id="ipAddress" value={ipAddress} onChange={e => setIpAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., 192.168.1.1" />
+                                {errors.ipAddress && <p className="text-red-500 text-xs mt-1">{errors.ipAddress}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="macAddress" className="text-xs">MAC Address</Label>
+                                <Input id="macAddress" value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., AA:BB:CC:DD:EE:FF" />
+                                {errors.macAddress && <p className="text-red-500 text-xs mt-1">{errors.macAddress}</p>}
+                            </div>
+                            {deviceType === 'Access' && (
+                              <>
+                                <div className="space-y-2">
+                                  <Label htmlFor="ssid" className="text-xs">Broadcasted SSID</Label>
+                                  <Input id="ssid" value={ssid} onChange={e => setSsid(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., MyWiFi" />
+                                  {errors.ssid && <p className="text-red-500 text-xs mt-1">{errors.ssid}</p>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="wirelessPassword" className="text-xs">WPA2 Key</Label>
+                                    <Input id="wirelessPassword" type="password" value={wirelessPassword} onChange={e => setWirelessPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : "••••••••"} className="h-9 bg-zinc-800 border-zinc-700 text-sm" />
+                                </div>
+                                <div className="space-y-2 sm:col-span-2">
+                                  <Label className="text-xs">Additionally Serves (Buildings)</Label>
+                                  <MultiSelect
+                                      options={buildingOptions}
+                                      value={serviceArea}
+                                      onValueChange={(selectedValues: string[]) => {
+                                          if (physicalBuildingId && !selectedValues.includes(physicalBuildingId)) {
+                                              toast({
+                                                  title: "Cannot remove physical building",
+                                                  description: "The physical location of the device must remain in the service area.",
+                                                  variant: "destructive",
+                                              });
+                                          } else {
+                                              setServiceArea(selectedValues);
+                                          }
+                                      }}
+                                      className="w-full"
+                                      placeholder="Select buildings this AP serves"
+                                  />
+                                </div>
+                              </>
+                            )}
+                            {deviceType === 'Station' && (
+                                <div className="space-y-2 sm:col-span-2">
+                                    <Label className="text-xs">Additionally Serves (Wired Neighbours)</Label>
+                                    <MultiSelect
+                                        options={buildingOptions}
+                                        value={serviceArea}
+                                        onValueChange={(selectedValues: string[]) => {
+                                            if (physicalBuildingId && !selectedValues.includes(physicalBuildingId)) {
+                                                toast({
+                                                    title: "Cannot remove physical building",
+                                                    description: "The physical location of the device must remain in the service area.",
+                                                    variant: "destructive",
+                                                });
+                                            } else {
+                                                setServiceArea(selectedValues);
+                                            }
+                                        }}
+                                        className="w-full"
+                                        placeholder="Select buildings this station serves"
+                                    />
+                                </div>
+                            )}
                           </div>
-                          <div className="space-y-1 sm:col-span-2">
-                            <Label className="text-xs">Additionally Serves (Buildings)</Label>
-                            <MultiSelect
-                                options={buildingOptions}
-                                value={serviceArea}
-                                onValueChange={(selectedValues: string[]) => {
-                                    if (physicalBuildingId && !selectedValues.includes(physicalBuildingId)) {
-                                        toast({
-                                            title: "Cannot remove physical building",
-                                            description: "The physical location of the device must remain in the service area.",
-                                            variant: "destructive",
-                                        });
-                                    } else {
-                                        setServiceArea(selectedValues);
-                                    }
-                                }}
-                                className="w-full"
-                                placeholder="Select buildings this AP serves"
-                            />
+                        </motion.div>
+                      );
+                    case 3:
+                      return (
+                        <motion.div key={3} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
+                          <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Administrative Details</CardTitle>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="loginUsername" className="text-xs">Login Username</Label>
+                                <Input id="loginUsername" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="e.g., admin" autoComplete="new-password" />
+                                {errors.loginUsername && <p className="text-red-500 text-xs mt-1">{errors.loginUsername}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="loginPassword" className="text-xs">Login Password</Label>
+                                <div className="relative">
+                                  <Input id="loginPassword" type={showPassword ? "text" : "password"} value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder={isEditMode ? "Leave blank to keep unchanged" : "••••••••"} className="h-9 bg-zinc-800 border-zinc-700 text-sm pr-10" autoComplete="new-password" />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-200"
+                                  >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                  </button>
+                                </div>
+                                {errors.loginPassword && <p className="text-red-500 text-xs mt-1">{errors.loginPassword}</p>}
+                            </div>
                           </div>
-                        </>
-                      )}
-                      {deviceType === 'Station' && (
-                          <div className="space-y-1 sm:col-span-2">
-                              <Label className="text-xs">Additionally Serves (Wired Neighbours)</Label>
-                              <MultiSelect
-                                  options={buildingOptions}
-                                  value={serviceArea}
-                                  onValueChange={(selectedValues: string[]) => {
-                                      if (physicalBuildingId && !selectedValues.includes(physicalBuildingId)) {
-                                          toast({
-                                              title: "Cannot remove physical building",
-                                              description: "The physical location of the device must remain in the service area.",
-                                              variant: "destructive",
-                                          });
-                                      } else {
-                                          setServiceArea(selectedValues);
-                                      }
-                                  }}
-                                  className="w-full"
-                                  placeholder="Select buildings this station serves"
-                              />
-                          </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
+                        </motion.div>
+                      );
+                    default:
+                      return null;
+                  }
+                })()}
               </AnimatePresence>
             </CardContent>
             <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
               <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
               <div>
-                {step === 1 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="mr-1 h-4 w-4" /></Button>}
-                {step === 2 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Device"}</Button>}
+                {step < 3 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
+                {step === 3 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Device"}</Button>}
               </div>
             </CardFooter>
           </form>
