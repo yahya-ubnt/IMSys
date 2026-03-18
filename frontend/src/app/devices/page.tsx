@@ -47,6 +47,7 @@ export default function DevicesPage() {
     pageIndex: 0,
     pageSize: 10,
   })
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const fetchDevices = useCallback(async () => {
     try {
@@ -89,6 +90,8 @@ export default function DevicesPage() {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter, // Add this line
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -98,6 +101,7 @@ export default function DevicesPage() {
       sorting,
       columnFilters,
       pagination,
+      globalFilter,
     },
   })
 
@@ -183,7 +187,7 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: s
 );
 
 const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<Device>> }) => (
-  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
     <div className="flex items-center gap-2">
       <Button size="sm" className={!table.getColumn('status')?.getFilterValue() ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue(undefined)}>All</Button>
       <Button size="sm" className={table.getColumn('status')?.getFilterValue() === 'UP' ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-transparent border border-zinc-700 text-zinc-400 hover:bg-zinc-800'} onClick={() => table.getColumn('status')?.setFilterValue('UP')}>Online</Button>
@@ -194,7 +198,7 @@ const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<De
           <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700">
             <SelectValue placeholder="Filter by type" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-zinc-800 text-white border-zinc-700">
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="Access">Access Points</SelectItem>
             <SelectItem value="Station">Stations</SelectItem>
@@ -203,12 +207,32 @@ const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<De
       <div className="relative w-full sm:max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input
-          placeholder="Search by name, IP, or MAC..."
-          value={(table.getColumn("deviceName")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("deviceName")?.setFilterValue(event.target.value)}
-          className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+          placeholder="Search all columns..."
+          value={(table.getState().globalFilter as string) ?? ""}
+          onChange={(event) => table.setGlobalFilter(event.target.value)}
+          className="pl-10 h-9 bg-zinc-800 border-zinc-700 w-full"
         />
       </div>
     </div>
   </div>
 );
+
+// Custom fuzzy filter function for global search
+const fuzzyFilter = (row: any, columnId: string, filterValue: string) => {
+  const search = filterValue.toLowerCase();
+
+  // Fields to search across
+  const deviceName = row.original.deviceName?.toLowerCase() || '';
+  const ipAddress = row.original.ipAddress?.toLowerCase() || '';
+  const macAddress = row.original.macAddress?.toLowerCase() || '';
+  const deviceType = row.original.deviceType?.toLowerCase() || '';
+  const mikrotikRouterName = row.original.mikrotikRouter?.name?.toLowerCase() || '';
+
+  return (
+    deviceName.includes(search) ||
+    ipAddress.includes(search) ||
+    macAddress.includes(search) ||
+    deviceType.includes(search) ||
+    mikrotikRouterName.includes(search)
+  );
+};

@@ -44,6 +44,7 @@ export default function PackagesPage() {
     pageIndex: 0,
     pageSize: 10,
   })
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const fetchPackages = useCallback(async () => {
     try {
@@ -119,6 +120,8 @@ export default function PackagesPage() {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter, // Add this line
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -128,6 +131,7 @@ export default function PackagesPage() {
       sorting,
       columnFilters,
       pagination,
+      globalFilter,
     },
   })
 
@@ -159,17 +163,7 @@ export default function PackagesPage() {
           <div className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
             <Card className="bg-transparent border-none">
               <CardContent className="p-4 space-y-4">
-                <div className="flex items-center justify-end">
-                  <div className="relative w-full sm:max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-                    <Input
-                      placeholder="Search by name or router..."
-                      value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                      onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-                      className="pl-10 h-9 bg-zinc-800 border-zinc-700"
-                    />
-                  </div>
-                </div>
+                <DataTableToolbar table={table} />
                 <div className="overflow-x-auto">
                   <DataTable table={table} columns={columns} />
                 </div>
@@ -203,3 +197,38 @@ export default function PackagesPage() {
     </>
   );
 }
+
+// --- SUB-COMPONENTS ---
+const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<Package>> }) => (
+  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
+    <div className="relative w-full sm:max-w-xs">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+      <Input
+        placeholder="Search all columns..."
+        value={(table.getState().globalFilter as string) ?? ""}
+        onChange={(event) => table.setGlobalFilter(event.target.value)}
+        className="pl-10 h-9 bg-zinc-800 border-zinc-700 w-full"
+      />
+    </div>
+  </div>
+);
+
+// Custom fuzzy filter function for global search
+const fuzzyFilter = (row: any, columnId: string, filterValue: string) => {
+  const search = filterValue.toLowerCase();
+
+  // Fields to search across
+  const name = row.original.name?.toLowerCase() || '';
+  const price = row.original.price?.toString().toLowerCase() || '';
+  const mikrotikRouterName = row.original.mikrotikRouter?.name?.toLowerCase() || '';
+  const downloadSpeed = row.original.downloadSpeed?.toLowerCase() || '';
+  const uploadSpeed = row.original.uploadSpeed?.toLowerCase() || '';
+
+  return (
+    name.includes(search) ||
+    price.includes(search) ||
+    mikrotikRouterName.includes(search) ||
+    downloadSpeed.includes(search) ||
+    uploadSpeed.includes(search)
+  );
+};
