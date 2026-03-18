@@ -58,19 +58,38 @@ export const getColumns = (
     },
     {
       accessorKey: "ipAddress",
-      header: "IP Address",
+      id: "ipAddress", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          IP Address
+        </Button>
+      ),
     },
     {
       accessorKey: "apiUsername",
-      header: "API Username",
+      id: "apiUsername", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          API Username
+        </Button>
+      ),
     },
     {
       accessorKey: "location",
-      header: "Location",
+      id: "location", // Added unique ID
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Location
+        </Button>
+      ),
     },
     {
       id: "status",
-      header: "Status",
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Status
+        </Button>
+      ),
       cell: ({ row }) => {
         const { isOnline, lastChecked } = row.original;
         const statusColor = isOnline ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-red-500/20 text-red-400 border-red-500/30";
