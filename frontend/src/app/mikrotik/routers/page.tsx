@@ -56,6 +56,7 @@ export default function MikrotikRoutersPage() {
     pageIndex: 0,
     pageSize: 10,
   })
+  const [globalFilter, setGlobalFilter] = useState('');
 
   const fetchRouters = useCallback(async () => {
     try {
@@ -99,6 +100,8 @@ export default function MikrotikRoutersPage() {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: fuzzyFilter, // Add this line
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -108,6 +111,7 @@ export default function MikrotikRoutersPage() {
       sorting,
       columnFilters,
       pagination,
+      globalFilter,
     },
   })
 
@@ -195,15 +199,31 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: s
 );
 
 const DataTableToolbar = ({ table }: { table: ReturnType<typeof useReactTable<MikrotikRouter>> }) => (
-  <div className="flex items-center justify-end">
+  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
     <div className="relative w-full sm:max-w-xs">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
       <Input
-        placeholder="Search by name or IP..."
-        value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-        onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-        className="pl-10 h-9 bg-zinc-800 border-zinc-700"
+        placeholder="Search all columns..."
+        value={(table.getState().globalFilter as string) ?? ""}
+        onChange={(event) => table.setGlobalFilter(event.target.value)}
+        className="pl-10 h-9 bg-zinc-800 border-zinc-700 w-full"
       />
     </div>
   </div>
 );
+
+// Custom fuzzy filter function for global search
+const fuzzyFilter = (row: any, columnId: string, filterValue: string) => {
+  const search = filterValue.toLowerCase();
+
+  // Fields to search across
+  const name = row.original.name?.toLowerCase() || '';
+  const ipAddress = row.original.ipAddress?.toLowerCase() || '';
+  const location = row.original.location?.toLowerCase() || '';
+
+  return (
+    name.includes(search) ||
+    ipAddress.includes(search) ||
+    location.includes(search)
+  );
+};

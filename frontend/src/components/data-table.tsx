@@ -37,7 +37,7 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="px-4 py-2 text-left text-zinc-300 font-semibold uppercase tracking-wider">
+                    <TableHead key={header.id} className="px-2 py-2 text-left text-zinc-300 font-semibold uppercase">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -80,7 +80,7 @@ export function DataTable<TData, TValue>({
                           onRowClick(cell.row.original);
                         }
                       }}
-                      className="px-4 py-2 align-middle [&:has([role=checkbox])]:pr-0 text-zinc-200 font-medium"
+                      className="px-2 py-2 align-middle [&:has([role=checkbox])]:pr-0 text-zinc-200 font-semibold"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
