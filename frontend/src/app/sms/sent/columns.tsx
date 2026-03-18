@@ -8,12 +8,22 @@ import { Button } from "@/components/ui/button"
 
 export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>[] => [
   {
-    header: "ID",
+    id: "id", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        ID
+      </Button>
+    ),
     cell: ({ row }) => row.index + 1,
   },
   {
     accessorKey: "providerResponse",
-    header: "Message ID",
+    id: "messageId", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Message ID
+      </Button>
+    ),
     cell: ({ row }) => {
       const message = row.original.providerResponse?.message || "";
       const match = message.match(/Message ID: (.*)/);
@@ -22,16 +32,31 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
   },
   {
     accessorKey: "mobileNumber",
-    header: "Mobile Number",
+    id: "mobileNumber", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Mobile Number
+      </Button>
+    ),
   },
   {
     accessorKey: "message",
-    header: "Message",
+    id: "message", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Message
+      </Button>
+    ),
     cell: ({ row }) => <div className="truncate max-w-xs">{row.original.message}</div>,
   },
   {
     accessorKey: "smsStatus",
-    header: "Status",
+    id: "smsStatus", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Status
+      </Button>
+    ),
     cell: ({ row }) => {
       const status = row.original.smsStatus
       
@@ -58,7 +83,12 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
   },
   {
     accessorKey: "messageType",
-    header: "Message Type",
+    id: "messageType", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Message Type
+      </Button>
+    ),
     cell: ({ row }) => {
       const messageType = row.original.messageType;
       return (
@@ -70,7 +100,12 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
   },
   {
     accessorKey: "createdAt",
-    header: "Sent At",
+    id: "createdAt", // Added unique ID
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Sent At
+      </Button>
+    ),
     cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
   },
   {

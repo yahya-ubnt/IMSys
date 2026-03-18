@@ -2,6 +2,7 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import { Transaction } from './page'; // Import the Transaction type from the page component
+import { Button } from "@/components/ui/button"
 
 // Function to mask the MSISDN (phone number)
 const maskMsisdn = (msisdn: string) => {
@@ -13,21 +14,28 @@ const maskMsisdn = (msisdn: string) => {
 
 export const getColumns = (): ColumnDef<Transaction>[] => [
   {
-    id: 'serialNumber',
-    header: 'S/N',
-    cell: ({ row }) => row.index + 1,
-  },
-  {
     accessorKey: 'officialName',
-    header: 'Name',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Name
+      </Button>
+    ),
   },
   {
     accessorKey: 'transactionId',
-    header: 'Transaction ID',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Transaction ID
+      </Button>
+    ),
   },
   {
     accessorKey: 'amount',
-    header: 'Amount',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Amount
+      </Button>
+    ),
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue('amount'));
       const formatted = new Intl.NumberFormat('en-US', {
@@ -39,26 +47,43 @@ export const getColumns = (): ColumnDef<Transaction>[] => [
   },
   {
     accessorKey: 'referenceNumber',
-    header: 'Ref Number',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Ref Number
+      </Button>
+    ),
   },
   {
     accessorKey: 'msisdn',
-    header: 'MSISDN',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        MSISDN
+      </Button>
+    ),
     cell: ({ row }) => maskMsisdn(row.getValue('msisdn')),
   },
   {
     accessorKey: 'transactionDate',
-    header: 'Time',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Time
+      </Button>
+    ),
     cell: ({ row }) => {
       return new Date(row.getValue('transactionDate')).toLocaleString();
     },
   },
   {
     accessorKey: 'balance',
-    header: 'Balance',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Balance
+      </Button>
+    ),
     cell: ({ row }) => {
       const balance = row.getValue('balance');
       return balance !== null && balance !== undefined ? balance : 'N/A';
     },
   },
 ];
+

@@ -1,15 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { motion } from "framer-motion"
 import {
   useReactTable,
   getCoreRowModel,
   PaginationState,
   ColumnDef,
+  getFilteredRowModel,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DataTable } from "@/components/data-table"
@@ -17,7 +17,7 @@ import { getColumns } from "./columns"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast";
-import { Download, Search, DollarSign, TrendingUp, User } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 
 // --- TYPE DEFINITIONS ---
@@ -42,12 +42,11 @@ export default function MpesaTransactionsPage() {
 
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [stats, setStats] = useState({ totalVolume: 0, transactionCount: 0, averageTransaction: 0 });
   const [pageCount, setPageCount] = useState(0)
 
   // Filter states
-  const [searchTerm, setSearchTerm] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+  const [globalFilter, setGlobalFilter] = useState('');
   
   // Table states
   const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
@@ -69,9 +68,9 @@ export default function MpesaTransactionsPage() {
       const params = new URLSearchParams({
         page: (pageIndex + 1).toString(),
         limit: pageSize.toString(),
-        ...(searchTerm && { searchTerm }),
         ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
         ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
+        ...(globalFilter && { search: globalFilter }), // Pass globalFilter as search term
       })
 
       const response = await fetch(`/api/payments/transactions?${params.toString()}`)
@@ -80,11 +79,10 @@ export default function MpesaTransactionsPage() {
       const data = await response.json()
       setTransactions(data.transactions || [])
       setPageCount(data.pages || 0)
-      setStats(data.stats || { totalVolume: 0, transactionCount: 0, averageTransaction: 0 })
     } catch {
       toast({ title: "Error", description: "Failed to load transactions.", variant: "destructive" })
     }
-  }, [pageIndex, pageSize, searchTerm, dateRange, toast])
+  }, [pageIndex, pageSize, dateRange, globalFilter, toast])
 
   useEffect(() => {
     fetchTransactions()
@@ -96,9 +94,13 @@ export default function MpesaTransactionsPage() {
     pageCount,
     state: {
       pagination,
+      globalFilter,
     },
     onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), // Add this for global filter
+    globalFilterFn: fuzzyFilter, // Add this line
     manualPagination: true,
   })
 
@@ -161,49 +163,33 @@ export default function MpesaTransactionsPage() {
           </div>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        <div
           className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
-            <CardHeader className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard title="Total Volume" value={`Ksh ${stats.totalVolume.toLocaleString()}`} icon={DollarSign} color="text-green-400" />
-              <StatCard title="Transactions" value={stats.transactionCount.toLocaleString()} icon={TrendingUp} />
-              <StatCard title="Avg. Transaction" value={`Ksh ${stats.averageTransaction.toLocaleString()}`} icon={User} />
-            </CardHeader>
             <CardContent className="p-4">
-              <DataTableToolbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} dateRange={dateRange} setDateRange={setDateRange} />
+              <DataTableToolbar table={table} dateRange={dateRange} setDateRange={setDateRange} />
               <div className="mt-4 overflow-x-auto">
                 <DataTable table={table} columns={getColumns()} />
               </div>
               <DataTablePagination table={table} />
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </main>
     </div>
   )
 }
 
 // --- SUB-COMPONENTS ---
-const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
-  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
-    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
-    <div>
-      <p className="text-xs text-zinc-400">{title}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
-    </div>
-  </div>
-);
-
-const DataTableToolbar = (props: { searchTerm: string; setSearchTerm: (value: string) => void; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
-  const { searchTerm, setSearchTerm, dateRange, setDateRange } = props;
+const DataTableToolbar = ({ table, dateRange, setDateRange }: { table: ReturnType<typeof useReactTable<Transaction>>; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
       <div className="relative w-full sm:max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <Input
-          placeholder="Search by name, phone, ref..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search all columns..."
+          value={(table.getState().globalFilter as string) ?? ""}
+          onChange={(event) => table.setGlobalFilter(event.target.value)}
           className="pl-10 h-9 bg-zinc-800 border-zinc-700 w-full"
         />
       </div>
@@ -211,5 +197,23 @@ const DataTableToolbar = (props: { searchTerm: string; setSearchTerm: (value: st
         <CalendarDateRangePicker date={dateRange} setDate={setDateRange} />
       </div>
     </div>
+  );
+};
+
+// Custom fuzzy filter function for global search
+const fuzzyFilter = (row: any, columnId: string, filterValue: string) => {
+  const search = filterValue.toLowerCase();
+
+  // Fields to search across
+  const transactionId = row.original.transactionId?.toLowerCase() || '';
+  const referenceNumber = row.original.referenceNumber?.toLowerCase() || '';
+  const officialName = row.original.officialName?.toLowerCase() || '';
+  const msisdn = row.original.msisdn?.toLowerCase() || '';
+
+  return (
+    transactionId.includes(search) ||
+    referenceNumber.includes(search) ||
+    officialName.includes(search) ||
+    msisdn.includes(search)
   );
 };

@@ -6,6 +6,7 @@ import {
   useReactTable,
   getCoreRowModel,
   PaginationState,
+  getFilteredRowModel,
 } from "@tanstack/react-table"
 import { Topbar } from "@/components/topbar"
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import { columns } from "./columns"
 import { CalendarDateRangePicker } from "@/components/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { useToast } from "@/hooks/use-toast"
-import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle } from "lucide-react"
+import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle, Search } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { SmsDetailsModal } from "@/components/SmsDetailsModal"
 
@@ -49,7 +50,7 @@ export default function SentSmsLogPage() {
   const [selectedSms, setSelectedSms] = useState<SmsLog | null>(null)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState("")
+  const [globalFilter, setGlobalFilter] = useState("")
   const [messageTypeFilter, setMessageTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
@@ -72,7 +73,7 @@ export default function SentSmsLogPage() {
       const params = new URLSearchParams({
         page: (pageIndex + 1).toString(),
         limit: pageSize.toString(),
-        ...(searchQuery && { search: searchQuery }),
+        ...(globalFilter && { search: globalFilter }), // Use globalFilter as search term
         ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
         ...(statusFilter !== "all" && { status: statusFilter }),
         ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
@@ -89,7 +90,7 @@ export default function SentSmsLogPage() {
     } catch {
       toast({ title: "Error", description: "Failed to load sent SMS logs.", variant: "destructive" })
     }
-  }, [pageIndex, pageSize, searchQuery, messageTypeFilter, statusFilter, dateRange, toast])
+  }, [pageIndex, pageSize, globalFilter, messageTypeFilter, statusFilter, dateRange, toast])
 
   useEffect(() => {
     fetchSmsLogs()
@@ -102,10 +103,14 @@ export default function SentSmsLogPage() {
     state: {
       sorting,
       pagination: { pageIndex, pageSize },
+      globalFilter,
     },
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), // Add this for global filter
+    globalFilterFn: fuzzyFilter, // Add this line
     manualPagination: true,
     manualSorting: true,
   })
@@ -113,7 +118,7 @@ export default function SentSmsLogPage() {
   // --- EVENT HANDLERS ---
   const handleExportCsv = () => {
     const params = new URLSearchParams({
-      ...(searchQuery && { search: searchQuery }),
+      ...(globalFilter && { search: globalFilter }),
       ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
@@ -126,7 +131,7 @@ export default function SentSmsLogPage() {
   const handleExportXlsx = () => {
     const params = new URLSearchParams({
       format: 'xlsx',
-      ...(searchQuery && { search: searchQuery }),
+      ...(globalFilter && { search: globalFilter }),
       ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
@@ -139,7 +144,7 @@ export default function SentSmsLogPage() {
   const handleExportPdf = () => {
     const params = new URLSearchParams({
       format: 'pdf',
-      ...(searchQuery && { search: searchQuery }),
+      ...(globalFilter && { search: globalFilter }),
       ...(messageTypeFilter !== "all" && { messageType: messageTypeFilter }),
       ...(statusFilter !== "all" && { status: statusFilter }),
       ...(dateRange?.from && { startDate: dateRange.from.toISOString() }),
@@ -191,7 +196,7 @@ export default function SentSmsLogPage() {
               <StatCard title="Failed" value={stats.failed} icon={XCircle} color="text-red-400" />
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-              <DataTableToolbar searchQuery={searchQuery} setSearchQuery={setSearchQuery} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
+              <DataTableToolbar table={table} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
               <div className="overflow-x-auto">
                 <DataTable columns={columns(handleViewDetails)} table={table} />
               </div>
@@ -220,16 +225,18 @@ const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: s
   </div>
 );
 
-const DataTableToolbar = (props: { searchQuery: string; setSearchQuery: (value: string) => void; messageTypeFilter: string; setMessageTypeFilter: (value: string) => void; statusFilter: string; setStatusFilter: (value: string) => void; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
-  const { searchQuery, setSearchQuery, messageTypeFilter, setMessageTypeFilter, statusFilter, setStatusFilter, dateRange, setDateRange } = props;
+const DataTableToolbar = ({ table, messageTypeFilter, setMessageTypeFilter, statusFilter, setStatusFilter, dateRange, setDateRange }: { table: ReturnType<typeof useReactTable<SmsLog>>; messageTypeFilter: string; setMessageTypeFilter: (value: string) => void; statusFilter: string; setStatusFilter: (value: string) => void; dateRange: DateRange | undefined; setDateRange: (value: DateRange | undefined) => void; }) => {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-zinc-800/50 rounded-lg">
-      <Input
-        placeholder="Search..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="h-9 bg-zinc-800 border-zinc-700 w-full sm:max-w-xs"
-      />
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+        <Input
+          placeholder="Search all columns..."
+          value={(table.getState().globalFilter as string) ?? ""}
+          onChange={(event) => table.setGlobalFilter(event.target.value)}
+          className="pl-10 h-9 bg-zinc-800 border-zinc-700 w-full"
+        />
+      </div>
       <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
         <Select value={messageTypeFilter} onValueChange={setMessageTypeFilter}>
           <SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 w-full"><SelectValue /></SelectTrigger>
@@ -251,5 +258,23 @@ const DataTableToolbar = (props: { searchQuery: string; setSearchQuery: (value: 
         <CalendarDateRangePicker date={dateRange} setDate={setDateRange} className="w-full" />
       </div>
     </div>
+  );
+};
+
+// Custom fuzzy filter function for global search
+const fuzzyFilter = (row: any, columnId: string, filterValue: string) => {
+  const search = filterValue.toLowerCase();
+
+  // Fields to search across
+  const mobileNumber = row.original.mobileNumber?.toLowerCase() || '';
+  const message = row.original.message?.toLowerCase() || '';
+  const smsStatus = row.original.smsStatus?.toLowerCase() || '';
+  const messageType = row.original.messageType?.toLowerCase() || '';
+
+  return (
+    mobileNumber.includes(search) ||
+    message.includes(search) ||
+    smsStatus.includes(search) ||
+    messageType.includes(search)
   );
 };
