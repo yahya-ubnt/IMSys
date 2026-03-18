@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-const ipAddressRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+const ipAddressRegex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 
 export const mikrotikUserFormSchema = z.object({
   mikrotikRouter: z.string().min(1, "Mikrotik router is required"),
-  serviceType: z.enum(['pppoe', 'static'], { required_error: "Service type is required" }),
+  serviceType: z.enum(['pppoe', 'static'], { message: "Service type is required" }),
   package: z.string().min(1, "Package is required"),
   username: z.string().min(3, "Username must be at least 3 characters"),
   officialName: z.string().min(1, "Official name is required"),
@@ -48,3 +48,14 @@ export const mikrotikUserFormSchema = z.object({
 });
 
 export type MikrotikUserFormSchema = z.infer<typeof mikrotikUserFormSchema>;
+
+export const mikrotikRouterFormSchema = z.object({
+  name: z.string().min(1, "Router name is required"),
+  ipAddress: z.string().regex(ipAddressRegex, "Invalid IP address format (e.g., 192.168.1.1)"),
+  apiUsername: z.string().min(1, "API username is required"),
+  apiPassword: z.string().optional(),
+  apiPort: z.coerce.number().min(1, "API port is required"),
+  location: z.string().optional(),
+});
+
+export type MikrotikRouterFormSchema = z.infer<typeof mikrotikRouterFormSchema>;

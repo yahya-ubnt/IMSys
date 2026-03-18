@@ -259,11 +259,13 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
         } catch (error) {
             if (error instanceof ZodError) {
                 const newErrors: Record<string, string> = {};
-                error.errors.forEach(err => {
-                    if (err.path[0]) {
-                        newErrors[err.path[0]] = err.message;
+                const flattenedErrors = error.flatten();
+                const fieldErrors: Record<string, string[]> = flattenedErrors.fieldErrors;
+                for (const key in fieldErrors) {
+                    if (Object.prototype.hasOwnProperty.call(fieldErrors, key)) {
+                        newErrors[key] = fieldErrors[key][0];
                     }
-                });
+                }
                 setErrors(newErrors);
             }
             return false;
@@ -345,7 +347,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                 <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                                     <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Wifi size={18} /> Service Setup</CardTitle>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1">
+                                        <div className="space-y-2">
                                             <Label className="text-xs">Mikrotik Router</Label>
                                             <Select onValueChange={setMikrotikRouterId} value={mikrotikRouterId}>
                                                 <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger>
@@ -353,7 +355,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             </Select>
                                             {errors.mikrotikRouter && <p className="text-red-500 text-xs mt-1">{errors.mikrotikRouter}</p>}
                                         </div>
-                                        <div className="space-y-1">
+                                        <div className="space-y-2">
                                             <Label className="text-xs">Service Type</Label>
                                             <Select onValueChange={(v: "pppoe" | "static") => setServiceType(v)} value={serviceType}>
                                                 <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select service type" /></SelectTrigger>
@@ -367,7 +369,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                                     <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Lock size={18} /> Package Setup</CardTitle>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1 sm:col-span-2">
+                                        <div className="space-y-2 sm:col-span-2">
                                             <Label className="text-xs">Package</Label>
                                             <Select onValueChange={setPackageId} value={packageId} disabled={!mikrotikRouterId || !serviceType || filteredPackages.length === 0}>
                                                 <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a package" /></SelectTrigger>
@@ -378,7 +380,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                     </div>
                                     {packageId && (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
-                                            <div className="space-y-1">
+                                            <div className="space-y-2">
                                                 <Label className="text-xs">Custom Package Price</Label>
                                                 <Input
                                                     type="number"
@@ -389,7 +391,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                                 />
                                             </div>
                                             {serviceType === 'pppoe' && (
-                                                <div className="space-y-1">
+                                                <div className="space-y-2">
                                                     <Label className="text-xs">PPPoE Profile</Label>
                                                     <Select onValueChange={setPppoeProfile} value={pppoeProfile} disabled={internalIsPppoeProfilesLoading}>
                                                         <SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm">
@@ -402,7 +404,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                                 </div>
                                             )}
                                             {serviceType === 'static' && (
-                                                <div className="space-y-1">
+                                                <div className="space-y-2">
                                                     <Label className="text-xs">Custom Rate Limit</Label>
                                                     <Input
                                                         value={customRateLimit}
@@ -420,11 +422,11 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                     <div className="space-y-3">
                                         <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> User Details</CardTitle>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-1"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} placeholder="e.g. Kevin Durant" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.officialName && <p className="text-red-500 text-xs mt-1">{errors.officialName}</p>}</div>
-                                            <div className="space-y-1"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} placeholder="e.g. 0712345678" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.mobileNumber && <p className="text-red-500 text-xs mt-1">{errors.mobileNumber}</p>}</div>
-                                            <div className="space-y-1"><Label className="text-xs">Email Address</Label><Input value={emailAddress} onChange={e => setEmailAddress(e.target.value)} placeholder="e.g. kevin.durant@example.com" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.emailAddress && <p className="text-red-500 text-xs mt-1">{errors.emailAddress}</p>}</div>
-											<div className="space-y-1"><Label className="text-xs">Door Number/Unit Label</Label><Input value={doorNumberUnitLabel} onChange={e => setDoorNumberUnitLabel(e.target.value)} placeholder="e.g. A1 or H1" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            <div className="space-y-1 sm:col-span-2">
+                                            <div className="space-y-2"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} placeholder="e.g. Kevin Durant" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.officialName && <p className="text-red-500 text-xs mt-1">{errors.officialName}</p>}</div>
+                                            <div className="space-y-2"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} placeholder="e.g. 0712345678" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.mobileNumber && <p className="text-red-500 text-xs mt-1">{errors.mobileNumber}</p>}</div>
+                                            <div className="space-y-2"><Label className="text-xs">Email Address</Label><Input value={emailAddress} onChange={e => setEmailAddress(e.target.value)} placeholder="e.g. kevin.durant@example.com" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.emailAddress && <p className="text-red-500 text-xs mt-1">{errors.emailAddress}</p>}</div>
+											<div className="space-y-2"><Label className="text-xs">Door Number/Unit Label</Label><Input value={doorNumberUnitLabel} onChange={e => setDoorNumberUnitLabel(e.target.value)} placeholder="e.g. A1 or H1" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                            <div className="space-y-2 sm:col-span-2">
                                                 <Label className="text-xs">Client's Building</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Select onValueChange={setBuildingId} value={buildingId}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm w-full"><SelectValue placeholder="Select a building" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{buildings.map(b => <SelectItem key={b._id} value={b._id} className="text-sm">{b.name}</SelectItem>)}</SelectContent></Select>
@@ -440,7 +442,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                                 </div>
                                             </div>
                                             {buildingId && filteredStations.length > 0 && (
-                                                <div className="space-y-1 sm:col-span-2">
+                                                <div className="space-y-2 sm:col-span-2">
                                                     <Label className="text-xs">Network Connection (Station)</Label>
                                                     {filteredStations.length === 1 ? (
                                                         <div className="h-9 px-3 flex items-center rounded-md border border-zinc-700 bg-zinc-800/50 text-sm"><span className="text-zinc-400">Auto-selected:</span><span className="ml-2 font-medium">{filteredStations[0].deviceName}</span></div>
@@ -454,13 +456,13 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                     <div className="space-y-3 pt-4 border-t border-zinc-800">
                                         <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><Lock size={18} /> Connection & Billing</CardTitle>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-1"><Label className="text-xs">Username</Label><Input value={username} onChange={e => setUsername(e.target.value)} required disabled={isEditMode} placeholder="e.g. kevindurant" className="h-9 bg-zinc-800 border-zinc-700 text-sm disabled:opacity-70" />{errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}</div>
-                                            {serviceType === 'pppoe' && <div className="space-y-1"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Leave blank to keep current" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div>{errors.pppoePassword && <p className="text-red-500 text-xs mt-1">{errors.pppoePassword}</p>}</div>}
-                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required placeholder="e.g., 192.168.10.50" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.ipAddress && <p className="text-red-500 text-xs mt-1">{errors.ipAddress}</p>}</div>}
-                                            {serviceType === 'static' && <div className="space-y-1"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="Optional, will be auto-discovered" /></div>}
-                                            <div className="space-y-1"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required placeholder="e.g. 20232..." className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div>{errors.mPesaRefNo && <p className="text-red-500 text-xs mt-1">{errors.mPesaRefNo}</p>}</div>
-                                            <div className="space-y-1"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} placeholder="e.g. 1500" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
+                                            <div className="space-y-2"><Label className="text-xs">Username</Label><Input value={username} onChange={e => setUsername(e.target.value)} required disabled={isEditMode} placeholder="e.g. kevindurant" className="h-9 bg-zinc-800 border-zinc-700 text-sm disabled:opacity-70" />{errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}</div>
+                                            {serviceType === 'pppoe' && <div className="space-y-2"><Label className="text-xs">PPPoE Password</Label><div className="flex gap-2"><Input type="text" value={pppoePassword} onChange={e => setPppoePassword(e.target.value)} required={!isEditMode} placeholder={isEditMode ? "Leave blank to keep current" : ""} className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setPppoePassword, 'letter')}>ABC</Button></div>{errors.pppoePassword && <p className="text-red-500 text-xs mt-1">{errors.pppoePassword}</p>}</div>}
+                                            {serviceType === 'static' && <div className="space-y-2"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required placeholder="e.g., 192.168.10.50" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.ipAddress && <p className="text-red-500 text-xs mt-1">{errors.ipAddress}</p>}</div>}
+                                            {serviceType === 'static' && <div className="space-y-2"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="Optional, will be auto-discovered" /></div>}
+                                            <div className="space-y-2"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required placeholder="e.g. 20232..." className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div>{errors.mPesaRefNo && <p className="text-red-500 text-xs mt-1">{errors.mPesaRefNo}</p>}</div>
+                                            <div className="space-y-2"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} placeholder="e.g. 1500" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
+                                            <div className="space-y-2 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
                                         </div>
                                         {!isEditMode && (
                                             <div className="items-center flex space-x-2 pt-2">

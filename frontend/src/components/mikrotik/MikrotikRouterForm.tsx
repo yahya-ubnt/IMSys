@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save, Router as RouterIcon, Server, User, KeyRound, Terminal, ChevronRight, ChevronLeft, Loader2, Wifi } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { mikrotikRouterFormSchema } from "@/lib/validators";
+import { ZodError } from "zod";
 
 // --- Interface Definitions ---
 export interface MikrotikRouterFormData {
@@ -50,6 +52,7 @@ export function MikrotikRouterForm({ isEditMode, initialData, onSubmit, isSubmit
   // --- State Management ---
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [name, setName] = useState(initialData?.name || "");
   const [ipAddress, setIpAddress] = useState(initialData?.ipAddress || "");
@@ -57,14 +60,51 @@ export function MikrotikRouterForm({ isEditMode, initialData, onSubmit, isSubmit
   const [apiUsername, setApiUsername] = useState(initialData?.apiUsername || "");
   const [apiPassword, setApiPassword] = useState(""); // Always starts blank for security
   const [apiPort, setApiPort] = useState(initialData?.apiPort?.toString() || "8728");
+  const [isPasswordReadOnly, setIsPasswordReadOnly] = useState(true);
+
+  const getFormData = (): Partial<MikrotikRouterFormData> => ({
+    name,
+    ipAddress,
+    location,
+    apiUsername,
+    apiPassword: apiPassword || undefined,
+    apiPort: parseInt(apiPort, 10),
+  });
+
+  const validateStep = (step: number) => {
+    const formData = getFormData();
+    let schema;
+    if (step === 1) {
+      schema = mikrotikRouterFormSchema.pick({ name: true, ipAddress: true });
+    } else {
+      schema = mikrotikRouterFormSchema;
+    }
+
+    try {
+      schema.parse(formData);
+      setErrors({});
+      return true;
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const newErrors: Record<string, string> = {};
+                const flattenedErrors = error.flatten(); // Use flatten() method
+                const fieldErrors: Record<string, string[]> = flattenedErrors.fieldErrors; // Explicitly cast
+                for (const key in fieldErrors) {
+                    if (Object.prototype.hasOwnProperty.call(fieldErrors, key)) {
+                        newErrors[key] = fieldErrors[key][0]; // Take the first error message
+                    }
+                }
+                setErrors(newErrors);
+            }
+            return false;
+        }
+  };
 
   // --- Event Handlers ---
   const handleNext = () => {
-    if (step === 1 && name && ipAddress) {
+    if (validateStep(1)) {
       setDirection(1);
       setStep(2);
-    } else {
-      toast({ title: "Missing Information", description: "Please fill in the router name and IP address.", variant: "destructive" });
     }
   };
 
@@ -75,15 +115,9 @@ export function MikrotikRouterForm({ isEditMode, initialData, onSubmit, isSubmit
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const routerData: MikrotikRouterFormData = {
-      name,
-      ipAddress,
-      location,
-      apiUsername,
-      apiPassword: apiPassword || undefined, // Send undefined if blank to not change it
-      apiPort: parseInt(apiPort, 10),
-    };
-    await onSubmit(routerData);
+    if (validateStep(2)) {
+      await onSubmit(getFormData() as MikrotikRouterFormData);
+    }
   };
 
   const handleTestConnectionClick = () => {
@@ -96,24 +130,47 @@ export function MikrotikRouterForm({ isEditMode, initialData, onSubmit, isSubmit
     <motion.div layout className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl overflow-hidden">
       <Card className="bg-transparent border-none">
         <CardHeader className="p-4 border-b border-zinc-800"><StepIndicator currentStep={step} /></CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} autoComplete="off">
           <CardContent className="p-5">
             <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
                 <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">Router Name</Label><div className="relative"><RouterIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., Main-Office-Router" /></div></div>
-                    <div className="space-y-1"><Label className="text-xs">IP Address</Label><div className="relative"><Server className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} required className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., 192.168.88.1" /></div></div>
-                    <div className="space-y-1 sm:col-span-2"><Label className="text-xs">Location</Label><div className="relative"><Server className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., Nairobi" /></div></div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Router Name</Label>
+                      <div className="relative"><RouterIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={name} onChange={(e) => setName(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., Main-Office-Router" /></div>
+                      {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">IP Address</Label>
+                      <div className="relative"><Server className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., 192.168.88.1" /></div>
+                      {errors.ipAddress && <p className="text-red-500 text-xs mt-1">{errors.ipAddress}</p>}
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label className="text-xs">Location</Label>
+                      <div className="relative"><Server className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., Nairobi" /></div>
+                    </div>
                   </div>
                 </motion.div>
               )}
               {step === 2 && (
                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label className="text-xs">API Username</Label><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" value={apiUsername} onChange={(e) => setApiUsername(e.target.value)} required className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., admin" /></div></div>
-                    <div className="space-y-1"><Label className="text-xs">API Password</Label><div className="relative"><KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="password" value={apiPassword} onChange={(e) => setApiPassword(e.target.value)} required={!isEditMode} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder={isEditMode ? "Leave blank to keep current" : "••••••••"} /></div></div>
-                    <div className="space-y-1 sm:col-span-2"><Label className="text-xs">API Port</Label><div className="relative"><Terminal className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="number" value={apiPort} onChange={(e) => setApiPort(e.target.value)} required className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" /></div></div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">API Username</Label>
+                      <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="text" name="mikrotik-api-username" value={apiUsername} onChange={(e) => setApiUsername(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder="e.g., admin" autoComplete="off" /></div>
+                      {errors.apiUsername && <p className="text-red-500 text-xs mt-1">{errors.apiUsername}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">API Password</Label>
+                      <div className="relative"><KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="password" name="mikrotik-api-password" value={apiPassword} onChange={(e) => setApiPassword(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" placeholder={isEditMode ? "Leave blank to keep current" : "••••••••"} autoComplete="off" readOnly={isPasswordReadOnly} onFocus={() => setIsPasswordReadOnly(false)} /></div>
+                      {errors.apiPassword && <p className="text-red-500 text-xs mt-1">{errors.apiPassword}</p>}
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label className="text-xs">API Port</Label>
+                      <div className="relative"><Terminal className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" /><Input type="number" value={apiPort} onChange={(e) => setApiPort(e.target.value)} className="h-9 pl-9 text-sm bg-zinc-800 border-zinc-700" /></div>
+                      {errors.apiPort && <p className="text-red-500 text-xs mt-1">{errors.apiPort}</p>}
+                    </div>
                   </div>
                 </motion.div>
               )}
