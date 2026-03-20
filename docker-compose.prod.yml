@@ -1,34 +1,88 @@
+version: '3.8'
+
+volumes:
+  mongodb_data:
+  redis_data:
+
 services:
   backend:
     build:
       context: ./backend
       target: production
-    ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/isp_management
-      # Add other necessary production environment variables
+    restart: unless-stopped
+    env_file:
+      - ./.env.production
+    volumes:
+      - ./.env.production:/usr/src/app/.env.production:ro
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # No ports are exposed directly to the host. Nginx will handle access.
+    # No volumes for code, it's baked into the image.
+
+  worker:
+    build:
+      context: ./backend
+      target: production
+    restart: unless-stopped
+    env_file:
+      - ./.env.production
+    volumes:
+      - ./.env.production:/usr/src/app/.env.production:ro
+    command: node worker.js # Use the direct command for production
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   frontend:
     build:
       context: ./frontend
       target: production
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - backend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost/api
+        NEXT_PUBLIC_API_BASE_URL_CLIENT: http://localhost/api
+        NEXT_PUBLIC_API_BASE_URL_SERVER: http://backend:5000/api
+    restart: unless-stopped
 
   mongo:
-    image: mongo:latest
-    ports:
-      - "27018:27017"
+    image: mongo:6.0 # Pinned version
+    restart: unless-stopped
+    container_name: imsys-mongo-prod
+    hostname: imsys-mongo-prod
     volumes:
-      - mongo-data:/data/db
+      - mongodb_data:/data/db
+      - ./mongo-entrypoint.sh:/usr/local/bin/mongo-entrypoint.sh
+    entrypoint: [ "/usr/local/bin/mongo-entrypoint.sh" ]
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "rs.status().ok && rs.status().myState == 1 ? quit(0) : quit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    # Port is not exposed to the host for security.
 
-volumes:
-  mongo-data:
+  redis:
+    image: redis:7-alpine # Pinned version
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 20 1 --loglevel warning
+    # Port is not exposed to the host for security.
+
+  nginx:
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      # Add volumes for SSL certificates
+      # - /path/to/your/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend

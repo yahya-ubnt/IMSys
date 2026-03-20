@@ -3,10 +3,7 @@
 import { getCookie } from 'cookies-next';
 
 const IS_SERVER = typeof window === 'undefined';
-const API_BASE_URL = IS_SERVER 
-  ? (process.env.NEXT_PUBLIC_API_BASE_URL_SERVER || 'http://backend:5000/api')
-  : (process.env.NEXT_PUBLIC_API_BASE_URL_CLIENT || 'http://localhost:5000/api');
-
+const API_BASE_URL = IS_SERVER ? process.env.NEXT_PUBLIC_API_BASE_URL_SERVER : process.env.NEXT_PUBLIC_API_BASE_URL_CLIENT;
 interface ApiOptions extends Omit<RequestInit, 'body'> {
   token?: string;
   isFormData?: boolean;

@@ -5,7 +5,7 @@ let socket;
 export const initializeSocket = () => {
   if (socket) return;
 
-  const socketUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  const socketUrl = (process.env.NEXT_PUBLIC_API_URL).replace('/api', '');
   socket = io(socketUrl, {
     withCredentials: true,
     autoConnect: true, // Explicitly set to connect
