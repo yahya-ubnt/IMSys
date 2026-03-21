@@ -1,5 +1,5 @@
 const SmsProvider = require('../models/SmsProvider');
-const SmsAcknowledgement = require('../models/SmsAcknowledgement');
+const SmsTemplate = require('../models/SmsTemplate');
 const SmsLog = require('../models/SmsLog');
 const MikrotikUser = require('../models/MikrotikUser'); // Added for sendBulkSms
 const path = require('path');
@@ -74,14 +74,14 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
         return { success: false, message: 'Cannot send acknowledgement SMS without a tenant context.' };
     }
 
-    const acknowledgement = await SmsAcknowledgement.findOne({ triggerType, tenant, status: 'Active' }).populate('smsTemplate');
+    const template = await SmsTemplate.findOne({ triggerType, tenant, status: 'Active' });
 
-    if (!acknowledgement || !acknowledgement.smsTemplate) {
-      console.log(`No active acknowledgement mapping found for trigger type: ${triggerType}`);
-      return { success: false, message: 'No active acknowledgement mapping found.' };
+    if (!template) {
+      console.log(`No active template found for trigger type: ${triggerType}`);
+      return { success: false, message: 'No active template found.' };
     }
 
-    let messageBody = acknowledgement.smsTemplate.messageBody;
+    let messageBody = template.messageBody;
 
     // Personalize message using data provided
     for (const key in data) {

@@ -1,4 +1,4 @@
-import { SmsExpirySchedule, SmsAcknowledgement, SmsTemplateData } from '@/types/sms';
+import { SmsExpirySchedule, SmsTemplateData } from '@/types/sms';
 import { fetchApi } from './utils';
 
 // SMS Template API functions
@@ -35,24 +35,8 @@ export const deleteSmsExpirySchedule = (id: string) => fetchApi(`/api/smsexpirys
     method: 'DELETE',
 });
 
-// SMS Acknowledgement API functions
-export const getSmsAcknowledgements = () => fetchApi('/api/smsacknowledgements');
-
-export const createSmsAcknowledgement = (data: SmsAcknowledgement) => fetchApi('/api/smsacknowledgements', {
-    method: 'POST',
-    body: JSON.stringify(data),
-});
-
-export const updateSmsAcknowledgement = (id: string, data: SmsAcknowledgement) => fetchApi(`/api/smsacknowledgements/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-});
-
-export const deleteSmsAcknowledgement = (id: string) => fetchApi(`/api/smsacknowledgements/${id}`, {
-    method: 'DELETE',
-});
-
 // General API functions (for Compose SMS dropdowns)
+export const getSmsTriggers = () => fetchApi('/api/sms/triggers');
 export const getMikrotikClientsForSms = () => fetchApi('/api/mikrotik/users/clients-for-sms');
 export const getMikrotikRouters = () => fetchApi('/api/mikrotik/routers');
 export const getBuildings = () => fetchApi('/api/buildings');

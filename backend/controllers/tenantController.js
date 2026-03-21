@@ -10,7 +10,6 @@ const Expense = require('../models/Expense');
 const ExpenseType = require('../models/ExpenseType');
 const Lead = require('../models/Lead');
 const Notification = require('../models/Notification');
-const SmsAcknowledgement = require('../models/SmsAcknowledgement');
 const SmsExpirySchedule = require('../models/SmsExpirySchedule');
 const SmsLog = require('../models/SmsLog');
 const SmsProvider = require('../models/SmsProvider');
@@ -211,7 +210,6 @@ const deleteTenant = asyncHandler(async (req, res) => {
     await ExpenseType.deleteMany({ tenant: tenantId });
     await Lead.deleteMany({ tenant: tenantId });
     await Notification.deleteMany({ tenant: tenantId });
-    await SmsAcknowledgement.deleteMany({ tenant: tenantId });
     await SmsExpirySchedule.deleteMany({ tenant: tenantId });
     await SmsLog.deleteMany({ tenant: tenantId });
     await SmsProvider.deleteMany({ tenant: tenantId });

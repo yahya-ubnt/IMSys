@@ -37,7 +37,6 @@ const smsProviderRoutes = require('./routes/smsProviderRoutes'); // Import SMS p
 
 const smsTemplateRoutes = require('./routes/smsTemplateRoutes');
 const smsExpiryScheduleRoutes = require('./routes/smsExpiryScheduleRoutes');
-const smsAcknowledgementRoutes = require('./routes/smsAcknowledgementRoutes');
 const smsRoutes = require('./routes/smsRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const publicPaymentRoutes = require('./routes/publicPaymentRoutes');
@@ -141,7 +140,6 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/settings/sms-providers', smsProviderRoutes);
 app.use('/api/smstemplates', smsTemplateRoutes);
 app.use('/api/smsexpiryschedules', smsExpiryScheduleRoutes);
-app.use('/api/smsacknowledgements', smsAcknowledgementRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);

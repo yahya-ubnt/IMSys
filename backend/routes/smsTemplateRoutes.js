@@ -14,8 +14,9 @@ router.route('/').get(protect, isSuperAdminOrAdmin, getTemplates).post(
   protect,
   isSuperAdminOrAdmin,
   [
-    body('name', 'Template name is required').not().isEmpty(),
+    body('triggerType', 'Trigger type is required').not().isEmpty(),
     body('messageBody', 'Message body is required').not().isEmpty(),
+    body('status').optional().isIn(['Active', 'Inactive']),
   ],
   createTemplate
 );

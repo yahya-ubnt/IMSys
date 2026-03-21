@@ -7,14 +7,20 @@ const SmsTemplateSchema = mongoose.Schema(
       required: true,
       ref: 'Tenant',
     },
-    name: {
+    triggerType: {
       type: String,
-      required: [true, 'Please add a template name'],
+      required: [true, 'Please specify the trigger type'],
       trim: true,
     },
     messageBody: {
       type: String,
       required: [true, 'Please add a message body for the template'],
+    },
+    status: {
+      type: String,
+      required: true,
+      enum: ['Active', 'Inactive'],
+      default: 'Active',
     }
   },
   {
@@ -23,6 +29,6 @@ const SmsTemplateSchema = mongoose.Schema(
 );
 
 SmsTemplateSchema.index({ tenant: 1 });
-SmsTemplateSchema.index({ tenant: 1, name: 1 }, { unique: true });
+SmsTemplateSchema.index({ triggerType: 1, tenant: 1 }, { unique: true });
 
 module.exports = mongoose.model('SmsTemplate', SmsTemplateSchema);

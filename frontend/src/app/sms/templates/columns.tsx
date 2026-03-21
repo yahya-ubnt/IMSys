@@ -24,8 +24,14 @@ export const columns = ({ handleEdit, handleDelete }: ColumnsProps): ColumnDef<S
     cell: ({ row }) => row.index + 1,
   },
   {
-    accessorKey: "name",
-    header: "Name",
+    accessorKey: "triggerType",
+    header: "Trigger Type",
+    cell: ({ row }) => {
+      const trigger = row.original.triggerType;
+      // Format triggerType to be more readable (e.g., 'mikrotik_user_created' -> 'Mikrotik User Created')
+      const formattedTrigger = trigger.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      return <div>{formattedTrigger}</div>;
+    },
   },
   {
     accessorKey: "messageBody",
@@ -33,6 +39,15 @@ export const columns = ({ handleEdit, handleDelete }: ColumnsProps): ColumnDef<S
     cell: ({ row }) => {
       const message = row.original.messageBody
       return <div className="truncate max-w-xs">{message}</div>
+    },
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const status = row.original.status;
+      const statusClass = status === 'Active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400';
+      return <div className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${statusClass}`}>{status}</div>;
     },
   },
   {

@@ -162,10 +162,6 @@ const menuCategories: MenuCategory[] = [
             url: "/sms/expiry",
           },
           {
-            title: "Acknowledgements",
-            url: "/sms/acknowledgements",
-          },
-          {
             title: "Templates",
             url: "/sms/templates",
           },

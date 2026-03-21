@@ -37,18 +37,19 @@ const createTemplate = asyncHandler(async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, messageBody } = req.body;
+  const { triggerType, messageBody, status } = req.body;
 
-  const templateExists = await SmsTemplate.findOne({ name, tenant: req.user.tenant });
+  const templateExists = await SmsTemplate.findOne({ triggerType, tenant: req.user.tenant });
 
   if (templateExists) {
     res.status(400);
-    throw new Error('A template with this name already exists');
+    throw new Error('A template for this trigger type already exists');
   }
 
   const template = await SmsTemplate.create({
-    name,
+    triggerType,
     messageBody,
+    status,
     tenant: req.user.tenant, // Associate with the logged-in user's tenant
   });
 
@@ -64,13 +65,13 @@ const createTemplate = asyncHandler(async (req, res) => {
 // @route   PUT /api/smstemplates/:id
 // @access  Private
 const updateTemplate = asyncHandler(async (req, res) => {
-  const { name, messageBody } = req.body;
+  const { messageBody, status } = req.body;
 
   const template = await SmsTemplate.findOne({ _id: req.params.id, tenant: req.user.tenant });
 
   if (template) {
-    template.name = name || template.name;
     template.messageBody = messageBody || template.messageBody;
+    template.status = status || template.status;
 
     const updatedTemplate = await template.save();
     res.json(updatedTemplate);
