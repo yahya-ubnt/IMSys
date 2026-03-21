@@ -328,6 +328,33 @@ export default function ComposeSmsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (activeTab !== 'unregistered' && selectedUsers.length === 0) {
+      const isAnyExpiredFilterOn = sendToExpiredOnly || sendToMikrotikExpiredOnly || sendToBuildingExpiredOnly;
+      const isAnyActiveFilterOn = sendToActiveOnly || sendToMikrotikActiveOnly || sendToBuildingActiveOnly;
+
+      if (isAnyExpiredFilterOn) {
+        toast({
+          title: "No Recipients",
+          description: "No expired users found for the selected criteria.",
+          variant: "destructive",
+        });
+      } else if (isAnyActiveFilterOn) {
+        toast({
+          title: "No Recipients",
+          description: "No active users found for the selected criteria.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "No Recipients",
+          description: "Please select at least one user to send the message to.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
     setIsSubmitting(true)
 
     let payload: { 

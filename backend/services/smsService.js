@@ -125,15 +125,8 @@ exports.sendBulkSms = async (message, sendToType, recipientIds, tenantId, unregi
       usersToSend = await MikrotikUser.find({ _id: { $in: recipientIds }, tenant: tenantId });
       break;
 
-    case 'mikrotik':
-      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
-        throw new Error('Mikrotik Router IDs are required for sending to Mikrotik group');
-      }
-      usersToSend = await MikrotikUser.find({ mikrotikRouter: { $in: recipientIds }, tenant: tenantId });
-      break;
-
     case 'location':
-      if (!recipientIds || !ArrayArray(recipientIds) || recipientIds.length === 0) {
+      if (!recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
         throw new Error('Apartment/House Numbers are required for sending to location');
       }
       usersToSend = await MikrotikUser.find({ apartment_house_number: { $in: recipientIds }, tenant: tenantId });
@@ -143,8 +136,6 @@ exports.sendBulkSms = async (message, sendToType, recipientIds, tenantId, unregi
       if (!unregisteredMobileNumber) {
         throw new Error('Mobile number is required for sending to unregistered users');
       }
-      usersToSend.push({ mobileNumber: unregisteredMobileNumber, _id: null });
-      break;
 
     default:
       throw new Error('Invalid sendToType specified');

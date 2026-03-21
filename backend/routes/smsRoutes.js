@@ -33,9 +33,8 @@ router.post(
   composeSmsLimiter, // Apply rate limiting to this route
   [
     body('message', 'Message body is required').not().isEmpty(),
-    body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotik', 'location', 'unregistered']),
-    body('userIds', 'User IDs must be an array of valid Mongo IDs').if(body('sendToType').equals('users')).isArray().custom(value => value.every(item => typeof item === 'string' && item.match(/^[0-9a-fA-F]{24}$/))),
-    body('mikrotikRouterIds', 'Mikrotik Router IDs must be an array').if(body('sendToType').equals('mikrotik')).isArray(),
+    body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotik', 'location', 'unregistered', 'building']),
+    body('userIds', 'User IDs must be an array of valid Mongo IDs').if(body('sendToType').isIn(['users', 'building', 'mikrotik'])).isArray().custom(value => value.every(item => typeof item === 'string' && item.match(/^[0-9a-fA-F]{24}$/))),
     body('apartmentHouseNumbers', 'Apartment/House Numbers must be an array').if(body('sendToType').equals('location')).isArray(),
     body('unregisteredMobileNumber', 'Mobile number must be valid').if(body('sendToType').equals('unregistered')).matches(/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/),
   ],

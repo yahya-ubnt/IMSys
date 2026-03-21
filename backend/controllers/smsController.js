@@ -23,20 +23,41 @@ const getSmsTriggers = asyncHandler(async (req, res) => {
 // @route   POST /api/sms/compose
 // @access  Private
 const composeAndSendSms = asyncHandler(async (req, res) => {
-    const {
-      message,
-      sendToType,
-      userIds,
-      mikrotikRouterIds,
-      apartmentHouseNumbers,
-      unregisteredMobileNumber,
-    } = req.body;
-  
-    const recipientIds = userIds || mikrotikRouterIds || apartmentHouseNumbers;
-    const logs = await sendBulkSms(message, sendToType, recipientIds, req.user.tenant, unregisteredMobileNumber);
-  
-    res.status(200).json({ message: 'SMS sending process completed.', logs });
-  });
+  const {
+    message,
+    sendToType,
+    userIds,
+    mikrotikRouterIds,
+    apartmentHouseNumbers,
+    unregisteredMobileNumber,
+  } = req.body;
+
+  let recipientIds;
+  let finalSendToType = sendToType;
+
+  switch (sendToType) {
+    case 'users':
+      recipientIds = userIds;
+      break;
+    case 'mikrotik':
+      recipientIds = userIds; // Use the pre-filtered userIds from the frontend
+      finalSendToType = 'users'; // Treat it as sending to a list of users
+      break;
+    case 'location':
+      recipientIds = apartmentHouseNumbers;
+      break;
+    case 'building':
+      recipientIds = userIds; // Use the pre-filtered userIds from the frontend
+      finalSendToType = 'users'; // Treat it as sending to a list of users
+      break;
+    default:
+      recipientIds = [];
+  }
+
+  const logs = await sendBulkSms(message, finalSendToType, recipientIds, req.user.tenant, unregisteredMobileNumber);
+
+  res.status(200).json({ message: 'SMS sending process completed.', logs });
+});
 
 // @desc    Get sent SMS log with filtering and pagination
 // @route   GET /api/sms/log

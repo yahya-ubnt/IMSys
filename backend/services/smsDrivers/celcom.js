@@ -11,16 +11,17 @@ const axios = require('axios');
  * @returns {Promise<{success: boolean, message: string}>}
  */
 exports.sendMessage = async (credentials, phoneNumber, message) => {
-  const { partnerID, apiKey, senderId } = credentials;
+  const { apiKey, senderId } = credentials;
+  const partnerId = credentials.partnerId || credentials.partnerID;
 
-  if (!partnerID || !apiKey || !senderId) {
+  if (!partnerId || !apiKey || !senderId) {
     return { success: false, message: 'Celcom Africa credentials are not fully configured.' };
   }
 
   const endpoint = 'https://isms.celcomafrica.com/api/services/sendsms/';
   
   const data = new URLSearchParams();
-  data.append('partnerID', partnerID);
+  data.append('partnerID', partnerId);
   data.append('apikey', apiKey);
   data.append('shortcode', senderId);
   data.append('mobile', phoneNumber);
