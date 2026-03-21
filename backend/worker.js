@@ -1,3 +1,5 @@
+require('./config/env'); // Load environment variables
+
 const mikrotikSyncWorker = require('./workers/mikrotikSyncWorker');
 const diagnosticWorker = require('./workers/diagnosticWorker');
 

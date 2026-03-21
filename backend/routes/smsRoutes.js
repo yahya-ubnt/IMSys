@@ -36,7 +36,7 @@ router.post(
     body('sendToType', 'Send To Type is required').isIn(['users', 'mikrotik', 'location', 'unregistered', 'building']),
     body('userIds', 'User IDs must be an array of valid Mongo IDs').if(body('sendToType').isIn(['users', 'building', 'mikrotik'])).isArray().custom(value => value.every(item => typeof item === 'string' && item.match(/^[0-9a-fA-F]{24}$/))),
     body('apartmentHouseNumbers', 'Apartment/House Numbers must be an array').if(body('sendToType').equals('location')).isArray(),
-    body('unregisteredMobileNumber', 'Mobile number must be valid').if(body('sendToType').equals('unregistered')).matches(/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/),
+    body('unregisteredMobileNumbers', 'Mobile numbers must be an array of valid numbers').if(body('sendToType').equals('unregistered')).isArray().custom(value => value.every(item => typeof item === 'string' && item.match(/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/))),
   ],
   composeAndSendSms
 );

@@ -111,7 +111,7 @@ exports.sendAcknowledgementSms = async (triggerType, recipientPhoneNumber, data 
   }
 };
 
-exports.sendBulkSms = async (message, sendToType, recipientIds, tenantId, unregisteredMobileNumber = null) => {
+exports.sendBulkSms = async (message, sendToType, recipientIds, tenantId, unregisteredMobileNumbers = null) => {
   if (!message) throw new Error('Message body is required');
   if (!tenantId) throw new Error('Tenant ID is required');
 
@@ -133,9 +133,13 @@ exports.sendBulkSms = async (message, sendToType, recipientIds, tenantId, unregi
       break;
 
     case 'unregistered':
-      if (!unregisteredMobileNumber) {
-        throw new Error('Mobile number is required for sending to unregistered users');
+      if (!unregisteredMobileNumbers || !Array.isArray(unregisteredMobileNumbers) || unregisteredMobileNumbers.length === 0) {
+        throw new Error('Mobile numbers are required for sending to unregistered users');
       }
+      unregisteredMobileNumbers.forEach(number => {
+        usersToSend.push({ mobileNumber: number, _id: null });
+      });
+      break;
 
     default:
       throw new Error('Invalid sendToType specified');

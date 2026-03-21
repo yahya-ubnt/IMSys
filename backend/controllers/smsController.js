@@ -29,7 +29,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
     userIds,
     mikrotikRouterIds,
     apartmentHouseNumbers,
-    unregisteredMobileNumber,
+    unregisteredMobileNumbers,
   } = req.body;
 
   let recipientIds;
@@ -54,7 +54,7 @@ const composeAndSendSms = asyncHandler(async (req, res) => {
       recipientIds = [];
   }
 
-  const logs = await sendBulkSms(message, finalSendToType, recipientIds, req.user.tenant, unregisteredMobileNumber);
+  const logs = await sendBulkSms(message, finalSendToType, recipientIds, req.user.tenant, unregisteredMobileNumbers);
 
   res.status(200).json({ message: 'SMS sending process completed.', logs });
 });
