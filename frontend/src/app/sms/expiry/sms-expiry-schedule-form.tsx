@@ -10,7 +10,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { SmsExpirySchedule } from "./page";
-import { getSmsTriggers } from "@/lib/api/sms"; // Import getSmsTriggers
 
 // Define the schema for the form data using Zod
 const formSchema = z.object({
@@ -18,7 +17,6 @@ const formSchema = z.object({
   days: z.number().int().min(1).max(7, "Days must be between 1 and 7"),
   timing: z.enum(["Before", "After", "Not Applicable"]),
   status: z.enum(["Active", "Inactive"]),
-  messageBody: z.string().min(10, "Message body must be at least 10 characters"),
 });
 
 export type SmsExpiryScheduleFormData = z.infer<typeof formSchema>;
@@ -37,27 +35,8 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
       days: 1,
       timing: "Before",
       status: "Active",
-      messageBody: "",
     },
   });
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [availableVariables, setAvailableVariables] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchVariables = async () => {
-      try {
-        const triggers = await getSmsTriggers();
-        const expiryTrigger = triggers.find((t: any) => t.id === 'sms_expiry_reminder');
-        if (expiryTrigger) {
-          setAvailableVariables(expiryTrigger.variables || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch SMS expiry variables", error);
-      }
-    };
-    fetchVariables();
-  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -66,29 +45,9 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
         days: initialData.days,
         timing: initialData.timing,
         status: initialData.status,
-        messageBody: initialData.messageBody,
       });
     }
   }, [initialData, form]);
-
-  const handlePlaceholderClick = (placeholder: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const newText = text.substring(0, start) + `{{${placeholder}}}` + text.substring(end);
-    
-    form.setValue("messageBody", newText, { shouldValidate: true });
-    
-    // Focus and set cursor position after the inserted placeholder
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPosition = start + `{{${placeholder}}}`.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-    }, 0);
-  };
 
   return (
     <Form {...form}>
@@ -151,42 +110,6 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
               </FormItem>
             )}
           />
-        </div>
-        <FormField
-          control={form.control}
-          name="messageBody"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Message Body</FormLabel>
-              <FormControl>
-                <Textarea
-                  ref={textareaRef}
-                  placeholder="Write your SMS message here. Use placeholders to personalize it."
-                  value={field.value}
-                  onChange={field.onChange}
-                  className="bg-zinc-800 border-zinc-700 min-h-[120px]"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div>
-          <FormLabel className="text-xs text-zinc-400">Insert Placeholder</FormLabel>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {availableVariables.map(v => (
-              <Button
-                type="button"
-                key={v}
-                variant="outline"
-                size="sm"
-                onClick={() => handlePlaceholderClick(v)}
-                className="bg-zinc-700 border-zinc-600 text-xs h-7"
-              >
-                {v.replace(/_/g, ' ')}
-              </Button>
-            ))}
-          </div>
         </div>
         <FormField
           control={form.control}

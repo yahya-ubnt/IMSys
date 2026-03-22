@@ -22,10 +22,6 @@ const SmsExpiryScheduleSchema = mongoose.Schema(
       enum: ['Before', 'After', 'Not Applicable'],
       default: 'Before',
     },
-    messageBody: {
-      type: String,
-      required: [true, 'Please add a message body for the schedule'],
-    },
     status: {
       type: String,
       required: true,

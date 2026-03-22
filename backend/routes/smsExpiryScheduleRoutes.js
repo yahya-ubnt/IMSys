@@ -14,7 +14,6 @@ const scheduleValidation = [
   body('name', 'Name is required').not().isEmpty(),
   body('days', 'Days must be a number').isNumeric(),
   body('timing', 'Invalid timing').isIn(['Before', 'After', 'Not Applicable']),
-  body('messageBody', 'Message body is required').not().isEmpty(),
   body('status', 'Invalid status').optional().isIn(['Active', 'Inactive']),
 ];
 
