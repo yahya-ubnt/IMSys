@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle } from "lucide-react";
+import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
 import { WalletTransaction } from "./wallet-columns";
@@ -20,6 +20,7 @@ import SmsTab from "@/components/mikrotik/SmsTab";
 import { DiagnosticButton } from "@/components/diagnostics/DiagnosticButton";
 import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
 import { ConnectDisconnectButtons } from "@/components/mikrotik/ConnectDisconnectButtons"; // Import the new component
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // --- Interface Definitions ---
 interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; building?: { _id: string; name: string }; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; isManuallyDisconnected?: boolean; }
@@ -63,6 +64,8 @@ export default function MikrotikUserDetailsPage() {
     const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
     const [smsData, setSmsData] = useState<SmsData | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
+    const [isResendingSms, setIsResendingSms] = useState(false); // New state for resending SMS
+    const [isResendConfirmOpen, setIsResendConfirmOpen] = useState(false); // New state for confirmation dialog
     const { toast } = useToast();
 
     const fetchUser = useCallback(async () => {
@@ -125,6 +128,28 @@ export default function MikrotikUserDetailsPage() {
         fetchSmsData();
     }, [id, toast]);
 
+    const handleResendWelcomeSms = async () => {
+        setIsResendingSms(true);
+        setIsResendConfirmOpen(false); // Close the dialog
+        try {
+            const response = await fetch(`/api/mikrotik/users/${id}/resend-welcome-sms`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to resend welcome SMS");
+            }
+
+            toast({ title: "Success", description: "Welcome SMS resent successfully." });
+        } catch (error: unknown) {
+            toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unexpected error occurred.", variant: "destructive" });
+        } finally {
+            setIsResendingSms(false);
+        }
+    };
+
     const daysToExpire = useMemo(() => {
         if (!userData?.expiryDate) return { days: 0, label: 'Expired' };
         const days = calculateDaysRemaining(userData.expiryDate);
@@ -160,12 +185,18 @@ export default function MikrotikUserDetailsPage() {
                             {/* Mobile Buttons */}
                             <div className="flex sm:hidden items-center gap-2">
                                 <Button variant="outline" size="icon" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="icon" onClick={() => setIsResendConfirmOpen(true)} disabled={isResendingSms}>
+                                    {isResendingSms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                </Button>
                                 <DiagnosticButton userId={userData._id} isIconOnly={true} />
                                 <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} isIconOnly={true} />
                             </div>
                             {/* Desktop Buttons */}
                             <div className="hidden sm:flex items-center gap-2">
                                 <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 mr-2" />Edit User</Button>
+                                <Button variant="outline" size="sm" onClick={() => setIsResendConfirmOpen(true)} disabled={isResendingSms}>
+                                    {isResendingSms ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Send className="h-3 w-3 mr-2" />}Resend Welcome SMS
+                                </Button>
                                 <DiagnosticButton userId={userData._id} />
                                 <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} />
                             </div>
@@ -217,6 +248,25 @@ export default function MikrotikUserDetailsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Resend Welcome SMS Confirmation Dialog */}
+            <AlertDialog open={isResendConfirmOpen} onOpenChange={setIsResendConfirmOpen}>
+                <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-cyan-400">Confirm Resend Welcome SMS</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            Are you sure you want to resend the welcome SMS to {userData.officialName}?
+                            This will send a new message to their registered mobile number.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResendWelcomeSms} disabled={isResendingSms} className="bg-blue-600 hover:bg-blue-700">
+                            {isResendingSms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}Resend SMS
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

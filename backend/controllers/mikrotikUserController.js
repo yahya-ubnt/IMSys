@@ -182,6 +182,22 @@ const getUserPaymentStats = asyncHandler(async (req, res) => {
     res.status(200).json(stats);
 });
 
+// @desc    Resend Welcome SMS to a Mikrotik User
+// @route   POST /api/mikrotik/users/:id/resend-welcome-sms
+// @access  Private
+const resendWelcomeSms = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tenantId = req.user.tenant;
+
+  const result = await UserService.resendWelcomeSms(id, tenantId);
+
+  if (result.success) {
+    res.status(200).json({ message: result.message });
+  } else {
+    res.status(400).json({ message: result.message });
+  }
+});
+
 module.exports = {
   createMikrotikUser,
   getMikrotikUsers,
@@ -202,4 +218,5 @@ module.exports = {
   manualConnectUser,
   getMikrotikUsersByRouters,
   getMikrotikUsersByBuildings,
+  resendWelcomeSms, // Export the new function
 };

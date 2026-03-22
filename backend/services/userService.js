@@ -68,6 +68,7 @@ const UserService = {
     if (installationFee && parseFloat(installationFee) > 0) {
       const fee = parseFloat(installationFee);
       mikrotikUser.walletBalance -= fee;
+      mikrotikUser.installationFee = fee; // Explicitly set installationFee on the user object
 
       await WalletTransaction.create({
         tenant: tenantId,
@@ -93,6 +94,11 @@ const UserService = {
     const userPackage = await Package.findById(mikrotikUser.package);
     const packagePrice = userPackage ? userPackage.price : 0;
     const totalAmount = packagePrice + (mikrotikUser.installationFee || 0);
+
+    console.log(`[UserService] createMikrotikUser - Debugging SMS variables:`);
+    console.log(`[UserService]   mikrotikUser.installationFee: ${mikrotikUser.installationFee}`);
+    console.log(`[UserService]   packagePrice: ${packagePrice}`);
+    console.log(`[UserService]   totalAmount: ${totalAmount}`);
 
     // 5. Send Welcome SMS
     if (sendWelcomeSms) {
@@ -497,6 +503,44 @@ const UserService = {
 
     await user.deleteOne();
     return { success: true };
+  },
+
+  resendWelcomeSms: async (userId, tenantId) => {
+    const mikrotikUser = await MikrotikUser.findOne({ _id: userId, tenant: tenantId }).populate('package');
+
+    if (!mikrotikUser) {
+      return { success: false, message: 'Mikrotik User not found.' };
+    }
+
+    // Fetch package details for SMS
+    const userPackage = mikrotikUser.package; // Already populated
+    const packagePrice = userPackage ? userPackage.price : 0;
+    const totalAmount = packagePrice + (mikrotikUser.installationFee || 0);
+
+    console.log(`[UserService] resendWelcomeSms - Debugging SMS variables:`);
+    console.log(`[UserService]   mikrotikUser.installationFee: ${mikrotikUser.installationFee}`);
+    console.log(`[UserService]   packagePrice: ${packagePrice}`);
+    console.log(`[UserService]   totalAmount: ${totalAmount}`);
+
+    try {
+      await sendAcknowledgementSms(smsTriggers.MIKROTIK_USER_CREATED.name, mikrotikUser.mobileNumber, {
+        officialName: mikrotikUser.officialName,
+        mPesaRefNo: mikrotikUser.mPesaRefNo,
+        username: mikrotikUser.username,
+        mobileNumber: mikrotikUser.mobileNumber,
+        expiryDate: mikrotikUser.expiryDate,
+        walletBalance: mikrotikUser.walletBalance,
+        billAmount: packagePrice,
+        installationFee: mikrotikUser.installationFee || 0,
+        totalAmount: totalAmount,
+        tenant: tenantId,
+        mikrotikUser: mikrotikUser._id
+      });
+      return { success: true, message: 'Welcome SMS resent successfully.' };
+    } catch (err) {
+      console.error('[UserService] Resend Welcome SMS failed:', err.message);
+      return { success: false, message: `Failed to resend Welcome SMS: ${err.message}` };
+    }
   }
 };
 

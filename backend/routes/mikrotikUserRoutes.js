@@ -20,6 +20,7 @@ const {
   manualConnectUser,
   getMikrotikUsersByRouters,
   getMikrotikUsersByBuildings,
+  resendWelcomeSms,
 } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 const diagnosticRoutes = require('./diagnosticRoutes');
@@ -75,6 +76,7 @@ router.route('/:userId/downtime-logs').get(protect, isSuperAdminOrAdmin, getDown
 
 router.route('/:id/disconnect').post(protect, isSuperAdminOrAdmin, manualDisconnectUser);
 router.route('/:id/connect').post(protect, isSuperAdminOrAdmin, manualConnectUser);
+router.route('/:id/resend-welcome-sms').post(protect, isSuperAdminOrAdmin, resendWelcomeSms);
 
 router
   .route('/:id')
