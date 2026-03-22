@@ -22,32 +22,43 @@ interface SmsTemplateFormProps {
 }
 
 export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateFormProps) {
-  const [formData, setFormData] = useState<SmsTemplateFormData>({ triggerType: "", messageBody: "", status: "Active" })
-  const [triggers, setTriggers] = useState<{ id: string, name: string }[]>([])
+  const [triggers, setTriggers] = useState<any[]>([])
+  const [formData, setFormData] = useState<SmsTemplateFormData>(
+    initialData
+      ? {
+          triggerType: initialData.triggerType,
+          messageBody: initialData.messageBody,
+          status: initialData.status || "Active",
+        }
+      : { triggerType: "", messageBody: "", status: "Active" }
+  )
+  const [selectedTriggerVariables, setSelectedTriggerVariables] = useState<string[]>([])
 
   useEffect(() => {
     const fetchTriggers = async () => {
       try {
         const triggerData = await getSmsTriggers();
         setTriggers(triggerData);
+
+        // Set initial selectedTriggerVariables based on initialData
+        if (initialData) {
+          const initialTrigger = triggerData.find((t: any) => t.id === initialData.triggerType);
+          if (initialTrigger) {
+            setSelectedTriggerVariables(initialTrigger.variables || []);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch SMS triggers", error);
       }
     };
     fetchTriggers();
-  }, []);
+  }, [initialData]); // Re-fetch triggers and re-initialize if initialData changes (e.g., editing a different template)
 
+  // Update selectedTriggerVariables when formData.triggerType changes (for new template or changing trigger)
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        triggerType: initialData.triggerType,
-        messageBody: initialData.messageBody,
-        status: initialData.status || "Active",
-      })
-    } else {
-      setFormData({ triggerType: "", messageBody: "", status: "Active" })
-    }
-  }, [initialData])
+    const currentTrigger = triggers.find(t => t.id === formData.triggerType);
+    setSelectedTriggerVariables(currentTrigger ? currentTrigger.variables || [] : []);
+  }, [formData.triggerType, triggers]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,7 +102,7 @@ export function SmsTemplateForm({ onClose, onSubmit, initialData }: SmsTemplateF
       <div className="space-y-2">
         <Label className="text-zinc-300">Insert Variables</Label>
         <div className="flex flex-wrap gap-2">
-          {["officialName", "username", "mPesaRefNo", "mobileNumber", "expiryDate", "walletBalance", "amountPaid"].map(v => (
+          {selectedTriggerVariables.map(v => (
             <Button key={v} type="button" variant="outline" size="sm" onClick={() => handleInsertVariable(v)} className="bg-zinc-700 border-zinc-600 hover:bg-zinc-600">
               {v.replace(/_/g, ' ')}
             </Button>

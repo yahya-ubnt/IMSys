@@ -36,7 +36,14 @@ export const deleteSmsExpirySchedule = (id: string) => fetchApi(`/api/smsexpirys
 });
 
 // General API functions (for Compose SMS dropdowns)
-export const getSmsTriggers = () => fetchApi('/api/sms/triggers');
+export const getSmsTriggers = async () => {
+    const triggers = await fetchApi('/api/smstemplates/triggers');
+    return triggers.map((trigger: any) => ({
+        id: trigger.name, // Use name as id for consistency with Select component
+        name: trigger.description || trigger.name, // Use description if available, otherwise name
+        ...trigger // Spread the rest of the trigger object (including variables)
+    }));
+};
 export const getMikrotikClientsForSms = () => fetchApi('/api/mikrotik/users/clients-for-sms');
 export const getMikrotikRouters = () => fetchApi('/api/mikrotik/routers');
 export const getBuildings = () => fetchApi('/api/buildings');

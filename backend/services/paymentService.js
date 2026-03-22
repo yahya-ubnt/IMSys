@@ -91,8 +91,10 @@ const PaymentService = {
    * Retrieves a paginated list of general transactions.
    */
   getTransactions: async (tenantId, queryParams) => {
-    const { startDate, endDate, search, page = 1, limit = 10 } = queryParams;
+    const { startDate, endDate, search, page = 1, limit = 10, userId } = queryParams;
     const query = { tenant: tenantId };
+
+    if (userId) query.mikrotikUser = userId;
 
     if (startDate && endDate) {
       query.transactionDate = { $gte: new Date(startDate), $lte: new Date(endDate) };

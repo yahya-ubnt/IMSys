@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 const SmsTemplate = require('../models/SmsTemplate');
+const smsTriggers = require('../constants/smsTriggers'); // Import smsTriggers
 
 // @desc    Get all SMS templates
 // @route   GET /api/smstemplates
@@ -10,6 +11,15 @@ const getTemplates = asyncHandler(async (req, res) => {
 
   const templates = await SmsTemplate.find(query);
   res.json(templates);
+});
+
+// @desc    Get available SMS triggers and their variables
+// @route   GET /api/smstemplates/triggers
+// @access  Private
+const getSmsTriggersWithVariables = asyncHandler(async (req, res) => {
+  // Convert the object to an array of triggers for easier consumption by frontend
+  const triggersArray = Object.keys(smsTriggers).map(key => smsTriggers[key]);
+  res.json(triggersArray);
 });
 
 // @desc    Get single SMS template by ID
@@ -102,4 +112,5 @@ module.exports = {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  getSmsTriggersWithVariables,
 };

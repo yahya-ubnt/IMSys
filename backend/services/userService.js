@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
 const Transaction = require('../models/Transaction'); // Import Transaction model
+const Package = require('../models/Package'); // Import Package model
 const UserDowntimeLog = require('../models/UserDowntimeLog'); // Import UserDowntimeLog model
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const { sendAcknowledgementSms } = require('./smsService');
@@ -88,11 +89,23 @@ const UserService = {
       tenantId,
     });
 
+    // Fetch package details for SMS
+    const userPackage = await Package.findById(mikrotikUser.package);
+    const packagePrice = userPackage ? userPackage.price : 0;
+    const totalAmount = packagePrice + (mikrotikUser.installationFee || 0);
+
     // 5. Send Welcome SMS
     if (sendWelcomeSms) {
-      sendAcknowledgementSms(smsTriggers.MIKROTIK_USER_CREATED, mikrotikUser.mobileNumber, {
+      sendAcknowledgementSms(smsTriggers.MIKROTIK_USER_CREATED.name, mikrotikUser.mobileNumber, {
         officialName: mikrotikUser.officialName,
         mPesaRefNo: mikrotikUser.mPesaRefNo,
+        username: mikrotikUser.username,
+        mobileNumber: mikrotikUser.mobileNumber,
+        expiryDate: mikrotikUser.expiryDate,
+        walletBalance: mikrotikUser.walletBalance,
+        billAmount: packagePrice, // Added bill amount
+        installationFee: mikrotikUser.installationFee || 0, // Added installation fee
+        totalAmount: totalAmount, // Added total amount
         tenant: tenantId,
         mikrotikUser: mikrotikUser._id
       }).catch(err => console.error('[UserService] Welcome SMS failed:', err.message));

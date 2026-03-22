@@ -150,7 +150,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
   try {
     console.log(`[${new Date().toISOString()}] Sending payment acknowledgement SMS.`);
     await sendAcknowledgementSms(
-      smsTriggers.PAYMENT_RECEIVED,
+      smsTriggers.PAYMENT_RECEIVED.name,
       user.mobileNumber,
       {
         officialName: user.officialName,

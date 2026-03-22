@@ -7,6 +7,7 @@ const {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  getSmsTriggersWithVariables, // Import the new function
 } = require('../controllers/smsTemplateController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
@@ -20,6 +21,9 @@ router.route('/').get(protect, isSuperAdminOrAdmin, getTemplates).post(
   ],
   createTemplate
 );
+
+// New route to get SMS triggers with their variables
+router.route('/triggers').get(protect, isSuperAdminOrAdmin, getSmsTriggersWithVariables);
 
 router
   .route('/:id')
