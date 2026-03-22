@@ -3,7 +3,7 @@ const { validationResult } = require('express-validator');
 const ScheduledTask = require('../models/ScheduledTask');
 const { spawn } = require('child_process');
 const path = require('path');
-const eventEmitter = require('../events');
+const systemTaskQueue = require('../queues/systemTaskQueue');
 const parser = require('cron-parser');
 
 // Helper to execute a script
@@ -77,7 +77,7 @@ const createScheduledTask = asyncHandler(async (req, res) => {
   });
   
   if (task.isEnabled) {
-    eventEmitter.emit('task:created', task);
+    await systemTaskQueue.add('task:created', { task });
   }
 
   res.status(201).json(task);
@@ -107,7 +107,7 @@ const updateScheduledTask = asyncHandler(async (req, res) => {
 
   const updatedTask = await task.save();
   
-  eventEmitter.emit('task:updated', updatedTask);
+  await systemTaskQueue.add('task:updated', { task: updatedTask });
 
   res.status(200).json(updatedTask);
 });
@@ -125,7 +125,7 @@ const deleteScheduledTask = asyncHandler(async (req, res) => {
 
   await task.deleteOne();
   
-  eventEmitter.emit('task:deleted', req.params.id);
+  await systemTaskQueue.add('task:deleted', { taskId: req.params.id });
 
   res.status(200).json({ message: 'Task removed' });
 });

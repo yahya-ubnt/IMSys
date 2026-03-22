@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { SmsExpirySchedule } from "./page";
+import { getSmsTriggers } from "@/lib/api/sms"; // Import getSmsTriggers
 
 // Define the schema for the form data using Zod
 const formSchema = z.object({
@@ -28,16 +29,6 @@ interface SmsExpiryScheduleFormProps {
   onClose: () => void;
 }
 
-const placeholders = [
-  { label: "Official Name", value: "{{officialName}}" },
-  { label: "MPESA Ref No.", value: "{{mPesaRefNo}}" },
-  { label: "Mobile Number", value: "{{mobileNumber}}" },
-  { label: "Wallet Balance", value: "{{walletBalance}}" },
-  { label: "Package Amount", value: "{{transaction_amount}}" },
-  { label: "Expiry Date", value: "{{expiryDate}}" },
-  { label: "Days Remaining", value: "{{daysRemaining}}" },
-];
-
 export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExpiryScheduleFormProps) {
   const form = useForm<SmsExpiryScheduleFormData>({
     resolver: zodResolver(formSchema),
@@ -51,6 +42,22 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [availableVariables, setAvailableVariables] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchVariables = async () => {
+      try {
+        const triggers = await getSmsTriggers();
+        const expiryTrigger = triggers.find((t: any) => t.id === 'sms_expiry_reminder');
+        if (expiryTrigger) {
+          setAvailableVariables(expiryTrigger.variables || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch SMS expiry variables", error);
+      }
+    };
+    fetchVariables();
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -71,14 +78,14 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = textarea.value;
-    const newText = text.substring(0, start) + placeholder + text.substring(end);
+    const newText = text.substring(0, start) + `{{${placeholder}}}` + text.substring(end);
     
     form.setValue("messageBody", newText, { shouldValidate: true });
     
     // Focus and set cursor position after the inserted placeholder
     setTimeout(() => {
       textarea.focus();
-      const newCursorPosition = start + placeholder.length;
+      const newCursorPosition = start + `{{${placeholder}}}`.length;
       textarea.setSelectionRange(newCursorPosition, newCursorPosition);
     }, 0);
   };
@@ -167,16 +174,16 @@ export function SmsExpiryScheduleForm({ onSubmit, initialData, onClose }: SmsExp
         <div>
           <FormLabel className="text-xs text-zinc-400">Insert Placeholder</FormLabel>
           <div className="flex flex-wrap gap-2 pt-2">
-            {placeholders.map(p => (
+            {availableVariables.map(v => (
               <Button
                 type="button"
-                key={p.value}
+                key={v}
                 variant="outline"
                 size="sm"
-                onClick={() => handlePlaceholderClick(p.value)}
+                onClick={() => handlePlaceholderClick(v)}
                 className="bg-zinc-700 border-zinc-600 text-xs h-7"
               >
-                {p.label}
+                {v.replace(/_/g, ' ')}
               </Button>
             ))}
           </div>

@@ -3,6 +3,8 @@ const path = require('path');
 const connectDB = require('../config/db');
 const SmsProvider = require('../models/SmsProvider');
 const SmsLog = require('../models/SmsLog');
+const SmsTemplate = require('../models/SmsTemplate');
+const { personalizeSms } = require('../utils/smsUtils');
 
 // Connect to DB once for the worker
 connectDB();
@@ -37,22 +39,30 @@ const executeSmsDriver = async (providerType, credentials, phoneNumber, message)
 
 
 const smsWorker = new Worker('SMS', async (job) => {
-  const { to, message, tenantId, mikrotikUserId, messageType } = job.data;
+  const { to, message, tenantId, mikrotikUserId, messageType, triggerType, data } = job.data;
   const { name: jobType } = job;
 
   console.log(`[${new Date().toISOString()}] SMS Worker: Processing job '${jobType}' for ${to} (Tenant: ${tenantId})`);
 
-  if (jobType !== 'sendSms') {
-    console.warn(`[${new Date().toISOString()}] SMS Worker: Unknown job type: ${jobType}`);
-    return;
-  }
-
   let log;
   try {
+    let messageToSend = message;
+
+    if (jobType === 'sendAcknowledgementSms') {
+      const template = await SmsTemplate.findOne({ tenant: tenantId, triggerType: triggerType, status: 'Active' });
+      if (!template) {
+        throw new Error(`No active SMS template found for trigger '${triggerType}' on tenant ${tenantId}.`);
+      }
+      messageToSend = personalizeSms(template.messageBody, data);
+    } else if (jobType !== 'sendSms') {
+      console.warn(`[${new Date().toISOString()}] SMS Worker: Unknown job type: ${jobType}`);
+      return;
+    }
+
     // 1. Log the attempt first
     log = await SmsLog.create({
       mobileNumber: to,
-      message: message,
+      message: messageToSend,
       messageType: messageType || 'System',
       smsStatus: 'Pending',
       tenant: tenantId,
@@ -77,7 +87,7 @@ const smsWorker = new Worker('SMS', async (job) => {
       activeProvider.providerType,
       credentials,
       to,
-      message
+      messageToSend
     );
 
     // 5. Update the log with the final result

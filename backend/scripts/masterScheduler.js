@@ -8,9 +8,35 @@ const path = require('path');
 const { performRouterStatusCheck } = require('../services/routerMonitoringService');
 const { performUserStatusCheck } = require('../services/userMonitoringService');
 const { checkAllDevices } = require('../services/monitoringService');
-const eventEmitter = require('../events');
+const { Worker } = require('bullmq');
+const systemTaskQueue = require('../queues/systemTaskQueue');
 
 const scheduledJobs = {};
+
+// Create a worker to process system task events
+new Worker('System-Tasks', async (job) => {
+  const { name, data } = job;
+  console.log(`[${new Date().toISOString()}] System task worker processing job '${name}'`);
+
+  switch (name) {
+    case 'task:created':
+      scheduleTask(data.task);
+      break;
+    case 'task:updated':
+      console.log(`[${new Date().toISOString()}] Updating schedule for task '${data.task.name}' to '${data.task.schedule}'`);
+      unscheduleTask(data.task._id);
+      if (data.task.isEnabled) {
+        scheduleTask(data.task);
+      }
+      break;
+    case 'task:deleted':
+      unscheduleTask(data.taskId);
+      break;
+    default:
+      console.warn(`[${new Date().toISOString()}] Unknown system task job: ${name}`);
+  }
+}, { connection: { host: 'redis', port: 6379 } });
+
 
 const executeScript = (scriptPath, tenantId) => {
   return new Promise((resolve, reject) => {
@@ -92,17 +118,6 @@ const masterScheduler = async () => {
   // Schedule all existing tasks on startup
   const tasks = await ScheduledTask.find({ isEnabled: true });
   tasks.forEach(scheduleTask);
-
-  // Listen for task changes
-  eventEmitter.on('task:created', scheduleTask);
-  eventEmitter.on('task:updated', (task) => {
-    console.log(`[${new Date().toISOString()}] Updating schedule for task '${task.name}' to '${task.schedule}'`);
-    unscheduleTask(task._id);
-    if (task.isEnabled) {
-      scheduleTask(task);
-    }
-  });
-  eventEmitter.on('task:deleted', unscheduleTask);
 
   // Schedule monitoring jobs to run every minute
   cron.schedule('* * * * *', async () => {

@@ -5,6 +5,9 @@ const MikrotikUser = require('../models/MikrotikUser');
 const SmsLog = require('../models/SmsLog');
 const HotspotSession = require('../models/HotspotSession');
 const Bill = require('../models/Bill'); // Import Bill model
+const SmsExpirySchedule = require('../models/SmsExpirySchedule');
+const moment = require('moment');
+const smsTriggers = require('../constants/smsTriggers');
 const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const smsQueue = require('../queues/smsQueue');
 
@@ -114,31 +117,51 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
             }
           }).populate('package');
 
-          for (const user of usersToNotify) {
-            // Personalize message
-            let personalizedMessage = messageBody;
-            const templateData = {
-                customer_name: user.officialName || 'Customer',
-                reference_number: user.mPesaRefNo || '',
-                customer_phone: user.mobileNumber || '',
-                transaction_amount: user.package?.price || '',
-                expiry_date: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
-            };
+          console.log(`Found ${usersToNotify.length} users to notify for schedule "${schedule.name}"`);
 
-            for (const key in templateData) {
-                const placeholder = new RegExp(`{{${key}}}`, 'g');
-                personalizedMessage = personalizedMessage.replace(placeholder, templateData[key]);
+          for (const user of usersToNotify) {
+            console.log(`Processing user: ${user.username}`);
+
+            // Check if a reminder has been sent recently
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const existingLog = await SmsLog.findOne({
+              mikrotikUser: user._id,
+              messageType: 'Expiry Alert',
+              createdAt: { $gte: twentyFourHoursAgo },
+            });
+
+            if (existingLog) {
+              console.log(`[Orchestrator] Expiry reminder already sent to user ${user.username} in the last 24 hours. Skipping.`);
+              continue;
             }
+            
+            const packagePrice = user.package ? user.package.price : 0;
+            const installationFee = user.installationFee || 0;
+            const totalAmount = packagePrice + installationFee;
+            const daysRemaining = Math.ceil(moment(user.expiryDate).diff(moment(), 'days'));
 
             // Add a job to the smsQueue
             const jobPayload = {
               to: user.mobileNumber,
-              message: personalizedMessage,
+              // message: personalizedMessage, // message will be fetched from SmsTemplate
               tenantId: user.tenant,
               mikrotikUserId: user._id,
-              messageType: 'Expiry Alert'
+              messageType: 'Expiry Alert',
+              triggerType: smsTriggers.SMS_EXPIRY_REMINDER.name, // Specify the trigger type
+              data: { // This is the data object for sendAcknowledgementSms
+                officialName: user.officialName,
+                username: user.username,
+                mPesaRefNo: user.mPesaRefNo,
+                mobileNumber: user.mobileNumber,
+                walletBalance: user.walletBalance,
+                billAmount: packagePrice,
+                installationFee: installationFee,
+                totalAmount: totalAmount,
+                expiryDate: user.expiryDate ? user.expiryDate.toLocaleDateString() : '',
+                daysRemaining: daysRemaining,
+              }
             };
-            await smsQueue.add('sendSms', jobPayload);
+            await smsQueue.add('sendAcknowledgementSms', jobPayload); // Use sendAcknowledgementSms job type
             console.log(`[Orchestrator] Queued expiry reminder for user ${user.username}.`);
           }
         }

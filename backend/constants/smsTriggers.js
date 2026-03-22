@@ -26,4 +26,20 @@ module.exports = {
       'paymentDate',
     ],
   },
+  SMS_EXPIRY_REMINDER: {
+    name: 'sms_expiry_reminder',
+    description: 'Triggered to remind users about upcoming service expiry.',
+    variables: [
+      'officialName',
+      'username',
+      'mPesaRefNo',
+      'mobileNumber',
+      'walletBalance',
+      'billAmount',
+      'installationFee',
+      'totalAmount',
+      'expiryDate',
+      'daysRemaining',
+    ],
+  },
 };

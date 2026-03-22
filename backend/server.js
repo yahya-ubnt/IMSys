@@ -205,13 +205,6 @@ process.on('uncaughtException', (err) => {
   server.close(() => process.exit(1));
 });
 
-// Initialize WebSocket terminal service
-const terminalService = require('./services/terminalService');
-terminalService.init(server);
-require('./scripts/masterScheduler');
-require('./workers/smsWorker');
-require('./workers/scheduledTaskWorker');
-require('./scripts/startupDisconnect.js');
 
 module.exports = app; // For testing purposes
 
