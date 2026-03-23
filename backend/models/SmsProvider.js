@@ -1,12 +1,6 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-
-// Ensure the encryption key is set
-if (!process.env.ENCRYPTION_KEY || Buffer.from(process.env.ENCRYPTION_KEY, 'hex').length !== 32) {
-  throw new Error('FATAL ERROR: ENCRYPTION_KEY is not defined or is not a 32-byte hex string.');
-}
-
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const { ENCRYPTION_KEY } = require('../config/secrets'); // Import from secrets module
 
 // Encryption and Decryption functions
 const encrypt = (text) => {

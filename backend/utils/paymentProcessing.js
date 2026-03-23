@@ -32,107 +32,112 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
     console.error(`[${new Date().toISOString()}] User not found for payment processing: ${mikrotikUserId}`);
     throw new Error(`User not found for payment processing: ${mikrotikUserId}`);
   }
-  console.log(`[${new Date().toISOString()}] User found: ${user.username}, new wallet balance after credit: ${user.walletBalance}, expiry: ${user.expiryDate}`);
-
-  // Create a wallet transaction record for the initial credit
-  await WalletTransaction.create([{
-    tenant: user.tenant,
-    mikrotikUser: user._id,
-    transactionId: `WT-CREDIT-${randomUUID()}`,
-    type: 'Credit',
-    amount: amountPaid,
-    source: paymentSource,
-    balanceAfter: user.walletBalance,
-    comment: `Payment received. Original TX ID: ${externalTransactionId}`,
-    processedBy: adminId,
-  }], { session });
-  console.log(`[${new Date().toISOString()}] Wallet transaction (credit) created.`);
-
-  // Priority 1: Pay off outstanding installation fee
-  if (user.installationFee > 0 && user.walletBalance >= user.installationFee) {
-    const fee = user.installationFee;
-    console.log(`[${new Date().toISOString()}] Paying installation fee of ${fee}.`);
-    user.walletBalance -= fee;
-    user.installationFee = 0;
-
+    console.log(`[${new Date().toISOString()}] User found: ${user.username}, new wallet balance after credit: ${user.walletBalance}, expiry: ${user.expiryDate}`);
+  
+    // Create a wallet transaction record for the initial credit
     await WalletTransaction.create([{
       tenant: user.tenant,
       mikrotikUser: user._id,
-      transactionId: `DEBIT-INSTALL-${randomUUID()}`,
-      type: 'Debit',
-      amount: fee,
-      source: 'Installation Fee',
+      transactionId: `WT-CREDIT-${randomUUID()}`,
+      type: 'Credit',
+      amount: amountPaid,
+      source: paymentSource,
       balanceAfter: user.walletBalance,
-      comment: 'Payment for one-time installation fee.',
+      comment: `Payment received. Original TX ID: ${externalTransactionId}`,
+      processedBy: adminId,
     }], { session });
-    console.log(`[${new Date().toISOString()}] Wallet transaction (installation fee debit) created.`);
-  }
-
-  if (!user.package || !user.package.price || user.package.price <= 0) {
-    console.warn(`[${new Date().toISOString()}] User ${user.username} has no valid package price. Amount credited to wallet.`);
-    // No need to save here, as the final save will handle it.
-    return;
-  }
-  console.log(`[${new Date().toISOString()}] Package price: ${user.package.price}`);
-
-  const packagePrice = user.customPackagePrice !== undefined && user.customPackagePrice !== null
-    ? user.customPackagePrice
-    : user.package.price;
-  let daysExtended = 0; // Changed from monthsExtended
-  const now = moment();
-  let newExpiryDate = moment(user.expiryDate || now);
-  console.log(`[${new Date().toISOString()}] Initial expiry date: ${newExpiryDate.toISOString()}`);
-
-  // Pay for one package duration if expired and has funds
-  if (newExpiryDate.isBefore(now) && user.walletBalance >= packagePrice) {
-    console.log(`[${new Date().toISOString()}] User expired. Renewing for ${user.package.durationInDays} days.`);
-    user.walletBalance -= packagePrice;
-    newExpiryDate = now.add(user.package.durationInDays, 'days'); // Use durationInDays
-    user.expiryDate = newExpiryDate.toDate();
-    daysExtended += user.package.durationInDays; // Track days extended
-
-    await WalletTransaction.create([{
-      tenant: user.tenant,
-      mikrotikUser: user._id,
-      transactionId: `DEBIT-RENEW-${randomUUID()}`,
-      type: 'Debit',
-      amount: packagePrice,
-      source: 'Subscription Renewal',
-      balanceAfter: user.walletBalance,
-      comment: `Automatic renewal of ${user.package.durationInDays} days.`,
-    }], { session });
-    console.log(`[${new Date().toISOString()}] Wallet transaction (renewal debit) created. New expiry: ${user.expiryDate}`);
-  }
-
-  // Buy future package durations with remaining balance
-  if (user.walletBalance >= packagePrice) {
-    const futureDurationsToBuy = Math.floor(user.walletBalance / packagePrice); // Calculate how many full package durations can be bought
-    if (futureDurationsToBuy > 0) {
-      const costOfFutureDurations = futureDurationsToBuy * packagePrice;
-      const totalDaysToAdd = futureDurationsToBuy * user.package.durationInDays;
-      console.log(`[${new Date().toISOString()}] Purchasing ${futureDurationsToBuy} future package durations (${totalDaysToAdd} days).`);
-      
-      let currentExpiry = moment(user.expiryDate);
-      user.expiryDate = currentExpiry.add(totalDaysToAdd, 'days').toDate(); // Use totalDaysToAdd
-      daysExtended += totalDaysToAdd; // Track days extended
-      user.walletBalance -= costOfFutureDurations;
-
+    console.log(`[${new Date().toISOString()}] Wallet transaction (credit) created.`);
+  
+    if (!user.package || !user.package.price || user.package.price <= 0) {
+      console.warn(`[${new Date().toISOString()}] User ${user.username} has no valid package price. Amount credited to wallet.`);
+      // No need to save here, as the final save will handle it.
+      return;
+    }
+    console.log(`[${new Date().toISOString()}] Package price: ${user.package.price}`);
+  
+    const packagePrice = user.customPackagePrice !== undefined && user.customPackagePrice !== null
+      ? user.customPackagePrice
+      : user.package.price;
+    let daysExtended = 0;
+    const now = moment();
+    let currentExpiryMoment = moment(user.expiryDate); // Use a separate moment object for current expiry
+  
+    // If the user is already expired, start counting from now
+    if (currentExpiryMoment.isBefore(now)) {
+      currentExpiryMoment = now;
+    }
+    console.log(`[${new Date().toISOString()}] Base expiry date for calculation: ${currentExpiryMoment.toISOString()}`);
+  
+    // Priority 1: Pay for one package duration if user has funds and is expired or has no expiry set
+    if (user.walletBalance >= packagePrice && (user.expiryDate === null || moment(user.expiryDate).isBefore(now))) {
+      console.log(`[${new Date().toISOString()}] User expired or no expiry set. Renewing for ${user.package.durationInDays} days.`);
+      user.walletBalance -= packagePrice;
+      currentExpiryMoment.add(user.package.durationInDays, 'days'); // Add to currentExpiryMoment
+      user.expiryDate = currentExpiryMoment.toDate();
+      daysExtended += user.package.durationInDays;
+  
       await WalletTransaction.create([{
         tenant: user.tenant,
         mikrotikUser: user._id,
-        transactionId: `DEBIT-FUTURE-${randomUUID()}`,
+        transactionId: `DEBIT-RENEW-${randomUUID()}`,
         type: 'Debit',
-        amount: costOfFutureDurations,
-      source: 'Subscription Purchase',
-      balanceAfter: user.walletBalance,
-      comment: `Automatic purchase of ${futureDurationsToBuy} future package durations (${totalDaysToAdd} days).`,
+        amount: packagePrice,
+        source: 'Subscription Renewal',
+        balanceAfter: user.walletBalance,
+        comment: `Automatic renewal of ${user.package.durationInDays} days.`,
       }], { session });
-      console.log(`[${new Date().toISOString()}] Wallet transaction (future purchase debit) created. New expiry: ${user.expiryDate}`);
+      console.log(`[${new Date().toISOString()}] Wallet transaction (renewal debit) created. New expiry: ${user.expiryDate}`);
     }
-  }
+  
+    // Priority 2: Pay off outstanding installation fee
+    if (user.installationFee > 0 && user.walletBalance >= user.installationFee) {
+      const fee = user.installationFee;
+      console.log(`[${new Date().toISOString()}] Paying installation fee of ${fee}.`);
+      user.walletBalance -= fee;
+      user.installationFee = 0;
+  
+      await WalletTransaction.create([{
+        tenant: user.tenant,
+        mikrotikUser: user._id,
+        transactionId: `DEBIT-INSTALL-${randomUUID()}`,
+        type: 'Debit',
+        amount: fee,
+        source: 'Installation Fee',
+        balanceAfter: user.walletBalance,
+        comment: 'Payment for one-time installation fee.',
+      }], { session });
+      console.log(`[${new Date().toISOString()}] Wallet transaction (installation fee debit) created.`);
+    }
+  
+    // Priority 3: Buy future package durations with remaining balance
+    if (user.walletBalance >= packagePrice) {
+      const futureDurationsToBuy = Math.floor(user.walletBalance / packagePrice);
+      if (futureDurationsToBuy > 0) {
+        const costOfFutureDurations = futureDurationsToBuy * packagePrice;
+        const totalDaysToAdd = futureDurationsToBuy * user.package.durationInDays;
+        console.log(`[${new Date().toISOString()}] Purchasing ${futureDurationsToBuy} future package durations (${totalDaysToAdd} days).`);
+        
+        currentExpiryMoment.add(totalDaysToAdd, 'days');
+        user.expiryDate = currentExpiryMoment.toDate();
+        daysExtended += totalDaysToAdd;
+        user.walletBalance -= costOfFutureDurations;
+  
+        await WalletTransaction.create([{
+          tenant: user.tenant,
+          mikrotikUser: user._id,
+          transactionId: `DEBIT-FUTURE-${randomUUID()}`,
+          type: 'Debit',
+          amount: costOfFutureDurations,
+        source: 'Subscription Purchase',
+        balanceAfter: user.walletBalance,
+        comment: `Automatic purchase of ${futureDurationsToBuy} future package durations (${totalDaysToAdd} days).`,
+        }], { session });
+        console.log(`[${new Date().toISOString()}] Wallet transaction (future purchase debit) created. New expiry: ${user.expiryDate}`);
+      }
+    }
 
   await user.save({ session });
-  console.log(`[${new Date().toISOString()}] User saved. Final expiry: ${user.expiryDate}, final balance: ${user.walletBalance}`);
+  user.markModified('expiryDate');
 
   if (daysExtended > 0 && !user.isManuallyDisconnected) { // Changed from monthsExtended
     console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username} via state-based sync.`);

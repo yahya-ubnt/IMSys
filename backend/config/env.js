@@ -1,9 +1,11 @@
+const { JWT_SECRET, ENCRYPTION_KEY } = require('./secrets');
+
 // backend/config/env.js
 // Environment variables are now injected by Docker Compose.
 
 module.exports = {
   MONGO_URI: process.env.MONGO_URI,
-  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_SECRET: JWT_SECRET,
   SMS_API_KEY: process.env.SMS_API_KEY,
 
   // M-Pesa Daraja API Configuration
@@ -15,5 +17,5 @@ module.exports = {
   DARAJA_CALLBACK_URL: process.env.DARAJA_CALLBACK_URL,
 
   CRYPTO_SECRET: process.env.CRYPTO_SECRET,
-  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+  ENCRYPTION_KEY: ENCRYPTION_KEY,
 };

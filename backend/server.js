@@ -1,7 +1,7 @@
-require('./config/env'); // Load environment variables
+const env = require('./config/env'); // Load environment variables and secrets
 
 // Fail-safe check for JWT_SECRET
-if (!process.env.JWT_SECRET) {
+if (!env.JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is not defined.');
   process.exit(1);
 }
@@ -53,16 +53,15 @@ const { setupReconciliationScheduler, processReconciliationScheduler } = require
 const { setupSmsReconciliationScheduler } = require('./jobs/smsReconciliationJob');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Connect to database
-connectDB();
+// connectDB(); // Moved to startServer function
 
-app.set('trust proxy', true); // Trust proxy headers to get the real IP
+// app.set('trust proxy', true); // Moved to startServer function
 
 // Setup BullMQ repeatable jobs
-setupReconciliationScheduler();
-setupSmsReconciliationScheduler();
+// setupReconciliationScheduler(); // Moved to startServer function
+// setupSmsReconciliationScheduler(); // Moved to startServer function
 
 // Middleware
 app.use(helmet());
@@ -164,7 +163,7 @@ io.use(async (socket, next) => {
     return next(new Error('Authentication error: No token provided'));
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET);
     socket.user = await User.findById(decoded.id).select('-password');
     if (!socket.user) {
       return next(new Error('Authentication error: User not found'));
@@ -187,9 +186,21 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  const PORT = process.env.PORT || 5000; // Declare PORT inside startServer
+  await connectDB();
+  app.set('trust proxy', true); // Trust proxy headers to get the real IP
+
+  // Setup BullMQ repeatable jobs
+  setupReconciliationScheduler();
+  setupSmsReconciliationScheduler();
+
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
@@ -207,5 +218,7 @@ process.on('uncaughtException', (err) => {
 
 
 module.exports = app; // For testing purposes
+
+
 
 app.use(errorHandler);

@@ -1,11 +1,7 @@
 const crypto = require('crypto');
+const { ENCRYPTION_KEY } = require('../config/secrets'); // Import from secrets module
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // Must be 256 bits (32 characters)
 const IV_LENGTH = 16; // For AES, this is always 16
-
-if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
-  throw new Error('ENCRYPTION_KEY must be a 64-character hex string (32 bytes).');
-}
 
 const key = Buffer.from(ENCRYPTION_KEY, 'hex');
 

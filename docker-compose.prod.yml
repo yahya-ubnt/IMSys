@@ -6,6 +6,12 @@ volumes:
   mongodb_data3:
   redis_data:
 
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret
+  encryption_key:
+    file: ./secrets/encryption_key
+
 services:
   backend:
     build:
@@ -16,6 +22,9 @@ services:
       - ./.env.production
     volumes:
       - ./.env.production:/usr/src/app/.env.production:ro
+    secrets:
+      - jwt_secret
+      - encryption_key
     depends_on:
       mongo:
         condition: service_healthy
@@ -38,6 +47,9 @@ services:
     volumes:
       - ./.env.production:/usr/src/app/.env.production:ro
     command: node worker.js # Use the direct command for production
+    secrets:
+      - jwt_secret
+      - encryption_key
     depends_on:
       mongo:
         condition: service_healthy
@@ -68,7 +80,7 @@ services:
       - ./mongo-entrypoint.sh:/usr/local/bin/mongo-entrypoint.sh
     entrypoint: [ "/usr/local/bin/mongo-entrypoint.sh" ]
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "rs.status().ok && rs.status().myState == 1 ? quit(0) : quit(1)"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 12
