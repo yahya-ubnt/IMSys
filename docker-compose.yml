@@ -56,7 +56,7 @@ services:
       - backend
 
   mongo:
-    image: mongo:latest
+    image: mongo:6.0
     container_name: imsys-mongo
     hostname: imsys-mongo
     ports:

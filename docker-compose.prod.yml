@@ -2,6 +2,8 @@ version: '3.8'
 
 volumes:
   mongodb_data:
+  mongodb_data2:
+  mongodb_data3:
   redis_data:
 
 services:
@@ -17,6 +19,10 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      mongo2:
+        condition: service_started
+      mongo3:
+        condition: service_started
       redis:
         condition: service_started
     # No ports are exposed directly to the host. Nginx will handle access.
@@ -35,6 +41,10 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      mongo2:
+        condition: service_started
+      mongo3:
+        condition: service_started
       redis:
         condition: service_started
 
@@ -64,6 +74,24 @@ services:
       retries: 12
       start_period: 30s
     # Port is not exposed to the host for security.
+
+  mongo2:
+    image: mongo:6.0
+    restart: unless-stopped
+    container_name: imsys-mongo-prod2
+    hostname: imsys-mongo-prod2
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongodb_data2:/data/db
+
+  mongo3:
+    image: mongo:6.0
+    restart: unless-stopped
+    container_name: imsys-mongo-prod3
+    hostname: imsys-mongo-prod3
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongodb_data3:/data/db
 
   redis:
     image: redis:7-alpine # Pinned version
