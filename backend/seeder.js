@@ -8,6 +8,7 @@ const MikrotikUser = require('./models/MikrotikUser');
 const ApplicationSettings = require('./models/ApplicationSettings');
 const bcrypt = require('bcryptjs');
 const connectDB = require('./config/db');
+const ScheduledTask = require('./models/ScheduledTask');
 const { encrypt } = require('./utils/crypto');
 
 // Configure dotenv to use the root .env file
@@ -23,6 +24,7 @@ const importData = async () => {
     await MikrotikRouter.deleteMany();
     await Package.deleteMany();
     await MikrotikUser.deleteMany();
+    await ScheduledTask.deleteMany(); // Wipe scheduled tasks as well
     console.log('Data wiped.');
 
     // --- Create SUPER_ADMIN ---
@@ -35,6 +37,17 @@ const importData = async () => {
       roles: ['SUPER_ADMIN'],
     });
     console.log('SUPER_ADMIN user created.');
+
+    // --- Create Automated Backup Task ---
+    console.log('Creating Automated Backup Task...');
+    await ScheduledTask.create({
+      name: 'Automated Database Backup',
+      description: 'Daily backup of the MongoDB database. This is a system-level task.',
+      scriptPath: 'scripts/runBackup.js',
+      schedule: '0 2 * * *', // Every day at 2:00 AM
+      isEnabled: true,
+    });
+    console.log('Automated Backup Task created.');
 
     console.log('Data Imported Successfully!');
     process.exit();
