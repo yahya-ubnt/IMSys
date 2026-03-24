@@ -19,7 +19,7 @@ The database is a critical stateful component of the system. Proper management i
 ### 1.3. Off-Site Backup Synchronization
 
 - **Why:** Local backups are insufficient to protect against total server failure (e.g., hardware failure, provider issue). Off-site backups are the only guarantee for disaster recovery.
-- **How:** Implement a host-level cron job that uses a tool like `rclone` to synchronize the local `backups/` directory with a secure, versioned cloud storage bucket (e.g., Amazon S3, Backblaze B2) on a nightly basis.
+- **How:** Refer to the [Off-Site Backup Synchronization Plan](OFFSITE_BACKUP_PLAN.md) for detailed implementation steps.
 
 ## 2. Configuration and Secrets Management (DONE)
 
@@ -53,14 +53,11 @@ The database is a critical stateful component of the system. Proper management i
 ## 6. Host and Application Monitoring
 
 - **Why:** To prevent outages caused by resource exhaustion (CPU, RAM, disk space), we need basic visibility into the health of the host VPS itself.
-- **How:** Set up a lightweight, real-time monitoring tool on the host VPS (e.g., `Netdata` or a cloud provider's native agent). This will provide dashboards to track resource utilization and help identify performance issues before they cause a failure.
+- **How:** Refer to the [Host and Application Monitoring Plan](HOST_MONITORING_PLAN.md) for detailed implementation steps.
 
 ## 7. Deployment and Rollback Procedure
 
 - **Why:** A formally defined process for deploying and rolling back code is essential to minimize the risk and impact of a bad deployment.
-- **How:** The standard procedure is as follows:
-    - **Versioning:** Every new release should be given a specific versioned image tag (e.g., `your-repo/imsys-backend:v1.2.4`).
-    - **Deployment:** The deployment process consists of updating the relevant image tag(s) in `docker-compose.prod.yml` and running `docker-compose -f docker-compose.prod.yml up -d --force-recreate`.
-    - **Rollback:** A rollback is achieved by reverting the image tag(s) to the last known good version and running the same deployment command.
+- **How:** Refer to the [Deployment and Rollback Procedure Plan](DEPLOYMENT_ROLLBACK_PLAN.md) for detailed implementation steps.
 
 This document can be updated as we make progress or identify new areas for improvement.
