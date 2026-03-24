@@ -150,7 +150,7 @@ services:
     # Port is not exposed to the host for security.
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.25 # Pinned version
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "nginx", "-t"]
