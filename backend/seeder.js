@@ -18,6 +18,16 @@ connectDB();
 
 const importData = async () => {
   try {
+    // Failsafe: Check if data already exists
+    const userCount = await User.countDocuments();
+    const tenantCount = await Tenant.countDocuments();
+    if (userCount > 0 || tenantCount > 0) {
+      console.error('ERROR: Data already exists in the database.');
+      console.error('The seeder is for initial setup only and will not run on a database with existing data.');
+      console.error('Aborting to prevent data loss.');
+      process.exit(1);
+    }
+
     console.log('Wiping existing data...');
     await Tenant.deleteMany();
     await User.deleteMany();
