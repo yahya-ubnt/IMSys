@@ -6,58 +6,61 @@ This document outlines the plan to enhance the production-readiness of the IMSys
 
 The database is a critical stateful component of the system. Proper management is essential to prevent data loss and ensure availability.
 
-### 1.1. Automated Backups
+### 1.1. Automated Local Backups (DONE)
 
-**Why:** Regular backups are the most critical defense against data loss due to hardware failure, software bugs, or human error.
+- **Why:** Regular backups are the most critical defense against data loss due to software bugs or local hardware failure.
+- **How:** The system uses a database-driven scheduler (`masterScheduler.js`) to run a daily backup script (`scripts/backup.sh`). This script creates a compressed archive of the database and stores it in the `backups/` directory on the host machine.
 
-**How:**
-- **Backup Script:** We will create a shell script (`scripts/backup.sh`) that uses the `docker exec` command to run `mongodump` inside the primary MongoDB container (`imsys-mongo-prod`).
-- **Storage:** The script will create a compressed archive of the database and store it in a new `backups/` directory on the host machine. This `backups/` directory should itself be backed up to a remote location (e.g., cloud storage).
-- **Automation:** The backup is scheduled and managed by the application's own internal, database-driven task scheduler (`masterScheduler.js`). A `ScheduledTask` is created in the database (via the seeder script) that runs daily. This approach is more portable and self-contained than relying on the host machine's cron.
+### 1.2. Data Persistence (DONE)
 
-### 1.2. Data Persistence
+- **Why:** Application data must persist even if containers are restarted or recreated.
+- **How:** The application correctly uses Docker named volumes (`mongodb_data`, `redis_data`) to ensure data is decoupled from the container lifecycle.
 
-**Why:** Application data must persist even if containers are restarted or recreated.
+### 1.3. Off-Site Backup Synchronization
 
-**How:**
-- **Current Setup:** The application currently uses Docker named volumes (`mongodb_data`, `redis_data`, etc.) to store data for MongoDB and Redis.
-- **Verification:** This is the correct approach for a production setup. It ensures that the data is decoupled from the container lifecycle. We have already verified this is working correctly.
+- **Why:** Local backups are insufficient to protect against total server failure (e.g., hardware failure, provider issue). Off-site backups are the only guarantee for disaster recovery.
+- **How:** Implement a host-level cron job that uses a tool like `rclone` to synchronize the local `backups/` directory with a secure, versioned cloud storage bucket (e.g., Amazon S3, Backblaze B2) on a nightly basis.
 
-## 2. Configuration and Secrets Management
+## 2. Configuration and Secrets Management (DONE)
 
-**Why:** Sensitive information, such as passwords and API keys, should not be hardcoded or stored in version control. They need to be managed securely.
+- **Why:** Sensitive information, such as passwords and API keys, should not be hardcoded or stored in version control.
+- **How:** The application has been migrated from `.env.production` files to use Docker Secrets (`jwt_secret`, `encryption_key`). This provides a higher level of security, as secrets are encrypted and only made available to the specific containers that need them.
 
-**How:**
-- **Current Setup:** The application uses an `.env.production` file to manage configuration. This file is correctly listed in `.gitignore` to prevent it from being committed.
-- **Improvement (Docker Secrets):** For a higher level of security on a production VPS, we can use Docker Secrets. Secrets are encrypted and only accessible to the services that are granted access.
-  - We would create secret files on the host machine (e.g., `/run/secrets/mongo_password`).
-  - We would then update the `docker-compose.prod.yml` file to use these secrets, making them available to the containers as files.
+## 3. Healthchecks and Monitoring (DONE)
 
-## 3. Healthchecks and Monitoring
+- **Why:** Healthchecks allow Docker to automatically detect and restart unhealthy containers, improving the application's resilience.
+- **How:** Robust healthchecks have been implemented for all services in `docker-compose.prod.yml`:
+    - **backend & frontend:** Use `wget` to hit key endpoints.
+    - **worker:** Uses a file-based heartbeat to ensure the event loop is active.
+    - **mongo replicas & redis:** Use native ping commands to verify responsiveness.
+    - **nginx:** Uses `nginx -t` to validate its configuration.
 
-**Why:** Healthchecks allow Docker to automatically detect and restart unhealthy containers, improving the application's resilience.
+## 4. Security Hardening (DONE)
 
-**How:**
-- **Current Setup:** We have already implemented a robust healthcheck for the `mongo` service, which was crucial in stabilizing the application.
-- **Improvement:** We can add basic healthchecks to the `backend` and `frontend` services as well. For example, we could add a healthcheck to the `backend` that hits a `/api/health` endpoint to verify that the server is running and can connect to the database.
-
-## 4. Security Hardening
-
-**Why:** To minimize the application's attack surface and protect it from common vulnerabilities.
-
-**How:**
-- **Image Tagging:** Pin all Docker images to specific versions (e.g., `mongo:6.0` instead of `mongo:latest`). This prevents unexpected changes from upstream images. We have already started doing this.
-- **Non-Root Users:** Containers are already correctly configured to run as non-root users (`appuser`), which is a major security best practice.
-- **`.dockerignore`:** The project correctly uses `.dockerignore` files to prevent unnecessary or sensitive files from being copied into the Docker images.
+- **Why:** To minimize the application's attack surface and protect it from common vulnerabilities.
+- **How:**
+    - **Image Tagging:** All Docker images in `docker-compose.prod.yml` (including `mongo`, `redis`, and `nginx`) have been pinned to specific, stable versions.
+    - **Non-Root Users:** Containers are correctly configured to run as a non-root `appuser`.
+    - **`.dockerignore`:** The project correctly uses `.dockerignore` files to prevent sensitive or unnecessary files from being copied into images.
 
 ## 5. Logging
 
-**Why:** Centralized and structured logging is essential for debugging and monitoring a production application.
-
-**How:**
-- **Current Setup:** The application currently logs to the container's stdout and stderr. This is sufficient for development but can be difficult to manage in production.
-- **Improvement (Future):** For a full production setup, we could implement a centralized logging solution. This would involve:
+- **Why:** Centralized and structured logging is essential for debugging and monitoring a production application.
+- **How (Future):** For a full production setup, we could implement a centralized logging solution. This would involve:
   - Configuring the application to output logs in a structured format (e.g., JSON).
   - Using a logging driver in Docker to send logs from all containers to a centralized logging service (e.g., ELK stack, Graylog, or a cloud-based service like Datadog).
+
+## 6. Host and Application Monitoring
+
+- **Why:** To prevent outages caused by resource exhaustion (CPU, RAM, disk space), we need basic visibility into the health of the host VPS itself.
+- **How:** Set up a lightweight, real-time monitoring tool on the host VPS (e.g., `Netdata` or a cloud provider's native agent). This will provide dashboards to track resource utilization and help identify performance issues before they cause a failure.
+
+## 7. Deployment and Rollback Procedure
+
+- **Why:** A formally defined process for deploying and rolling back code is essential to minimize the risk and impact of a bad deployment.
+- **How:** The standard procedure is as follows:
+    - **Versioning:** Every new release should be given a specific versioned image tag (e.g., `your-repo/imsys-backend:v1.2.4`).
+    - **Deployment:** The deployment process consists of updating the relevant image tag(s) in `docker-compose.prod.yml` and running `docker-compose -f docker-compose.prod.yml up -d --force-recreate`.
+    - **Rollback:** A rollback is achieved by reverting the image tag(s) to the last known good version and running the same deployment command.
 
 This document can be updated as we make progress or identify new areas for improvement.
