@@ -14,6 +14,7 @@ const connectDB = require('./config/db');
 const path = require('path'); // Import path module
 
 // Import routes
+const healthRoutes = require('./routes/healthRoutes');
 const leadRoutes = require('./routes/leadRoutes');
 const { publicRouter: publicUserRoutes, privateRouter: privateUserRoutes } = require('./routes/userRoutes');
 const uploadRoutes = require('./routes/uploadRoutes'); // Import upload routes
@@ -107,6 +108,7 @@ const webhookRoutes = require('./routes/webhookRoutes');
 
 // --- Public Routes ---
 // Routes that do not require authentication go here.
+app.use('/api/health', healthRoutes);
 app.use('/api/users', publicUserRoutes);
 app.use('/api/payments', publicPaymentRoutes);
 app.use('/api/upload', uploadRoutes); // Assuming upload might have public access points, adjust if not

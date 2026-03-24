@@ -35,4 +35,18 @@ console.log('All worker processes started.');
 require('./scripts/masterScheduler');
 require('./scripts/startupDisconnect.js');
 
+const fs = require('fs');
+const path = require('path');
+
+// Healthcheck: Periodically touch a file to indicate liveness
+const healthCheckPath = path.join('/tmp', 'worker_healthy');
+setInterval(() => {
+  try {
+    // Write the current timestamp to the file
+    fs.writeFileSync(healthCheckPath, new Date().toISOString());
+  } catch (err) {
+    console.error('Failed to write worker healthcheck file:', err);
+  }
+}, 30000); // every 30 seconds
+
 
