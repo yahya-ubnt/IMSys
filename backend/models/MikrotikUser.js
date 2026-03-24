@@ -134,7 +134,21 @@ const MikrotikUserSchema = mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: 'Package',
     },
-    
+    // Grace Period Fields
+    gracePeriodEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    expectedPaymentDate: {
+      type: Date,
+    },
+    originalExpiryDate: {
+      type: Date,
+    },
+    gracePeriodDaysUsed: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

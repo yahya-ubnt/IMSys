@@ -46,6 +46,10 @@ export interface MikrotikUser {
     _id: string;
     fullName: string;
   };
+  gracePeriodEnabled?: boolean;
+  expectedPaymentDate?: string; // Assuming ISO string from backend
+  originalExpiryDate?: string; // Assuming ISO string from backend
+  gracePeriodDaysUsed?: number;
 }
 
 export default function MikrotikUsersPage() {

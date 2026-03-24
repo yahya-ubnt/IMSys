@@ -37,28 +37,51 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
         const currentDate = new Date();
         currentDate.setHours(0, 0, 0, 0);
 
-        const cursor = MikrotikUser.find({
+        // Find users who are either:
+        // 1. Expired and not in grace period (status active)
+        // 2. In grace period and their expectedPaymentDate has passed
+        const usersToProcess = await MikrotikUser.find({
           tenant: tenantId,
-          expiryDate: { $lte: currentDate },
-          status: 'active',
+          $or: [
+            {
+              expiryDate: { $lte: currentDate },
+              gracePeriodEnabled: false,
+              status: 'active',
+            },
+            {
+              gracePeriodEnabled: true,
+              expectedPaymentDate: { $lte: currentDate },
+            },
+          ],
         }).cursor();
 
-        await cursor.eachAsync(async (expiredUser) => {
-          console.log(`[Orchestrator] Found expired user: ${expiredUser.username} (ID: ${expiredUser._id}). Queueing for disconnection.`);
+        await usersToProcess.eachAsync(async (user) => {
+          console.log(`[Orchestrator] Found user to process: ${user.username} (ID: ${user._id}).`);
+
+          if (user.gracePeriodEnabled && user.expectedPaymentDate && user.expectedPaymentDate > currentDate) {
+            // User is in grace period and expectedPaymentDate has not yet passed, skip disconnection
+            console.log(`[Orchestrator] User ${user.username} is in grace period until ${user.expectedPaymentDate.toISOString()}. Skipping disconnection.`);
+            return;
+          }
 
           // Update user in DB to pending suspension
-          expiredUser.status = 'suspended';
-          expiredUser.syncStatus = 'pending';
-          await expiredUser.save();
+          user.status = 'suspended';
+          user.syncStatus = 'pending';
+          user.gracePeriodEnabled = false; // End grace period if it was active
+          user.expectedPaymentDate = undefined;
+          user.originalExpiryDate = undefined;
+          user.gracePeriodDaysUsed = 0;
+          await user.save();
 
           // Add a job to the mikrotikSyncQueue to disconnect this specific user
           await mikrotikSyncQueue.add('disconnectUser', {
-            mikrotikUserId: expiredUser._id,
+            mikrotikUserId: user._id,
             tenantId: tenantId,
-            reason: 'expired',
+            reason: user.gracePeriodEnabled ? 'grace_period_expired' : 'expired',
           });
+          console.log(`[Orchestrator] Queued disconnection for user: ${user.username}. Reason: ${user.gracePeriodEnabled ? 'grace_period_expired' : 'expired'}`);
         });
-        console.log(`[Orchestrator] Finished queueing disconnection jobs for tenant: ${tenantId}`);
+        console.log(`[Orchestrator] Finished processing disconnection jobs for tenant: ${tenantId}`);
         break;
 
       case 'disconnectExpiredHotspotUsers':

@@ -61,11 +61,44 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
     let daysExtended = 0;
     const now = moment();
     let currentExpiryMoment = moment(user.expiryDate); // Use a separate moment object for current expiry
-  
-    // If the user is already expired, start counting from now
-    if (currentExpiryMoment.isBefore(now)) {
-      currentExpiryMoment = now;
+    let gracePeriodApplied = false; // Flag to track if grace period logic was applied
+
+    // --- Grace Period Logic ---
+    if (user.gracePeriodEnabled) {
+        gracePeriodApplied = true;
+        const paymentMoment = moment(); // Current time of payment
+        const expectedPaymentMoment = moment(user.expectedPaymentDate);
+        const originalExpiryMoment = moment(user.originalExpiryDate);
+
+        if (paymentMoment.isSameOrBefore(expectedPaymentMoment, 'day')) {
+            // Scenario A: Payment Made During the Grace Period
+            // New expiry date starts from originalExpiryDate
+            currentExpiryMoment = originalExpiryMoment;
+            console.log(`[Payment] User ${user.username} paid during grace period. New base expiry: ${currentExpiryMoment.toISOString()}`);
+        } else {
+            // Scenario B: Payment Made After the Grace Period (Late Payment)
+            // New expiry date starts from now, then subtract grace days
+            const graceDaysUsed = expectedPaymentMoment.diff(originalExpiryMoment, 'days');
+            user.gracePeriodDaysUsed = graceDaysUsed; // Store for later use
+            console.log(`[Payment] User ${user.username} paid after grace period. Grace days used: ${graceDaysUsed}.`);
+            // The existing logic of `currentExpiryMoment = now` will apply below
+            // and we'll adjust the final expiry after adding package duration.
+        }
+
+        // Reset grace period flags
+        user.gracePeriodEnabled = false;
+        user.expectedPaymentDate = undefined;
+        user.originalExpiryDate = undefined;
+        user.status = 'active'; // Ensure user is active after payment
+        user.syncStatus = 'pending'; // Trigger sync to re-enable on Mikrotik
+    } else {
+        // Existing logic for non-grace period users
+        if (currentExpiryMoment.isBefore(now)) {
+            currentExpiryMoment = now;
+        }
     }
+    // --- End Grace Period Logic ---
+
     console.log(`[${new Date().toISOString()}] Base expiry date for calculation: ${currentExpiryMoment.toISOString()}`);
   
     // Priority 1: Pay for one package duration if user has funds and is expired or has no expiry set
@@ -136,12 +169,20 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
       }
     }
 
+    // Adjust expiry date if payment was made after grace period
+    if (gracePeriodApplied && user.gracePeriodDaysUsed > 0) {
+        currentExpiryMoment.subtract(user.gracePeriodDaysUsed, 'days');
+        user.expiryDate = currentExpiryMoment.toDate();
+        console.log(`[Payment] Adjusted expiry for ${user.username} by subtracting ${user.gracePeriodDaysUsed} grace days.`);
+        user.gracePeriodDaysUsed = 0; // Reset after use
+    }
+
   await user.save({ session });
   user.markModified('expiryDate');
 
-  if (daysExtended > 0 && !user.isManuallyDisconnected) { // Changed from monthsExtended
+  if (daysExtended > 0 || gracePeriodApplied) { // Trigger sync if days extended or grace period was involved
     console.log(`[${new Date().toISOString()}] Reconnecting Mikrotik user ${user.username} via state-based sync.`);
-    user.isSuspended = false;
+    // user.isSuspended = false; // This might be handled by user.status = 'active' above
     user.syncStatus = 'pending';
     await user.save({ session }); // Save again to reflect suspension/sync status
 

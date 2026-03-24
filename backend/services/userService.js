@@ -460,6 +460,28 @@ const UserService = {
       needsSync = true;
     }
 
+    // Handle grace period fields
+    if (updateData.gracePeriodEnabled !== undefined && updateData.gracePeriodEnabled === false) {
+      // If grace period is explicitly disabled, clear related fields
+      user.gracePeriodEnabled = false;
+      user.expectedPaymentDate = undefined;
+      user.originalExpiryDate = undefined;
+      user.gracePeriodDaysUsed = 0;
+      needsSync = true; // Disabling grace period might require a sync
+    } else if (updateData.gracePeriodEnabled !== undefined && updateData.gracePeriodEnabled === true) {
+      // If grace period is explicitly enabled via update (should ideally use grantGracePeriod)
+      // Ensure originalExpiryDate is set if not already
+      if (!user.originalExpiryDate) {
+        user.originalExpiryDate = user.expiryDate;
+      }
+      needsSync = true;
+    }
+    // If any other grace period field is updated directly, trigger sync
+    if (updateData.expectedPaymentDate || updateData.originalExpiryDate || updateData.gracePeriodDaysUsed) {
+      needsSync = true;
+    }
+
+
     if (updateData.station === '') {
       updateData.station = null;
     }
@@ -541,7 +563,36 @@ const UserService = {
       console.error('[UserService] Resend Welcome SMS failed:', err.message);
       return { success: false, message: `Failed to resend Welcome SMS: ${err.message}` };
     }
-  }
+  },
+
+  /**
+   * Grants a grace period to a Mikrotik user.
+   */
+  grantGracePeriod: async (userId, expectedPaymentDate, tenantId) => {
+    const user = await MikrotikUser.findOne({ _id: userId, tenant: tenantId });
+    if (!user) {
+      throw new Error('Mikrotik User not found');
+    }
+
+    if (user.gracePeriodEnabled) {
+      throw new Error('User is already in a grace period.');
+    }
+
+    user.gracePeriodEnabled = true;
+    user.originalExpiryDate = user.expiryDate; // Store current expiry as original
+    user.expectedPaymentDate = expectedPaymentDate;
+    user.gracePeriodDaysUsed = 0; // Reset
+    user.syncStatus = 'pending'; // Trigger sync to ensure user remains connected
+
+    await user.save();
+
+    await mikrotikSyncQueue.add('syncUser', {
+      mikrotikUserId: user._id,
+      tenantId,
+    });
+
+    return user;
+  },
 };
 
 module.exports = UserService;

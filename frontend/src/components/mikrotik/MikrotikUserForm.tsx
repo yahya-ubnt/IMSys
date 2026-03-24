@@ -22,7 +22,7 @@ import { ZodError } from "zod";
 // --- Interface Definitions ---
 interface MikrotikRouter { _id: string; name: string; ipAddress: string; }
 interface Package { _id:string; mikrotikRouter: { _id: string; name: string }; serviceType: 'pppoe' | 'static'; name: string; price: number; profile?: string; rateLimit?: string; status?: 'active' | 'inactive'; }
-export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; customPackagePrice?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; rateLimit?: string; profile?: string; }
+export interface MikrotikUserFormData { mikrotikRouter: string; serviceType?: 'pppoe' | 'static'; package: string; username: string; officialName: string; emailAddress?: string; mPesaRefNo: string; installationFee?: number; customPackagePrice?: number; mobileNumber: string; expiryDate?: Date; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; macAddress?: string; building?: string; station?: string; apartment_house_number?: string; door_number_unit_label?: string; sendWelcomeSms?: boolean; rateLimit?: string; profile?: string; gracePeriodEnabled?: boolean; expectedPaymentDate?: Date; originalExpiryDate?: Date; gracePeriodDaysUsed?: number; }
 
 interface MikrotikUserFormProps {
   isEditMode: boolean;
@@ -95,6 +95,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
     const [customRateLimit, setCustomRateLimit] = useState(initialData?.rateLimit || "");
     const [pppoeProfile, setPppoeProfile] = useState(initialData?.profile || "");
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(initialData?.expiryDate ? new Date(initialData.expiryDate) : new Date());
+    const [expectedPaymentDate, setExpectedPaymentDate] = useState<Date | undefined>(initialData?.expectedPaymentDate ? new Date(initialData.expectedPaymentDate) : undefined);
     const [sendWelcomeSms, setSendWelcomeSms] = useState(initialData?.sendWelcomeSms ?? true);
     const [internalPppoeProfiles, setInternalPppoeProfiles] = useState<string[]>([]);
     const [internalIsPppoeProfilesLoading, setInternalIsPppoeProfilesLoading] = useState(false);
@@ -326,6 +327,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
         pppoePassword,
         ipAddress,
         macAddress,
+        expectedPaymentDate: expectedPaymentDate || undefined,
     });
 
     // --- Form Submission ---
@@ -463,6 +465,21 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             <div className="space-y-2"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required placeholder="e.g. 20232..." className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div>{errors.mPesaRefNo && <p className="text-red-500 text-xs mt-1">{errors.mPesaRefNo}</p>}</div>
                                             <div className="space-y-2"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} placeholder="e.g. 1500" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
                                             <div className="space-y-2 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
+                                            {isEditMode && (serviceType === 'pppoe' || serviceType === 'static') && (
+                                                <div className="space-y-2 sm:col-span-2">
+                                                    <Label className="text-xs">Grant Grace Period Until</Label>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">
+                                                                {expectedPaymentDate ? format(expectedPaymentDate, "PPP") : "Select grace period end date"}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700">
+                                                            <Calendar mode="single" selected={expectedPaymentDate} onSelect={setExpectedPaymentDate} initialFocus />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
+                                            )}
                                         </div>
                                         {!isEditMode && (
                                             <div className="items-center flex space-x-2 pt-2">

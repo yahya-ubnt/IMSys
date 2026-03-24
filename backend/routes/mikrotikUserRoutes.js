@@ -21,6 +21,7 @@ const {
   getMikrotikUsersByRouters,
   getMikrotikUsersByBuildings,
   resendWelcomeSms,
+  grantGracePeriod, // Import the new controller function
 } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 const diagnosticRoutes = require('./diagnosticRoutes');
@@ -77,6 +78,14 @@ router.route('/:userId/downtime-logs').get(protect, isSuperAdminOrAdmin, getDown
 router.route('/:id/disconnect').post(protect, isSuperAdminOrAdmin, manualDisconnectUser);
 router.route('/:id/connect').post(protect, isSuperAdminOrAdmin, manualConnectUser);
 router.route('/:id/resend-welcome-sms').post(protect, isSuperAdminOrAdmin, resendWelcomeSms);
+router.route('/:id/grant-grace-period').post(
+  protect,
+  isSuperAdminOrAdmin,
+  [
+    body('expectedPaymentDate', 'Expected payment date is required and must be a valid date').isISO8601().toDate(),
+  ],
+  grantGracePeriod
+);
 
 router
   .route('/:id')

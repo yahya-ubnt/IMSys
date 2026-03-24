@@ -344,9 +344,20 @@ const syncMikrotikUser = async (client, user) => {
 
 const ensurePppSecret = async (client, user) => {
   const pppSecrets = await client.write('/ppp/secret/print', [`?name=${user.username}`]);
-  const isSuspended = user.status === 'suspended';
-  const desiredProfile = isSuspended ? 'Disconnect' : user.package.profile;
-  const desiredDisabled = isSuspended ? 'yes' : 'no';
+  
+  // Determine desired state based on user status and grace period
+  let desiredProfile;
+  let desiredDisabled;
+
+  if (user.gracePeriodEnabled) {
+    desiredProfile = user.package.profile; // Keep original profile during grace
+    desiredDisabled = 'no'; // Keep enabled during grace
+  } else {
+    const isSuspended = user.status === 'suspended';
+    desiredProfile = isSuspended ? 'Disconnect' : user.package.profile;
+    desiredDisabled = isSuspended ? 'yes' : 'no';
+  }
+  
   const comment = `Synced by IMSys at ${new Date().toISOString()}`;
 
   const secretArgs = [
@@ -378,8 +389,8 @@ const ensurePppSecret = async (client, user) => {
     }
   }
 
-  // Handle active session if suspended
-  if (isSuspended) {
+  // Handle active session if user should be suspended (and not in grace period)
+  if (user.status === 'suspended' && !user.gracePeriodEnabled) {
     const activeSessions = await client.write('/ppp/active/print', [`?name=${user.username}`]);
     for (const session of activeSessions) {
       console.log(`[Sync] Terminating active session for suspended user ${user.username}`);
@@ -447,7 +458,8 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
     `?list=ALLOWED_USERS`
   ]);
 
-  const isAllowed = user.status === 'active';
+  // User is allowed if status is active OR if they are in a grace period
+  const isAllowed = user.status === 'active' || user.gracePeriodEnabled;
   const currentlyInList = listEntries.length > 0;
 
   if (isAllowed && !currentlyInList) {

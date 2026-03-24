@@ -26,10 +26,20 @@ interface User {
 }
 
 export const getMikrotikUserStatus = (user: MikrotikUser) => {
-  const expiryDate = new Date(user.expiryDate);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
+  if (user.gracePeriodEnabled) {
+    const expectedPaymentDate = new Date(user.expectedPaymentDate || '');
+    if (expectedPaymentDate >= now) {
+      return { status: "Grace Period", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
+    } else {
+      // Grace period has passed, treat as expired
+      return { status: "Expired (Grace Ended)", color: "bg-red-500/20 text-red-400 border-red-500/30" };
+    }
+  }
+
+  const expiryDate = new Date(user.expiryDate);
   if (expiryDate < now) {
     return { status: "Expired", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" };
   }

@@ -198,6 +198,26 @@ const resendWelcomeSms = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Grant a grace period to a Mikrotik User
+// @route   POST /api/mikrotik/users/:id/grant-grace-period
+// @access  Private
+const grantGracePeriod = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { id } = req.params;
+  const { expectedPaymentDate } = req.body;
+  const tenantId = req.user.tenant;
+
+  if (!expectedPaymentDate) {
+    res.status(400);
+    throw new Error('Expected payment date is required.');
+  }
+
+  const updatedUser = await UserService.grantGracePeriod(id, new Date(expectedPaymentDate), tenantId);
+  res.status(200).json(updatedUser);
+});
+
 module.exports = {
   createMikrotikUser,
   getMikrotikUsers,
@@ -218,5 +238,6 @@ module.exports = {
   manualConnectUser,
   getMikrotikUsersByRouters,
   getMikrotikUsersByBuildings,
-  resendWelcomeSms, // Export the new function
+  resendWelcomeSms,
+  grantGracePeriod, // Export the new function
 };
