@@ -574,12 +574,12 @@ const UserService = {
       throw new Error('Mikrotik User not found');
     }
 
-    if (user.gracePeriodEnabled) {
-      throw new Error('User is already in a grace period.');
+    // If user is not already in a grace period, store the original expiry date.
+    if (!user.gracePeriodEnabled) {
+      user.originalExpiryDate = user.expiryDate; // Store current expiry as original
     }
 
     user.gracePeriodEnabled = true;
-    user.originalExpiryDate = user.expiryDate; // Store current expiry as original
     user.expectedPaymentDate = expectedPaymentDate;
     user.gracePeriodDaysUsed = 0; // Reset
     user.syncStatus = 'pending'; // Trigger sync to ensure user remains connected

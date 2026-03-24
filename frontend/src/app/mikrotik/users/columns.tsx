@@ -154,7 +154,12 @@ export const getColumns = (
           Days Left
         </Button>
       ),
-      cell: ({ row }) => calculateDaysRemaining(row.original.expiryDate).toString(),
+      cell: ({ row }) => {
+        if (row.original.gracePeriodEnabled && row.original.expectedPaymentDate) {
+          return calculateDaysRemaining(row.original.expectedPaymentDate).toString();
+        }
+        return calculateDaysRemaining(row.original.expiryDate).toString();
+      },
     },
     {
       id: "accountStatus",

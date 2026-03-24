@@ -67,6 +67,7 @@ export default function EditMikrotikUserPage() {
                     customPackagePrice: userData.customPackagePrice,
                     mobileNumber: userData.mobileNumber,
                     expiryDate: userData.expiryDate ? new Date(userData.expiryDate) : undefined,
+                    expectedPaymentDate: userData.expectedPaymentDate ? new Date(userData.expectedPaymentDate) : undefined,
                     station: userData.station && typeof userData.station === 'object' ? userData.station._id : userData.station,
                     building: userData.building && typeof userData.building === 'object' ? userData.building._id : userData.building,
                 };
