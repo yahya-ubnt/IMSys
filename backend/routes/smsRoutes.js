@@ -8,6 +8,7 @@ const {
   getSentSmsLog,
   exportSmsLogs,
   getSmsLogsForUserController,
+  retrySms,
 } = require('../controllers/smsController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 
@@ -44,5 +45,6 @@ router.post(
 router.route('/log').get(protect, isSuperAdminOrAdmin, getSentSmsLog);
 router.route('/log/export').get(protect, isSuperAdminOrAdmin, exportSmsLogs);
 router.route('/logs/user/:userId').get(protect, isSuperAdminOrAdmin, getSmsLogsForUserController);
+router.route('/logs/:id/retry').post(protect, isSuperAdminOrAdmin, retrySms);
 
 module.exports = router;

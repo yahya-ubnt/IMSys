@@ -39,7 +39,7 @@ const executeSmsDriver = async (providerType, credentials, phoneNumber, message)
 
 
 const smsWorker = new Worker('SMS', async (job) => {
-  const { to, message, tenantId, mikrotikUserId, messageType, triggerType, data } = job.data;
+  const { to, message, tenantId, mikrotikUserId, messageType, triggerType, data, originalSmsLogId } = job.data;
   const { name: jobType } = job;
 
   console.log(`[${new Date().toISOString()}] SMS Worker: Processing job '${jobType}' for ${to} (Tenant: ${tenantId})`);
@@ -59,15 +59,31 @@ const smsWorker = new Worker('SMS', async (job) => {
       return;
     }
 
-    // 1. Log the attempt first
-    log = await SmsLog.create({
-      mobileNumber: to,
-      message: messageToSend,
-      messageType: messageType || 'System',
-      smsStatus: 'Pending',
-      tenant: tenantId,
-      mikrotikUser: mikrotikUserId,
-    });
+    // 1. Find or Create the SmsLog entry
+    if (originalSmsLogId) {
+      log = await SmsLog.findById(originalSmsLogId);
+      if (!log) {
+        throw new Error(`Original SmsLog with ID ${originalSmsLogId} not found for retry.`);
+      }
+      // Update existing log for retry attempt
+      log.message = messageToSend;
+      log.smsStatus = 'Pending';
+      log.triggerType = triggerType;
+      log.templateData = data;
+      // Other fields like mobileNumber, tenant, mikrotikUser should not change on retry
+    } else {
+      // Create a new log entry for the initial send
+      log = await SmsLog.create({
+        mobileNumber: to,
+        message: messageToSend,
+        messageType: messageType || 'System',
+        smsStatus: 'Pending',
+        tenant: tenantId,
+        mikrotikUser: mikrotikUserId,
+        triggerType: triggerType, // For retries
+        templateData: data, // For retries
+      });
+    }
 
     // 2. Find the active SMS provider for the tenant
     const activeProvider = await SmsProvider.findOne({ tenant: tenantId, isActive: true });
@@ -99,7 +115,7 @@ const smsWorker = new Worker('SMS', async (job) => {
 
   } catch (error) {
     console.error(`[${new Date().toISOString()}] SMS Worker: Error processing job '${jobType}' for ${to}:`, error.message);
-    // If a log entry was created, update it to reflect the failure
+    // If a log entry was created or found, update it to reflect the failure
     if (log) {
       log.smsStatus = 'Failed';
       log.providerResponse = error.message;

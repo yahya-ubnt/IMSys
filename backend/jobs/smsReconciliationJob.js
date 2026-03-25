@@ -1,7 +1,7 @@
 const scheduledTaskQueue = require('../queues/scheduledTaskQueue');
 
 const JOB_NAME = 'reconcileSmsStatus';
-const CRON_SCHEDULE = '0 * * * *'; // Every hour at the 0th minute
+const CRON_SCHEDULE = '*/5 * * * *'; // Every 5 minutes
 
 /**
  * Sets up a repeatable job in the scheduledTaskQueue to run the SMS reconciliation task.

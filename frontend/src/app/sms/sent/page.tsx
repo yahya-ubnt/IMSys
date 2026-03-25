@@ -22,18 +22,20 @@ import { useToast } from "@/hooks/use-toast"
 import { FileDown, Printer, Copy, MessageSquare, CheckCircle, XCircle, Search } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { SmsDetailsModal } from "@/components/SmsDetailsModal"
+import { retrySms } from "@/lib/api/sms"
 
 // --- TYPE DEFINITIONS ---
 export type SmsLog = {
   _id: string;
   mobileNumber: string;
   message: string;
-  smsStatus: 'Success' | 'Failed' | 'Pending' | 'Submitted';
+  smsStatus: 'Success' | 'Failed' | 'Pending' | 'Submitted' | 'RequiresManualIntervention';
   messageType: 'Acknowledgement' | 'Expiry Alert' | 'Compose';
   createdAt: string;
   providerResponse: {
     message?: string;
   };
+  retryCount: number;
 };
 
 // --- MAIN COMPONENT ---
@@ -62,10 +64,50 @@ export default function SentSmsLogPage() {
   })
   const [sorting, setSorting] = useState<SortingState>([])
 
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
   const handleViewDetails = (sms: SmsLog) => {
     setSelectedSms(sms)
     setIsModalOpen(true)
   }
+
+  const handleRetry = async (logId: string) => {
+    setRetryingId(logId);
+    try {
+      const result = await retrySms(logId); // retrySms now returns { message, status }
+      if (result.status === 'Success') {
+        toast({
+          title: "Success",
+          description: "SMS sent successfully.",
+        });
+      } else if (result.status === 'RequiresManualIntervention') {
+        toast({
+          title: "Failed",
+          description: "SMS failed, requires manual intervention.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Info",
+          description: result.message || "SMS retry processed.",
+        });
+      }
+
+      // Directly update the status of the specific log in the data array
+      setData(prevData => prevData.map(log => 
+        log._id === logId ? { ...log, smsStatus: result.status as SmsLog['smsStatus'] } : log
+      ));
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to retry SMS.",
+        variant: "destructive",
+      });
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   // --- DATA FETCHING ---
   const fetchSmsLogs = useCallback(async () => {
@@ -80,10 +122,13 @@ export default function SentSmsLogPage() {
         ...(dateRange?.to && { endDate: dateRange.to.toISOString() }),
       })
 
+
+
       const response = await fetch(`/api/sms/log?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to fetch sent SMS logs")
       
       const responseData = await response.json()
+
       setData(responseData.logs || [])
       setPageCount(responseData.pages || 0)
       setStats(responseData.stats || { total: 0, success: 0, failed: 0 })
@@ -98,7 +143,7 @@ export default function SentSmsLogPage() {
 
   const table = useReactTable({
     data,
-    columns: columns(handleViewDetails),
+    columns: columns(handleViewDetails, handleRetry, retryingId),
     pageCount,
     state: {
       sorting,
@@ -198,7 +243,7 @@ export default function SentSmsLogPage() {
             <CardContent className="p-4 space-y-4">
               <DataTableToolbar table={table} messageTypeFilter={messageTypeFilter} setMessageTypeFilter={setMessageTypeFilter} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateRange={dateRange} setDateRange={setDateRange} />
               <div className="overflow-x-auto">
-                <DataTable columns={columns(handleViewDetails)} table={table} />
+                <DataTable columns={columns(handleViewDetails, handleRetry, retryingId)} table={table} />
               </div>
               <DataTablePagination table={table} />
             </CardContent>
@@ -248,11 +293,13 @@ const DataTableToolbar = ({ table, messageTypeFilter, setMessageTypeFilter, stat
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 bg-zinc-800 border-zinc-700 w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 bg-zinc-800/50 border-zinc-700 w-full"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-zinc-800 text-white border-zinc-700">
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="Success">Success</SelectItem>
             <SelectItem value="Failed">Failed</SelectItem>
+            <SelectItem value="Pending">Pending</SelectItem>
+            <SelectItem value="RequiresManualIntervention">Retry Needed</SelectItem>
           </SelectContent>
         </Select>
         <CalendarDateRangePicker date={dateRange} setDate={setDateRange} className="w-full" />

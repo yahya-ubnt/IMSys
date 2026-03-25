@@ -3,10 +3,32 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { SmsLog } from "./page"
-import { CheckCircle, XCircle, Eye } from "lucide-react"
+import { CheckCircle, XCircle, Eye, RefreshCw, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>[] => [
+// --- Sub-components (redefined from SmsTab for local use) ---
+const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' | 'Submitted' | 'RequiresManualIntervention' }) => {
+  const statusConfig = {
+    Success: { icon: CheckCircle, color: 'bg-green-500/20 text-green-400', label: 'Success' },
+    Failed: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Failed' },
+    Pending: { icon: Clock, color: 'bg-yellow-500/20 text-yellow-400', label: 'Pending' },
+    Submitted: { icon: Clock, color: 'bg-blue-500/20 text-blue-400', label: 'Submitted' }, // Assuming 'Submitted' is similar to Pending
+    RequiresManualIntervention: { icon: RefreshCw, color: 'bg-orange-500/20 text-orange-400', label: 'Failed' },
+  };
+  const { icon: Icon, color, label } = statusConfig[status];
+  return (
+    <Badge variant="outline" className={`border-0 ${color}`}>
+      <Icon className="h-3 w-3 mr-1" />
+      {label}
+    </Badge>
+  );
+};
+
+export const columns = (
+  onViewDetails: (sms: SmsLog) => void,
+  onRetry: (logId: string) => void,
+  retryingId: string | null
+): ColumnDef<SmsLog>[] => [
   {
     id: "id", // Added unique ID
     header: ({ column }) => (
@@ -15,20 +37,6 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
       </Button>
     ),
     cell: ({ row }) => row.index + 1,
-  },
-  {
-    accessorKey: "providerResponse",
-    id: "messageId", // Added unique ID
-    header: ({ column }) => (
-      <Button variant="ghost">
-        Message ID
-      </Button>
-    ),
-    cell: ({ row }) => {
-      const message = row.original.providerResponse?.message || "";
-      const match = message.match(/Message ID: (.*)/);
-      return match ? match[1] : "N/A";
-    },
   },
   {
     accessorKey: "mobileNumber",
@@ -58,27 +66,8 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
       </Button>
     ),
     cell: ({ row }) => {
-      const status = row.original.smsStatus
-      
-      if (status === 'Success') {
-        return (
-          <Badge variant="outline" className="bg-green-600/20 text-green-400 border-green-600/30">
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Success
-          </Badge>
-        )
-      }
-      
-      if (status === 'Failed') {
-        return (
-          <Badge variant="outline" className="bg-red-600/20 text-red-400 border-red-600/30">
-            <XCircle className="mr-2 h-4 w-4" />
-            Failed
-          </Badge>
-        )
-      }
-
-      return <Badge variant="secondary">{status}</Badge>
+      const status = row.original.smsStatus;
+      return <StatusBadge status={status} />;
     },
   },
   {
@@ -111,9 +100,26 @@ export const columns = (onViewDetails: (sms: SmsLog) => void): ColumnDef<SmsLog>
   {
     id: "actions",
     cell: ({ row }) => (
-      <Button variant="ghost" size="icon" onClick={() => onViewDetails(row.original)}>
-        <Eye className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center space-x-2">
+        {(row.original.smsStatus === 'RequiresManualIntervention' || row.original.smsStatus === 'Failed') && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-orange-400 text-orange-400 hover:bg-orange-400/10 hover:text-orange-300"
+            onClick={() => onRetry(row.original._id)}
+            disabled={retryingId === row.original._id}
+          >
+            {retryingId === row.original._id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+        <Button variant="ghost" size="icon" onClick={() => onViewDetails(row.original)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+      </div>
     ),
   },
-]
+];

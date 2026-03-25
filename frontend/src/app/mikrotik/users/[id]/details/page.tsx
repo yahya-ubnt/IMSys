@@ -25,7 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 // --- Interface Definitions ---
 interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; building?: { _id: string; name: string }; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; isManuallyDisconnected?: boolean; }
 interface PaymentStats { totalSpentMpesa: number; lastMpesaPaymentDate: string | null; totalMpesaTransactions: number; averageMpesaTransaction: number; mpesaTransactionHistory: MpesaTransaction[]; }
-interface SmsLog { _id: string; message: string; messageType: string; smsStatus: 'Success' | 'Failed' | 'Pending'; createdAt: string; }
+interface SmsLog { _id: string; message: string; messageType: string; smsStatus: 'Success' | 'Failed' | 'Pending' | 'RequiresManualIntervention'; createdAt: string; }
 interface SmsStats { total: number; acknowledgement: number; expiry: number; composed: number; system: number; }
 interface SmsData { logs: SmsLog[]; stats: SmsStats; }
 
@@ -80,10 +80,22 @@ export default function MikrotikUserDetailsPage() {
         }
     }, [id, toast]);
 
+    const fetchSmsData = useCallback(async () => {
+        if (!id) return;
+        try {
+            const response = await fetch(`/api/sms/logs/user/${id}`);
+            if (!response.ok) throw new Error("Failed to fetch SMS logs");
+            setSmsData(await response.json());
+        } catch {
+            toast({ title: "Error", description: "Failed to load SMS history.", variant: "destructive" });
+        }
+    }, [id, toast]);
+
     useEffect(() => {
         if (!id) return;
         fetchUser();
-    }, [id, fetchUser]);
+        fetchSmsData();
+    }, [id, fetchUser, fetchSmsData]);
 
     useEffect(() => {
         if (!id) return;
@@ -114,20 +126,6 @@ export default function MikrotikUserDetailsPage() {
         fetchWalletTransactions();
     }, [id, toast]);
 
-    useEffect(() => {
-        if (!id) return;
-        const fetchSmsData = async () => {
-            try {
-                const response = await fetch(`/api/sms/logs/user/${id}`);
-                if (!response.ok) throw new Error("Failed to fetch SMS logs");
-                setSmsData(await response.json());
-            } catch {
-                toast({ title: "Error", description: "Failed to load SMS history.", variant: "destructive" });
-            }
-        };
-        fetchSmsData();
-    }, [id, toast]);
-
     const handleResendWelcomeSms = async () => {
         setIsResendingSms(true);
         setIsResendConfirmOpen(false); // Close the dialog
@@ -143,6 +141,7 @@ export default function MikrotikUserDetailsPage() {
             }
 
             toast({ title: "Success", description: "Welcome SMS resent successfully." });
+            fetchSmsData(); // Refresh SMS data after resending
         } catch (error: unknown) {
             toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unexpected error occurred.", variant: "destructive" });
         } finally {
@@ -240,7 +239,7 @@ export default function MikrotikUserDetailsPage() {
                                     </TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="usage" className="h-full"><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full"><MikrotikUserTrafficChart userId={userData._id} /><DowntimeLogTable userId={userData._id} /></div></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="billing" className="h-full flex flex-col"><BillingTab paymentStats={paymentStats} walletTransactions={walletTransactions} /></TabsPrimitive.Content>
-                                    <TabsPrimitive.Content value="sms" className="h-full flex flex-col"><SmsTab smsData={smsData} /></TabsPrimitive.Content>
+                                    <TabsPrimitive.Content value="sms" className="h-full flex flex-col"><SmsTab smsData={smsData} onRefresh={fetchSmsData} /></TabsPrimitive.Content>
                                     <TabsPrimitive.Content value="diagnostics" className="h-full"><DiagnosticHistory userId={userData._id} /></TabsPrimitive.Content>
                                 </CardContent>
                             </TabsPrimitive.Root>

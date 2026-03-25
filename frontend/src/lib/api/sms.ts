@@ -56,3 +56,8 @@ export const composeAndSendSms = (data: { mobileNumber: string; message: string;
 
 // Sent SMS Log function
 export const getSentSmsLog = (params: string) => fetchApi(`/api/sms/log?${params}`);
+
+// Retry SMS function
+export const retrySms = (id: string) => fetchApi(`/api/sms/logs/${id}/retry`, {
+    method: 'POST',
+});

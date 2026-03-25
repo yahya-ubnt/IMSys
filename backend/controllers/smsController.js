@@ -4,6 +4,8 @@ const smsTriggers = require('../constants/smsTriggers');
 const xlsx = require('xlsx');
 const { json2csv } = require('json-2-csv');
 const PDFDocument = require('pdfkit');
+const SmsLog = require('../models/SmsLog');
+const smsQueue = require('../queues/smsQueue');
 
 // @desc    Get available SMS trigger types
 // @route   GET /api/sms/triggers
@@ -157,10 +159,72 @@ const getSmsLogsForUserController = asyncHandler(async (req, res) => {
     res.status(200).json(data);
   });
 
+// @desc    Manually retry a failed SMS
+// @route   POST /api/v1/sms/logs/:id/retry
+// @access  Private (Admin)
+const retrySms = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const log = await SmsLog.findById(id);
+
+  if (!log) {
+    res.status(404);
+    throw new Error('SMS Log not found');
+  }
+
+  // Optional: Check if the user is an admin and has permission to retry
+  // For now, we assume the route is protected by an admin middleware
+
+  log.smsStatus = 'Pending';
+  await log.save();
+
+  // Re-queue the job
+  const jobPayload = {
+    originalSmsLogId: log._id, // Pass the original log ID for update
+    to: log.mobileNumber,
+    message: log.message,
+    tenantId: log.tenant,
+    mikrotikUserId: log.mikrotikUser,
+    messageType: log.messageType,
+    triggerType: log.triggerType,
+    data: log.templateData,
+  };
+
+  const jobType = log.triggerType ? 'sendAcknowledgementSms' : 'sendSms';
+  const job = await smsQueue.add(jobType, jobPayload, { return: true });
+  console.log('Job instance:', job);
+
+  // Manual polling for job completion
+  let jobStatus;
+  let attempts = 0;
+  const maxAttempts = 10; // Poll for max 10 seconds (10 * 1 second delay)
+
+  do {
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+    const fetchedJob = await smsQueue.getJob(job.id); // Fetch the job to get its current state
+    jobStatus = fetchedJob ? await fetchedJob.getState() : null;
+    attempts++;
+    console.log(`[Manual Retry] Polling job ${job.id}, status: ${jobStatus}, attempt: ${attempts}`);
+  } while (jobStatus !== 'completed' && jobStatus !== 'failed' && attempts < maxAttempts);
+
+  // Re-fetch the log to get its updated status after processing by the worker
+  const updatedLog = await SmsLog.findById(id);
+
+  // If the manual retry failed, immediately mark it for manual intervention
+  if (updatedLog && updatedLog.smsStatus === 'Failed') {
+    updatedLog.smsStatus = 'RequiresManualIntervention';
+    await updatedLog.save();
+  }
+
+  console.log(`[Manual Retry] SMS Log ID: ${log._id} processed. Final status: ${updatedLog?.smsStatus}`);
+  res.status(200).json({ message: 'SMS retry processed.', status: updatedLog?.smsStatus });
+});
+
+
 module.exports = {
   getSmsTriggers,
   composeAndSendSms,
   getSentSmsLog,
   exportSmsLogs,
   getSmsLogsForUserController,
+  retrySms,
 };

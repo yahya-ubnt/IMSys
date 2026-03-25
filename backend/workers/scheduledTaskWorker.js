@@ -274,9 +274,10 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
         break;
       
       case 'reconcileSmsStatus':
-        console.log(`[Orchestrator] Starting SMS reconciliation safety net check.`);
-        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+        console.log(`[Orchestrator] Starting SMS reconciliation and retry job.`);
 
+        // 1. Check for stale 'Pending' logs (worker crash detection)
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
         const staleSmsLogs = await SmsLog.find({
           smsStatus: 'Pending',
           createdAt: { $lt: thirtyMinutesAgo },
@@ -288,9 +289,55 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
             console.warn(`  - Stale Log ID: ${log._id}, To: ${log.mobileNumber}, Tenant: ${log.tenant}, Created At: ${log.createdAt.toISOString()}`);
           }
           console.error(`[CRITICAL] This may indicate that the smsWorker is failing silently or has crashed. Please investigate.`);
-        } else {
-          console.log(`[Orchestrator] SMS reconciliation check complete. No stale logs found.`);
         }
+
+        // 2. Find and retry 'Failed' logs
+        const failedLogsToRetry = await SmsLog.find({
+          smsStatus: 'Failed',
+          retryCount: { $lt: 5 },
+        });
+
+        if (failedLogsToRetry.length > 0) {
+          console.log(`[Orchestrator] Found ${failedLogsToRetry.length} failed SMS log(s) to retry.`);
+          for (const log of failedLogsToRetry) {
+            log.retryCount += 1;
+            log.smsStatus = 'Pending'; // Set back to pending for the retry attempt
+            await log.save();
+
+            // Re-queue the job
+            const jobPayload = {
+              originalSmsLogId: log._id, // Pass the original log ID for update
+              to: log.mobileNumber,
+              message: log.message, // The original, un-personalized message if it exists
+              tenantId: log.tenant,
+              mikrotikUserId: log.mikrotikUser,
+              messageType: log.messageType,
+              triggerType: log.triggerType,
+              data: log.templateData,
+            };
+            
+            const jobType = log.triggerType ? 'sendAcknowledgementSms' : 'sendSms';
+            await smsQueue.add(jobType, jobPayload);
+            console.log(`  - Re-queued SMS Log ID: ${log._id} for retry attempt ${log.retryCount}.`);
+          }
+        }
+
+        // 3. Mark persistently failing logs for manual intervention
+        const logsForManualIntervention = await SmsLog.find({
+          smsStatus: 'Failed',
+          retryCount: { $gte: 3 },
+        });
+
+        if (logsForManualIntervention.length > 0) {
+          console.warn(`[Orchestrator] Found ${logsForManualIntervention.length} SMS log(s) that have reached max retries.`);
+          for (const log of logsForManualIntervention) {
+            log.smsStatus = 'RequiresManualIntervention';
+            await log.save();
+            console.warn(`  - Marked SMS Log ID: ${log._id} as 'RequiresManualIntervention'.`);
+          }
+        }
+
+        console.log(`[Orchestrator] SMS reconciliation and retry job complete.`);
         break;
 
       default:

@@ -1,18 +1,21 @@
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { MessageSquare, CheckCircle, XCircle, Clock, Mail, Bell } from 'lucide-react';
+import { MessageSquare, CheckCircle, XCircle, Clock, Mail, Bell, RefreshCw } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from '@/components/ui/button';
+import { useToast } from "@/hooks/use-toast";
+import { retrySms } from '@/lib/api/sms';
 
 // --- Interface Definitions ---
 interface SmsLog {
   _id: string;
   message: string;
   messageType: string;
-  smsStatus: 'Success' | 'Failed' | 'Pending';
+  smsStatus: 'Success' | 'Failed' | 'Pending' | 'RequiresManualIntervention';
   createdAt: string;
 }
 
@@ -29,6 +32,7 @@ interface SmsTabProps {
     logs: SmsLog[];
     stats: SmsStats;
   } | null;
+  onRefresh: () => void; // Callback to refresh data
 }
 
 // --- Sub-components ---
@@ -42,11 +46,12 @@ const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType; label
   </div>
 );
 
-const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' }) => {
+const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' | 'RequiresManualIntervention' }) => {
   const statusConfig = {
     Success: { icon: CheckCircle, color: 'bg-green-500/20 text-green-400', label: 'Success' },
     Failed: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Failed' },
     Pending: { icon: Clock, color: 'bg-yellow-500/20 text-yellow-400', label: 'Pending' },
+    RequiresManualIntervention: { icon: RefreshCw, color: 'bg-blue-500/20 text-blue-400', label: 'Retry Needed' },
   };
   const { icon: Icon, color, label } = statusConfig[status];
   return (
@@ -58,12 +63,35 @@ const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' }) =
 };
 
 // --- Main Component ---
-const SmsTab: React.FC<SmsTabProps> = ({ smsData }) => {
+const SmsTab: React.FC<SmsTabProps> = ({ smsData, onRefresh }) => {
+  const { toast } = useToast();
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
   if (!smsData) {
     return <div className="text-center text-zinc-400">Loading SMS history...</div>;
   }
 
   const { logs, stats } = smsData;
+
+  const handleRetry = async (logId: string) => {
+    setRetryingId(logId);
+    try {
+      await retrySms(logId);
+      toast({
+        title: "Success",
+        description: "SMS has been re-queued for sending.",
+      });
+      onRefresh(); // Refresh the data to show the updated status
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to retry SMS.",
+        variant: "destructive",
+      });
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -89,6 +117,7 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData }) => {
                   <TableHead>Type</TableHead>
                   <TableHead>Message</TableHead>
                   <TableHead className="text-right">Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -100,10 +129,27 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData }) => {
                     <TableCell className="text-right">
                       <StatusBadge status={log.smsStatus} />
                     </TableCell>
+                    <TableCell className="text-right">
+                      {log.smsStatus === 'RequiresManualIntervention' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 hover:text-cyan-300"
+                          onClick={() => handleRetry(log._id)}
+                          disabled={retryingId === log._id}
+                        >
+                          {retryingId === log._id ? (
+                            <Clock className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-zinc-500">
+                    <TableCell colSpan={5} className="text-center text-zinc-500">
                       No SMS history found for this user.
                     </TableCell>
                   </TableRow>

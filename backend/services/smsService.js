@@ -192,7 +192,13 @@ exports.getSmsLogs = async (tenantId, queryParams) => {
   }
 
   if (messageType) query.messageType = messageType;
-  if (status) query.smsStatus = status;
+  if (status) {
+    if (status === 'Failed') {
+      query.smsStatus = { $in: ['Failed', 'RequiresManualIntervention'] };
+    } else {
+      query.smsStatus = status;
+    }
+  }
 
   if (startDate && endDate) {
     query.createdAt = {
@@ -220,7 +226,7 @@ exports.getSmsLogs = async (tenantId, queryParams) => {
 
   statsAggregation.forEach(s => {
     if (s._id === 'Success') stats.success = s.count;
-    if (s._id === 'Failed') stats.failed = s.count;
+    if (s._id === 'Failed' || s._id === 'RequiresManualIntervention') stats.failed = stats.failed + s.count;
   });
 
   return { logs, page: parseInt(page), pages: Math.ceil(count / parseInt(limit)), total: count, stats };

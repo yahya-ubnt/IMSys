@@ -17,8 +17,12 @@ const smsLogSchema = mongoose.Schema(
     },
     smsStatus: {
       type: String,
-      enum: ['Success', 'Failed', 'Pending'],
+      enum: ['Success', 'Failed', 'Pending', 'RequiresManualIntervention'],
       default: 'Pending',
+    },
+    retryCount: {
+      type: Number,
+      default: 0,
     },
     providerResponse: {
       type: Object,
@@ -31,6 +35,12 @@ const smsLogSchema = mongoose.Schema(
     mikrotikUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'MikrotikUser',
+    },
+    triggerType: {
+      type: String,
+    },
+    templateData: {
+      type: Object,
     },
   },
   {
