@@ -1,10 +1,10 @@
 version: '3.8'
 
 volumes:
-  mongodb_data:
-  mongodb_data2:
-  mongodb_data3:
-  redis_data:
+  mongodb_data_prod:
+  mongodb_data2_prod:
+  mongodb_data3_prod:
+  redis_data_prod:
 
 secrets:
   jwt_secret:
@@ -94,7 +94,7 @@ services:
     container_name: imsys-mongo-prod
     hostname: imsys-mongo-prod
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_data_prod:/data/db
       - ./mongo-entrypoint.sh:/usr/local/bin/mongo-entrypoint.sh
     entrypoint: [ "/usr/local/bin/mongo-entrypoint.sh" ]
     healthcheck:
@@ -118,7 +118,7 @@ services:
     hostname: imsys-mongo-prod2
     command: mongod --replSet rs0 --bind_ip_all
     volumes:
-      - mongodb_data2:/data/db
+      - mongodb_data2_prod:/data/db
 
   mongo3:
     image: mongo:6.0
@@ -133,7 +133,7 @@ services:
     hostname: imsys-mongo-prod3
     command: mongod --replSet rs0 --bind_ip_all
     volumes:
-      - mongodb_data3:/data/db
+      - mongodb_data3_prod:/data/db
 
   redis:
     image: redis:7-alpine # Pinned version
@@ -145,7 +145,7 @@ services:
       retries: 5
       start_period: 5s
     volumes:
-      - redis_data:/data
+      - redis_data_prod:/data
     command: redis-server --save 20 1 --loglevel warning
     # Port is not exposed to the host for security.
 

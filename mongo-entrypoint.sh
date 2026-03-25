@@ -25,17 +25,27 @@ mongosh --eval "
     rs.conf();
     print('Replica set already configured. Skipping initiation.');
   } catch (e) {
-    // If not configured, initiate the replica set
+    // If not configured, initiate the replica set based on hostname
     if (e.code === 94 || e.codeName === 'NotYetInitialized') {
-      print('Replica set not yet initialized. Initiating with 3 members...');
-      rs.initiate({
-        _id: 'rs0',
-        members: [
-          { _id: 0, host: 'imsys-mongo-prod:27017' },
-          { _id: 1, host: 'imsys-mongo-prod2:27017' },
-          { _id: 2, host: 'imsys-mongo-prod3:27017' }
-        ]
-      });
+      if ('${HOSTNAME}' === 'imsys-mongo-prod') {
+        print('Production environment detected. Initiating with 3 members...');
+        rs.initiate({
+          _id: 'rs0',
+          members: [
+            { _id: 0, host: 'imsys-mongo-prod:27017' },
+            { _id: 1, host: 'imsys-mongo-prod2:27017' },
+            { _id: 2, host: 'imsys-mongo-prod3:27017' }
+          ]
+        });
+      } else {
+        print('Development environment detected. Initiating with single member...');
+        rs.initiate({
+          _id: 'rs0',
+          members: [
+            { _id: 0, host: '${HOSTNAME}:27017' }
+          ]
+        });
+      }
     } else {
       print('rs.conf() failed with an unexpected error: ' + e.message);
       throw e;
@@ -44,10 +54,10 @@ mongosh --eval "
 
   // Wait for the replica set to have a primary
   print('Waiting for replica set to elect a primary...');
-  while (rs.status().myState != 1) {
+  while (rs.status().myState != 1 && rs.status().myState != 2) {
     sleep(1000);
   }
-  print('Primary elected. Replica set is ready.');
+  print('Primary or secondary elected. Replica set is ready.');
 "
 
 echo "MongoDB is ready."

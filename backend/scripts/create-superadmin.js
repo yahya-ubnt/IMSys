@@ -7,15 +7,20 @@ const path = require('path');
 // Configure dotenv to use the root .env file
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-connectDB();
+const start = async () => {
+  await connectDB();
+  await createAdmin();
+}
+
+start();
 
 const createAdmin = async () => {
   try {
-    // Get arguments from command line: node create-admin.js "FullName" "email" "password"
-    const [,, fullName, email, password] = process.argv;
+    // Get arguments from command line: node create-admin.js "FullName" "email" "password" "phone"
+    const [,,, fullName, email, password, phone] = process.argv;
 
-    if (!fullName || !email || !password) {
-      console.error('Usage: node create-admin.js "Full Name" "email@example.com" "password"');
+    if (!fullName || !email || !password || !phone) {
+      console.error('Usage: node create-admin.js "Full Name" "email@example.com" "password" "+1234567890"');
       console.log('Note: Arguments with spaces must be wrapped in quotes.');
       process.exit(1);
     }
@@ -32,6 +37,7 @@ const createAdmin = async () => {
     const user = await User.create({
       fullName,
       email,
+      phone,
       password, // The model's pre-save hook will handle hashing
       roles: ['SUPER_ADMIN'],
     });

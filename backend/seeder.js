@@ -14,7 +14,17 @@ const { encrypt } = require('./utils/crypto');
 // Configure dotenv to use the root .env file
 dotenv.config({ path: require('path').resolve(__dirname, '../.env') });
 
-connectDB();
+const start = async () => {
+  await connectDB();
+
+  if (process.argv[2] === '-d') {
+    await destroyData();
+  } else {
+    await importData();
+  }
+};
+
+start();
 
 const importData = async () => {
   try {
