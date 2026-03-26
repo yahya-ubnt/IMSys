@@ -64,27 +64,7 @@ const UserService = {
 
     const mikrotikUser = await MikrotikUser.create(newUser);
 
-    // 3. Handle Installation Fee
-    if (installationFee && parseFloat(installationFee) > 0) {
-      const fee = parseFloat(installationFee);
-      mikrotikUser.walletBalance -= fee;
-      mikrotikUser.installationFee = fee; // Explicitly set installationFee on the user object
-
-      await WalletTransaction.create({
-        tenant: tenantId,
-        mikrotikUser: mikrotikUser._id,
-        transactionId: `DEBIT-INSTALL-${Date.now()}-${mikrotikUser.username}`,
-        type: 'Debit',
-        amount: fee,
-        source: 'Installation Fee',
-        balanceAfter: mikrotikUser.walletBalance,
-        comment: 'Initial installation fee.',
-      });
-
-      await mikrotikUser.save();
-    }
-
-    // 4. Trigger Hardware Sync
+    // 3. Trigger Hardware Sync
     await mikrotikSyncQueue.add('syncUser', {
       mikrotikUserId: mikrotikUser._id,
       tenantId,
@@ -93,14 +73,16 @@ const UserService = {
     // Fetch package details for SMS
     const userPackage = await Package.findById(mikrotikUser.package);
     const packagePrice = userPackage ? userPackage.price : 0;
-    const totalAmount = packagePrice + (mikrotikUser.installationFee || 0);
+    // Set installationFee from userData for SMS context
+    installationFee = userData.installationFee ? parseFloat(userData.installationFee) : 0;
+    const totalAmount = packagePrice + installationFee;
 
     console.log(`[UserService] createMikrotikUser - Debugging SMS variables:`);
-    console.log(`[UserService]   mikrotikUser.installationFee: ${mikrotikUser.installationFee}`);
+    console.log(`[UserService]   installationFee: ${installationFee}`);
     console.log(`[UserService]   packagePrice: ${packagePrice}`);
     console.log(`[UserService]   totalAmount: ${totalAmount}`);
 
-    // 5. Send Welcome SMS
+    // 4. Send Welcome SMS
     if (sendWelcomeSms) {
       sendAcknowledgementSms(smsTriggers.MIKROTIK_USER_CREATED.name, mikrotikUser.mobileNumber, {
         officialName: mikrotikUser.officialName,
@@ -110,7 +92,7 @@ const UserService = {
         expiryDate: mikrotikUser.expiryDate,
         walletBalance: mikrotikUser.walletBalance,
         billAmount: packagePrice, // Added bill amount
-        installationFee: mikrotikUser.installationFee || 0, // Added installation fee
+        installationFee: installationFee, // Use the fee from userData
         totalAmount: totalAmount, // Added total amount
         tenant: tenantId,
         mikrotikUser: mikrotikUser._id

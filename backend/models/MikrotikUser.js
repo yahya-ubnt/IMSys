@@ -80,6 +80,10 @@ const MikrotikUserSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    installationFeePaid: {
+      type: Boolean,
+      default: false,
+    },
     mobileNumber: {
       type: String,
       required: true,

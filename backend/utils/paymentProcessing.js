@@ -1,6 +1,6 @@
+const MikrotikUser = require('../models/MikrotikUser');
 const moment = require('moment');
 const { randomUUID } = require('crypto');
-const MikrotikUser = require('../models/MikrotikUser');
 const WalletTransaction = require('../models/WalletTransaction');
 const { sendAcknowledgementSms } = require('../services/smsService');
 const smsTriggers = require('../constants/smsTriggers');
@@ -93,7 +93,7 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
         user.syncStatus = 'pending'; // Trigger sync to re-enable on Mikrotik
     } else {
         // Existing logic for non-grace period users
-        if (currentExpiryMoment.isBefore(now)) {
+        if (currentExpiryMoment.isSameOrBefore(now)) {
             currentExpiryMoment = now;
         }
     }
@@ -101,8 +101,29 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
 
     console.log(`[${new Date().toISOString()}] Base expiry date for calculation: ${currentExpiryMoment.toISOString()}`);
   
-    // Priority 1: Pay for one package duration if user has funds and is expired or has no expiry set
-    if (user.walletBalance >= packagePrice && (user.expiryDate === null || moment(user.expiryDate).isBefore(now))) {
+    // Priority 1: Pay off outstanding installation fee if not already paid
+    if (!user.installationFeePaid && user.installationFee > 0 && user.walletBalance >= user.installationFee) {
+      const fee = user.installationFee;
+      console.log(`[${new Date().toISOString()}] Paying installation fee of ${fee}.`);
+      user.walletBalance -= fee;
+      user.installationFee = 0; // Clear the fee amount
+      user.installationFeePaid = true; // Mark as paid
+  
+      await WalletTransaction.create([{
+        tenant: user.tenant,
+        mikrotikUser: user._id,
+        transactionId: `DEBIT-INSTALL-${randomUUID()}`,
+        type: 'Debit',
+        amount: fee,
+        source: 'Installation Fee',
+        balanceAfter: user.walletBalance,
+        comment: 'Payment for one-time installation fee.',
+      }], { session });
+      console.log(`[${new Date().toISOString()}] Wallet transaction (installation fee debit) created.`);
+    }
+
+    // Priority 2: Pay for one package duration if user has funds and is expired or has no expiry set
+    if (user.walletBalance >= packagePrice && (user.expiryDate === null || moment(user.expiryDate).isSameOrBefore(now))) {
       console.log(`[${new Date().toISOString()}] User expired or no expiry set. Renewing for ${user.package.durationInDays} days.`);
       user.walletBalance -= packagePrice;
       currentExpiryMoment.add(user.package.durationInDays, 'days'); // Add to currentExpiryMoment
@@ -120,26 +141,6 @@ const processSubscriptionPayment = async (mikrotikUserId, amountPaid, paymentSou
         comment: `Automatic renewal of ${user.package.durationInDays} days.`,
       }], { session });
       console.log(`[${new Date().toISOString()}] Wallet transaction (renewal debit) created. New expiry: ${user.expiryDate}`);
-    }
-  
-    // Priority 2: Pay off outstanding installation fee
-    if (user.installationFee > 0 && user.walletBalance >= user.installationFee) {
-      const fee = user.installationFee;
-      console.log(`[${new Date().toISOString()}] Paying installation fee of ${fee}.`);
-      user.walletBalance -= fee;
-      user.installationFee = 0;
-  
-      await WalletTransaction.create([{
-        tenant: user.tenant,
-        mikrotikUser: user._id,
-        transactionId: `DEBIT-INSTALL-${randomUUID()}`,
-        type: 'Debit',
-        amount: fee,
-        source: 'Installation Fee',
-        balanceAfter: user.walletBalance,
-        comment: 'Payment for one-time installation fee.',
-      }], { session });
-      console.log(`[${new Date().toISOString()}] Wallet transaction (installation fee debit) created.`);
     }
   
     // Priority 3: Buy future package durations with remaining balance
