@@ -1,31 +1,51 @@
-'use client';
-
 import { ColumnDef } from '@tanstack/react-table';
+import { Button } from '@/components/ui/button'; // Import Button component
 import { WalletTransaction } from './page'; // Import the WalletTransaction type from the page component
 
 export const getColumns = (): ColumnDef<WalletTransaction>[] => [
   {
     id: 'serialNumber',
-    header: 'S/N',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        S/N
+      </Button>
+    ),
     cell: ({ row }) => row.index + 1,
   },
   {
     accessorKey: 'userId.officialName',
-    header: 'User',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        User
+      </Button>
+    ),
     cell: ({ row }) => row.original.userId?.officialName || 'N/A',
   },
   {
     accessorKey: 'transactionId',
-    header: 'Transaction ID',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Transaction ID
+      </Button>
+    ),
+    cell: ({ row }) => <div className="truncate max-w-xs">{row.original.transactionId}</div>,
   },
   {
     accessorKey: 'type',
-    header: 'Type',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Type
+      </Button>
+    ),
     filterFn: 'equalsString',
   },
   {
     accessorKey: 'amount',
-    header: 'Amount',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Amount
+      </Button>
+    ),
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue('amount'));
       const formatted = new Intl.NumberFormat('en-US', {
@@ -37,11 +57,20 @@ export const getColumns = (): ColumnDef<WalletTransaction>[] => [
   },
   {
     accessorKey: 'source',
-    header: 'Source/Reason',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Source/Reason
+      </Button>
+    ),
+    cell: ({ row }) => <div className="truncate max-w-xs">{row.original.source}</div>,
   },
   {
     accessorKey: 'balanceAfter',
-    header: 'Balance After',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Balance After
+      </Button>
+    ),
     cell: ({ row }) => {
       const balance = parseFloat(row.getValue('balanceAfter'));
       const formatted = new Intl.NumberFormat('en-US', {
@@ -53,7 +82,11 @@ export const getColumns = (): ColumnDef<WalletTransaction>[] => [
   },
   {
     accessorKey: 'createdAt',
-    header: 'Date/Time',
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Date/Time
+      </Button>
+    ),
     cell: ({ row }) => {
       return new Date(row.getValue('createdAt')).toLocaleString();
     },
@@ -76,7 +109,11 @@ export const getColumns = (): ColumnDef<WalletTransaction>[] => [
   },
   {
     accessorKey: 'comment',
-    header: 'Comment',
-    cell: ({ row }) => row.getValue('comment') || '-',
-  },
+    header: ({ column }) => (
+      <Button variant="ghost">
+        Comment
+      </Button>
+    ),
+    cell: ({ row }) => <div className="truncate max-w-xs">{row.original.comment || '-'}</div>,
+  }
 ];

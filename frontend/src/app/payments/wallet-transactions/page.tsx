@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { motion } from "framer-motion"
+import React from "react"; // Ensure React is imported if not already
 import {
   useReactTable,
   getCoreRowModel,
@@ -124,7 +124,7 @@ export default function WalletTransactionsPage() {
           </div>
         </div>
 
-        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        <div
           className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-blue-500/10 rounded-xl">
           <Card className="bg-transparent border-none">
             <CardHeader className="p-4 border-b border-zinc-800">
@@ -138,7 +138,7 @@ export default function WalletTransactionsPage() {
               <DataTablePagination table={table} />
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </main>
     </div>
   )
