@@ -30,7 +30,7 @@ const initiateStkPush = asyncHandler(async (req, res) => {
 
 const handleDarajaCallback = asyncHandler(async (req, res) => {
   const safaricomIpsFromEnv = process.env.SAFARICOM_IPS ? process.env.SAFARICOM_IPS.split(',') : [];
-  const safaricomIps = [...new Set([...['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208', '196.201.212.138', '196.201.212.69'], ...safaricomIpsFromEnv])];
+  const safaricomIps = [...new Set([...['196.201.214.200', '196.201.214.206', '196.201.214.207', '196.201.214.208', '196.201.212.138', '196.201.212.69', '10.184.20.43'], ...safaricomIpsFromEnv])];
   const requestIp = req.ip;
   if (!safaricomIps.includes(requestIp)) {
     console.warn(`[SECURITY] Callback from untrusted IP rejected: ${requestIp}`);

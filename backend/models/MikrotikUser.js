@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter'); // Import the counter model
 
 const MikrotikUserSchema = mongoose.Schema(
   {
+    userNumber: { // The new human-readable, auto-incrementing ID
+      type: Number,
+      unique: true,
+    },
     tenant: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -159,6 +164,26 @@ const MikrotikUserSchema = mongoose.Schema(
   }
 );
 
+// Middleware to auto-increment userNumber before saving
+MikrotikUserSchema.pre('save', async function (next) {
+  if (this.isNew) {
+    try {
+      const counter = await Counter.findByIdAndUpdate(
+        { _id: 'mikrotik-user' },
+        { $inc: { sequence_value: 1 } },
+        { new: true, upsert: true }
+      );
+      this.userNumber = counter.sequence_value;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
+  }
+});
+
+MikrotikUserSchema.index({ userNumber: 1 }, { unique: true });
 MikrotikUserSchema.index({ tenant: 1 });
 MikrotikUserSchema.index({ tenant: 1, username: 1 }, { unique: true });
 MikrotikUserSchema.index({ tenant: 1, mPesaRefNo: 1 }, { unique: true });

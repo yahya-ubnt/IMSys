@@ -30,6 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export interface MikrotikUser {
   _id: string;
+  userNumber: number;
   username: string;
   officialName: string;
   emailAddress?: string;
@@ -72,6 +73,7 @@ export default function MikrotikUsersPage() {
     pageIndex: 0,
     pageSize: 10,
   })
+  const [rowSelection, setRowSelection] = useState({})
 
   const fetchMonthlyTotalSubscribers = useCallback(async (year: string) => {
     try {
@@ -143,11 +145,14 @@ export default function MikrotikUsersPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onPaginationChange: setPagination,
+    enableRowSelection: true, // enable row selection
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       pagination,
       globalFilter,
+      rowSelection,
     },
   })
 

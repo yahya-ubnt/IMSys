@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { MikrotikUser } from "./page"; // Import from the page component
 import { calculateDaysRemaining } from "@/lib/utils"; // Import the new utility function
+import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox component
 
 // --- Interface Definition ---
 interface User {
@@ -52,17 +53,39 @@ export const getColumns = (
 ): ColumnDef<MikrotikUser>[] => {
   const columns: ColumnDef<MikrotikUser>[] = [
     {
-      accessorKey: "username",
-      header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Username <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center h-full px-4">
+          <Checkbox
+            checked={table.getIsAllPageRowsSelected()}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        </div>
       ),
       cell: ({ row }) => (
-        <Link href={`/mikrotik/users/${row.original._id}/details`} className="font-medium text-blue-400 hover:underline">
-          {row.original.username}
-        </Link>
+        <div className="flex items-center justify-center h-full px-4">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
       ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      id: "visualId",
+      header: () => <Button variant="ghost">ID</Button>,
+      size: 40, // Fixed width for ID
+      cell: ({ row, table }) => {
+        const { pageIndex, pageSize } = table.getState().pagination;
+        const id = pageIndex * pageSize + row.index + 1;
+        return <div className="text-center">{id}</div>;
+      },
+      enableSorting: false,
+      enableHiding: false,
     },
     {
       accessorKey: "officialName",
@@ -70,6 +93,19 @@ export const getColumns = (
       header: ({ column }) => (
         <Button variant="ghost">
           Official Name
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <Link href={`/mikrotik/users/${row.original._id}/details`} className="font-medium text-blue-400 hover:underline">
+          {row.original.officialName}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: "username",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Username <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
     },
@@ -83,6 +119,14 @@ export const getColumns = (
       ),
     },
     {
+      accessorKey: "mPesaRefNo",
+      header: ({ column }) => (
+        <Button variant="ghost">
+          Reference No.
+        </Button>
+      ),
+    },
+    {
       accessorKey: "package.name",
       id: "packageName", // Added unique ID
       header: ({ column }) => (
@@ -91,6 +135,17 @@ export const getColumns = (
         </Button>
       ),
       cell: ({ row }) => row.original.package?.name || 'N/A',
+    },
+    {
+      accessorKey: "package.price",
+      header: () => <Button variant="ghost">Price</Button>,
+      cell: ({ row }) => {
+        const price = parseFloat(row.original.package.price.toString());
+        const formatted = new Intl.NumberFormat("en-US", {
+          maximumFractionDigits: 0, // No decimals
+        }).format(price);
+        return <div className="text-center font-medium">{formatted}</div>;
+      },
     },
     {
       accessorKey: "mikrotikRouter.name",
@@ -155,10 +210,10 @@ export const getColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        if (row.original.gracePeriodEnabled && row.original.expectedPaymentDate) {
-          return calculateDaysRemaining(row.original.expectedPaymentDate).toString();
-        }
-        return calculateDaysRemaining(row.original.expiryDate).toString();
+        const days = row.original.gracePeriodEnabled && row.original.expectedPaymentDate
+          ? calculateDaysRemaining(row.original.expectedPaymentDate).toString()
+          : calculateDaysRemaining(row.original.expiryDate).toString();
+        return <div className="text-right">{days}</div>;
       },
     },
     {
@@ -170,7 +225,7 @@ export const getColumns = (
       ),
       cell: ({ row }) => {
         const { status, color } = getMikrotikUserStatus(row.original);
-        return <Badge variant="outline" className={`capitalize ${color}`}>{status}</Badge>;
+        return <div className="text-center"><Badge variant="outline" className={`capitalize ${color}`}>{status}</Badge></div>;
       },
       filterFn: (row, id, value) => {
         const userStatus = getMikrotikUserStatus(row.original).status.toLowerCase();
@@ -185,9 +240,10 @@ export const getColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        return row.original.isOnline 
+        const badge = row.original.isOnline 
           ? <Badge variant="outline" className="border-green-500/30 bg-green-500/20 text-green-400">Online</Badge>
           : <Badge variant="outline" className="border-red-500/30 bg-red-500/20 text-red-400">Offline</Badge>;
+        return <div className="text-center">{badge}</div>;
       },
     },
     {
@@ -195,25 +251,27 @@ export const getColumns = (
       cell: ({ row }) => {
         const user = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}/details`}>View Details</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>Edit User</Link></DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-zinc-700" />
-              {onDelete && (
-                <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-500/20" onClick={() => onDelete(user._id)}>
-                  Delete User
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex justify-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-800 text-white border-zinc-700">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}/details`}>View Details</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href={`/mikrotik/users/${user._id}`}>Edit User</Link></DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-700" />
+                {onDelete && (
+                  <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-500/20" onClick={() => onDelete(user._id)}>
+                    Delete User
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
