@@ -42,19 +42,19 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => (
         {/* Step 1 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>1</div>
-            <span className={`text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Service Setup</span>
+            <span className={`text-xs sm:text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Service Setup</span>
         </div>
         <div className={`w-12 h-px transition-colors ${currentStep >= 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
         {/* Step 2 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>2</div>
-            <span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Package Setup</span>
+            <span className={`text-xs sm:text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Package Setup</span>
         </div>
         <div className={`w-12 h-px transition-colors ${currentStep >= 3 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
         {/* Step 3 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>3</div>
-            <span className={`text-sm transition-colors ${currentStep === 3 ? 'text-blue-400' : 'text-zinc-500'}`}>User Details</span>
+            <span className={`text-xs sm:text-sm transition-colors ${currentStep === 3 ? 'text-blue-400' : 'text-zinc-500'}`}>User Details</span>
         </div>
     </div>
 );
@@ -347,7 +347,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                         <AnimatePresence mode="wait" custom={direction}>
                             {step === 1 ? (
                                 <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
-                                    <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Wifi size={18} /> Service Setup</CardTitle>
+                                    <CardTitle className="text-base sm:text-lg text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Wifi size={18} /> Service Setup</CardTitle>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label className="text-xs">Mikrotik Router</Label>
@@ -369,7 +369,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                 </motion.div>
                             ) : step === 2 ? (
                                 <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
-                                    <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Lock size={18} /> Package Setup</CardTitle>
+                                    <CardTitle className="text-base sm:text-lg text-cyan-400 border-b border-zinc-800 pb-2 mb-4 flex items-center gap-2"><Lock size={18} /> Package Setup</CardTitle>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-2 sm:col-span-2">
                                             <Label className="text-xs">Package</Label>
@@ -422,7 +422,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                             ) : (
                                 <motion.div key={3} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5">
                                     <div className="space-y-3">
-                                        <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> User Details</CardTitle>
+                                        <CardTitle className="text-base sm:text-lg text-cyan-400 border-b border-zinc-800 pb-2 flex items-center gap-2"><User size={18} /> User Details</CardTitle>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div className="space-y-2"><Label className="text-xs">Official Name</Label><Input value={officialName} onChange={e => setOfficialName(e.target.value)} placeholder="e.g. Kevin Durant" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.officialName && <p className="text-red-500 text-xs mt-1">{errors.officialName}</p>}</div>
                                             <div className="space-y-2"><Label className="text-xs">Mobile Number</Label><Input value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} placeholder="e.g. 0712345678" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.mobileNumber && <p className="text-red-500 text-xs mt-1">{errors.mobileNumber}</p>}</div>
@@ -492,11 +492,11 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                             )}
                         </AnimatePresence>
                     </CardContent>
-                    <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
-                        <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
-                        <div>
-                            {step < 3 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
-                            {step === 3 && <Button type="submit" size="sm" disabled={isSubmitting} className="bg-gradient-to-r from-blue-600 to-cyan-500">{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isSubmitting ? "Saving..." : (isEditMode ? "Save Changes" : "Save User")}</Button>}
+                    <CardFooter className="p-4 flex flex-col sm:flex-row items-center justify-between border-t border-zinc-800 gap-3 sm:gap-0">
+                        <div className="w-full sm:w-auto flex justify-start">{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
+                        <div className="w-full sm:w-auto flex justify-end">
+                            {step < 3 && <Button type="button" size="sm" onClick={handleNext} className="w-full sm:w-auto">Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
+                            {step === 3 && <Button type="submit" size="sm" disabled={isSubmitting} className="bg-gradient-to-r from-blue-600 to-cyan-500 w-full sm:w-auto">{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isSubmitting ? "Saving..." : (isEditMode ? "Save Changes" : "Save User")}</Button>}
                         </div>
                     </CardFooter>
                 </form>

@@ -30,19 +30,19 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => (
         {/* Step 1 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>1</div>
-            <span className={`text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Device Type & Monitoring</span>
+            <span className={`text-xs sm:text-sm transition-colors ${currentStep === 1 ? 'text-blue-400' : 'text-zinc-500'}`}>Device Type & Monitoring</span>
         </div>
         <div className={`w-12 h-px transition-colors ${currentStep >= 2 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
         {/* Step 2 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>2</div>
-            <span className={`text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Network Configuration</span>
+            <span className={`text-xs sm:text-sm transition-colors ${currentStep === 2 ? 'text-blue-400' : 'text-zinc-500'}`}>Network Configuration</span>
         </div>
         <div className={`w-12 h-px transition-colors ${currentStep >= 3 ? 'bg-blue-500' : 'bg-zinc-700'}`}></div>
         {/* Step 3 */}
         <div className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all duration-300 ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400'}`}>3</div>
-            <span className={`text-sm transition-colors ${currentStep === 3 ? 'text-blue-400' : 'text-zinc-500'}`}>Administrative Details</span>
+            <span className={`text-xs sm:text-sm transition-colors ${currentStep === 3 ? 'text-blue-400' : 'text-zinc-500'}`}>Administrative Details</span>
         </div>
     </div>
 );
@@ -322,7 +322,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                     case 1:
                       return (
                         <motion.div key={1} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
-                          <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Device Type & Monitoring</CardTitle>
+                          <CardTitle className="text-base sm:text-lg text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Device Type & Monitoring</CardTitle>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-2"><Label className="text-xs">MikroTik Router</Label><Select onValueChange={setRouterId} value={routerId} disabled={dataLoading.routers}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select a router" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700">{routers.map(r => <SelectItem key={r._id} value={r._id} className="text-sm">{r.name}</SelectItem>)}</SelectContent></Select>{errors.router && <p className="text-red-500 text-xs mt-1">{errors.router}</p>}</div>
                             <div className="space-y-2"><Label className="text-xs">Device Type</Label><Select onValueChange={(v: "Access" | "Station") => setDeviceType(v)} value={deviceType}><SelectTrigger className="bg-zinc-800 border-zinc-700 h-9 text-sm"><SelectValue placeholder="Select device type" /></SelectTrigger><SelectContent className="bg-zinc-800 text-white border-zinc-700"><SelectItem value="Access" className="text-sm">Access Point</SelectItem><SelectItem value="Station" className="text-sm">Station (CPE)</SelectItem></SelectContent></Select>{errors.deviceType && <p className="text-red-500 text-xs mt-1">{errors.deviceType}</p>}</div>
@@ -346,7 +346,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                     case 2:
                       return (
                         <motion.div key={2} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
-                          <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Network Configuration</CardTitle>
+                          <CardTitle className="text-base sm:text-lg text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Network Configuration</CardTitle>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-2">
                                 <Label htmlFor="deviceName" className="text-xs">Device Name</Label>
@@ -430,7 +430,7 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                     case 3:
                       return (
                         <motion.div key={3} custom={direction} variants={formVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
-                          <CardTitle className="text-base text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Administrative Details</CardTitle>
+                          <CardTitle className="text-base sm:text-lg text-cyan-400 border-b border-zinc-800 pb-2 mb-3 flex items-center gap-2"><HardDrive size={18} /> Administrative Details</CardTitle>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-2">
                                 <Label htmlFor="loginUsername" className="text-xs">Login Username</Label>
@@ -460,11 +460,11 @@ export function DeviceForm({ initialData, onSubmit, isEditMode, loading }: Devic
                 })()}
               </AnimatePresence>
             </CardContent>
-            <CardFooter className="p-4 flex items-center justify-between border-t border-zinc-800">
-              <div>{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
-              <div>
-                {step < 3 && <Button type="button" size="sm" onClick={handleNext}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
-                {step === 3 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Device"}</Button>}
+            <CardFooter className="p-4 flex flex-col sm:flex-row items-center justify-between border-t border-zinc-800 gap-3 sm:gap-0">
+              <div className="w-full sm:w-auto flex justify-start">{step > 1 && <Button type="button" variant="outline" size="sm" onClick={handleBack}><ChevronLeft className="mr-1 h-4 w-4" />Back</Button>}</div>
+              <div className="w-full sm:w-auto flex justify-end">
+                {step < 3 && <Button type="button" size="sm" onClick={handleNext} className="w-full sm:w-auto">Next<ChevronRight className="ml-1 h-4 w-4" /></Button>}
+                {step === 3 && <Button type="submit" size="sm" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-500 w-full sm:w-auto">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{loading ? "Saving..." : "Save Device"}</Button>}
               </div>
             </CardFooter>
           </form>
