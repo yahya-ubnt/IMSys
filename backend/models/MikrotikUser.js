@@ -101,6 +101,19 @@ const MikrotikUserSchema = mongoose.Schema(
     type: Date,
     required: true,
   },
+  isPaused: {
+    type: Boolean,
+    default: false,
+  },
+  pauseDate: {
+    type: Date,
+  },
+  remainingDaysAtPause: { // Stored in milliseconds for higher precision
+    type: Number,
+  },
+  prePauseExpiryDate: {
+    type: Date,
+  },
   walletBalance: {
     type: Number,
     required: true,
@@ -151,7 +164,7 @@ const MikrotikUserSchema = mongoose.Schema(
     expectedPaymentDate: {
       type: Date,
     },
-    originalExpiryDate: {
+    gracePeriodOriginalExpiryDate: {
       type: Date,
     },
     gracePeriodDaysUsed: {

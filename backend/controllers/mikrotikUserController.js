@@ -218,6 +218,28 @@ const grantGracePeriod = asyncHandler(async (req, res) => {
   res.status(200).json(updatedUser);
 });
 
+// @desc    Pause a Mikrotik User's subscription
+// @route   PUT /api/mikrotik/users/:id/pause-subscription
+// @access  Private
+const pauseSubscription = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tenantId = req.user.tenant;
+
+  const updatedUser = await UserService.pauseMikrotikUser(id, tenantId);
+  res.status(200).json({ message: 'Subscription paused successfully', user: updatedUser });
+});
+
+// @desc    Unpause a Mikrotik User's subscription
+// @route   PUT /api/mikrotik/users/:id/unpause-subscription
+// @access  Private
+const unpauseSubscription = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tenantId = req.user.tenant;
+
+  const updatedUser = await UserService.unpauseMikrotikUser(id, tenantId);
+  res.status(200).json({ message: 'Subscription unpaused successfully', user: updatedUser });
+});
+
 module.exports = {
   createMikrotikUser,
   getMikrotikUsers,
@@ -239,5 +261,7 @@ module.exports = {
   getMikrotikUsersByRouters,
   getMikrotikUsersByBuildings,
   resendWelcomeSms,
-  grantGracePeriod, // Export the new function
+  grantGracePeriod,
+  pauseSubscription,
+  unpauseSubscription,
 };

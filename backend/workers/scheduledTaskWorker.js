@@ -42,6 +42,7 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
         // 2. In grace period and their expectedPaymentDate has passed
         const usersToProcess = await MikrotikUser.find({
           tenant: tenantId,
+          isPaused: false, // Exclude paused users from disconnection
           $or: [
             {
               expiryDate: { $lte: currentDate },
@@ -134,6 +135,7 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
 
           const usersToNotify = await MikrotikUser.find({
             tenant: tenantId,
+            isPaused: false, // Exclude paused users from receiving expiry reminders
             expiryDate: {
               $gte: targetDate,
               $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000) // Full 24h range of the target date

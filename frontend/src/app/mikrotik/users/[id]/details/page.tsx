@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2, Pause, Play } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
 import { WalletTransaction } from "./wallet-columns";
@@ -23,7 +23,33 @@ import { ConnectDisconnectButtons } from "@/components/mikrotik/ConnectDisconnec
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // --- Interface Definitions ---
-interface MikrotikUser { _id: string; username: string; officialName: string; emailAddress?: string; mobileNumber: string; billingCycle: string; expiryDate: string; mikrotikRouter: { _id: string; name: string }; package: { _id: string; name: string; price: number }; serviceType: 'pppoe' | 'static'; mPesaRefNo: string; installationFee?: number; building?: { _id: string; name: string }; door_number_unit_label?: string; pppoePassword?: string; remoteAddress?: string; ipAddress?: string; station?: { _id: string; deviceName: string; ipAddress: string }; isOnline: boolean; isManuallyDisconnected?: boolean; }
+interface MikrotikUser {
+    _id: string;
+    username: string;
+    officialName: string;
+    emailAddress?: string;
+    mobileNumber: string;
+    billingCycle: string;
+    expiryDate: string;
+    mikrotikRouter: { _id: string; name: string };
+    package: { _id: string; name: string; price: number };
+    serviceType: 'pppoe' | 'static';
+    mPesaRefNo: string;
+    installationFee?: number;
+    building?: { _id: string; name: string };
+    door_number_unit_label?: string;
+    pppoePassword?: string;
+    remoteAddress?: string;
+    ipAddress?: string;
+    station?: { _id: string; deviceName: string; ipAddress: string };
+    isOnline: boolean;
+    isManuallyDisconnected?: boolean;
+    // New fields for Pause Subscription
+    isPaused?: boolean;
+    pauseDate?: string;
+    remainingDaysAtPause?: number; // Stored in milliseconds
+    prePauseExpiryDate?: string;
+}
 interface PaymentStats { totalSpentMpesa: number; lastMpesaPaymentDate: string | null; totalMpesaTransactions: number; averageMpesaTransaction: number; mpesaTransactionHistory: MpesaTransaction[]; }
 interface SmsLog { _id: string; message: string; messageType: string; smsStatus: 'Success' | 'Failed' | 'Pending' | 'RequiresManualIntervention'; createdAt: string; }
 interface SmsStats { total: number; acknowledgement: number; expiry: number; composed: number; system: number; }
@@ -66,6 +92,10 @@ export default function MikrotikUserDetailsPage() {
     const [activeTab, setActiveTab] = useState("overview");
     const [isResendingSms, setIsResendingSms] = useState(false); // New state for resending SMS
     const [isResendConfirmOpen, setIsResendConfirmOpen] = useState(false); // New state for confirmation dialog
+    const [isPausing, setIsPausing] = useState(false);
+    const [isUnpausing, setIsUnpausing] = useState(false);
+    const [isPauseConfirmOpen, setIsPauseConfirmOpen] = useState(false);
+    const [isUnpauseConfirmOpen, setIsUnpauseConfirmOpen] = useState(false);
     const { toast } = useToast();
 
     const fetchUser = useCallback(async () => {
@@ -149,11 +179,64 @@ export default function MikrotikUserDetailsPage() {
         }
     };
 
+    const handlePauseSubscription = async () => {
+        setIsPausing(true);
+        setIsPauseConfirmOpen(false);
+        try {
+            const response = await fetch(`/api/mikrotik/users/${id}/pause-subscription`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to pause subscription");
+            }
+
+            toast({ title: "Success", description: "Subscription paused successfully." });
+            fetchUser(); // Refresh user data
+        } catch (error: unknown) {
+            toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unexpected error occurred.", variant: "destructive" });
+        } finally {
+            setIsPausing(false);
+        }
+    };
+
+    const handleUnpauseSubscription = async () => {
+        setIsUnpausing(true);
+        setIsUnpauseConfirmOpen(false);
+        try {
+            const response = await fetch(`/api/mikrotik/users/${id}/unpause-subscription`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to unpause subscription");
+            }
+
+            toast({ title: "Success", description: "Subscription unpaused successfully." });
+            fetchUser(); // Refresh user data
+        } catch (error: unknown) {
+            toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unexpected error occurred.", variant: "destructive" });
+        } finally {
+            setIsUnpausing(false);
+        }
+    };
+
     const daysToExpire = useMemo(() => {
-        if (!userData?.expiryDate) return { days: 0, label: 'Expired' };
+        if (!userData) return { days: 0, label: 'N/A' };
+
+        if (userData.isPaused && userData.remainingDaysAtPause !== undefined) {
+            const days = Math.ceil(userData.remainingDaysAtPause / (1000 * 60 * 60 * 24));
+            return { days, label: `${days} days remaining (paused)` };
+        }
+
+        if (!userData.expiryDate) return { days: 0, label: 'Expired' };
         const days = calculateDaysRemaining(userData.expiryDate);
         return { days, label: days > 0 ? `${days} days remaining` : 'Expired' };
-    }, [userData?.expiryDate]);
+    }, [userData]);
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading user profile...</div>;
     if (!userData) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">User not found.</div>;
@@ -188,6 +271,15 @@ export default function MikrotikUserDetailsPage() {
                                     {isResendingSms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                 </Button>
                                 <DiagnosticButton userId={userData._id} isIconOnly={true} />
+                                {userData.isPaused ? (
+                                    <Button variant="outline" size="icon" onClick={() => setIsUnpauseConfirmOpen(true)} disabled={isUnpausing}>
+                                        {isUnpausing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" size="icon" onClick={() => setIsPauseConfirmOpen(true)} disabled={isPausing || new Date(userData.expiryDate) < new Date()}>
+                                        {isPausing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
+                                    </Button>
+                                )}
                                 <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} isIconOnly={true} />
                             </div>
                             {/* Desktop Buttons */}
@@ -197,6 +289,15 @@ export default function MikrotikUserDetailsPage() {
                                     {isResendingSms ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Send className="h-3 w-3 mr-2" />}Resend Welcome SMS
                                 </Button>
                                 <DiagnosticButton userId={userData._id} />
+                                {userData.isPaused ? (
+                                    <Button variant="outline" size="sm" onClick={() => setIsUnpauseConfirmOpen(true)} disabled={isUnpausing}>
+                                        {isUnpausing ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Play className="h-3 w-3 mr-2" />}Unpause Subscription
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" size="sm" onClick={() => setIsPauseConfirmOpen(true)} disabled={isPausing || new Date(userData.expiryDate) < new Date()}>
+                                        {isPausing ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Pause className="h-3 w-3 mr-2" />}Pause Subscription
+                                    </Button>
+                                )}
                                 <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} />
                             </div>
                         </div>
@@ -262,6 +363,44 @@ export default function MikrotikUserDetailsPage() {
                         <AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleResendWelcomeSms} disabled={isResendingSms} className="bg-blue-600 hover:bg-blue-700">
                             {isResendingSms ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}Resend SMS
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Pause Subscription Confirmation Dialog */}
+            <AlertDialog open={isPauseConfirmOpen} onOpenChange={setIsPauseConfirmOpen}>
+                <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-cyan-400">Confirm Pause Subscription</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            Are you sure you want to pause {userData.officialName}'s subscription?
+                            Service will stop immediately and remaining time will be preserved.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handlePauseSubscription} disabled={isPausing} className="bg-purple-600 hover:bg-purple-700">
+                            {isPausing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Pause className="h-4 w-4 mr-2" />}Pause Subscription
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Unpause Subscription Confirmation Dialog */}
+            <AlertDialog open={isUnpauseConfirmOpen} onOpenChange={setIsUnpauseConfirmOpen}>
+                <AlertDialogContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-cyan-400">Confirm Unpause Subscription</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            Are you sure you want to unpause {userData.officialName}'s subscription?
+                            Service will resume and remaining time will continue counting down.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-700">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUnpauseSubscription} disabled={isUnpausing} className="bg-green-600 hover:bg-green-700">
+                            {isUnpausing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}Unpause Subscription
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

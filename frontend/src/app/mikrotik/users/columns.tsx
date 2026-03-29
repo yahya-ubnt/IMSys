@@ -30,6 +30,10 @@ export const getMikrotikUserStatus = (user: MikrotikUser) => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
+  if (user.isPaused) {
+    return { status: "Paused", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" };
+  }
+
   if (user.gracePeriodEnabled) {
     const expectedPaymentDate = new Date(user.expectedPaymentDate || '');
     if (expectedPaymentDate >= now) {
@@ -49,7 +53,9 @@ export const getMikrotikUserStatus = (user: MikrotikUser) => {
 
 export const getColumns = (
   user: User | null,
-  onDelete?: (userId: string) => void
+  onDelete?: (userId: string) => void,
+  onPause?: (userId: string) => void,
+  onUnpause?: (userId: string) => void
 ): ColumnDef<MikrotikUser>[] => {
   const columns: ColumnDef<MikrotikUser>[] = [
     {
@@ -210,9 +216,14 @@ export const getColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const days = row.original.gracePeriodEnabled && row.original.expectedPaymentDate
-          ? calculateDaysRemaining(row.original.expectedPaymentDate).toString()
-          : calculateDaysRemaining(row.original.expiryDate).toString();
+        let days: string;
+        if (row.original.isPaused && row.original.remainingDaysAtPause !== undefined) {
+          days = Math.ceil(row.original.remainingDaysAtPause / (1000 * 60 * 60 * 24)).toString();
+        } else if (row.original.gracePeriodEnabled && row.original.expectedPaymentDate) {
+          days = calculateDaysRemaining(row.original.expectedPaymentDate).toString();
+        } else {
+          days = calculateDaysRemaining(row.original.expiryDate).toString();
+        }
         return <div className="text-right">{days}</div>;
       },
     },
@@ -268,6 +279,20 @@ export const getColumns = (
                   <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-500/20" onClick={() => onDelete(user._id)}>
                     Delete User
                   </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator className="bg-zinc-700" />
+                {user.isPaused ? (
+                  onUnpause && (
+                    <DropdownMenuItem onClick={() => onUnpause(user._id)}>
+                      Unpause Subscription
+                    </DropdownMenuItem>
+                  )
+                ) : (
+                  onPause && (
+                    <DropdownMenuItem onClick={() => onPause(user._id)} disabled={new Date(user.expiryDate) < new Date()}>
+                      Pause Subscription
+                    </DropdownMenuItem>
+                  )
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

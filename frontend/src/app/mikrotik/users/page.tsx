@@ -22,7 +22,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { getColumns, getMikrotikUserStatus } from "./columns";
 import { Input } from "@/components/ui/input";
-import { Search, Users, CheckCircle, Clock, Wifi, BarChart2, UserPlus } from "lucide-react";
+import { Search, Users, CheckCircle, Clock, Wifi, BarChart2, UserPlus, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Topbar } from "@/components/topbar";
@@ -42,15 +42,20 @@ export interface MikrotikUser {
   expiryDate: string;
   isOnline: boolean;
   station?: { _id: string; deviceName: string };
-  building?: { _id: string; name: string; }; // Added this line
+  building?: { _id: string; name: string; };
   tenant?: {
     _id: string;
     fullName: string;
   };
   gracePeriodEnabled?: boolean;
-  expectedPaymentDate?: string; // Assuming ISO string from backend
-  originalExpiryDate?: string; // Assuming ISO string from backend
+  expectedPaymentDate?: string;
+  gracePeriodOriginalExpiryDate?: string; // Renamed from originalExpiryDate
   gracePeriodDaysUsed?: number;
+  // New fields for Pause Subscription
+  isPaused?: boolean;
+  pauseDate?: string;
+  remainingDaysAtPause?: number; // Stored in milliseconds
+  prePauseExpiryDate?: string;
 }
 
 export default function MikrotikUsersPage() {
@@ -64,6 +69,10 @@ export default function MikrotikUsersPage() {
   const [newThisMonth, setNewThisMonth] = useState(0);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  const [pauseCandidateId, setPauseCandidateId] = useState<string | null>(null);
+  const [unpauseCandidateId, setUnpauseCandidateId] = useState<string | null>(null);
+  const [isPausingUser, setIsPausingUser] = useState(false);
+  const [isUnpausingUser, setIsUnpausingUser] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
 
   // Table states
@@ -131,7 +140,50 @@ export default function MikrotikUsersPage() {
     }
   };
 
-  const columns = useMemo(() => getColumns(user, (id) => setDeleteCandidateId(id)), [user]);
+  const handlePauseUser = async () => {
+    if (!pauseCandidateId) return;
+    setIsPausingUser(true);
+    try {
+      const response = await fetch(`/api/mikrotik/users/${pauseCandidateId}/pause-subscription`, { method: 'PUT' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to pause user ${pauseCandidateId}`);
+      }
+      toast({ title: 'Subscription Paused', description: 'User subscription has been successfully paused.' });
+      fetchUsers(); // Refresh the user list
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to pause subscription.', variant: 'destructive' });
+    } finally {
+      setPauseCandidateId(null);
+      setIsPausingUser(false);
+    }
+  };
+
+  const handleUnpauseUser = async () => {
+    if (!unpauseCandidateId) return;
+    setIsUnpausingUser(true);
+    try {
+      const response = await fetch(`/api/mikrotik/users/${unpauseCandidateId}/unpause-subscription`, { method: 'PUT' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to unpause user ${unpauseCandidateId}`);
+      }
+      toast({ title: 'Subscription Unpaused', description: 'User subscription has been successfully unpaused.' });
+      fetchUsers(); // Refresh the user list
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to unpause subscription.', variant: 'destructive' });
+    } finally {
+      setUnpauseCandidateId(null);
+      setIsUnpausingUser(false);
+    }
+  };
+
+  const columns = useMemo(() => getColumns(
+    user,
+    (id) => setDeleteCandidateId(id),
+    (id) => setPauseCandidateId(id),
+    (id) => setUnpauseCandidateId(id)
+  ), [user]);
 
   const table = useReactTable({
     data: users,
@@ -220,6 +272,44 @@ export default function MikrotikUsersPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Pause User Confirmation Dialog */}
+      <AlertDialog open={!!pauseCandidateId} onOpenChange={() => setPauseCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Pause Subscription</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to pause this user's subscription?
+              Service will stop immediately and remaining time will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePauseUser} disabled={isPausingUser}>
+              {isPausingUser ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Pause
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unpause User Confirmation Dialog */}
+      <AlertDialog open={!!unpauseCandidateId} onOpenChange={() => setUnpauseCandidateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Unpause Subscription</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unpause this user's subscription?
+              Service will resume and remaining time will continue counting down.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnpauseUser} disabled={isUnpausingUser}>
+              {isUnpausingUser ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Unpause
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

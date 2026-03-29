@@ -21,7 +21,9 @@ const {
   getMikrotikUsersByRouters,
   getMikrotikUsersByBuildings,
   resendWelcomeSms,
-  grantGracePeriod, // Import the new controller function
+  grantGracePeriod,
+  pauseSubscription,
+  unpauseSubscription,
 } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 const diagnosticRoutes = require('./diagnosticRoutes');
@@ -77,7 +79,12 @@ router.route('/:userId/downtime-logs').get(protect, isSuperAdminOrAdmin, getDown
 
 router.route('/:id/disconnect').post(protect, isSuperAdminOrAdmin, manualDisconnectUser);
 router.route('/:id/connect').post(protect, isSuperAdminOrAdmin, manualConnectUser);
+
+router.route('/:id/pause-subscription').put(protect, isSuperAdminOrAdmin, pauseSubscription);
+router.route('/:id/unpause-subscription').put(protect, isSuperAdminOrAdmin, unpauseSubscription);
+
 router.route('/:id/resend-welcome-sms').post(protect, isSuperAdminOrAdmin, resendWelcomeSms);
+
 router.route('/:id/grant-grace-period').post(
   protect,
   isSuperAdminOrAdmin,

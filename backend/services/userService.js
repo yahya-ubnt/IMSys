@@ -441,25 +441,28 @@ const UserService = {
     if (updateData.status && user.status !== updateData.status) {
       needsSync = true;
     }
+    if (updateData.isPaused !== undefined && user.isPaused !== updateData.isPaused) {
+      needsSync = true;
+    }
 
     // Handle grace period fields
     if (updateData.gracePeriodEnabled !== undefined && updateData.gracePeriodEnabled === false) {
       // If grace period is explicitly disabled, clear related fields
       user.gracePeriodEnabled = false;
       user.expectedPaymentDate = undefined;
-      user.originalExpiryDate = undefined;
+      user.gracePeriodOriginalExpiryDate = undefined;
       user.gracePeriodDaysUsed = 0;
       needsSync = true; // Disabling grace period might require a sync
     } else if (updateData.gracePeriodEnabled !== undefined && updateData.gracePeriodEnabled === true) {
       // If grace period is explicitly enabled via update (should ideally use grantGracePeriod)
       // Ensure originalExpiryDate is set if not already
-      if (!user.originalExpiryDate) {
-        user.originalExpiryDate = user.expiryDate;
+      if (!user.gracePeriodOriginalExpiryDate) {
+        user.gracePeriodOriginalExpiryDate = user.expiryDate;
       }
       needsSync = true;
     }
     // If any other grace period field is updated directly, trigger sync
-    if (updateData.expectedPaymentDate || updateData.originalExpiryDate || updateData.gracePeriodDaysUsed) {
+    if (updateData.expectedPaymentDate || updateData.gracePeriodOriginalExpiryDate || updateData.gracePeriodDaysUsed) {
       needsSync = true;
     }
 
@@ -558,13 +561,79 @@ const UserService = {
 
     // If user is not already in a grace period, store the original expiry date.
     if (!user.gracePeriodEnabled) {
-      user.originalExpiryDate = user.expiryDate; // Store current expiry as original
+      user.gracePeriodOriginalExpiryDate = user.expiryDate; // Store current expiry as original
     }
 
     user.gracePeriodEnabled = true;
     user.expectedPaymentDate = expectedPaymentDate;
     user.gracePeriodDaysUsed = 0; // Reset
     user.syncStatus = 'pending'; // Trigger sync to ensure user remains connected
+
+    await user.save();
+
+    await mikrotikSyncQueue.add('syncUser', {
+      mikrotikUserId: user._id,
+      tenantId,
+    });
+
+    return user;
+  },
+
+  /**
+   * Pauses a Mikrotik user's subscription.
+   */
+  pauseMikrotikUser: async (userId, tenantId) => {
+    const user = await MikrotikUser.findOne({ _id: userId, tenant: tenantId });
+    if (!user) {
+      throw new Error('Mikrotik User not found');
+    }
+    if (user.isPaused) {
+      throw new Error('User is already paused.');
+    }
+    if (user.expiryDate < new Date()) {
+      throw new Error('Cannot pause an expired subscription.');
+    }
+
+    const now = new Date();
+    const remainingMillis = user.expiryDate.getTime() - now.getTime();
+
+    user.isPaused = true;
+    user.pauseDate = now;
+    user.remainingDaysAtPause = remainingMillis;
+    user.prePauseExpiryDate = user.expiryDate; // Store current expiry date before pausing
+    user.syncStatus = 'pending'; // Trigger sync to disconnect user
+
+    await user.save();
+
+    await mikrotikSyncQueue.add('syncUser', {
+      mikrotikUserId: user._id,
+      tenantId,
+    });
+
+    return user;
+  },
+
+  /**
+   * Unpauses a Mikrotik user's subscription.
+   */
+  unpauseMikrotikUser: async (userId, tenantId) => {
+    const user = await MikrotikUser.findOne({ _id: userId, tenant: tenantId });
+    if (!user) {
+      throw new Error('Mikrotik User not found');
+    }
+    if (!user.isPaused) {
+      throw new Error('User is not paused.');
+    }
+
+    const now = new Date();
+    const newExpiryDate = new Date(now.getTime() + user.remainingDaysAtPause);
+
+    user.isPaused = false;
+    user.pauseDate = undefined; // Clear pause date
+    user.remainingDaysAtPause = undefined; // Clear remaining time
+    user.prePauseExpiryDate = undefined; // Clear pre-pause expiry
+    user.expiryDate = newExpiryDate; // Set new expiry date
+    user.syncStatus = 'pending'; // Trigger sync to reconnect user
 
     await user.save();
 

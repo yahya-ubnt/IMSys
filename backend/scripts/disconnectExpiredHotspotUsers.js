@@ -29,6 +29,7 @@ const disconnectExpiredHotspotUsers = async () => {
     const expiredUsers = await HotspotUser.find({
       tenant: tenant._id,
       expiryDate: { $lt: new Date() },
+      isPaused: false, // Exclude paused users from disconnection
     }).populate('mikrotikRouter');
 
     for (const user of expiredUsers) {

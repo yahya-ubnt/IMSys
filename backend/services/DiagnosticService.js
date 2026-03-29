@@ -112,8 +112,20 @@ const DiagnosticService = {
       throw error;
     }
 
-    const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
-    addStep('Billing Check', isExpired ? 'Failure' : 'Success', isExpired ? `Client account expired on ${new Date(mikrotikUser.expiryDate).toLocaleDateString()}.` : 'Client account is active.');
+    let billingStatus = 'Success';
+    let billingSummary = 'Client account is active.';
+
+    if (mikrotikUser.isPaused) {
+      billingStatus = 'Warning';
+      billingSummary = `Client account is paused. Remaining time: ${Math.ceil(mikrotikUser.remainingDaysAtPause / (1000 * 60 * 60 * 24))} days.`;
+    } else {
+      const isExpired = new Date() > new Date(mikrotikUser.expiryDate);
+      if (isExpired) {
+        billingStatus = 'Failure';
+        billingSummary = `Client account expired on ${new Date(mikrotikUser.expiryDate).toLocaleDateString()}.`;
+      }
+    }
+    addStep('Billing Check', billingStatus, billingSummary);
 
     const router = mikrotikUser.mikrotikRouter;
     if (!router) {

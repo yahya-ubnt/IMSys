@@ -20,6 +20,7 @@ const runStartupDisconnect = async () => {
     const expiredUsers = await MikrotikUser.find({
       expiryDate: { $lt: new Date() },
       isSuspended: false,
+      isPaused: false, // Exclude paused users from disconnection
     });
 
     if (expiredUsers.length === 0) {

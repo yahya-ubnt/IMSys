@@ -93,9 +93,15 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
       case 'connectUser':
       case 'syncUser':
         // All user operations are now consolidated into an idempotent sync
-        await syncMikrotikUser(client, user);
+        if (user.isPaused) {
+          console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} is paused. Disconnecting from Mikrotik.`);
+          await removeMikrotikUser(client, user);
+          user.provisionedOnMikrotik = false; // User is not provisioned if paused
+        } else {
+          await syncMikrotikUser(client, user);
+          user.provisionedOnMikrotik = true;
+        }
         
-        user.provisionedOnMikrotik = true;
         user.syncStatus = 'synced';
         user.syncErrorMessage = undefined;
         user.lastSyncedAt = new Date();
