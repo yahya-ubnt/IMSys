@@ -210,7 +210,9 @@ export default function MikrotikUsersPage() {
 
   const totalUsers = users.length;
   const activeUsers = users.filter(user => getMikrotikUserStatus(user).status.toLowerCase() === 'active').length;
-  const expiredUsers = totalUsers - activeUsers;
+  const pausedUsers = users.filter(user => getMikrotikUserStatus(user).status.toLowerCase() === 'paused').length;
+  const gracePeriodUsers = users.filter(user => getMikrotikUserStatus(user).status.toLowerCase() === 'grace period').length;
+  const expiredUsers = users.filter(user => getMikrotikUserStatus(user).status.toLowerCase().includes('expired')).length; // More precise for expired
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
   if (loading) return <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">Loading...</div>;
@@ -248,7 +250,7 @@ export default function MikrotikUsersPage() {
               </CardHeader>
               <CardContent className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <ChartCard title="Subscriber Trends" selectedYear={selectedYear} onYearChange={setSelectedYear} years={years} data={monthlyTotalSubscribers} />
-                <DonutChartCard active={activeUsers} expired={expiredUsers} total={totalUsers} />
+                <DonutChartCard active={activeUsers} expired={expiredUsers} paused={pausedUsers} gracePeriod={gracePeriodUsers} total={totalUsers} />
               </CardContent>
               <div className="p-4">
                 <DataTableToolbar table={table} />
@@ -349,7 +351,7 @@ const ChartCard = ({ title, selectedYear, onYearChange, years, data }: { title: 
   </div>
 );
 
-const DonutChartCard = ({ active, expired, total }: { active: number; expired: number; total: number }) => (
+const DonutChartCard = ({ active, expired, paused, gracePeriod, total }: { active: number; expired: number; paused: number; gracePeriod: number; total: number }) => (
     <div className="bg-zinc-800/50 p-4 rounded-lg">
         <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2"><Wifi size={16}/> User Status</h3>
         <ResponsiveContainer width="100%" height={200}>
@@ -357,10 +359,19 @@ const DonutChartCard = ({ active, expired, total }: { active: number; expired: n
                 <defs>
                     <linearGradient id="activeFill"><stop offset="0%" stopColor="#10b981" /><stop offset="100%" stopColor="#34d399" /></linearGradient>
                     <linearGradient id="expiredFill"><stop offset="0%" stopColor="#f59e0b" /><stop offset="100%" stopColor="#fbbf24" /></linearGradient>
+                    <linearGradient id="pausedFill"><stop offset="0%" stopColor="#8b5cf6" /><stop offset="100%" stopColor="#a78bfa" /></linearGradient> {/* Purple */}
+                    <linearGradient id="gracePeriodFill"><stop offset="0%" stopColor="#3b82f6" /><stop offset="100%" stopColor="#60a5fa" /></linearGradient> {/* Blue */}
                 </defs>
-                <Pie data={[{ name: 'Active', value: active }, { name: 'Expired', value: expired }]} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} stroke="none">
+                <Pie data={[
+                    { name: 'Active', value: active },
+                    { name: 'Expired', value: expired },
+                    { name: 'Paused', value: paused },
+                    { name: 'Grace Period', value: gracePeriod },
+                ]} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} stroke="none">
                     <Cell key="active" fill="url(#activeFill)" />
                     <Cell key="expired" fill="url(#expiredFill)" />
+                    <Cell key="paused" fill="url(#pausedFill)" />
+                    <Cell key="gracePeriod" fill="url(#gracePeriodFill)" />
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
                 <Legend iconSize={10} wrapperStyle={{ fontSize: '0.75rem' }} />

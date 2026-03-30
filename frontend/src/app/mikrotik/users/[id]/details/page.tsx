@@ -44,6 +44,7 @@ interface MikrotikUser {
     station?: { _id: string; deviceName: string; ipAddress: string };
     isOnline: boolean;
     isManuallyDisconnected?: boolean;
+    walletBalance: number;
     // New fields for Pause Subscription
     isPaused?: boolean;
     pauseDate?: string;
@@ -310,6 +311,7 @@ export default function MikrotikUserDetailsPage() {
                                 <HeaderStat icon={userData.isOnline ? Wifi : WifiOff} label="Status" value={userData.isOnline ? 'Online' : 'Offline'} color={userData.isOnline ? 'text-green-400' : 'text-red-400'} />
                                 <HeaderStat icon={Package} label="Package" value={userData.package.name} />
                                 <HeaderStat icon={DollarSign} label="Price" value={`KES ${userData.package.price}`} />
+                                <HeaderStat icon={DollarSign} label="Wallet" value={`KES ${userData.walletBalance.toFixed(2)}`} color={userData.walletBalance > 0 ? 'text-green-400' : 'text-zinc-300'} />
                                 <HeaderStat icon={Calendar} label="Expires in" value={daysToExpire.label} color={daysToExpire.days < 7 ? 'text-red-400' : 'text-zinc-300'} />
                             </CardHeader>
                             
