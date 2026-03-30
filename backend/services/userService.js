@@ -644,6 +644,45 @@ const UserService = {
 
     return user;
   },
+
+  adjustWalletBalance: async (userId, tenantId, amount, type, adminUserId) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const user = await MikrotikUser.findOne({ _id: userId, tenant: tenantId }).session(session);
+      if (!user) {
+        throw new Error('Mikrotik User not found');
+      }
+
+      const adjustmentAmount = type === 'debit' ? -Math.abs(amount) : Math.abs(amount);
+
+      const updatedUser = await MikrotikUser.findByIdAndUpdate(
+        userId,
+        { $inc: { walletBalance: adjustmentAmount } },
+        { new: true, session }
+      );
+
+      await WalletTransaction.create([{
+        mikrotikUser: userId,
+        tenant: tenantId,
+        transactionId: new mongoose.Types.ObjectId(),
+        type: 'Adjustment',
+        amount: adjustmentAmount,
+        source: 'manual_adjustment',
+        balanceAfter: updatedUser.walletBalance,
+        comment: `Manual wallet adjustment by admin ${adminUserId}.`,
+        processedBy: adminUserId,
+      }], { session });
+
+      await session.commitTransaction();
+      return updatedUser;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  },
 };
 
 module.exports = UserService;

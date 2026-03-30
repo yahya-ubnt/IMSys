@@ -240,6 +240,22 @@ const unpauseSubscription = asyncHandler(async (req, res) => {
   res.status(200).json({ message: 'Subscription unpaused successfully', user: updatedUser });
 });
 
+// @desc    Adjust a Mikrotik User's wallet balance
+// @route   PUT /api/mikrotik/users/:id/wallet-balance
+// @access  Private
+const adjustWalletBalance = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { id } = req.params;
+  const { amount, type } = req.body;
+  const tenantId = req.user.tenant;
+  const adminUserId = req.user._id; // Assuming the admin's user ID is available in req.user
+
+  const updatedUser = await UserService.adjustWalletBalance(id, tenantId, amount, type, adminUserId);
+  res.status(200).json(updatedUser);
+});
+
 module.exports = {
   createMikrotikUser,
   getMikrotikUsers,
@@ -264,4 +280,5 @@ module.exports = {
   grantGracePeriod,
   pauseSubscription,
   unpauseSubscription,
+  adjustWalletBalance,
 };

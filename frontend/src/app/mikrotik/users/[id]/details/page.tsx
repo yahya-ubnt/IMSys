@@ -21,6 +21,11 @@ import { DiagnosticButton } from "@/components/diagnostics/DiagnosticButton";
 import { DiagnosticHistory } from "@/components/diagnostics/DiagnosticHistory";
 import { ConnectDisconnectButtons } from "@/components/mikrotik/ConnectDisconnectButtons"; // Import the new component
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 
 // --- Interface Definitions ---
 interface MikrotikUser {
@@ -97,6 +102,10 @@ export default function MikrotikUserDetailsPage() {
     const [isUnpausing, setIsUnpausing] = useState(false);
     const [isPauseConfirmOpen, setIsPauseConfirmOpen] = useState(false);
     const [isUnpauseConfirmOpen, setIsUnpauseConfirmOpen] = useState(false);
+    const [isAdjustWalletOpen, setIsAdjustWalletOpen] = useState(false);
+    const [adjustmentAmount, setAdjustmentAmount] = useState(0);
+    const [adjustmentType, setAdjustmentType] = useState<'credit' | 'debit'>('credit');
+    const [isAdjustingWallet, setIsAdjustingWallet] = useState(false);
     const { toast } = useToast();
 
     const fetchUser = useCallback(async () => {
@@ -122,11 +131,24 @@ export default function MikrotikUserDetailsPage() {
         }
     }, [id, toast]);
 
+    const fetchWalletTransactions = useCallback(async () => {
+        if (!id) return;
+        try {
+            const response = await fetch(`/api/payments/wallet/user/${id}`);
+            if (!response.ok) throw new Error("Failed to fetch wallet transactions");
+            const data = await response.json();
+            setWalletTransactions(data.transactions || []);
+        } catch {
+            toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" });
+        }
+    }, [id, toast]);
+
     useEffect(() => {
         if (!id) return;
         fetchUser();
         fetchSmsData();
-    }, [id, fetchUser, fetchSmsData]);
+        fetchWalletTransactions();
+    }, [id, fetchUser, fetchSmsData, fetchWalletTransactions]);
 
     useEffect(() => {
         if (!id) return;
@@ -140,21 +162,6 @@ export default function MikrotikUserDetailsPage() {
             }
         };
         fetchPaymentStats();
-    }, [id, toast]);
-
-    useEffect(() => {
-        if (!id) return;
-        const fetchWalletTransactions = async () => {
-            try {
-                const response = await fetch(`/api/payments/wallet/user/${id}`);
-                if (!response.ok) throw new Error("Failed to fetch wallet transactions");
-                const data = await response.json();
-                setWalletTransactions(data.transactions || []);
-            } catch {
-                toast({ title: "Error", description: "Failed to load wallet transactions.", variant: "destructive" });
-            }
-        };
-        fetchWalletTransactions();
     }, [id, toast]);
 
     const handleResendWelcomeSms = async () => {
@@ -223,6 +230,34 @@ export default function MikrotikUserDetailsPage() {
             toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unexpected error occurred.", variant: "destructive" });
         } finally {
             setIsUnpausing(false);
+        }
+    };
+
+    const handleAdjustWalletBalance = async () => {
+        setIsAdjustingWallet(true);
+        try {
+            const response = await fetch(`/api/mikrotik/users/${id}/wallet-balance`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: adjustmentAmount,
+                    type: adjustmentType,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to adjust wallet balance');
+            }
+
+            toast({ title: 'Success', description: 'Wallet balance adjusted successfully.' });
+            fetchUser(); // Refresh user data
+            fetchWalletTransactions(); // Refresh wallet transactions
+            setIsAdjustWalletOpen(false); // Close the modal
+        } catch (error: unknown) {
+            toast({ title: 'Error', description: (error instanceof Error) ? error.message : 'An unexpected error occurred.', variant: 'destructive' });
+        } finally {
+            setIsAdjustingWallet(false);
         }
     };
 
@@ -311,7 +346,7 @@ export default function MikrotikUserDetailsPage() {
                                 <HeaderStat icon={userData.isOnline ? Wifi : WifiOff} label="Status" value={userData.isOnline ? 'Online' : 'Offline'} color={userData.isOnline ? 'text-green-400' : 'text-red-400'} />
                                 <HeaderStat icon={Package} label="Package" value={userData.package.name} />
                                 <HeaderStat icon={DollarSign} label="Price" value={`KES ${userData.package.price}`} />
-                                <HeaderStat icon={DollarSign} label="Wallet" value={`KES ${userData.walletBalance.toFixed(2)}`} color={userData.walletBalance > 0 ? 'text-green-400' : 'text-zinc-300'} />
+                                <HeaderStat icon={DollarSign} label="Wallet" value={`KES ${userData.walletBalance.toFixed(2)}`} color={userData.walletBalance > 0 ? 'text-green-400' : 'text-zinc-300'} onEdit={() => setIsAdjustWalletOpen(true)} />
                                 <HeaderStat icon={Calendar} label="Expires in" value={daysToExpire.label} color={daysToExpire.days < 7 ? 'text-red-400' : 'text-zinc-300'} />
                             </CardHeader>
                             
@@ -407,18 +442,77 @@ export default function MikrotikUserDetailsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Adjust Wallet Balance Modal */}
+            <Dialog open={isAdjustWalletOpen} onOpenChange={setIsAdjustWalletOpen}>
+                <DialogContent className="bg-zinc-900 border-zinc-700 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-cyan-400">Adjust Wallet Balance</DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Manually credit or debit {userData.officialName}'s wallet.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="amount" className="text-right">
+                                Amount
+                            </Label>
+                            <Input
+                                id="amount"
+                                type="number"
+                                value={adjustmentAmount}
+                                onChange={(e) => setAdjustmentAmount(parseFloat(e.target.value))}
+                                className="col-span-3 bg-zinc-800 border-zinc-700"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">
+                                Type
+                            </Label>
+                            <RadioGroup
+                                value={adjustmentType}
+                                onValueChange={(value) => setAdjustmentType(value as 'credit' | 'debit')}
+                                className="col-span-3 flex items-center gap-4"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="credit" id="credit" />
+                                    <Label htmlFor="credit">Credit</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="debit" id="debit" />
+                                    <Label htmlFor="debit">Debit</Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsAdjustWalletOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAdjustWalletBalance} disabled={isAdjustingWallet} className="bg-blue-600 hover:bg-blue-700">
+                            {isAdjustingWallet ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Adjust Balance
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
 
 import { Eye, EyeOff } from "lucide-react";
 
-const HeaderStat = ({ icon: Icon, label, value, color = 'text-zinc-300' }: { icon: React.ElementType, label: string, value: string, color?: string }) => (
-    <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-800/50">
-        <Icon className={`h-5 w-5 flex-shrink-0 ${color}`} />
-        <div>
-            <p className="text-xs text-zinc-400">{label}</p>
-            <p className={`text-sm font-bold ${color}`}>{value}</p>
+const HeaderStat = ({ icon: Icon, label, value, color = 'text-zinc-300', onEdit }: { icon: React.ElementType, label: string, value: string, color?: string, onEdit?: () => void }) => (
+    <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-zinc-800/50">
+        <div className="flex items-center gap-3">
+            <Icon className={`h-5 w-5 flex-shrink-0 ${color}`} />
+            <div>
+                <p className="text-xs text-zinc-400">{label}</p>
+                <p className={`text-sm font-bold ${color}`}>{value}</p>
+            </div>
         </div>
+        {onEdit && (
+            <Button variant="outline" size="sm" onClick={onEdit} className="text-xs">
+                Edit Balance
+            </Button>
+        )}
     </div>
 );

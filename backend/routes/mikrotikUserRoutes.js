@@ -24,6 +24,7 @@ const {
   grantGracePeriod,
   pauseSubscription,
   unpauseSubscription,
+  adjustWalletBalance,
 } = require('../controllers/mikrotikUserController');
 const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
 const diagnosticRoutes = require('./diagnosticRoutes');
@@ -82,6 +83,16 @@ router.route('/:id/connect').post(protect, isSuperAdminOrAdmin, manualConnectUse
 
 router.route('/:id/pause-subscription').put(protect, isSuperAdminOrAdmin, pauseSubscription);
 router.route('/:id/unpause-subscription').put(protect, isSuperAdminOrAdmin, unpauseSubscription);
+
+router.route('/:id/wallet-balance').put(
+  protect,
+  isSuperAdminOrAdmin,
+  [
+    body('amount', 'Amount must be a valid number').isNumeric(),
+    body('type', 'Type must be either credit or debit').isIn(['credit', 'debit']),
+  ],
+  adjustWalletBalance
+);
 
 router.route('/:id/resend-welcome-sms').post(protect, isSuperAdminOrAdmin, resendWelcomeSms);
 
