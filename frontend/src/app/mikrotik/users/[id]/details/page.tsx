@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2, Pause, Play, Pencil } from "lucide-react";
+import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2, Pause, Play, Pencil, ChevronDown } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
 import { WalletTransaction } from "./wallet-columns";
@@ -25,6 +25,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 
 
 // --- Interface Definitions ---
@@ -329,42 +331,45 @@ export default function MikrotikUserDetailsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* Mobile Buttons */}
-                            <div className="flex sm:hidden items-center gap-2">
-                                <Button variant="outline" size="icon" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-4 w-4" /></Button>
-                                <Button variant="outline" size="icon" onClick={() => setIsResendConfirmOpen(true)} disabled={isResendingSms}>
-                                    {isResendingSms ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                </Button>
-                                <DiagnosticButton userId={userData._id} isIconOnly={true} />
-                                {userData.isPaused ? (
-                                    <Button variant="outline" size="icon" onClick={() => setIsUnpauseConfirmOpen(true)} disabled={isUnpausing}>
-                                        {isUnpausing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                            {/* Action Buttons */}
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 sm:mr-2" /><span className="hidden sm:inline">Edit User</span></Button>
+                            <DiagnosticButton userId={userData._id} />
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <span className="hidden sm:inline">Actions</span>
+                                        <ChevronDown className="h-4 w-4 sm:ml-2" />
                                     </Button>
-                                ) : (
-                                    <Button variant="outline" size="icon" onClick={() => setIsPauseConfirmOpen(true)} disabled={isPausing || new Date(userData.expiryDate) < new Date()}>
-                                        {isPausing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
-                                    </Button>
-                                )}
-                                <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} isIconOnly={true} />
-                            </div>
-                            {/* Desktop Buttons */}
-                            <div className="hidden sm:flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => router.push(`/mikrotik/users/${id}`)}><Edit className="h-3 w-3 mr-2" />Edit User</Button>
-                                <Button variant="outline" size="sm" onClick={() => setIsResendConfirmOpen(true)} disabled={isResendingSms}>
-                                    {isResendingSms ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Send className="h-3 w-3 mr-2" />}Resend Welcome SMS
-                                </Button>
-                                <DiagnosticButton userId={userData._id} />
-                                {userData.isPaused ? (
-                                    <Button variant="outline" size="sm" onClick={() => setIsUnpauseConfirmOpen(true)} disabled={isUnpausing}>
-                                        {isUnpausing ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Play className="h-3 w-3 mr-2" />}Unpause Subscription
-                                    </Button>
-                                ) : (
-                                    <Button variant="outline" size="sm" onClick={() => setIsPauseConfirmOpen(true)} disabled={isPausing || new Date(userData.expiryDate) < new Date()}>
-                                        {isPausing ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Pause className="h-3 w-3 mr-2" />}Pause Subscription
-                                    </Button>
-                                )}
-                                <ConnectDisconnectButtons userId={userData._id} isManuallyDisconnected={userData.isManuallyDisconnected || false} onStatusChange={fetchUser} />
-                            </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-700 text-white">
+                                    <DropdownMenuItem onClick={() => setIsResendConfirmOpen(true)} disabled={isResendingSms}>
+                                        {isResendingSms ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Send className="h-3 w-3 mr-2" />}
+                                        <span>Resend Welcome SMS</span>
+                                    </DropdownMenuItem>
+
+                                    {userData.isPaused ? (
+                                        <DropdownMenuItem onClick={() => setIsUnpauseConfirmOpen(true)} disabled={isUnpausing}>
+                                            {isUnpausing ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Play className="h-3 w-3 mr-2" />}
+                                            <span>Unpause Subscription</span>
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem onClick={() => setIsPauseConfirmOpen(true)} disabled={isPausing || new Date(userData.expiryDate) < new Date()}>
+                                            {isPausing ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Pause className="h-3 w-3 mr-2" />}
+                                            <span>Pause Subscription</span>
+                                        </DropdownMenuItem>
+                                    )}
+                                    
+                                    <DropdownMenuSeparator className="bg-zinc-700" />
+
+                                    <ConnectDisconnectButtons 
+                                        userId={userData._id} 
+                                        isManuallyDisconnected={userData.isManuallyDisconnected || false} 
+                                        onStatusChange={fetchUser}
+                                        isDropdownItem={true}
+                                    />
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
 

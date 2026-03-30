@@ -8,10 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface DiagnosticButtonProps {
   userId: string;
-  isIconOnly?: boolean;
 }
 
-export function DiagnosticButton({ userId, isIconOnly = false }: DiagnosticButtonProps) {
+export function DiagnosticButton({ userId }: DiagnosticButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -22,7 +21,7 @@ export function DiagnosticButton({ userId, isIconOnly = false }: DiagnosticButto
     try {
       const response = await fetch(`/api/mikrotik/users/${userId}/diagnostics`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ stream: false }) // Explicitly request non-streaming response
@@ -33,7 +32,7 @@ export function DiagnosticButton({ userId, isIconOnly = false }: DiagnosticButto
       if (!response.ok) {
         throw new Error(result.message || 'Failed to run diagnostics.');
       }
-      
+
       // Navigate to the new dedicated page for the diagnostic report
       router.push(`/mikrotik/users/${userId}/diagnostics/${result._id}`);
 
@@ -46,18 +45,18 @@ export function DiagnosticButton({ userId, isIconOnly = false }: DiagnosticButto
   };
 
   return (
-    <Button 
-      onClick={handleRunDiagnostic} 
-      disabled={isLoading} 
-      size={isIconOnly ? "icon" : "default"}
-      className="bg-green-600 text-white hover:bg-green-700"
+    <Button
+      onClick={handleRunDiagnostic}
+      disabled={isLoading}
+      size="sm" // Changed to "sm" for consistency
+      className="bg-green-600 text-white hover:bg-green-700 sm:size-sm size-icon" // Responsive sizing
     >
       {isLoading ? (
-        <Loader2 className={`h-4 w-4 ${!isIconOnly ? 'mr-2' : ''} animate-spin`} />
+        <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
       ) : (
-        <PlayCircle className={`h-4 w-4 ${!isIconOnly ? 'mr-2' : ''}`} />
+        <PlayCircle className="h-4 w-4 sm:mr-2" />
       )}
-      {!isIconOnly && (isLoading ? 'Running...' : 'Run Diagnostic')}
+      <span className="hidden sm:inline">{isLoading ? 'Running...' : 'Run Diagnostic'}</span>
     </Button>
   );
 }
