@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2, Pause, Play } from "lucide-react";
+import { ArrowLeft, Edit, User as UserIcon, Wifi, WifiOff, Package, Smartphone, AtSign, Calendar, DollarSign, Lock, Hash, Building, Home, Router as RouterIcon, BarChart2, ShieldCheck, FileText, MessageCircle, Send, Loader2, Pause, Play, Pencil } from "lucide-react";
 import { Topbar } from "@/components/topbar";
 import { MpesaTransaction } from "./mpesa-columns";
 import { WalletTransaction } from "./wallet-columns";
@@ -84,6 +84,35 @@ const DetailItem = ({ icon: Icon, label, value, href, isPassword }: { icon: Reac
         </div>
     );
 };
+
+const HeaderStat = ({ icon: Icon, label, value, color = 'text-zinc-300' }: { icon: React.ElementType, label: string, value: string, color?: string }) => (
+    <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-800/50">
+        <Icon className={`h-5 w-5 flex-shrink-0 ${color}`} />
+        <div>
+            <p className="text-xs text-zinc-400">{label}</p>
+            <p className={`text-sm font-bold ${color}`}>{value}</p>
+        </div>
+    </div>
+);
+
+const WalletBalanceCard = ({ balance, onEdit }: { balance: number, onEdit: () => void }) => (
+    <div className="col-span-1 md:col-span-2 lg:col-span-4 flex items-center justify-between gap-3 p-3 rounded-lg bg-gradient-to-r from-blue-900/50 to-zinc-900/50">
+        <div className="flex items-center gap-3">
+            <DollarSign className="h-6 w-6 text-blue-400" />
+            <div>
+                <p className="text-sm text-blue-300">Wallet Balance</p>
+                <p className={`text-xl font-bold ${balance > 0 ? 'text-green-400' : 'text-zinc-300'}`}>
+                    KES {balance.toFixed(2)}
+                </p>
+            </div>
+        </div>
+        <Button onClick={onEdit} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+            <span className="hidden sm:inline">Edit Balance</span>
+            <Pencil className="sm:hidden h-4 w-4" />
+        </Button>
+    </div>
+);
+
 
 // --- Main Page Component ---
 export default function MikrotikUserDetailsPage() {
@@ -342,11 +371,11 @@ export default function MikrotikUserDetailsPage() {
                     {/* Main Content Card */}
                     <div className="bg-zinc-900/50 backdrop-blur-lg border-zinc-700 shadow-2xl shadow-blue-500/10 rounded-xl flex-1 flex flex-col">
                         <Card className="bg-transparent border-none flex-1 flex flex-col">
-                            <CardHeader className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <CardHeader className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <WalletBalanceCard balance={userData.walletBalance} onEdit={() => setIsAdjustWalletOpen(true)} />
                                 <HeaderStat icon={userData.isOnline ? Wifi : WifiOff} label="Status" value={userData.isOnline ? 'Online' : 'Offline'} color={userData.isOnline ? 'text-green-400' : 'text-red-400'} />
                                 <HeaderStat icon={Package} label="Package" value={userData.package.name} />
                                 <HeaderStat icon={DollarSign} label="Price" value={`KES ${userData.package.price}`} />
-                                <HeaderStat icon={DollarSign} label="Wallet" value={`KES ${userData.walletBalance.toFixed(2)}`} color={userData.walletBalance > 0 ? 'text-green-400' : 'text-zinc-300'} onEdit={() => setIsAdjustWalletOpen(true)} />
                                 <HeaderStat icon={Calendar} label="Expires in" value={daysToExpire.label} color={daysToExpire.days < 7 ? 'text-red-400' : 'text-zinc-300'} />
                             </CardHeader>
                             
@@ -499,20 +528,3 @@ export default function MikrotikUserDetailsPage() {
 }
 
 import { Eye, EyeOff } from "lucide-react";
-
-const HeaderStat = ({ icon: Icon, label, value, color = 'text-zinc-300', onEdit }: { icon: React.ElementType, label: string, value: string, color?: string, onEdit?: () => void }) => (
-    <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-zinc-800/50">
-        <div className="flex items-center gap-3">
-            <Icon className={`h-5 w-5 flex-shrink-0 ${color}`} />
-            <div>
-                <p className="text-xs text-zinc-400">{label}</p>
-                <p className={`text-sm font-bold ${color}`}>{value}</p>
-            </div>
-        </div>
-        {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit} className="text-xs">
-                Edit Balance
-            </Button>
-        )}
-    </div>
-);
