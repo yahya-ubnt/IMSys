@@ -36,17 +36,17 @@ interface SmsTabProps {
 }
 
 // --- Sub-components ---
-const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) => (
-  <div className="p-4 rounded-lg bg-zinc-800/50 flex items-center">
-    <Icon className="h-6 w-6 text-cyan-400 mr-4" />
+const StatCard = ({ title, value, icon: Icon, color = "text-white" }: { title: string; value: string | number; icon: React.ElementType; color?: string }) => (
+  <div className="bg-zinc-800/50 p-3 rounded-lg flex items-center gap-4">
+    <div className={`p-2 bg-zinc-700 rounded-md ${color}`}><Icon className="h-5 w-5" /></div>
     <div>
-      <p className="text-sm text-zinc-400">{label}</p>
-      <p className="text-xl font-bold text-white">{value}</p>
+      <p className="text-xs text-zinc-400">{title}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
     </div>
   </div>
 );
 
-const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' | 'RequiresManualIntervention' }) => {
+export const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' | 'RequiresManualIntervention' }) => {
   const statusConfig = {
     Success: { icon: CheckCircle, color: 'bg-green-500/20 text-green-400', label: 'Success' },
     Failed: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Failed' },
@@ -62,7 +62,12 @@ const StatusBadge = ({ status }: { status: 'Success' | 'Failed' | 'Pending' | 'R
   );
 };
 
-// --- Main Component ---
+import { DataTable } from '@/components/data-table';
+import { getColumns } from './sms-log-columns';
+import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
+
+// ... (rest of the file)
+
 const SmsTab: React.FC<SmsTabProps> = ({ smsData, onRefresh }) => {
   const { toast } = useToast();
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -93,14 +98,20 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData, onRefresh }) => {
     }
   };
 
+  const table = useReactTable({
+    data: logs,
+    columns: getColumns(handleRetry, retryingId),
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={MessageSquare} label="Total Messages" value={stats.total} />
-        <StatCard icon={Mail} label="Acknowledgements" value={stats.acknowledgement} />
-        <StatCard icon={Bell} label="Expiry Alerts" value={stats.expiry} />
-        <StatCard icon={MessageSquare} label="Composed" value={stats.composed} />
+        <StatCard icon={MessageSquare} title="Total Messages" value={stats.total} />
+        <StatCard icon={Mail} title="Acknowledgements" value={stats.acknowledgement} />
+        <StatCard icon={Bell} title="Expiry Alerts" value={stats.expiry} />
+        <StatCard icon={MessageSquare} title="Composed" value={stats.composed} />
       </div>
 
       {/* SMS History Table */}
@@ -110,52 +121,11 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData, onRefresh }) => {
         </CardHeader>
         <CardContent>
           <div className="h-96 overflow-y-auto overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Message</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logs.length > 0 ? logs.map((log) => (
-                  <TableRow key={log._id}>
-                    <TableCell className="whitespace-nowrap text-zinc-400">{format(new Date(log.createdAt), 'PPpp')}</TableCell>
-                    <TableCell className="font-semibold text-zinc-300">{log.messageType}</TableCell>
-                    <TableCell className="text-sm text-zinc-400 max-w-md truncate">{log.message}</TableCell>
-                    <TableCell className="text-right">
-                      <StatusBadge status={log.smsStatus} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {log.smsStatus === 'RequiresManualIntervention' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 hover:text-cyan-300"
-                          onClick={() => handleRetry(log._id)}
-                          disabled={retryingId === log._id}
-                        >
-                          {retryingId === log._id ? (
-                            <Clock className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-zinc-500">
-                      No SMS history found for this user.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            {logs.length > 0 ? (
+              <DataTable table={table} columns={getColumns(handleRetry, retryingId)} />
+            ) : (
+              <div className="flex items-center justify-center h-full text-zinc-400">No SMS history found for this user.</div>
+            )}
           </div>
         </CardContent>
       </Card>
