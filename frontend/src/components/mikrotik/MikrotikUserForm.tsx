@@ -470,8 +470,36 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                             {serviceType === 'static' && <div className="space-y-2"><Label className="text-xs">Static IP Address</Label><Input value={ipAddress} onChange={e => setIpAddress(e.target.value)} required placeholder="e.g., 192.168.10.50" className="h-9 bg-zinc-800 border-zinc-700 text-sm" />{errors.ipAddress && <p className="text-red-500 text-xs mt-1">{errors.ipAddress}</p>}</div>}
                                             {serviceType === 'static' && <div className="space-y-2"><Label className="text-xs">MAC Address</Label><Input value={macAddress} onChange={e => setMacAddress(e.target.value)} className="h-9 bg-zinc-800 border-zinc-700 text-sm" placeholder="Optional, will be auto-discovered" /></div>}
                                             <div className="space-y-2"><Label className="text-xs">M-Pesa Ref No</Label><div className="flex gap-2"><Input value={mPesaRefNo} onChange={e => setMPesaRefNo(e.target.value)} required placeholder="e.g. 20232..." className="h-9 bg-zinc-800 border-zinc-700 text-sm" /><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'number')}>123</Button><Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => generateValue(setMPesaRefNo, 'letter')}>ABC</Button></div>{errors.mPesaRefNo && <p className="text-red-500 text-xs mt-1">{errors.mPesaRefNo}</p>}</div>
-                                            <div className="space-y-2"><Label className="text-xs">Installation Fee</Label><Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} placeholder="e.g. 1500" className="h-9 bg-zinc-800 border-zinc-700 text-sm" /></div>
-                                            <div className="space-y-2 sm:col-span-2"><Label className="text-xs">Expiry Date</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700">{expiryDate ? format(expiryDate, "PPP") : "Pick a date"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent></Popover></div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs">Installation Fee</Label>
+                                                <Input value={installationFee} onChange={e => setInstallationFee(e.target.value)} placeholder="e.g. 1500" className="h-9 bg-zinc-800 border-zinc-700 text-sm disabled:opacity-70 disabled:cursor-not-allowed" disabled={isEditMode} />
+                                                {isEditMode && (
+                                                    <p className="text-xs text-zinc-400 mt-1">
+                                                        This was the one-time installation fee recorded for this user.
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label className="text-xs">Expiry Date</Label>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button 
+                                                            variant="outline" 
+                                                            className="w-full justify-start text-left font-normal h-9 bg-zinc-800 border-zinc-700 text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            disabled={isEditMode && !!expectedPaymentDate}
+                                                        >
+                                                            {expiryDate ? format(expiryDate, "PPP") : "Pick a date"}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700">
+                                                        <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                                                                {isEditMode && expectedPaymentDate && (
+                                                                                                                                                        <p className="text-xs text-zinc-400 mt-1">
+                                                                                                                                                            Expiry date cannot be changed while a grace period is active. Please clear the grace period first.
+                                                                                                                                                        </p>                                                                                                )}
+                                            </div>
                                             {isEditMode && (serviceType === 'pppoe' || serviceType === 'static') && (
                                                 <div className="space-y-2 sm:col-span-2">
                                                     <Label className="text-xs">Grant Grace Period Until</Label>
@@ -490,6 +518,18 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                                             </div>
                                                         </PopoverContent>
                                                     </Popover>
+                                                    {isEditMode && expectedPaymentDate && (
+                                                        <div className="flex items-center justify-end mt-1">
+                                                            <Button 
+                                                                type="button"
+                                                                variant="outline" 
+                                                                className="h-7 px-2 text-xs border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                                                                onClick={() => setExpectedPaymentDate(undefined)}
+                                                            >
+                                                                Clear Grace Period
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
