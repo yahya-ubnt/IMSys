@@ -580,6 +580,43 @@ const UserService = {
   },
 
   /**
+   * Cancels an active grace period for a Mikrotik user.
+   */
+  cancelGracePeriod: async (userId, tenantId) => {
+    const user = await MikrotikUser.findOne({ _id: userId, tenant: tenantId });
+    if (!user) {
+      throw new Error('Mikrotik User not found');
+    }
+
+    if (!user.gracePeriodEnabled) {
+      // If there's no grace period to cancel, just return the user as-is.
+      return user;
+    }
+
+    // Reset all grace period fields
+    user.gracePeriodEnabled = false;
+    user.expectedPaymentDate = undefined;
+    user.gracePeriodOriginalExpiryDate = undefined;
+    user.gracePeriodDaysUsed = 0;
+
+    // If the user's original expiry date is in the past, their status should be suspended.
+    if (user.expiryDate < new Date()) {
+      user.status = 'suspended';
+    }
+    
+    user.syncStatus = 'pending'; // Trigger sync to enforce the cancellation
+
+    await user.save();
+
+    await mikrotikSyncQueue.add('syncUser', {
+      mikrotikUserId: user._id,
+      tenantId,
+    });
+
+    return user;
+  },
+
+  /**
    * Pauses a Mikrotik user's subscription.
    */
   pauseMikrotikUser: async (userId, tenantId) => {

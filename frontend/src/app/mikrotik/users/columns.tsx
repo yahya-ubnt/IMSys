@@ -34,20 +34,21 @@ export const getMikrotikUserStatus = (user: MikrotikUser) => {
     return { status: "Paused", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" };
   }
 
-  if (user.gracePeriodEnabled) {
-    const expectedPaymentDate = new Date(user.expectedPaymentDate || '');
-    if (expectedPaymentDate >= now) {
-      return { status: "Grace Period", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
-    } else {
-      // Grace period has passed, treat as expired
-      return { status: "Expired (Grace Ended)", color: "bg-red-500/20 text-red-400 border-red-500/30" };
+  const expiryDate = new Date(user.expiryDate);
+
+  if (expiryDate < now) { // User has expired
+    if (user.gracePeriodEnabled) {
+      const expectedPaymentDate = new Date(user.expectedPaymentDate || '');
+      if (expectedPaymentDate >= now) {
+        return { status: "Grace Period", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" };
+      } else {
+        return { status: "Expired (Grace Ended)", color: "bg-red-500/20 text-red-400 border-red-500/30" };
+      }
     }
+    return { status: "Expired", color: "bg-red-500/20 text-red-400 border-red-500/30" };
   }
 
-  const expiryDate = new Date(user.expiryDate);
-  if (expiryDate < now) {
-    return { status: "Expired", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" };
-  }
+  // If not expired, they are active (grace period flag is ignored)
   return { status: "Active", color: "bg-green-500/20 text-green-400 border-green-500/30" };
 };
 
@@ -206,7 +207,25 @@ export const getColumns = (
           Expiry Date
         </Button>
       ),
-      cell: ({ row }) => new Date(row.getValue("expiryDate")).toLocaleDateString(),
+      cell: ({ row }) => {
+        const user = row.original;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const originalExpiry = new Date(user.expiryDate);
+
+        // Check if user has expired and is in a grace period
+        if (user.gracePeriodEnabled && originalExpiry < now && user.expectedPaymentDate) {
+          // If so, display the grace period's end date with blue text
+          return (
+            <div className="text-yellow-400 font-medium">
+              {new Date(user.expectedPaymentDate).toLocaleDateString()}
+            </div>
+          );
+        }
+
+        // Otherwise, display the standard expiry date
+        return new Date(user.expiryDate).toLocaleDateString();
+      },
     },
     {
       id: "remainingDays",
@@ -216,15 +235,23 @@ export const getColumns = (
         </Button>
       ),
       cell: ({ row }) => {
+        const user = row.original;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const originalExpiry = new Date(user.expiryDate);
+        
         let days: string;
-        if (row.original.isPaused && row.original.remainingDaysAtPause !== undefined) {
-          days = Math.ceil(row.original.remainingDaysAtPause / (1000 * 60 * 60 * 24)).toString();
-        } else if (row.original.gracePeriodEnabled && row.original.expectedPaymentDate) {
-          days = calculateDaysRemaining(row.original.expectedPaymentDate).toString();
+        let className = "text-right"; // Default class
+
+        if (user.isPaused && user.remainingDaysAtPause !== undefined) {
+          days = Math.ceil(user.remainingDaysAtPause / (1000 * 60 * 60 * 24)).toString();
+        } else if (user.gracePeriodEnabled && originalExpiry < now && user.expectedPaymentDate) {
+          days = calculateDaysRemaining(user.expectedPaymentDate).toString();
+          className = "text-right text-yellow-400 font-medium"; // Yellow for grace period
         } else {
-          days = calculateDaysRemaining(row.original.expiryDate).toString();
+          days = calculateDaysRemaining(user.expiryDate).toString();
         }
-        return <div className="text-right">{days}</div>;
+        return <div className={className}>{days}</div>;
       },
     },
     {

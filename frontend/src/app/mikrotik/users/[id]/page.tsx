@@ -122,6 +122,28 @@ export default function EditMikrotikUserPage() {
         }
     };
 
+    const handleCancelGracePeriod = async () => {
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/mikrotik/users/${id}/cancel-grace-period`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to cancel grace period");
+            }
+
+            toast({ title: "Success", description: "Grace period has been cancelled." });
+            router.push(`/mikrotik/users`);
+        } catch (error: unknown) {
+            toast({ title: "Error", description: (error instanceof Error) ? error.message : "An unexpected error occurred.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="flex flex-col min-h-screen bg-zinc-900 text-white">
             <Topbar />
@@ -147,6 +169,7 @@ export default function EditMikrotikUserPage() {
                                 isEditMode={true}
                                 initialData={initialData}
                                 onSubmit={handleSubmit}
+                                onCancelGracePeriod={handleCancelGracePeriod}
                                 routers={routers}
                                 packages={packages}
                                 buildings={buildings}

@@ -22,6 +22,7 @@ const {
   getMikrotikUsersByBuildings,
   resendWelcomeSms,
   grantGracePeriod,
+  cancelGracePeriod,
   pauseSubscription,
   unpauseSubscription,
   adjustWalletBalance,
@@ -104,6 +105,8 @@ router.route('/:id/grant-grace-period').post(
   ],
   grantGracePeriod
 );
+
+router.route('/:id/cancel-grace-period').post(protect, isSuperAdminOrAdmin, cancelGracePeriod);
 
 router
   .route('/:id')

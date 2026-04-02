@@ -33,6 +33,7 @@ interface MikrotikUserFormProps {
   buildings: Building[];
   stations: Device[];
   onBuildingsUpdate: (buildings: Building[]) => void;
+  onCancelGracePeriod?: () => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -66,7 +67,7 @@ const formVariants = {
     exit: (direction: number) => ({ opacity: 0, x: direction < 0 ? 50 : -50, transition: { duration: 0.2, ease: "easeInOut" } }),
 };
 
-export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, packages, buildings, stations, onBuildingsUpdate, isSubmitting }: MikrotikUserFormProps) {
+export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, packages, buildings, stations, onBuildingsUpdate, onCancelGracePeriod, isSubmitting }: MikrotikUserFormProps) {
     const { toast } = useToast();
     const searchParams = useSearchParams();
 
@@ -334,7 +335,13 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (validateStep(3)) {
-            await onSubmit(getFormData());
+            const formData = getFormData();
+            // Check if the grace period is being cancelled
+            if (isEditMode && initialData?.expectedPaymentDate && formData.expectedPaymentDate === undefined && onCancelGracePeriod) {
+                await onCancelGracePeriod();
+            } else {
+                await onSubmit(formData);
+            }
         }
     };
 
@@ -476,6 +483,11 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
                                                         </PopoverTrigger>
                                                         <PopoverContent className="w-auto p-0 bg-zinc-800 text-white border-zinc-700">
                                                             <Calendar mode="single" selected={expectedPaymentDate} onSelect={setExpectedPaymentDate} initialFocus />
+                                                            <div className="p-2 border-t border-zinc-700">
+                                                                <Button variant="ghost" size="sm" className="w-full h-8 text-xs" onClick={() => setExpectedPaymentDate(undefined)}>
+                                                                    Clear
+                                                                </Button>
+                                                            </div>
                                                         </PopoverContent>
                                                     </Popover>
                                                 </div>

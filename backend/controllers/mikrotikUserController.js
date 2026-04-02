@@ -218,6 +218,17 @@ const grantGracePeriod = asyncHandler(async (req, res) => {
   res.status(200).json(updatedUser);
 });
 
+// @desc    Cancel a grace period for a Mikrotik User
+// @route   POST /api/mikrotik/users/:id/cancel-grace-period
+// @access  Private
+const cancelGracePeriod = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tenantId = req.user.tenant;
+
+  const updatedUser = await UserService.cancelGracePeriod(id, tenantId);
+  res.status(200).json(updatedUser);
+});
+
 // @desc    Pause a Mikrotik User's subscription
 // @route   PUT /api/mikrotik/users/:id/pause-subscription
 // @access  Private
@@ -278,6 +289,7 @@ module.exports = {
   getMikrotikUsersByBuildings,
   resendWelcomeSms,
   grantGracePeriod,
+  cancelGracePeriod,
   pauseSubscription,
   unpauseSubscription,
   adjustWalletBalance,
