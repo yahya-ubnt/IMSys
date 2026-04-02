@@ -41,7 +41,7 @@ router.post(
 // Wallet Transactions
 router.route('/transactions').get(protect, isSuperAdminOrAdmin, getTransactions);
 router.route('/wallet').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
-router.route('/wallet/user/:id').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
+router.route('/wallet/user/:userId').get(protect, isSuperAdminOrAdmin, getWalletTransactions);
 router.post(
   '/wallet',
   protect,
