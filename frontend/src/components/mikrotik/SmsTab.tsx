@@ -72,12 +72,6 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData, onRefresh }) => {
   const { toast } = useToast();
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
-  if (!smsData) {
-    return <div className="text-center text-zinc-400">Loading SMS history...</div>;
-  }
-
-  const { logs, stats } = smsData;
-
   const handleRetry = async (logId: string) => {
     setRetryingId(logId);
     try {
@@ -98,38 +92,50 @@ const SmsTab: React.FC<SmsTabProps> = ({ smsData, onRefresh }) => {
     }
   };
 
+  const logs = smsData?.logs || [];
+  const stats = smsData?.stats || { total: 0, acknowledgement: 0, expiry: 0, composed: 0, system: 0 };
+
   const table = useReactTable({
     data: logs,
     columns: getColumns(handleRetry, retryingId),
     getCoreRowModel: getCoreRowModel(),
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={MessageSquare} title="Total Messages" value={stats.total} />
-        <StatCard icon={Mail} title="Acknowledgements" value={stats.acknowledgement} />
-        <StatCard icon={Bell} title="Expiry Alerts" value={stats.expiry} />
-        <StatCard icon={MessageSquare} title="Composed" value={stats.composed} />
-      </div>
 
-      {/* SMS History Table */}
-      <Card className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-cyan-500/10 rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-cyan-400">SMS History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-96 overflow-y-auto overflow-x-auto">
-            {logs.length > 0 ? (
-              <DataTable table={table} columns={getColumns(handleRetry, retryingId)} />
-            ) : (
-              <div className="flex items-center justify-center h-full text-zinc-400">No SMS history found for this user.</div>
-            )}
+
+
+  return (
+    <>
+      {!smsData ? (
+        <div className="text-center text-zinc-400">Loading SMS history...</div>
+      ) : (
+        <div className="space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon={MessageSquare} title="Total Messages" value={stats.total} />
+            <StatCard icon={Mail} title="Acknowledgements" value={stats.acknowledgement} />
+            <StatCard icon={Bell} title="Expiry Alerts" value={stats.expiry} />
+            <StatCard icon={MessageSquare} title="Composed" value={stats.composed} />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {/* SMS History Table */}
+          <Card className="bg-zinc-900/50 backdrop-blur-lg shadow-2xl shadow-cyan-500/10 rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-cyan-400">SMS History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-96 overflow-y-auto overflow-x-auto">
+                {logs.length > 0 ? (
+                  <DataTable table={table} columns={getColumns(handleRetry, retryingId)} />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-zinc-400">No SMS history found for this user.</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </>
   );
 };
 
