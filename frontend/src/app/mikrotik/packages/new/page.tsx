@@ -14,6 +14,9 @@ interface MikrotikRouter { _id: string; name: string; }
 export default function NewPackagePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [routers, setRouters] = useState<MikrotikRouter[]>([]);
+    const [pppProfiles, setPppProfiles] = useState<string[]>([]);
+    const [isPppProfilesLoading, setIsPppProfilesLoading] = useState(false);
+    const [selectedRouterId, setSelectedRouterId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const router = useRouter();
@@ -32,6 +35,27 @@ export default function NewPackagePage() {
         };
         fetchRouters();
     }, [toast]);
+
+    useEffect(() => {
+        if (selectedRouterId) {
+            const fetchPppProfiles = async () => {
+                setIsPppProfilesLoading(true);
+                try {
+                    const response = await fetch(`/api/mikrotik/routers/${selectedRouterId}/ppp-profiles`);
+                    if (!response.ok) throw new Error("Failed to fetch PPP profiles");
+                    setPppProfiles(await response.json());
+                } catch (error) {
+                    toast({ title: "Error", description: "Failed to load PPP profiles.", variant: "destructive" });
+                    setPppProfiles([]);
+                } finally {
+                    setIsPppProfilesLoading(false);
+                }
+            };
+            fetchPppProfiles();
+        } else {
+            setPppProfiles([]);
+        }
+    }, [selectedRouterId, toast]);
 
     const handleSubmit = async (packageData: MikrotikPackageFormData) => {
         setIsSubmitting(true);
@@ -78,6 +102,9 @@ export default function NewPackagePage() {
                                 onSubmit={handleSubmit}
                                 isSubmitting={isSubmitting}
                                 routers={routers}
+                                pppProfiles={pppProfiles}
+                                isPppProfilesLoading={isPppProfilesLoading}
+                                onRouterSelect={setSelectedRouterId}
                             />
                         )}
                     </div>

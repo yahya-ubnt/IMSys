@@ -34,6 +34,7 @@ interface MikrotikPackageFormProps {
   routers: MikrotikRouter[];
   pppProfiles?: string[];
   isPppProfilesLoading?: boolean;
+  onRouterSelect?: (routerId: string) => void;
 }
 
 // --- Helper Functions & Components ---
@@ -60,7 +61,7 @@ const deconstructDuration = (days: number | undefined) => {
 };
 
 // --- Main Form Component ---
-export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmitting, routers, pppProfiles = [], isPppProfilesLoading = false }: MikrotikPackageFormProps) {
+export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmitting, routers, pppProfiles = [], isPppProfilesLoading = false, onRouterSelect }: MikrotikPackageFormProps) {
     const { toast } = useToast();
     const [step, setStep] = useState(1);
     const [direction, setDirection] = useState(1);
@@ -76,6 +77,12 @@ export function MikrotikPackageForm({ isEditMode, initialData, onSubmit, isSubmi
     const [profile, setProfile] = useState(initialData?.profile || "");
     const [rateLimit, setRateLimit] = useState(initialData?.rateLimit || "");
     const [status, setStatus] = useState<'active' | 'disabled'>(initialData?.status || "active");
+
+    useEffect(() => {
+        if (onRouterSelect && mikrotikRouterId) {
+            onRouterSelect(mikrotikRouterId);
+        }
+    }, [mikrotikRouterId, onRouterSelect]);
 
     const getFormData = (): Partial<MikrotikPackageFormData> => {
         let durationInDays = 0;
