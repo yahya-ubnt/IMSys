@@ -23,8 +23,8 @@ router.route('/').post(
   protect,
   isSuperAdminOrAdmin,
   [
-    body('date', 'Date is required').isISO8601().toDate(),
-    body('type', 'Type is required').not().isEmpty(),
+    body('expenseDate', 'Date is required').isISO8601().toDate(),
+    body('expenseType', 'Type is required').not().isEmpty(),
     body('amount', 'Amount must be a positive number').isFloat({ gt: 0 }),
     body('description', 'Description is required').not().isEmpty(),
   ],
