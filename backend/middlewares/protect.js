@@ -60,4 +60,12 @@ const isSuperAdminOrAdmin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, isSuperAdmin, isAdmin, isSuperAdminOrAdmin };
+const isSuperAdminOrAdminOrTenant = (req, res, next) => {
+  if (req.user && (req.user.roles.includes('SUPER_ADMIN') || req.user.roles.includes('ADMIN') || req.user.roles.includes('TENANT'))) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Not authorized for this resource' });
+  }
+};
+
+module.exports = { protect, isSuperAdmin, isAdmin, isSuperAdminOrAdmin, isSuperAdminOrAdminOrTenant };

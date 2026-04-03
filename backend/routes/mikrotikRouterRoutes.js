@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { protect, isSuperAdminOrAdmin } = require('../middlewares/protect');
+const { protect, isSuperAdminOrAdmin, isSuperAdminOrAdminOrTenant } = require('../middlewares/protect');
 const {
   createMikrotikRouter,
   getMikrotikRouters,
@@ -39,7 +39,7 @@ router.route('/:id').get(protect, isSuperAdminOrAdmin, getMikrotikRouterById).pu
     updateMikrotikRouter)
     .delete(protect, isSuperAdminOrAdmin, deleteMikrotikRouter);
 router.route('/:id/status').get(protect, isSuperAdminOrAdmin, getMikrotikRouterStatus);
-router.post('/test-connection', protect, isSuperAdminOrAdmin, testMikrotikConnection);
+router.post('/test-connection', protect, isSuperAdminOrAdminOrTenant, testMikrotikConnection);
 
 // Routes for fetching Mikrotik specific data
 router.route('/:id/ppp-profiles').get(protect, isSuperAdminOrAdmin, getMikrotikPppProfiles);

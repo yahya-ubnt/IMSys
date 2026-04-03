@@ -131,7 +131,7 @@ const deleteMikrotikRouter = asyncHandler(async (req, res) => {
 // @route   POST /api/mikrotik/routers/test-connection
 // @access  Private
 const testMikrotikConnection = asyncHandler(async (req, res) => {
-  if (!req.user || !req.user.roles.includes('SUPER_ADMIN')) {
+  if (!req.user || (!req.user.roles.includes('SUPER_ADMIN') && !req.user.roles.includes('ADMIN') && !req.user.roles.includes('TENANT'))) {
     res.status(403);
     throw new Error('Not authorized to access this resource. Super Admin access required.');
   }
