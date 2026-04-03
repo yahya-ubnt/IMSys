@@ -372,33 +372,37 @@ const ensurePppSecret = async (client, user) => {
     secretArgs.push(`=remote-address=${user.remoteAddress}`);
   }
 
-  if (pppSecrets.length === 0) {
-    console.log(`[Sync] Creating missing PPP secret for ${user.username}`);
-    await client.write('/ppp/secret/add', secretArgs);
-  } else {
-    const existing = pppSecrets[0];
-    const needsUpdate = 
-      existing.password !== user.pppoePassword ||
-      existing.profile !== desiredProfile ||
-      existing.disabled !== desiredDisabled ||
-      (user.remoteAddress && existing['remote-address'] !== user.remoteAddress);
+  try {
+    if (pppSecrets.length === 0) {
+      await client.write('/ppp/secret/add', secretArgs);
+    } else {
+      const existing = pppSecrets[0];
+      const needsUpdate = 
+        existing.password !== user.pppoePassword ||
+        existing.profile !== desiredProfile ||
+        existing.disabled !== desiredDisabled ||
+        (user.remoteAddress && existing['remote-address'] !== user.remoteAddress);
 
-    if (needsUpdate) {
-      console.log(`[Sync] Updating PPP secret for ${user.username}`);
-      await client.write('/ppp/secret/set', [`=.id=${existing['.id']}`, ...secretArgs]);
+      if (needsUpdate) {
+        await client.write('/ppp/secret/set', [`=.id=${existing['.id']}`, ...secretArgs]);
+      }
     }
-  }
 
-  // Handle active session if user should be suspended (and not in grace period)
-  if (user.status === 'suspended' && !user.gracePeriodEnabled) {
-    const activeSessions = await client.write('/ppp/active/print', [`?name=${user.username}`]);
-    for (const session of activeSessions) {
-      console.log(`[Sync] Terminating active session for suspended user ${user.username}`);
-      await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
+    // Handle active session if user should be suspended (and not in grace period)
+    if (user.status === 'suspended' && !user.gracePeriodEnabled) {
+      const activeSessions = await client.write('/ppp/active/print', [`?name=${user.username}`]);
+      if (activeSessions.length > 0) {
+        for (const session of activeSessions) {
+          await client.write('/ppp/active/remove', [`=.id=${session['.id']}`]);
+        }
+      }
     }
-  }
 
-  return true;
+    return true;
+  } catch (error) {
+    console.error(`[ensurePppSecret] Error during PPP secret sync for ${user.username}:`, error);
+    throw error; // Re-throw to be caught by the worker
+  }
 };
 
 const ensureStaticLeaseAndQueue = async (client, user) => {

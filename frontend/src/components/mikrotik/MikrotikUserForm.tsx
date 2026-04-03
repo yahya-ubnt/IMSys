@@ -212,7 +212,7 @@ export function MikrotikUserForm({ isEditMode, initialData, onSubmit, routers, p
             const fetchPppoeProfiles = async () => {
                 setInternalIsPppoeProfilesLoading(true);
                 try {
-                    const response = await fetch(`/api/mikrotik/ppp-profiles?routerId=${mikrotikRouterId}`);
+                    const response = await fetch(`/api/mikrotik/routers/${mikrotikRouterId}/ppp-profiles`);
                     if (!response.ok) {
                         throw new Error("Failed to fetch PPPoE profiles");
                     }
