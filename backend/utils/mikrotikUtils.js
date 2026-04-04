@@ -418,34 +418,50 @@ const ensurePppSecret = async (client, user) => {
 const ensureStaticLeaseAndQueue = async (client, user) => {
   // 1. Ensure DHCP Lease (only make static if MAC is present)
   if (user.macAddress) {
-    const leases = await client.runQuery('/ip/dhcp-server/lease/print', { 'mac-address': user.macAddress });
-    const leaseArgs = {
-      address: user.ipAddress,
-      'mac-address': user.macAddress,
-      comment: `IMSys: ${user.username}`,
-    };
+    const leasesByMac = await client.runQuery('/ip/dhcp-server/lease/print', { 'mac-address': user.macAddress });
+    let desiredStaticLeaseExists = false;
 
-    if (leases.length === 0) {
-      console.log(`[ensureStaticLeaseAndQueue] Creating missing static DHCP lease for ${user.username} with args:`, leaseArgs);
-      await client.runQuery('/ip/dhcp-server/lease/add', leaseArgs);
-      console.log(`[ensureStaticLeaseAndQueue] Successfully created static DHCP lease for ${user.username}.`);
-    } else {
-      const existing = leases[0];
-      if (existing.address !== user.ipAddress || !existing.comment.includes('IMSys:')) {
-        console.log(`[ensureStaticLeaseAndQueue] Updating static DHCP lease for ${user.username} with args:`, { '.id': existing['.id'], ...leaseArgs });
-        await client.runQuery('/ip/dhcp-server/lease/set', { '.id': existing['.id'], ...leaseArgs });
-        console.log(`[ensureStaticLeaseAndQueue] Successfully updated static DHCP lease for ${user.username}.`);
+    for (const lease of leasesByMac) {
+      if (lease.address === user.ipAddress && lease.dynamic === 'false') {
+        // This is the desired static lease, ensure its comment is correct
+        if (!lease.comment || !lease.comment.includes(`IMSys: ${user.username}`)) {
+          console.log(`[ensureStaticLeaseAndQueue] Updating comment for existing static DHCP lease for ${user.username}. ID: ${lease['.id']}`);
+          await client.runQuery('/ip/dhcp-server/lease/set', {
+            '.id': lease['.id'],
+            comment: `IMSys: ${user.username}`
+          });
+          console.log(`[ensureStaticLeaseAndQueue] Successfully updated comment for static DHCP lease for ${user.username}.`);
+        }
+        desiredStaticLeaseExists = true;
       } else {
-        console.log(`[ensureStaticLeaseAndQueue] Static DHCP lease for ${user.username} is already in desired state. No update needed.`);
+        // This is a conflicting lease (dynamic, or static with wrong IP for this user)
+        console.log(`[ensureStaticLeaseAndQueue] Removing conflicting DHCP lease for ${user.username}. ID: ${lease['.id']}, Address: ${lease.address}, MAC: ${lease['mac-address']}, Dynamic: ${lease.dynamic}`);
+        await client.runQuery('/ip/dhcp-server/lease/remove', { '.id': lease['.id'] });
+        console.log(`[ensureStaticLeaseAndQueue] Successfully removed conflicting DHCP lease for ${user.username}.`);
       }
+    }
+
+    if (!desiredStaticLeaseExists) {
+      // If no desired static lease was found after cleanup, create a new one
+      const leaseArgs = {
+        address: user.ipAddress,
+        'mac-address': user.macAddress,
+        comment: `IMSys: ${user.username}`
+      };
+      console.log(`[ensureStaticLeaseAndQueue] Creating new static DHCP lease for ${user.username} with args:`, leaseArgs);
+      await client.runQuery('/ip/dhcp-server/lease/add', leaseArgs);
+      console.log(`[ensureStaticLeaseAndQueue] Successfully created new static DHCP lease for ${user.username}.`);
     }
   } else {
     // If no macAddress, ensure no static lease exists for this IP, as it should be dynamic
-    const leases = await client.runQuery('/ip/dhcp-server/lease/print', { address: user.ipAddress, dynamic: 'false' });
-    for (const lease of leases) {
-        console.log(`[ensureStaticLeaseAndQueue] Warning: Found unexpected static lease for ${user.ipAddress} without a MAC in DB. Removing it. ID: ${lease['.id']}`);
+    // Also remove any IMSys-managed leases for this user, as they should not be static without a MAC
+    const allLeases = await client.runQuery('/ip/dhcp-server/lease/print');
+    for (const lease of allLeases) {
+      if (lease.comment && lease.comment.includes(`IMSys: ${user.username}`)) {
+        console.log(`[ensureStaticLeaseAndQueue] Removing IMSys-managed lease for ${user.username} as no MAC is provided. ID: ${lease['.id']}`);
         await client.runQuery('/ip/dhcp-server/lease/remove', { '.id': lease['.id'] });
-        console.log(`[ensureStaticLeaseAndQueue] Successfully removed unexpected static lease for ${user.ipAddress}.`);
+        console.log(`[ensureStaticLeaseAndQueue] Successfully removed IMSys-managed lease for ${user.username}.`);
+      }
     }
   }
 
