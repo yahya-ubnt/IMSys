@@ -551,13 +551,24 @@ const removeMikrotikUser = async (client, user) => {
       }
     }
 
-    // Remove from Firewall Address List
+    // Remove from Firewall Address Lists
     if (user.ipAddress) {
-      const listEntries = await client.runQuery('/ip/firewall/address-list/print', {
+      // Remove from ALLOWED_USERS list
+      const allowedEntries = await client.runQuery('/ip/firewall/address-list/print', {
+        address: user.ipAddress,
+        list: 'ALLOWED_USERS'
+      });
+      for (const entry of allowedEntries) {
+        console.log(`[Remove] Removing ${user.ipAddress} from ALLOWED_USERS (ID: ${entry['.id']}).`);
+        await client.runQuery('/ip/firewall/address-list/remove', { '.id': entry['.id'] });
+      }
+
+      // Also remove from the legacy/fallback BLOCKED_USERS list
+      const blockedEntries = await client.runQuery('/ip/firewall/address-list/print', {
         address: user.ipAddress,
         list: 'BLOCKED_USERS'
       });
-      for (const entry of listEntries) {
+      for (const entry of blockedEntries) {
         console.log(`[Remove] Removing ${user.ipAddress} from BLOCKED_USERS (ID: ${entry['.id']}).`);
         await client.runQuery('/ip/firewall/address-list/remove', { '.id': entry['.id'] });
       }
