@@ -27,3 +27,81 @@ This section describes how the system creates and manages static users. This is 
 
 -   When a user is deleted from the system, a `removeUser` job is queued.
 -   The `mikrotikSyncWorker` picks up this job and runs commands to remove the static DHCP lease, the simple queue, and any firewall entries related to the user from the MikroTik router.
+
+---
+
+## Firewall Configuration for User Management
+
+For the `suspend` and `disconnect` features to work correctly, a "Walled Garden" security model must be implemented on the MikroTik router's firewall. The application's role is simply to add or remove a user's IP from the `ALLOWED_USERS` address list. The router's firewall is responsible for enforcing the block.
+
+### For Mixed (PPPoE & Static) Environments (Recommended)
+
+
+
+This is the safest configuration if you run both PPPoE and Static IP users on the same router. It ensures the firewall rule only ever applies to the static IP users. This requires two rules, where the order is critical.
+
+
+
+**Step 1: Define your Static IP Subnet**
+
+Create a firewall address list that contains the entire IP block you use for static users.
+
+
+
+```mikrotik
+
+# IMPORTANT: Replace 10.10.10.0/24 with your actual static IP subnet.
+
+/ip firewall address-list
+
+add list=STATIC_IP_SUBNET address=10.10.10.0/24 comment="IP block for all Static Users"
+
+```
+
+
+
+**Step 2: Create the Walled Garden Rules**
+
+First, create a rule to `accept` traffic from active users. Then, create a second rule to `drop` all other traffic from the static subnet.
+
+
+
+```mikrotik
+
+/ip firewall filter
+
+
+
+# Rule 2a: ACCEPT traffic from users who are currently allowed.
+
+add action=accept chain=forward src-address-list=ALLOWED_USERS comment="IMSys: Allow Active Users"
+
+
+
+# Rule 2b: DROP all other traffic from the static IP subnet.
+
+add action=drop chain=forward src-address-list=STATIC_IP_SUBNET comment="IMSys: Walled Garden Block"
+
+```
+
+
+
+### For Static-Only Environments
+
+
+
+If your router *only* serves static IP clients from this system, you can use a simpler rule.
+
+
+
+```mikrotik
+
+/ip firewall filter
+
+add action=drop chain=forward src-address-list=!ALLOWED_USERS comment="IMSys: Walled Garden Block"
+
+```
+
+
+
+**Important Rule Placement:** For the two-rule setup, you MUST ensure the `action=accept` rule is positioned directly above the `action=drop` rule in your `/ip firewall filter` list. For either setup, the rules should be placed **above** any general `action=accept` rules for your local networks, but typically **below** rules that accept `connection-state=established,related`.

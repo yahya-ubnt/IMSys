@@ -497,8 +497,8 @@ const ensureStaticLeaseAndQueue = async (client, user) => {
     list: 'ALLOWED_USERS'
   });
 
-  // User is allowed if status is active OR if they are in a grace period
-  const isAllowed = user.status === 'active' || user.gracePeriodEnabled;
+  // User is allowed if status is active AND not paused, OR if they are in a grace period
+  const isAllowed = (user.status === 'active' && !user.isPaused) || user.gracePeriodEnabled;
   const currentlyInList = listEntries.length > 0;
 
   if (isAllowed && !currentlyInList) {
