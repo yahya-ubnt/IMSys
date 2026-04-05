@@ -45,6 +45,21 @@ export const mikrotikUserFormSchema = z.object({
             message: 'IP address is required for static service type',
         });
     }
+  if (data.serviceType === 'static') {
+    if (!data.macAddress) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['macAddress'],
+        message: 'MAC address is required for static service type',
+      });
+    } else if (!/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(data.macAddress)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['macAddress'],
+        message: 'Invalid MAC address format (e.g., AA:BB:CC:DD:EE:FF)',
+      });
+    }
+  }
 });
 
 export type MikrotikUserFormSchema = z.infer<typeof mikrotikUserFormSchema>;

@@ -58,10 +58,6 @@ const UserService = {
       syncStatus: 'pending',
     };
 
-    if (newUser.serviceType === 'static' && !newUser.macAddress) {
-      newUser.status = 'pending_mac_assignment';
-    }
-
     const mikrotikUser = await MikrotikUser.create(newUser);
 
     // 3. Trigger Hardware Sync

@@ -123,7 +123,7 @@ const MikrotikUserSchema = mongoose.Schema(
     // System-managed fields
     status: {
       type: String,
-      enum: ['pending_mac_assignment', 'active', 'suspended'],
+      enum: ['active', 'suspended'],
       default: 'active',
     },
     isManuallyDisconnected: {
