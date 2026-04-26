@@ -5,7 +5,7 @@ const HotspotSession = require('../models/HotspotSession');
 const HotspotPlan = require('../models/HotspotPlan');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const { initiateStkPushService } = require('../services/mpesaService');
-const { addHotspotIpBinding } = require('../utils/mikrotikUtils');
+const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 
 const getHotspotTransactions = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -144,13 +144,21 @@ const handleHotspotCallback = asyncHandler(async (req, res) => {
       startTime: now,
       endTime: endTime,
       dataUsage: 0,
+      routerId: router._id,
+      tenant: transaction.tenant,
     },
     { upsert: true, new: true }
   );
 
-  await addHotspotIpBinding(router, transaction.macAddress, plan.server);
+  // ASYNC: Queue the bypass on the MikroTik
+  await mikrotikSyncQueue.add('addHotspotIpBinding', {
+    macAddress: transaction.macAddress,
+    server: plan.server,
+    routerId: router._id,
+    tenantId: transaction.tenant,
+  });
 
-  res.status(200).json({ message: 'Callback processed successfully' });
+  res.status(200).send('OK');
 });
 
 module.exports = {

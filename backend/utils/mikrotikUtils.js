@@ -590,4 +590,69 @@ const removeMikrotikUser = async (client, user) => {
   return true;
 };
 
-module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser, removeMikrotikUser };
+const ensureHotspotUser = async (client, userData) => {
+  try {
+    const existingUsers = await client.runQuery('/ip/hotspot/user/print', { name: userData.username });
+    
+    const userArgs = {
+      name: userData.username,
+      password: userData.password,
+      server: userData.server || 'all',
+      profile: userData.profile,
+      'limit-uptime': userData.timeLimit || '0',
+      'limit-bytes-total': userData.dataLimit || '0',
+      comment: `Synced by IMSys at ${new Date().toISOString()}`,
+    };
+
+    if (existingUsers.length === 0) {
+      console.log(`[ensureHotspotUser] Adding new hotspot user: ${userData.username}`);
+      await client.runQuery('/ip/hotspot/user/add', userArgs);
+    } else {
+      const existing = existingUsers[0];
+      // Check if update is needed
+      const needsUpdate = 
+        existing.password !== userData.password ||
+        existing.profile !== userData.profile ||
+        existing.server !== (userData.server || 'all');
+
+      if (needsUpdate) {
+        console.log(`[ensureHotspotUser] Updating hotspot user: ${userData.username}`);
+        await client.runQuery('/ip/hotspot/user/set', { '.id': existing['.id'], ...userArgs });
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error(`[ensureHotspotUser] Error syncing hotspot user ${userData.username}:`, error);
+    throw error;
+  }
+};
+
+const ensureHotspotIpBinding = async (client, macAddress, server) => {
+  try {
+    const existingBindings = await client.runQuery('/ip/hotspot/ip-binding/print', { 'mac-address': macAddress });
+    
+    const bindingArgs = {
+      'mac-address': macAddress,
+      server: server || 'all',
+      type: 'bypassed',
+      comment: `Bypassed by IMSys Portal at ${new Date().toISOString()}`,
+    };
+
+    if (existingBindings.length === 0) {
+      console.log(`[ensureHotspotIpBinding] Creating new IP binding for MAC: ${macAddress}`);
+      await client.runQuery('/ip/hotspot/ip-binding/add', bindingArgs);
+    } else {
+      const existing = existingBindings[0];
+      if (existing.type !== 'bypassed' || existing.server !== (server || 'all')) {
+        console.log(`[ensureHotspotIpBinding] Updating IP binding for MAC: ${macAddress}`);
+        await client.runQuery('/ip/hotspot/ip-binding/set', { '.id': existing['.id'], ...bindingArgs });
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error(`[ensureHotspotIpBinding] Error syncing IP binding for ${macAddress}:`, error);
+    throw error;
+  }
+};
+
+module.exports = { getMikrotikApiClient, checkRouterStatus, checkUserStatus, checkCPEStatus, addHotspotUser, addHotspotIpBinding, removeHotspotIpBinding, removeHotspotUser, getHotspotServers, getHotspotProfiles, injectNetwatchScript, removeNetwatchScript, injectPPPProfileScripts, syncMikrotikUser, removeMikrotikUser, ensureHotspotUser, ensureHotspotIpBinding };

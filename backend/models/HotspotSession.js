@@ -28,6 +28,11 @@ const HotspotSessionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    routerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MikrotikRouter',
+      required: true,
+    },
   },
   {
     timestamps: true,

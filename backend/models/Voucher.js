@@ -19,6 +19,14 @@ const voucherSchema = new mongoose.Schema({
   expiryDate: {
     type: Date,
   },
+  syncStatus: {
+    type: String,
+    enum: ['synced', 'pending', 'error'],
+    default: 'pending',
+  },
+  syncErrorMessage: { type: String },
+  lastSyncedAt: { type: Date },
+  provisionedOnMikrotik: { type: Boolean, default: false },
 }, {
   timestamps: true,
 });

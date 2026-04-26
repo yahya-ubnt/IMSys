@@ -107,6 +107,47 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: User ${user.username} synced successfully.`);
         break;
 
+      case 'syncHotspotUser':
+        const hotspotUserData = {
+          username: user.hotspotName,
+          password: user.hotspotPassword,
+          server: user.server,
+          profile: user.profile,
+          timeLimit: '0', // Adjust if HotspotUser model gets time limits
+          dataLimit: '0',
+        };
+        await ensureHotspotUser(client, hotspotUserData);
+        user.syncStatus = 'synced';
+        user.provisionedOnMikrotik = true;
+        user.lastSyncedAt = new Date();
+        await user.save();
+        break;
+
+      case 'syncVoucher':
+        const Voucher = require('../models/Voucher');
+        const voucher = await Voucher.findById(mikrotikUserId);
+        if (!voucher) throw new Error('Voucher not found');
+        
+        const voucherData = {
+          username: voucher.username,
+          password: voucher.password,
+          profile: voucher.profile,
+          timeLimit: voucher.timeLimit || '0', // Vouchers often have time limits
+          dataLimit: voucher.dataLimit || '0',
+        };
+        await ensureHotspotUser(client, voucherData);
+        voucher.syncStatus = 'synced';
+        voucher.provisionedOnMikrotik = true;
+        voucher.lastSyncedAt = new Date();
+        await voucher.save();
+        break;
+
+      case 'addHotspotIpBinding':
+        const { macAddress: bindingMac, server: bindingServer } = job.data;
+        await ensureHotspotIpBinding(client, bindingMac, bindingServer);
+        console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: IP Binding ensured for ${bindingMac}`);
+        break;
+
       case 'removeUser':
         const { routerId: removeRouterId, ...userToRemove } = job.data;
         if (!removeRouterId) {
@@ -126,6 +167,25 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
         } finally {
           if (removalClient) {
             removalClient.close();
+          }
+        }
+        break;
+
+      case 'removeHotspotUser':
+        const { username: removeUsername, routerId: removeRouterId } = job.data;
+        const routerForHotspotRemoval = await MikrotikRouter.findById(removeRouterId);
+        if (routerForHotspotRemoval) {
+          const hClient = await getMikrotikApiClient(routerForHotspotRemoval);
+          if (hClient) {
+            try {
+              const hUsers = await hClient.runQuery('/ip/hotspot/user/print', { name: removeUsername });
+              if (hUsers.length > 0) {
+                await hClient.runQuery('/ip/hotspot/user/remove', { '.id': hUsers[0]['.id'] });
+                console.log(`[${new Date().toISOString()}] MikroTik Sync Worker: Hotspot user ${removeUsername} removed successfully.`);
+              }
+            } finally {
+              hClient.close();
+            }
           }
         }
         break;
@@ -289,6 +349,14 @@ const mikrotikSyncWorker = new Worker('MikroTik-Sync', async (job) => {
       user.syncStatus = 'error';
       user.syncErrorMessage = error.message;
       await user.save();
+    } else if (mikrotikUserId && jobType === 'syncVoucher') {
+      const Voucher = require('../models/Voucher');
+      const voucher = await Voucher.findById(mikrotikUserId);
+      if (voucher) {
+        voucher.syncStatus = 'error';
+        voucher.syncErrorMessage = error.message;
+        await voucher.save();
+      }
     }
     throw error; // Re-throw to mark job as failed in BullMQ
   } finally {

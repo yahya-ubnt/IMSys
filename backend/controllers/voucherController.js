@@ -2,7 +2,7 @@ const Voucher = require('../models/Voucher');
 const MikrotikRouter = require('../models/MikrotikRouter');
 const HotspotSession = require('../models/HotspotSession');
 const HotspotPlan = require('../models/HotspotPlan');
-const { addHotspotUser, removeHotspotUser, addHotspotIpBinding } = require('../utils/mikrotikUtils');
+const mikrotikSyncQueue = require('../queues/mikrotikSyncQueue');
 const crypto = require('crypto');
 
 // Function to generate a random string of numbers
@@ -42,7 +42,7 @@ exports.generateVouchers = async (req, res) => {
 
     const tenantId = req.user.tenant;
     const batchId = crypto.randomBytes(8).toString('hex');
-    const createdVouchers = [];
+    const vouchersToCreate = [];
 
     // Determine expiry date based on plan's time limit
     let expiryDate = null;
@@ -58,37 +58,19 @@ exports.generateVouchers = async (req, res) => {
         case 'days':
           expiryDate = new Date(now.getTime() + timeLimitValue * 24 * 60 * 60 * 1000);
           break;
-        // Default to hours if unit is not recognized
         default:
           expiryDate = new Date(now.getTime() + timeLimitValue * 60 * 60 * 1000);
       }
     }
 
+    const timeLimit = `${timeLimitValue}${timeLimitUnit.charAt(0)}`;
+    const dataLimit = dataLimitValue ? `${dataLimitValue}${dataLimitUnit}` : '0';
+
     for (let i = 0; i < quantity; i++) {
       const username = generateRandomString(nameLength);
       const password = withPassword ? generateRandomString(6) : username;
 
-      const timeLimit = `${timeLimitValue}${timeLimitUnit.charAt(0)}`;
-      const dataLimit = dataLimitValue ? `${dataLimitValue}${dataLimitUnit}` : '0';
-
-      const userData = {
-        username,
-        password,
-        server,
-        profile,
-        timeLimit,
-        dataLimit,
-      };
-
-      const success = await addHotspotUser(router, userData);
-
-      if (!success) {
-        // If one voucher fails, we stop and don't save any more.
-        // Consider a transaction or rollback mechanism for more robustness.
-        return res.status(500).json({ message: `Failed to create voucher ${i + 1} on Mikrotik router` });
-      }
-
-      const voucher = new Voucher({
+      vouchersToCreate.push({
         username,
         password,
         profile,
@@ -98,14 +80,26 @@ exports.generateVouchers = async (req, res) => {
         batch: batchId,
         status: 'active',
         expiryDate: expiryDate,
+        timeLimit,
+        dataLimit,
+        syncStatus: 'pending',
       });
+    }
 
-      const createdVoucher = await voucher.save();
-      createdVouchers.push(createdVoucher);
+    // Bulk insert into database
+    const createdVouchers = await Voucher.insertMany(vouchersToCreate);
+
+    // Queue sync jobs for each voucher
+    for (const voucher of createdVouchers) {
+      await mikrotikSyncQueue.add('syncVoucher', {
+        mikrotikUserId: voucher._id,
+        tenantId: tenantId,
+      });
     }
 
     res.status(201).json(createdVouchers);
   } catch (error) {
+    console.error('Error generating vouchers:', error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -130,21 +124,27 @@ exports.deleteVoucherBatch = async (req, res) => {
     const { batchId } = req.params;
     const tenantId = req.user.tenant;
 
-    const vouchers = await Voucher.find({ batch: batchId, tenant: tenantId }).populate('mikrotikRouter');
+    const vouchers = await Voucher.find({ batch: batchId, tenant: tenantId });
 
     if (!vouchers.length) {
-      return res.status(404).json({ message: 'No vouchers found for this batch and tenant' });
+      return res.status(404).json({ message: 'No vouchers found' });
     }
 
-    const router = vouchers[0].mikrotikRouter;
+    const routerId = vouchers[0].mikrotikRouter;
 
+    // Queue removal jobs for each voucher
     for (const voucher of vouchers) {
-      await removeHotspotUser(router, voucher.username);
+      await mikrotikSyncQueue.add('removeHotspotUser', {
+        username: voucher.username,
+        routerId: routerId,
+        tenantId: tenantId,
+      });
     }
 
+    // Remove from database
     await Voucher.deleteMany({ batch: batchId, tenant: tenantId });
 
-    res.json({ message: `Batch ${batchId} removed` });
+    res.json({ message: `Batch ${batchId} removal queued and removed from Hub.` });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -168,7 +168,7 @@ exports.loginVoucher = async (req, res) => {
     }
 
     if (voucher.status !== 'active') {
-      return res.status(400).json({ message: 'Voucher is not active or already used' });
+      return res.status(400).json({ message: 'Voucher is already used or expired' });
     }
 
     if (voucher.expiryDate && new Date() > voucher.expiryDate) {
@@ -182,39 +182,23 @@ exports.loginVoucher = async (req, res) => {
       return res.status(500).json({ message: 'Associated Mikrotik router not found' });
     }
 
-    // Find the HotspotPlan associated with the voucher's profile
     const plan = await HotspotPlan.findOne({ profile: voucher.profile, mikrotikRouter: router._id });
     if (!plan) {
       return res.status(500).json({ message: 'Associated hotspot plan not found' });
     }
 
-    // Bypass the user's MAC address on the Mikrotik router
-    const bypassSuccess = await addHotspotIpBinding(router, macAddress, plan.server);
-    if (!bypassSuccess) {
-      return res.status(500).json({ message: 'Failed to bypass MAC address on Mikrotik' });
-    }
+    // ASYNC: Queue the bypass on the MikroTik
+    await mikrotikSyncQueue.add('addHotspotIpBinding', {
+      macAddress: macAddress,
+      server: plan.server,
+      routerId: router._id,
+      tenantId: voucher.tenant,
+    });
 
-    // Create a HotspotSession in our database
+    // Create session in DB
     const now = new Date();
-    let endTime = voucher.expiryDate || new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); // Fallback to plan time if no voucher expiry
+    let endTime = voucher.expiryDate || new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000);
     
-    // If voucher has no explicit expiryDate, calculate from plan
-    if (!voucher.expiryDate) {
-      switch (plan.timeLimitUnit) {
-        case 'minutes':
-          endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 1000);
-          break;
-        case 'hours':
-          endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000);
-          break;
-        case 'days':
-          endTime = new Date(now.getTime() + plan.timeLimitValue * 24 * 60 * 60 * 1000);
-          break;
-        default:
-          endTime = new Date(now.getTime() + plan.timeLimitValue * 60 * 60 * 1000); // Default to hours
-      }
-    }
-
     await HotspotSession.findOneAndUpdate(
       { macAddress: macAddress },
       {
@@ -222,6 +206,8 @@ exports.loginVoucher = async (req, res) => {
         startTime: now,
         endTime: endTime,
         dataUsage: 0,
+        routerId: router._id,
+        tenant: voucher.tenant,
       },
       { upsert: true, new: true }
     );
@@ -231,7 +217,7 @@ exports.loginVoucher = async (req, res) => {
     voucher.usedByMacAddress = macAddress;
     await voucher.save();
 
-    res.status(200).json({ message: 'Voucher login successful' });
+    res.status(200).json({ message: 'Voucher login successful. Your connection is being activated.' });
   } catch (error) {
     console.error('Error during voucher login:', error);
     res.status(500).json({ message: error.message });

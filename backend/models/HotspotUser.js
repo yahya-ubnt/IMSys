@@ -19,6 +19,14 @@ const hotspotUserSchema = new mongoose.Schema({
   expiryTime: { type: String, required: true }, // Storing time as a string e.g., "23:59"
   tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
   mikrotikRouter: { type: mongoose.Schema.Types.ObjectId, ref: 'MikrotikRouter', required: true },
+  syncStatus: {
+    type: String,
+    enum: ['synced', 'pending', 'error'],
+    default: 'pending',
+  },
+  syncErrorMessage: { type: String },
+  lastSyncedAt: { type: Date },
+  provisionedOnMikrotik: { type: Boolean, default: false },
 }, {
   timestamps: true,
 });
