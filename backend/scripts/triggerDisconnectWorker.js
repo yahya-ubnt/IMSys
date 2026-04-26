@@ -11,7 +11,7 @@ const triggerDisconnects = async () => {
 
   try {
     console.log('Finding active tenants...');
-    const tenants = await Tenant.find({ status: 'Active' });
+    const tenants = await Tenant.find({ status: 'active' });
     console.log(`Found ${tenants.length} active tenants.`);
 
     for (const tenant of tenants) {

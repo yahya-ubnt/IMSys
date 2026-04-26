@@ -35,7 +35,6 @@ const scheduledTaskWorker = new Worker('Scheduled-Tasks', async (job) => {
       case 'disconnectExpiredUsers':
         console.log(`[Orchestrator] Finding expired users for tenant ${tenantId} and queueing disconnection jobs.`);
         const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
 
         // Find users who are either:
         // 1. Expired and not in grace period (status active)
