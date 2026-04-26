@@ -18,9 +18,18 @@ const runStartupDisconnect = async () => {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     const expiredUsers = await MikrotikUser.find({
-      expiryDate: { $lt: new Date() },
-      isSuspended: false,
+      status: 'active',
       isPaused: false, // Exclude paused users from disconnection
+      $or: [
+        {
+          expiryDate: { $lte: new Date() },
+          gracePeriodEnabled: false,
+        },
+        {
+          gracePeriodEnabled: true,
+          expectedPaymentDate: { $lte: new Date() },
+        },
+      ],
     });
 
     if (expiredUsers.length === 0) {
@@ -32,12 +41,18 @@ const runStartupDisconnect = async () => {
 
     for (const user of expiredUsers) {
       try {
-        user.isSuspended = true;
+        user.status = 'suspended';
+        user.syncStatus = 'pending';
+        user.gracePeriodEnabled = false; // End grace period if it was active
+        user.expectedPaymentDate = undefined;
+        user.originalExpiryDate = undefined;
+        user.gracePeriodDaysUsed = 0;
         await user.save();
 
         await mikrotikSyncQueue.add('disconnectUser', {
           mikrotikUserId: user._id,
           tenantId: user.tenant,
+          reason: user.gracePeriodEnabled ? 'grace_period_expired' : 'expired',
         });
 
         console.log(`- User ${user.username} (ID: ${user._id}) marked as suspended and queued for disconnection.`);
